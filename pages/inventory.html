@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Management - myPOS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .top-bar {
+      background: #fff;
+      padding: 15px 30px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #3498db;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #2980b9;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 5px;
+      border-bottom: 2px solid #e0e0e0;
+      margin-bottom: 20px;
+      background: #fff;
+      padding: 0 30px;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-weight: 500;
+      color: #7f8c8d;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      position: relative;
+      top: 2px;
+    }
+
+    .tab.active {
+      color: #3498db;
+      border-bottom-color: #3498db;
+    }
+
+    .tab:hover {
+      color: #2c3e50;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 30px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .filters {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .filter-item label {
+      font-size: 12px;
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+
+    .filter-item select,
+    .filter-item input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .table-container {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .table-header {
+      padding: 20px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .table-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: #f8f9fa;
+    }
+
+    th, td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    th {
+      font-weight: 600;
+      font-size: 12px;
+      color: #7f8c8d;
+      text-transform: uppercase;
+    }
+
+    tbody tr:hover {
+      background: #f8f9fa;
+    }
+
+    .badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .badge-warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .badge-danger {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .subtabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 20px;
+    }
+
+    .subtab {
+      padding: 8px 16px;
+      cursor: pointer;
+      border: none;
+      background: #f8f9fa;
+      font-weight: 500;
+      color: #7f8c8d;
+      border-radius: 4px;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .subtab.active {
+      color: #fff;
+      background: #3498db;
+    }
+
+    .subtab:hover {
+      background: #e9ecef;
+    }
+
+    .subtab.active:hover {
+      background: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <h1 class="page-title">Inventory Management</h1>
+    <button class="btn btn-primary" id="action-btn">Export</button>
+  </div>
+
+  <!-- Main Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="summary">Summary</button>
+    <button class="tab" data-tab="suppliers">Suppliers</button>
+    <button class="tab" data-tab="purchase-order">Purchase Order</button>
+    <button class="tab" data-tab="transfer">Transfer</button>
+    <button class="tab" data-tab="adjustment">Stock Adjustment</button>
+  </div>
+
+  <!-- Tab Content: Inventory Summary -->
+  <div class="tab-content active" id="summary">
+    <div class="filters">
+      <div class="filter-item">
+        <select>
+          <option>Kebuli Utsman</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <select>
+          <option>Item Library</option>
+          <option>Ingredient Library</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <input type="text" placeholder="Search">
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Name - Variant</th>
+            <th>Category</th>
+            <th>Beginning</th>
+            <th>Purchase Order</th>
+            <th>Sales</th>
+            <th>Transfer</th>
+            <th>Adjustment</th>
+            <th>Ending</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Air Mineral</td>
+            <td>Minuman</td>
+            <td>37</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td>37</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab Content: Suppliers -->
+  <div class="tab-content" id="suppliers">
+    <div class="filters">
+      <div class="filter-item">
+        <input type="text" placeholder="Search suppliers...">
+      </div>
+      <div class="filter-item">
+        <select>
+          <option>All Status</option>
+          <option>Active</option>
+          <option>Inactive</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-title">Total: 4</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Supplier Name</th>
+            <th>Contact Person</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Products</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PT Sumber Rejeki</td>
+            <td>Budi Santoso</td>
+            <td>0812-3456-7890</td>
+            <td>budi@sumberrejeki.com</td>
+            <td>Beras, Minyak, Gula</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+          <tr>
+            <td>CV Sayur Segar</td>
+            <td>Dewi Lestari</td>
+            <td>0821-9876-5432</td>
+            <td>dewi@sayursegar.com</td>
+            <td>Sayuran, Bumbu Fresh</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+          <tr>
+            <td>Toko Daging Segar</td>
+            <td>Ahmad Yusuf</td>
+            <td>0856-1234-5678</td>
+            <td>ahmad@dagingsegar.com</td>
+            <td>Ayam, Kambing, Sapi</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+          <tr>
+            <td>Distributor Minuman</td>
+            <td>Siti Nurhaliza</td>
+            <td>0813-5555-6666</td>
+            <td>siti@minuman.com</td>
+            <td>Air Mineral, Soft Drink</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab Content: Purchase Order -->
+  <div class="tab-content" id="purchase-order">
+    <div class="subtabs">
+      <button class="subtab active">All</button>
+      <button class="subtab">Pending</button>
+      <button class="subtab">Completed</button>
+      <button class="subtab">Cancelled</button>
+    </div>
+
+    <div class="filters">
+      <div class="filter-item">
+        <select>
+          <option>Kebuli Utsman</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <input type="date" value="2025-11-13">
+      </div>
+      <div class="filter-item">
+        <select>
+          <option>All Suppliers</option>
+          <option>PT Sumber Rejeki</option>
+          <option>CV Sayur Segar</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-title">Total: 5</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>PO Number</th>
+            <th>Supplier</th>
+            <th>Date</th>
+            <th>Items</th>
+            <th>Total Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PO-2025-001</td>
+            <td>PT Sumber Rejeki</td>
+            <td>13/11/2025</td>
+            <td>5 items</td>
+            <td>Rp. 5.250.000</td>
+            <td><span class="badge badge-success">Completed</span></td>
+          </tr>
+          <tr>
+            <td>PO-2025-002</td>
+            <td>CV Sayur Segar</td>
+            <td>12/11/2025</td>
+            <td>8 items</td>
+            <td>Rp. 1.800.000</td>
+            <td><span class="badge badge-warning">Pending</span></td>
+          </tr>
+          <tr>
+            <td>PO-2025-003</td>
+            <td>Toko Daging Segar</td>
+            <td>11/11/2025</td>
+            <td>3 items</td>
+            <td>Rp. 8.500.000</td>
+            <td><span class="badge badge-success">Completed</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab Content: Transfer -->
+  <div class="tab-content" id="transfer">
+    <div class="subtabs">
+      <button class="subtab active">All Transfers</button>
+      <button class="subtab">Pending</button>
+      <button class="subtab">Completed</button>
+    </div>
+
+    <div class="filters">
+      <div class="filter-item">
+        <input type="date" value="2025-11-13">
+      </div>
+      <div class="filter-item">
+        <select>
+          <option>All Outlets</option>
+          <option>Kebuli Utsman</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-title">Total: 3</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Transfer ID</th>
+            <th>Date</th>
+            <th>From Outlet</th>
+            <th>To Outlet</th>
+            <th>Items</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>TRF-2025-001</td>
+            <td>13/11/2025 10:30</td>
+            <td>Kebuli Utsman</td>
+            <td>Kebuli Jordan</td>
+            <td>3 items</td>
+            <td><span class="badge badge-success">Completed</span></td>
+          </tr>
+          <tr>
+            <td>TRF-2025-002</td>
+            <td>12/11/2025 14:15</td>
+            <td>Kebuli Jordan</td>
+            <td>Kebuli Utsman</td>
+            <td>5 items</td>
+            <td><span class="badge badge-warning">Pending</span></td>
+          </tr>
+          <tr>
+            <td>TRF-2025-003</td>
+            <td>11/11/2025 09:00</td>
+            <td>Kebuli Utsman</td>
+            <td>Kebuli Jordan</td>
+            <td>2 items</td>
+            <td><span class="badge badge-success">Completed</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab Content: Stock Adjustment -->
+  <div class="tab-content" id="adjustment">
+    <div class="filters">
+      <div class="filter-item">
+        <select>
+          <option>Kebuli Utsman</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <input type="date" value="2025-11-13">
+      </div>
+      <div class="filter-item">
+        <select>
+          <option>All Types</option>
+          <option>Stock In</option>
+          <option>Stock Out</option>
+          <option>Correction</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-title">Total: 6</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Adjustment ID</th>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Item/Ingredient</th>
+            <th>Quantity</th>
+            <th>Reason</th>
+            <th>By</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ADJ-2025-001</td>
+            <td>13/11/2025 08:00</td>
+            <td><span class="badge badge-danger">Stock Out</span></td>
+            <td>Beras</td>
+            <td>-5 kg</td>
+            <td>Expired</td>
+            <td>Admin</td>
+          </tr>
+          <tr>
+            <td>ADJ-2025-002</td>
+            <td>12/11/2025 16:30</td>
+            <td><span class="badge badge-success">Stock In</span></td>
+            <td>Ayam Potong</td>
+            <td>+50 ptg</td>
+            <td>Stock opname</td>
+            <td>Supervisor</td>
+          </tr>
+          <tr>
+            <td>ADJ-2025-003</td>
+            <td>11/11/2025 12:00</td>
+            <td><span class="badge badge-warning">Correction</span></td>
+            <td>Air Mineral</td>
+            <td>+10 pcs</td>
+            <td>Calculation error</td>
+            <td>Admin</td>
+          </tr>
+          <tr>
+            <td>ADJ-2025-004</td>
+            <td>10/11/2025 09:15</td>
+            <td><span class="badge badge-danger">Stock Out</span></td>
+            <td>Bawang Putih</td>
+            <td>-2 kg</td>
+            <td>Damaged</td>
+            <td>Chef</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Tab switching functionality
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const actionBtn = document.getElementById('action-btn');
+
+    // Button text mapping for each tab
+    const buttonTexts = {
+      'summary': 'Export',
+      'suppliers': 'Add Supplier',
+      'purchase-order': 'Create PO',
+      'transfer': 'Create Transfer',
+      'adjustment': 'Create Adjustment'
+    };
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', function() {
+        // Remove active class from all tabs
+        tabs.forEach(t => t.classList.remove('active'));
+
+        // Remove active class from all tab contents
+        tabContents.forEach(tc => tc.classList.remove('active'));
+
+        // Add active class to clicked tab
+        this.classList.add('active');
+
+        // Get the tab id and show corresponding content
+        const tabId = this.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+
+        // Update action button text
+        actionBtn.textContent = buttonTexts[tabId] || 'Action';
+      });
+    });
+
+    // Subtab functionality (for Purchase Order and Transfer tabs)
+    const subtabs = document.querySelectorAll('.subtab');
+
+    subtabs.forEach(subtab => {
+      subtab.addEventListener('click', function() {
+        // Get parent subtabs container
+        const parent = this.parentElement;
+        const siblings = parent.querySelectorAll('.subtab');
+
+        // Remove active class from siblings
+        siblings.forEach(s => s.classList.remove('active'));
+
+        // Add active class to clicked subtab
+        this.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
