@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Import routes
+import authRoutes from './routes/auth.routes';
+import tenantRoutes from './routes/tenant.routes';
 import productRoutes from './routes/product.routes';
 import categoryRoutes from './routes/category.routes';
 import transactionRoutes from './routes/transaction.routes';
@@ -14,6 +16,10 @@ import tableRoutes from './routes/table.routes';
 import inventoryRoutes from './routes/inventory.routes';
 import customerRoutes from './routes/customer.routes';
 import employeeRoutes from './routes/employee.routes';
+import modifierRoutes from './routes/modifier.routes';
+import variantRoutes from './routes/variant.routes';
+import ingredientRoutes from './routes/ingredient.routes';
+import supplierRoutes from './routes/supplier.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -37,6 +43,8 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/tenants', tenantRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/transactions', transactionRoutes);
@@ -44,6 +52,10 @@ app.use('/api/tables', tableRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/modifiers', modifierRoutes);
+app.use('/api/variants', variantRoutes);
+app.use('/api/ingredients', ingredientRoutes);
+app.use('/api/suppliers', supplierRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
