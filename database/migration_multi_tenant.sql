@@ -1,96 +1,141 @@
 -- =====================================================
--- Multi-Tenant Migration Script
--- =====================================================
--- Description: Upgrade from single-tenant to multi-tenant SaaS system
--- Version: 2.0
+-- Complete Multi-Tenant Migration (FROM SCRATCH)
 -- =====================================================
 
--- Step 1: Create Tenants Table
+-- Step 1: Create Roles Table (BASE)
 -- =====================================================
--- Tenants = Penyewa/Admin yang sewa platform MyPOS
--- Contoh: Restoran A, Toko B, Cafe C
+CREATE TABLE IF NOT EXISTS roles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    permissions JSONB DEFAULT '{}'::JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+-- Step 2: Create Tenants Table (MULTI-TENANT)
+-- =====================================================
 CREATE TABLE IF NOT EXISTS tenants (
     id SERIAL PRIMARY KEY,
-    business_name VARCHAR(255) NOT NULL,           -- Nama bisnis penyewa
-    owner_name VARCHAR(255) NOT NULL,              -- Nama pemilik bisnis
-    email VARCHAR(255) UNIQUE NOT NULL,            -- Email untuk login admin tenant
+    business_name VARCHAR(255) NOT NULL,
+    owner_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(50),
     address TEXT,
-
+    
     -- Subscription Management
-    subscription_plan VARCHAR(50) DEFAULT 'basic', -- 'basic', 'pro', 'enterprise'
-    subscription_status VARCHAR(50) DEFAULT 'trial', -- 'trial', 'active', 'suspended', 'expired'
+    subscription_plan VARCHAR(50) DEFAULT 'basic',
+    subscription_status VARCHAR(50) DEFAULT 'trial',
     subscription_starts_at TIMESTAMP,
     subscription_expires_at TIMESTAMP,
-    max_outlets INTEGER DEFAULT 1,                 -- Batas jumlah outlet per plan
-    max_users INTEGER DEFAULT 5,                   -- Batas jumlah users per plan
-
+    max_outlets INTEGER DEFAULT 1,
+    max_users INTEGER DEFAULT 5,
+    
     -- Billing
     billing_email VARCHAR(255),
-    payment_method VARCHAR(50),                    -- 'bank_transfer', 'credit_card', etc
+    payment_method VARCHAR(50),
     last_payment_at TIMESTAMP,
     next_billing_date DATE,
-
-    -- Settings per tenant
-    settings JSONB DEFAULT '{}'::JSONB,            -- Custom settings per tenant
-    features JSONB DEFAULT '{}'::JSONB,            -- Enabled features per plan
-
+    
+    -- Settings
+    settings JSONB DEFAULT '{}'::JSONB,
+    features JSONB DEFAULT '{}'::JSONB,
+    
     -- Status
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP                           -- Soft delete
+    deleted_at TIMESTAMP
 );
 
--- Indexes untuk performance
-CREATE INDEX idx_tenants_email ON tenants(email);
-CREATE INDEX idx_tenants_status ON tenants(subscription_status);
-CREATE INDEX idx_tenants_active ON tenants(is_active);
-
-
--- Step 2: Add tenant_id to outlets
+-- Step 3: Create Outlets Table (WITH tenant_id)
 -- =====================================================
--- Setiap outlet sekarang belong to 1 tenant
+CREATE TABLE IF NOT EXISTS outlets (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    address TEXT,
+    phone VARCHAR(50),
+    email VARCHAR(255),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-ALTER TABLE outlets
-ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE;
-
--- Index untuk performance
-CREATE INDEX IF NOT EXISTS idx_outlets_tenant ON outlets(tenant_id);
-
-
--- Step 3: Add tenant_id to users
+-- Step 4: Create Users Table (WITH tenant_id)
 -- =====================================================
--- User sekarang belong to 1 tenant (data isolation)
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
+    outlet_id INTEGER REFERENCES outlets(id) ON DELETE SET NULL,
+    role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    is_active BOOLEAN DEFAULT true,
+    last_login TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-ALTER TABLE users
-ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE;
-
--- Index untuk performance
-CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
-
-
--- Step 4: Update roles untuk support Super Admin
+-- Step 5: Create Products Table
 -- =====================================================
--- Tambah role Super Admin (platform owner)
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
+    outlet_id INTEGER REFERENCES outlets(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    sku VARCHAR(100),
+    barcode VARCHAR(100),
+    price DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    cost DECIMAL(12, 2) DEFAULT 0,
+    stock INTEGER DEFAULT 0,
+    min_stock INTEGER DEFAULT 0,
+    category VARCHAR(100),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-INSERT INTO roles (name, permissions)
-VALUES ('Super Admin', '{"all": true, "manage_tenants": true, "view_all_data": true}')
-ON CONFLICT (name) DO UPDATE
-SET permissions = EXCLUDED.permissions;
-
-
--- Step 5: Create Audit Log untuk Tenant Activities
+-- Step 6: Create Transactions Table
 -- =====================================================
--- Track aktivitas penting tenant (untuk billing & security)
+CREATE TABLE IF NOT EXISTS transactions (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
+    outlet_id INTEGER REFERENCES outlets(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    invoice_number VARCHAR(100) UNIQUE NOT NULL,
+    total_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    tax_amount DECIMAL(12, 2) DEFAULT 0,
+    discount_amount DECIMAL(12, 2) DEFAULT 0,
+    payment_method VARCHAR(50),
+    payment_status VARCHAR(50) DEFAULT 'paid',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+-- Step 7: Create Transaction Items Table
+-- =====================================================
+CREATE TABLE IF NOT EXISTS transaction_items (
+    id SERIAL PRIMARY KEY,
+    transaction_id INTEGER REFERENCES transactions(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    price DECIMAL(12, 2) NOT NULL,
+    discount DECIMAL(12, 2) DEFAULT 0,
+    subtotal DECIMAL(12, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Step 8: Create Tenant Audit Logs
+-- =====================================================
 CREATE TABLE IF NOT EXISTS tenant_audit_logs (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(id),
-    action VARCHAR(100) NOT NULL,                  -- 'login', 'create_outlet', 'subscription_change', etc
-    entity_type VARCHAR(100),                      -- 'outlet', 'user', 'transaction', etc
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(100),
     entity_id INTEGER,
     details JSONB DEFAULT '{}'::JSONB,
     ip_address VARCHAR(50),
@@ -98,41 +143,53 @@ CREATE TABLE IF NOT EXISTS tenant_audit_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_tenant_audit_tenant ON tenant_audit_logs(tenant_id);
-CREATE INDEX idx_tenant_audit_created ON tenant_audit_logs(created_at);
-
-
--- Step 6: Create Tenant Subscription History
+-- Step 9: Create Tenant Subscriptions
 -- =====================================================
--- Track perubahan subscription & payment
-
 CREATE TABLE IF NOT EXISTS tenant_subscriptions (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
-    plan VARCHAR(50) NOT NULL,                     -- 'basic', 'pro', 'enterprise'
-    status VARCHAR(50) NOT NULL,                   -- 'pending', 'active', 'expired', 'cancelled'
+    plan VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
     amount DECIMAL(12, 2) DEFAULT 0,
     currency VARCHAR(10) DEFAULT 'IDR',
-    billing_cycle VARCHAR(50),                     -- 'monthly', 'yearly'
+    billing_cycle VARCHAR(50),
     starts_at TIMESTAMP,
     expires_at TIMESTAMP,
     payment_method VARCHAR(50),
-    payment_status VARCHAR(50),                    -- 'pending', 'paid', 'failed'
-    payment_reference VARCHAR(255),                -- Invoice number / receipt
+    payment_status VARCHAR(50),
+    payment_reference VARCHAR(255),
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_tenant_subs_tenant ON tenant_subscriptions(tenant_id);
-CREATE INDEX idx_tenant_subs_status ON tenant_subscriptions(status);
-
-
--- Step 7: Auto-update Triggers
+-- Step 10: Create All Indexes
 -- =====================================================
+CREATE INDEX IF NOT EXISTS idx_tenants_email ON tenants(email);
+CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(subscription_status);
+CREATE INDEX IF NOT EXISTS idx_tenants_active ON tenants(is_active);
+CREATE INDEX IF NOT EXISTS idx_outlets_tenant ON outlets(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_products_outlet ON products(outlet_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_tenant ON transactions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_outlet ON transactions(outlet_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_audit_tenant ON tenant_audit_logs(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_subs_tenant ON tenant_subscriptions(tenant_id);
 
--- Trigger untuk updated_at di tenants
-CREATE OR REPLACE FUNCTION update_tenants_updated_at()
+-- Step 11: Insert Default Roles
+-- =====================================================
+INSERT INTO roles (name, permissions) VALUES
+('Super Admin', '{"all": true, "manage_tenants": true, "view_all_data": true}'),
+('Owner', '{"manage_outlets": true, "manage_users": true, "view_reports": true, "manage_products": true}'),
+('Manager', '{"manage_users": true, "view_reports": true, "manage_products": true, "manage_transactions": true}'),
+('Cashier', '{"create_transactions": true, "view_products": true, "manage_own_transactions": true}')
+ON CONFLICT (name) DO UPDATE SET permissions = EXCLUDED.permissions;
+
+-- Step 12: Create Update Triggers
+-- =====================================================
+CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
@@ -140,29 +197,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_tenants_updated_at
-    BEFORE UPDATE ON tenants
-    FOR EACH ROW
-    EXECUTE FUNCTION update_tenants_updated_at();
-
-
--- Step 8: Add Constraints untuk Data Isolation
--- =====================================================
-
--- Pastikan user hanya bisa akses outlet dalam tenant yang sama
--- (akan dihandle di application level via middleware)
-
-COMMENT ON COLUMN outlets.tenant_id IS 'Belongs to which tenant (data isolation)';
-COMMENT ON COLUMN users.tenant_id IS 'User belongs to this tenant only';
-COMMENT ON TABLE tenants IS 'Tenants/Penyewa yang sewa platform MyPOS (SaaS model)';
-
+-- Apply trigger to all tables with updated_at
+DO $$
+DECLARE
+    tbl TEXT;
+BEGIN
+    FOR tbl IN 
+        SELECT table_name 
+        FROM information_schema.columns 
+        WHERE column_name = 'updated_at' 
+        AND table_schema = 'public'
+    LOOP
+        EXECUTE format('DROP TRIGGER IF EXISTS trigger_%s_updated_at ON %s', tbl, tbl);
+        EXECUTE format('CREATE TRIGGER trigger_%s_updated_at BEFORE UPDATE ON %s FOR EACH ROW EXECUTE FUNCTION update_updated_at()', tbl, tbl);
+    END LOOP;
+END $$;
 
 -- =====================================================
 -- Migration Complete
 -- =====================================================
--- Next steps:
--- 1. Run seed_multi_tenant.sql untuk sample data
--- 2. Update Prisma schema
--- 3. Implement tenant middleware di backend
--- 4. Test dengan 2 tenant berbeda
-
