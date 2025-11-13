@@ -1,0 +1,185 @@
+<div class="top-bar">
+  <h1 class="page-title">Payments</h1>
+  <button class="btn btn-primary">Settings</button>
+</div>
+
+<div style="padding: 30px;">
+  <!-- Sub Navigation -->
+  <div class="tabs" style="margin-bottom: 30px;">
+    <button class="tab active" onclick="showPaymentTab('qris')">QRIS</button>
+    <button class="tab" onclick="showPaymentTab('config')">Payment Configuration</button>
+  </div>
+
+  <!-- QRIS Section -->
+  <div id="payment-qris" class="payment-section" style="display: block;">
+    <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 30px;">
+      <div class="stat-card">
+        <div class="stat-label">Total Transactions</div>
+        <div class="stat-value">156</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Amount</div>
+        <div class="stat-value">Rp. 12.5jt</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Success Rate</div>
+        <div class="stat-value">98.7%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg. Transaction</div>
+        <div class="stat-value">Rp. 80.128</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="filter-item">
+        <label>Date Range</label>
+        <input type="date" value="2025-11-01">
+      </div>
+      <div class="filter-item">
+        <label>To</label>
+        <input type="date" value="2025-11-13">
+      </div>
+      <div class="filter-item">
+        <label>Status</label>
+        <select>
+          <option>All Status</option>
+          <option>Success</option>
+          <option>Failed</option>
+          <option>Pending</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-container" style="margin-top: 20px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Transaction ID</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>QRIS-20251113-001</td>
+            <td>13/11/2025 14:23</td>
+            <td>Ahmad F.</td>
+            <td>Rp. 125.000</td>
+            <td><span class="badge badge-success">Success</span></td>
+          </tr>
+          <tr>
+            <td>QRIS-20251113-002</td>
+            <td>13/11/2025 15:45</td>
+            <td>Siti N.</td>
+            <td>Rp. 87.500</td>
+            <td><span class="badge badge-success">Success</span></td>
+          </tr>
+          <tr>
+            <td>QRIS-20251113-003</td>
+            <td>13/11/2025 16:12</td>
+            <td>Budi S.</td>
+            <td>Rp. 200.000</td>
+            <td><span class="badge badge-danger">Failed</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Payment Configuration Section -->
+  <div id="payment-config" class="payment-section" style="display: none;">
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Payment Method</th>
+            <th>Type</th>
+            <th>Fee</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="font-size: 24px;">💵</div>
+                <div>Cash</div>
+              </div>
+            </td>
+            <td>Manual</td>
+            <td>-</td>
+            <td><span class="badge badge-success">Active</span></td>
+            <td><button class="btn btn-primary" style="padding: 5px 15px; font-size: 12px;">Configure</button></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="font-size: 24px;">📱</div>
+                <div>QRIS</div>
+              </div>
+            </td>
+            <td>Digital</td>
+            <td>0.7%</td>
+            <td><span class="badge badge-success">Active</span></td>
+            <td><button class="btn btn-primary" style="padding: 5px 15px; font-size: 12px;">Configure</button></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="font-size: 24px;">💳</div>
+                <div>Debit/Credit Card</div>
+              </div>
+            </td>
+            <td>Digital</td>
+            <td>2.5%</td>
+            <td><span class="badge badge-warning">Inactive</span></td>
+            <td><button class="btn btn-primary" style="padding: 5px 15px; font-size: 12px;">Activate</button></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="font-size: 24px;">🏦</div>
+                <div>Bank Transfer</div>
+              </div>
+            </td>
+            <td>Manual</td>
+            <td>Rp. 4.000</td>
+            <td><span class="badge badge-success">Active</span></td>
+            <td><button class="btn btn-primary" style="padding: 5px 15px; font-size: 12px;">Configure</button></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="font-size: 24px;">📲</div>
+                <div>E-Wallet (GoPay, OVO, Dana)</div>
+              </div>
+            </td>
+            <td>Digital</td>
+            <td>1.5%</td>
+            <td><span class="badge badge-warning">Inactive</span></td>
+            <td><button class="btn btn-primary" style="padding: 5px 15px; font-size: 12px;">Activate</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPaymentTab(tabName) {
+  document.querySelectorAll('.payment-section').forEach(section => {
+    section.style.display = 'none';
+  });
+  document.getElementById('payment-' + tabName).style.display = 'block';
+
+  const tabs = event.target.closest('.tabs').querySelectorAll('.tab');
+  tabs.forEach(tab => tab.classList.remove('active'));
+  event.target.classList.add('active');
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+</script>

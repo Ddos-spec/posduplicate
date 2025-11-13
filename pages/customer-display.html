@@ -1,0 +1,120 @@
+<div class="top-bar">
+  <h1 class="page-title">Customer Display</h1>
+  <button class="btn btn-primary">Preview Display</button>
+</div>
+
+<div style="padding: 30px;">
+  <!-- Sub Navigation -->
+  <div class="tabs" style="margin-bottom: 30px;">
+    <button class="tab active" onclick="showDisplayTab('campaign')">Campaign</button>
+    <button class="tab" onclick="showDisplayTab('settings')">Settings</button>
+  </div>
+
+  <!-- Campaign Section -->
+  <div id="display-campaign" class="display-section" style="display: block;">
+    <div class="filters">
+      <div class="filter-item">
+        <select>
+          <option>All Outlets</option>
+          <option>Kebuli Utsman</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <select>
+          <option>All Types</option>
+          <option>Video</option>
+          <option>Image</option>
+          <option>Text</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <button class="btn btn-primary">Create Campaign</button>
+      </div>
+    </div>
+
+    <div class="table-container" style="margin-top: 20px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Campaign Name</th>
+            <th>Type</th>
+            <th>Duration</th>
+            <th>Schedule</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Welcome Message</td>
+            <td>Text</td>
+            <td>10 seconds</td>
+            <td>All Day</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+          <tr>
+            <td>Promo Ramadan</td>
+            <td>Image</td>
+            <td>15 seconds</td>
+            <td>10:00 - 22:00</td>
+            <td><span class="badge badge-warning">Scheduled</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Settings Section -->
+  <div id="display-settings" class="display-section" style="display: none;">
+    <div class="stat-card" style="max-width: 600px; margin: 0 auto;">
+      <h3 style="margin-bottom: 20px; font-size: 18px;">Display Configuration</h3>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Display Mode</label>
+        <select style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+          <option>Standard</option>
+          <option>Compact</option>
+          <option>Full Screen</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Theme</label>
+        <select style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+          <option>Light</option>
+          <option>Dark</option>
+          <option>Auto</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Language</label>
+        <select style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+          <option>Bahasa Indonesia</option>
+          <option>English</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Idle Timeout (seconds)</label>
+        <input type="number" value="30" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+      </div>
+
+      <button class="btn btn-primary" style="width: 100%; margin-top: 10px;">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showDisplayTab(tabName) {
+  document.querySelectorAll('.display-section').forEach(section => {
+    section.style.display = 'none';
+  });
+  document.getElementById('display-' + tabName).style.display = 'block';
+
+  const tabs = event.target.closest('.tabs').querySelectorAll('.tab');
+  tabs.forEach(tab => tab.classList.remove('active'));
+  event.target.classList.add('active');
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+</script>
