@@ -1,0 +1,62 @@
+<div class="top-bar">
+  <h1 class="page-title">Dashboard</h1>
+  <div class="filters">
+    <select class="px-3 py-2 border rounded">
+      <option>Kebuli Utsman</option>
+    </select>
+    <input type="date" value="2025-11-13" class="px-3 py-2 border rounded">
+  </div>
+</div>
+
+<div style="padding: 30px;">
+  <div class="tabs">
+    <button class="tab active">Summary</button>
+    <button class="tab">Outlet Comparison</button>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Gross Sales</div>
+      <div class="stat-value">Rp. 1.655.000</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Net Sales</div>
+      <div class="stat-value">Rp. 1.655.000</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Gross Profit</div>
+      <div class="stat-value">Rp. 506.940</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Transactions</div>
+      <div class="stat-value">8</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Average Sale per Transaction</div>
+      <div class="stat-value">Rp. 206.875</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Gross Margin</div>
+      <div class="stat-value">30.63%</div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-top: 30px;">
+    <div class="chart-container">
+      <div class="chart-title">Day of the Week Gross Sales Amount</div>
+      <canvas id="weekChart"></canvas>
+    </div>
+    <div class="chart-container">
+      <div class="chart-title">Hourly Gross Sales Amount</div>
+      <canvas id="hourlyChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-container" style="margin-top: 20px;">
+    <div class="chart-title">Item Summary</div>
+    <div class="empty-state">
+      <i data-lucide="package"></i>
+      <p>No item data available for selected period</p>
+    </div>
+  </div>
+</div>
