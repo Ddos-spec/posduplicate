@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>myPOS - Point of Sale System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    
+    .sidebar { 
+      background: #2c3e50;
+      color: #ecf0f1;
+      width: 200px;
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      overflow-y: auto;
+      transition: all 0.3s;
+    }
+    
+    .sidebar::-webkit-scrollbar { width: 6px; }
+    .sidebar::-webkit-scrollbar-track { background: #34495e; }
+    .sidebar::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+    
+    .sidebar-logo {
+      padding: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      border-bottom: 1px solid #34495e;
+      color: #3498db;
+    }
+    
+    .sidebar-menu { padding: 10px 0; }
+    
+    .menu-item {
+      padding: 12px 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #bdc3c7;
+      font-size: 14px;
+    }
+    
+    .menu-item:hover { background: #34495e; color: #fff; }
+    .menu-item.active { background: #3498db; color: #fff; }
+    
+    .menu-item i { width: 18px; height: 18px; margin-right: 10px; }
+    
+    .submenu {
+      background: #1a252f;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    
+    .submenu.open { max-height: 500px; }
+    
+    .submenu-item {
+      padding: 10px 20px 10px 48px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #95a5a6;
+      transition: all 0.2s;
+    }
+    
+    .submenu-item:hover { background: #34495e; color: #fff; }
+    .submenu-item.active { color: #3498db; background: #34495e; }
+    
+    .main-content {
+      margin-left: 200px;
+      padding: 0;
+      min-height: 100vh;
+      background: #f5f7fa;
+    }
+    
+    .top-bar {
+      background: #fff;
+      padding: 15px 30px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .page-title { font-size: 24px; font-weight: 600; color: #2c3e50; }
+    
+    .content-area {
+      padding: 30px;
+      display: none;
+    }
+    
+    .content-area.active { display: block; }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #7f8c8d;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2c3e50;
+    }
+    
+    .chart-container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    .chart-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+    
+    .table-container {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .table-header {
+      padding: 20px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .table-title { font-size: 18px; font-weight: 600; }
+    
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #3498db;
+      color: #fff;
+    }
+    
+    .btn-primary:hover { background: #2980b9; }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    thead {
+      background: #f8f9fa;
+    }
+    
+    th, td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    th {
+      font-weight: 600;
+      font-size: 12px;
+      color: #7f8c8d;
+      text-transform: uppercase;
+    }
+    
+    tbody tr:hover {
+      background: #f8f9fa;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 5px;
+      border-bottom: 2px solid #e0e0e0;
+      margin-bottom: 20px;
+    }
+    
+    .tab {
+      padding: 12px 24px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-weight: 500;
+      color: #7f8c8d;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    
+    .tab.active {
+      color: #3498db;
+      border-bottom-color: #3498db;
+    }
+    
+    .tab:hover { color: #2c3e50; }
+    
+    .filters {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .filter-item label {
+      font-size: 12px;
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+    
+    .filter-item select,
+    .filter-item input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #95a5a6;
+    }
+    
+    .empty-state i {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 15px;
+      color: #bdc3c7;
+    }
+    
+    .badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .badge-success { background: #d4edda; color: #155724; }
+    .badge-warning { background: #fff3cd; color: #856404; }
+    .badge-danger { background: #f8d7da; color: #721c24; }
+    
+    .chevron {
+      transition: transform 0.3s;
+    }
+    
+    .chevron.open {
+      transform: rotate(90deg);
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">myPOS</div>
+    
+    <div class="sidebar-menu">
+      <div class="menu-item" data-page="dashboard">
+        <span><i data-lucide="layout-dashboard"></i> Dashboard</span>
+      </div>
+      
+      <div class="menu-item" onclick="toggleSubmenu('reports')">
+        <span><i data-lucide="bar-chart-2"></i> Reports</span>
+        <i data-lucide="chevron-right" class="chevron" id="reports-chevron"></i>
+      </div>
+      <div class="submenu" id="reports-submenu">
+        <div class="submenu-item" data-page="sales">Sales</div>
+        <div class="submenu-item" data-page="transactions">Transactions</div>
+        <div class="submenu-item" data-page="invoices">Invoices</div>
+        <div class="submenu-item" data-page="shift">Shift</div>
+      </div>
+      
+      <div class="menu-item" onclick="toggleSubmenu('library')">
+        <span><i data-lucide="book-open"></i> Library</span>
+        <i data-lucide="chevron-right" class="chevron" id="library-chevron"></i>
+      </div>
+      <div class="submenu" id="library-submenu">
+        <div class="submenu-item" data-page="item-library">Item Library</div>
+        <div class="submenu-item" data-page="modifiers">Modifiers</div>
+        <div class="submenu-item" data-page="categories">Categories</div>
+        <div class="submenu-item" data-page="bundle">Bundle Package</div>
+        <div class="submenu-item" data-page="promo">Promo</div>
+        <div class="submenu-item" data-page="discounts">Discounts</div>
+        <div class="submenu-item" data-page="taxes">Taxes</div>
+      </div>
+      
+      <div class="menu-item" onclick="toggleSubmenu('ingredient')">
+        <span><i data-lucide="package"></i> Ingredient</span>
+        <i data-lucide="chevron-right" class="chevron" id="ingredient-chevron"></i>
+      </div>
+      <div class="submenu" id="ingredient-submenu">
+        <div class="submenu-item" data-page="ingredient-library">Ingredient Library</div>
+        <div class="submenu-item" data-page="ingredient-categories">Ingredient Categories</div>
+        <div class="submenu-item" data-page="recipes">Recipes</div>
+      </div>
+      
+      <div class="menu-item" onclick="toggleSubmenu('inventory')">
+        <span><i data-lucide="archive"></i> Inventory</span>
+        <i data-lucide="chevron-right" class="chevron" id="inventory-chevron"></i>
+      </div>
+      <div class="submenu" id="inventory-submenu">
+        <div class="submenu-item" data-page="inventory-summary">Summary</div>
+        <div class="submenu-item" data-page="suppliers">Suppliers</div>
+        <div class="submenu-item" data-page="purchase-order">Purchase Order</div>
+        <div class="submenu-item" data-page="transfer">Transfer</div>
+        <div class="submenu-item" data-page="adjustment">Adjustment</div>
+      </div>
+      
+      <div class="menu-item" onclick="toggleSubmenu('online')">
+        <span><i data-lucide="globe"></i> Online Channels</span>
+        <i data-lucide="chevron-right" class="chevron" id="online-chevron"></i>
+      </div>
+      <div class="submenu" id="online-submenu">
+        <div class="submenu-item" data-page="online-order">myPOS Order</div>
+        <div class="submenu-item" data-page="gofood">GoFood</div>
+      </div>
+      
+      <div class="menu-item" onclick="toggleSubmenu('customers')">
+        <span><i data-lucide="users"></i> Customers</span>
+        <i data-lucide="chevron-right" class="chevron" id="customers-chevron"></i>
+      </div>
+      <div class="submenu" id="customers-submenu">
+        <div class="submenu-item" data-page="customers-list">Customers List</div>
+        <div class="submenu-item" data-page="feedback">Feedback</div>
+        <div class="submenu-item" data-page="loyalty">Loyalty Program</div>
+      </div>
+      
+      <div class="menu-item" onclick="toggleSubmenu('employees')">
+        <span><i data-lucide="user-check"></i> Employees</span>
+        <i data-lucide="chevron-right" class="chevron" id="employees-chevron"></i>
+      </div>
+      <div class="submenu" id="employees-submenu">
+        <div class="submenu-item" data-page="employee-slots">Employee Slots</div>
+        <div class="submenu-item" data-page="employee-access">Employee Access</div>
+        <div class="submenu-item" data-page="pin-access">PIN Access</div>
+      </div>
+      
+      <div class="menu-item" onclick="toggleSubmenu('display')">
+        <span><i data-lucide="monitor"></i> Customer Display</span>
+        <i data-lucide="chevron-right" class="chevron" id="display-chevron"></i>
+      </div>
+      <div class="submenu" id="display-submenu">
+        <div class="submenu-item" data-page="campaign">Campaign</div>
+        <div class="submenu-item" data-page="display-settings">Settings</div>
+      </div>
+      
+      <div class="menu-item" data-page="table-management">
+        <span><i data-lucide="grid-3x3"></i> Table Management</span>
+      </div>
+      
+      <div class="menu-item" data-page="partner-solutions">
+        <span><i data-lucide="puzzle"></i> Partner Solutions</span>
+      </div>
+      
+      <div class="menu-item" onclick="toggleSubmenu('payments')">
+        <span><i data-lucide="credit-card"></i> Payments</span>
+        <i data-lucide="chevron-right" class="chevron" id="payments-chevron"></i>
+      </div>
+      <div class="submenu" id="payments-submenu">
+        <div class="submenu-item" data-page="qris">QRIS</div>
+        <div class="submenu-item" data-page="payment-config">Payment Configuration</div>
+      </div>
+      
+      <div class="menu-item" onclick="toggleSubmenu('settings')">
+        <span><i data-lucide="settings"></i> Account Settings</span>
+        <i data-lucide="chevron-right" class="chevron" id="settings-chevron"></i>
+      </div>
+      <div class="submenu" id="settings-submenu">
+        <div class="submenu-item" data-page="account">Account</div>
+        <div class="submenu-item" data-page="billing">Billing</div>
+        <div class="submenu-item" data-page="outlets">Outlets</div>
+        <div class="submenu-item" data-page="bank-account">Bank Account</div>
+        <div class="submenu-item" data-page="receipt">Receipt</div>
+        <div class="submenu-item" data-page="checkout">Checkout</div>
+      </div>
+    </div>
+    
+    <div style="padding: 20px; border-top: 1px solid #34495e; margin-top: 20px;">
+      <button class="btn btn-primary w-full">
+        <i data-lucide="book"></i> Tutorials & Help
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Dashboard Page -->
+    <div class="content-area active" id="dashboard">
+      <div class="top-bar">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="filters">
+          <select class="px-3 py-2 border rounded">
+            <option>Kebuli Utsman</option>
+          </select>
+          <input type="date" value="2025-11-13" class="px-3 py-2 border rounded">
+        </div>
+      </div>
+      
+      <div style="padding: 30px;">
+        <div class="tabs">
+          <button class="tab active">Summary</button>
+          <button class="tab">Outlet Comparison</button>
+        </div>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Gross Sales</div>
+            <div class="stat-value">Rp. 1.655.000</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Net Sales</div>
+            <div class="stat-value">Rp. 1.655.000</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Gross Profit</div>
+            <div class="stat-value">Rp. 506.940</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Transactions</div>
+            <div class="stat-value">8</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Average Sale per Transaction</div>
+            <div class="stat-value">Rp. 206.875</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Gross Margin</div>
+            <div class="stat-value">30.63%</div>
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-top: 30px;">
+          <div class="chart-container">
+            <div class="chart-title">Day of the Week Gross Sales Amount</div>
+            <canvas id="weekChart"></canvas>
+          </div>
+          <div class="chart-container">
+            <div class="chart-title">Hourly Gross Sales Amount</div>
+            <canvas id="hourlyChart"></canvas>
+          </div>
+        </div>
+        
+        <div class="chart-container" style="margin-top: 20px;">
+          <div class="chart-title">Item Summary</div>
+          <div class="empty-state">
+            <i data-lucide="package"></i>
+            <p>No item data available for selected period</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions Page -->
+    <div class="content-area" id="transactions">
+      <div class="top-bar">
+        <h1 class="page-title">Transactions</h1>
+        <button class="btn btn-primary">Export</button>
+      </div>
+      
+      <div style="padding: 30px;">
+        <div class="tabs">
+          <button class="tab active">Success Orders</button>
+          <button class="tab">Cancelled Orders</button>
+          <button class="tab">Void Items</button>
+        </div>
+        
+        <div class="filters">
+          <div class="filter-item">
+            <label>Outlet</label>
+            <select>
+              <option>All Outlet</option>
+              <option>Kebuli Utsman</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Date</label>
+            <input type="date" value="2025-11-13">
+          </div>
+          <div class="filter-item">
+            <label>Receipt Number</label>
+            <input type="text" placeholder="Search...">
+          </div>
+        </div>
+        
+        <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="stat-card">
+            <div class="stat-label">0 Transactions</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Rp. 0 Total Collected</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Rp. 0 Net Sales</div>
+          </div>
+        </div>
+        
+        <div class="table-container" style="margin-top: 20px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Outlet</th>
+                <th>Time</th>
+                <th>Collected By</th>
+                <th>Items</th>
+                <th>Total Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="5">
+                  <div class="empty-state">
+                    <i data-lucide="shopping-cart"></i>
+                    <p>No Transactions</p>
+                    <small>You can make transactions through your device, or select different time frame.</small>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Item Library Page -->
+    <div class="content-area" id="item-library">
+      <div class="top-bar">
+        <h1 class="page-title">Item Library</h1>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-primary">Import / Export</button>
+          <button class="btn btn-primary">Create Item</button>
+        </div>
+      </div>
+      
+      <div style="padding: 30px;">
+        <div class="filters">
+          <div class="filter-item">
+            <select>
+              <option>Kebuli Utsman</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <select>
+              <option>All Categories</option>
+              <option>Minuman</option>
+              <option>Makanan</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <select>
+              <option>All Inventory</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <input type="text" placeholder="Search">
+          </div>
+        </div>
+        
+        <div class="table-container" style="margin-top: 20px;">
+          <div class="table-header">
+            <div class="table-title">Total: 25</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Pricing</th>
+                <th>In Stock</th>
+                <th>Stock Alert</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Air Mineral</td>
+                <td>Minuman</td>
+                <td>Sales Type</td>
+                <td>36</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Ayam Kebuli Perpotong</td>
+                <td>Makanan</td>
+                <td>Sales Type</td>
+                <td>-</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Es Jeruk</td>
+                <td>Minuman</td>
+                <td>Sales Type</td>
+                <td>-</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Kambing Kebuli Perpotong</td>
+                <td>Makanan</td>
+                <td>Sales Type</td>
+                <td>-</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>loyang mix 3 ayam 2 kambing</td>
+                <td>Makanan</td>
+                <td>Sales Type</td>
+                <td>-</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ingredient Library Page -->
+    <div class="content-area" id="ingredient-library">
+      <div class="top-bar">
+        <h1 class="page-title">Ingredient Library</h1>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-primary">Import / Export</button>
+          <button class="btn btn-primary">Create Ingredient</button>
+        </div>
+      </div>
+      
+      <div style="padding: 30px;">
+        <div class="filters">
+          <div class="filter-item">
+            <select>
+              <option>Kebuli Utsman</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <select>
+              <option>All Ingredient Type</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <select>
+              <option>All Categories</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <select>
+              <option>All Inventory</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <input type="text" placeholder="Search">
+          </div>
+        </div>
+        
+        <div class="table-container" style="margin-top: 20px;">
+          <div class="table-header">
+            <div class="table-title">Total: 22</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>In Stock</th>
+                <th>Unit</th>
+                <th>Stock Alert</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Aluminium Foil</td>
+                <td>Bahan Baku</td>
+                <td>-905725</td>
+                <td>centimeter (cm)</td>
+                <td><span class="badge badge-danger">Out</span></td>
+              </tr>
+              <tr>
+                <td>Ayam Potong</td>
+                <td>Bahan Baku</td>
+                <td>290</td>
+                <td>potong (ptg)</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Bawang Bombay</td>
+                <td>Bahan Baku</td>
+                <td>-0.4</td>
+                <td>pieces (pcs)</td>
+                <td><span class="badge badge-danger">Out</span></td>
+              </tr>
+              <tr>
+                <td>Bawang Putih</td>
+                <td>Bahan Baku</td>
+                <td>-2348.18</td>
+                <td>pieces (pcs)</td>
+                <td><span class="badge badge-danger">Out</span></td>
+              </tr>
+              <tr>
+                <td>Beras</td>
+                <td>Bahan Baku</td>
+                <td>50.02</td>
+                <td>kilogram (kg)</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sales Report -->
+    <div class="content-area" id="sales">
+      <div class="top-bar">
+        <h1 class="page-title">Sales Report</h1>
+        <button class="btn btn-primary">Export</button>
+      </div>
+      
+      <div style="padding: 30px;">
+        <div class="filters">
+          <div class="filter-item">
+            <select>
+              <option>Kebuli Utsman</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <input type="date" value="2025-11-13">
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <canvas id="salesChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shift Report -->
+    <div class="content-area" id="shift">
+      <div class="top-bar">
+        <h1 class="page-title">Shift</h1>
+        <button class="btn btn-primary">Export</button>
+      </div>
+      
+      <div style="padding: 30px;">
+        <div class="filters">
+          <div class="filter-item">
+            <select>
+              <option>Kebuli Utsman</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <input type="date" value="2025-11-13">
+          </div>
+        </div>
+        
+        <div class="table-container" style="margin-top: 20px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Total Expected</th>
+                <th>Total Actual</th>
+                <th>Difference</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Kebuli Jordan</td>
+                <td>11/11/2025 10:16</td>
+                <td>11/11/2025 21:11</td>
+                <td>Rp. 1.655.000</td>
+                <td>Rp. 1.655.000</td>
+                <td>Rp. 0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inventory Summary -->
+    <div class="content-area" id="inventory-summary">
+      <div class="top-bar">
+        <h1 class="page-title">Inventory Summary</h1>
+        <button class="btn btn-primary">Export</button>
+      </div>
+      
+      <div style="padding: 30px;">
+        <div class="filters">
+          <div class="filter-item">
+            <select>
+              <option>Kebuli Utsman</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <select>
+              <option>Item Library</option>
+              <option>Ingredient Library</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <input type="text" placeholder="Search">
+          </div>
+        </div>
+        
+        <div class="table-container" style="margin-top: 20px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Name - Variant</th>
+                <th>Category</th>
+                <th>Beginning</th>
+                <th>Purchase Order</th>
+                <th>Sales</th>
+                <th>Transfer</th>
+                <th>Adjustment</th>
+                <th>Ending</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Air Mineral</td>
+                <td>Minuman</td>
+                <td>37</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>37</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customers List -->
+    <div class="content-area" id="customers-list">
+      <div class="top-bar">
+        <h1 class="page-title">Customer List</h1>
+        <button class="btn btn-primary">Import / Export</button>
+      </div>
+      
+      <div style="padding: 30px;">
+        <div class="filters">
+          <div class="filter-item">
+            <input type="text" placeholder="Name, email, phone">
+          </div>
+        </div>
+        
+        <div class="table-container" style="margin-top: 20px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Customer Since</th>
+                <th>This Month</th>
+                <th>This Year</th>
+                <th>Lifetime</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>asep</td>
+                <td>22-07-2020</td>
+                <td>Rp0</td>
+                <td>Rp0</td>
+                <td>Rp0</td>
+              </tr>
+              <tr>
+                <td>bapk bayu konsumer</td>
+                <td>29-07-2020</td>
+                <td>Rp0</td>
+                <td>Rp0</td>
+                <td>Rp65.000</td>
+              </tr>
+              <tr>
+                <td>basa</td>
+                <td>07-01-2020</td>
+                <td>Rp0</td>
+                <td>Rp0</td>
+                <td>Rp0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Employee Slots -->
+    <div class="content-area" id="employee-slots">
+      <div class="top-bar">
+        <h1 class="page-title">Employee Slots</h1>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-primary">Export</button>
+          <button class="btn btn-primary">Add Employee Slot</button>
+        </div>
+      </div>
+      
+      <div style="padding: 30px;">
+        <div class="filters">
+          <div class="filter-item">
+            <input type="text" placeholder="Search Employees">
+          </div>
+          <div class="filter-item">
+            <select>
+              <option>Active Employees</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="table-container" style="margin-top: 20px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee Name</th>
+                <th>Role</th>
+                <th>Assigned Outlet</th>
+                <th>Expiration Date</th>
+                <th>Slot Status</th>
+                <th>Outlet Parent</th>
+                <th>Employee Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>27 Nov 2025</td>
+                <td>Free</td>
+                <td>Kebuli Utsman</td>
+                <td><button class="btn btn-primary">Invite Employee</button></td>
+              </tr>
+              <tr>
+                <td>Asep asep</td>
+                <td>Cashier</td>
+                <td>Kebuli Utsman</td>
+                <td>27 Nov 2025</td>
+                <td>Free</td>
+                <td>Kebuli Utsman</td>
+                <td><span class="badge badge-success">Verified</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Other Pages (Placeholder) -->
+    <div class="content-area" id="invoices">
+      <div class="top-bar">
+        <h1 class="page-title">Invoice</h1>
+        <button class="btn btn-primary">Export</button>
+      </div>
+      <div style="padding: 30px;">
+        <div class="empty-state">
+          <i data-lucide="file-text"></i>
+          <p>No Data To Display</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Catch-all for other pages -->
+    <div class="content-area" id="modifiers">
+      <div class="top-bar"><h1 class="page-title">Modifiers</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="package"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="categories">
+      <div class="top-bar"><h1 class="page-title">Categories</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="folder"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="bundle">
+      <div class="top-bar"><h1 class="page-title">Bundle Package</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="package"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="promo">
+      <div class="top-bar"><h1 class="page-title">Promo</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="tag"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="discounts">
+      <div class="top-bar"><h1 class="page-title">Discounts</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="percent"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="taxes">
+      <div class="top-bar"><h1 class="page-title">Taxes</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="calculator"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="ingredient-categories">
+      <div class="top-bar"><h1 class="page-title">Ingredient Categories</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="folder"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="recipes">
+      <div class="top-bar"><h1 class="page-title">Recipes</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="book-open"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="suppliers">
+      <div class="top-bar"><h1 class="page-title">Suppliers</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="truck"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="purchase-order">
+      <div class="top-bar"><h1 class="page-title">Purchase Order</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="shopping-bag"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="transfer">
+      <div class="top-bar"><h1 class="page-title">Transfer</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="arrow-right-left"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="adjustment">
+      <div class="top-bar"><h1 class="page-title">Adjustment</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="edit"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="online-order">
+      <div class="top-bar"><h1 class="page-title">myPOS Order</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="smartphone"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="gofood">
+      <div class="top-bar"><h1 class="page-title">GoFood Integration</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="utensils"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="feedback">
+      <div class="top-bar"><h1 class="page-title">Feedback</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="message-square"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="loyalty">
+      <div class="top-bar"><h1 class="page-title">Loyalty Program</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="award"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="employee-access">
+      <div class="top-bar"><h1 class="page-title">Employee Access</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="key"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="pin-access">
+      <div class="top-bar"><h1 class="page-title">PIN Access</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="lock"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="campaign">
+      <div class="top-bar"><h1 class="page-title">Campaign</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="megaphone"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="display-settings">
+      <div class="top-bar"><h1 class="page-title">Display Settings</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="settings"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="table-management">
+      <div class="top-bar"><h1 class="page-title">Table Management</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="grid-3x3"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="partner-solutions">
+      <div class="top-bar"><h1 class="page-title">Partner Solutions</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="puzzle"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="qris">
+      <div class="top-bar"><h1 class="page-title">QRIS Payment</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="qr-code"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="payment-config">
+      <div class="top-bar"><h1 class="page-title">Payment Configuration</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="credit-card"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="account">
+      <div class="top-bar"><h1 class="page-title">Account Settings</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="user"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="billing">
+      <div class="top-bar"><h1 class="page-title">Billing</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="file-text"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="outlets">
+      <div class="top-bar"><h1 class="page-title">Outlets</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="store"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="bank-account">
+      <div class="top-bar"><h1 class="page-title">Bank Account</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="landmark"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="receipt">
+      <div class="top-bar"><h1 class="page-title">Receipt</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="receipt"></i><p>Coming Soon</p></div></div>
+    </div>
+    <div class="content-area" id="checkout">
+      <div class="top-bar"><h1 class="page-title">Checkout</h1></div>
+      <div style="padding: 30px;"><div class="empty-state"><i data-lucide="shopping-cart"></i><p>Coming Soon</p></div></div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+    
+    // Submenu toggle
+    function toggleSubmenu(id) {
+      const submenu = document.getElementById(id + '-submenu');
+      const chevron = document.getElementById(id + '-chevron');
+      
+      submenu.classList.toggle('open');
+      chevron.classList.toggle('open');
+    }
+    
+    // Page navigation
+    document.querySelectorAll('.menu-item[data-page], .submenu-item[data-page]').forEach(item => {
+      item.addEventListener('click', function() {
+        const page = this.getAttribute('data-page');
+        
+        // Hide all pages
+        document.querySelectorAll('.content-area').forEach(p => p.classList.remove('active'));
+        
+        // Show selected page
+        document.getElementById(page).classList.add('active');
+        
+        // Update active menu item
+        document.querySelectorAll('.menu-item, .submenu-item').forEach(m => m.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+    
+    // Charts
+    const weekCtx = document.getElementById('weekChart');
+    if (weekCtx) {
+      new Chart(weekCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+          datasets: [{
+            data: [0, 0, 0, 1655000, 0, 0, 0],
+            backgroundColor: '#3498db',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString();
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    const hourlyCtx = document.getElementById('hourlyChart');
+    if (hourlyCtx) {
+      new Chart(hourlyCtx, {
+        type: 'line',
+        data: {
+          labels: Array.from({length: 24}, (_, i) => i),
+          datasets: [{
+            data: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1200000,0,0,0,0],
+            backgroundColor: 'rgba(52, 152, 219, 0.2)',
+            borderColor: '#3498db',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString();
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    const salesCtx = document.getElementById('salesChart');
+    if (salesCtx) {
+      new Chart(salesCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+          datasets: [{
+            label: 'Gross Sales',
+            data: [650000, 1655000, 980000, 1200000],
+            backgroundColor: '#3498db',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return 'Rp. ' + value.toLocaleString();
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
