@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(README.md)",
+      "Bash(dir /s /b)",
+      "Bash(findstr:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

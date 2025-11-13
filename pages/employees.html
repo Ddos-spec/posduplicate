@@ -1,0 +1,163 @@
+<div class="top-bar">
+  <h1 class="page-title">Employees</h1>
+  <button class="btn btn-primary">Invite Employee</button>
+</div>
+
+<div style="padding: 30px;">
+  <!-- Sub Navigation -->
+  <div class="tabs" style="margin-bottom: 30px;">
+    <button class="tab active" onclick="showEmployeeTab('slots')">Employee Slots</button>
+    <button class="tab" onclick="showEmployeeTab('access')">Employee Access</button>
+    <button class="tab" onclick="showEmployeeTab('pin')">PIN Access</button>
+  </div>
+
+  <!-- Employee Slots Section -->
+  <div id="employee-slots" class="employee-section" style="display: block;">
+    <div class="filters">
+      <div class="filter-item">
+        <select>
+          <option>All Outlets</option>
+          <option>Kebuli Utsman</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <input type="text" placeholder="Search employees...">
+      </div>
+    </div>
+
+    <div class="table-container" style="margin-top: 20px;">
+      <div class="table-header">
+        <div class="table-title">Total: 2</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Outlets</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Kebuli Jordan</td>
+            <td>jordan@kebuli.com</td>
+            <td>Owner</td>
+            <td>All Outlets</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+          <tr>
+            <td>Kasir 1</td>
+            <td>kasir1@kebuli.com</td>
+            <td>Cashier</td>
+            <td>Kebuli Utsman</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Employee Access Section -->
+  <div id="employee-access" class="employee-section" style="display: none;">
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-title">Access Groups</div>
+        <button class="btn btn-primary">Create Group</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Group Name</th>
+            <th>Permissions</th>
+            <th>Members</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Owner</td>
+            <td>Full Access</td>
+            <td>1</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+          <tr>
+            <td>Cashier</td>
+            <td>Sales, Reports (View Only)</td>
+            <td>1</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+          <tr>
+            <td>Manager</td>
+            <td>Sales, Reports, Inventory</td>
+            <td>0</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PIN Access Section -->
+  <div id="employee-pin" class="employee-section" style="display: none;">
+    <div class="filters">
+      <div class="filter-item">
+        <select>
+          <option>Kebuli Utsman</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <input type="text" placeholder="Search by name or PIN...">
+      </div>
+    </div>
+
+    <div class="table-container" style="margin-top: 20px;">
+      <div class="table-header">
+        <div class="table-title">PIN Users</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>PIN</th>
+            <th>Role</th>
+            <th>Last Used</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Kebuli Jordan</td>
+            <td>****</td>
+            <td>Owner</td>
+            <td>11/11/2025 21:11</td>
+            <td><button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;">Reset PIN</button></td>
+          </tr>
+          <tr>
+            <td>Kasir 1</td>
+            <td>****</td>
+            <td>Cashier</td>
+            <td>11/11/2025 19:30</td>
+            <td><button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;">Reset PIN</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function showEmployeeTab(tabName) {
+  document.querySelectorAll('.employee-section').forEach(section => {
+    section.style.display = 'none';
+  });
+  document.getElementById('employee-' + tabName).style.display = 'block';
+
+  const tabs = event.target.closest('.tabs').querySelectorAll('.tab');
+  tabs.forEach(tab => tab.classList.remove('active'));
+  event.target.classList.add('active');
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+</script>

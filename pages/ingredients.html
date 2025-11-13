@@ -1,0 +1,215 @@
+<div class="top-bar">
+  <h1 class="page-title">Ingredients</h1>
+  <div style="display: flex; gap: 10px;">
+    <button class="btn btn-primary">Import / Export</button>
+    <button class="btn btn-primary" id="ingredientActionBtn">Create Ingredient</button>
+  </div>
+</div>
+
+<div style="padding: 30px;">
+  <!-- Sub Navigation -->
+  <div class="tabs" style="margin-bottom: 30px;">
+    <button class="tab active" onclick="showIngredientTab('library')">Ingredient Library</button>
+    <button class="tab" onclick="showIngredientTab('categories')">Categories</button>
+    <button class="tab" onclick="showIngredientTab('recipes')">Recipes</button>
+  </div>
+
+  <!-- Ingredient Library Section -->
+  <div id="ingredient-library" class="ingredient-section" style="display: block;">
+    <div class="filters">
+      <div class="filter-item">
+        <select>
+          <option>Kebuli Utsman</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <select>
+          <option>All Ingredient Type</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <select>
+          <option>All Categories</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <select>
+          <option>All Inventory</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <input type="text" placeholder="Search">
+      </div>
+    </div>
+
+    <div class="table-container" style="margin-top: 20px;">
+      <div class="table-header">
+        <div class="table-title">Total: 22</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>In Stock</th>
+            <th>Unit</th>
+            <th>Stock Alert</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Aluminium Foil</td>
+            <td>Bahan Baku</td>
+            <td>-905725</td>
+            <td>centimeter (cm)</td>
+            <td><span class="badge badge-danger">Out</span></td>
+          </tr>
+          <tr>
+            <td>Ayam Potong</td>
+            <td>Bahan Baku</td>
+            <td>290</td>
+            <td>potong (ptg)</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Bawang Bombay</td>
+            <td>Bahan Baku</td>
+            <td>-0.4</td>
+            <td>pieces (pcs)</td>
+            <td><span class="badge badge-danger">Out</span></td>
+          </tr>
+          <tr>
+            <td>Bawang Putih</td>
+            <td>Bahan Baku</td>
+            <td>-2348.18</td>
+            <td>pieces (pcs)</td>
+            <td><span class="badge badge-danger">Out</span></td>
+          </tr>
+          <tr>
+            <td>Beras</td>
+            <td>Bahan Baku</td>
+            <td>50.02</td>
+            <td>kilogram (kg)</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Categories Section -->
+  <div id="ingredient-categories" class="ingredient-section" style="display: none;">
+    <div class="filters">
+      <div class="filter-item">
+        <select>
+          <option>Kebuli Utsman</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <input type="text" placeholder="Search categories...">
+      </div>
+    </div>
+
+    <div class="table-container" style="margin-top: 20px;">
+      <div class="table-header">
+        <div class="table-title">Total: 1</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Category Name</th>
+            <th>Ingredients</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Bahan Baku</td>
+            <td>22 ingredients</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recipes Section -->
+  <div id="ingredient-recipes" class="ingredient-section" style="display: none;">
+    <div class="filters">
+      <div class="filter-item">
+        <select>
+          <option>Kebuli Utsman</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <input type="text" placeholder="Search recipes...">
+      </div>
+    </div>
+
+    <div class="table-container" style="margin-top: 20px;">
+      <div class="table-header">
+        <div class="table-title">Total: 5</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Recipe Name</th>
+            <th>Yield</th>
+            <th>Cost per Unit</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Nasi Kebuli</td>
+            <td>1 porsi</td>
+            <td>Rp. 12.500</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+          <tr>
+            <td>Ayam Kebuli</td>
+            <td>1 potong</td>
+            <td>Rp. 18.000</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+          <tr>
+            <td>Kambing Kebuli</td>
+            <td>1 potong</td>
+            <td>Rp. 35.000</td>
+            <td><span class="badge badge-success">Active</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function showIngredientTab(tabName) {
+  // Hide all sections
+  document.querySelectorAll('.ingredient-section').forEach(section => {
+    section.style.display = 'none';
+  });
+
+  // Show selected section
+  document.getElementById('ingredient-' + tabName).style.display = 'block';
+
+  // Update active tab
+  const tabs = event.target.closest('.tabs').querySelectorAll('.tab');
+  tabs.forEach(tab => tab.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // Update action button text
+  const btnText = {
+    'library': 'Create Ingredient',
+    'categories': 'Create Category',
+    'recipes': 'Create Recipe'
+  };
+  document.getElementById('ingredientActionBtn').textContent = btnText[tabName] || 'Create';
+
+  // Reinitialize icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+</script>
