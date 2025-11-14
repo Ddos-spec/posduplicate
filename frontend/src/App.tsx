@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import CashierPage from './pages/CashierPage';
 import AdminLayout from './pages/AdminLayout';
 import DashboardPage from './pages/DashboardPage';
+import EmployeeManagementPage from './pages/EmployeeManagementPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
@@ -35,6 +36,14 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute>
+              <EmployeeManagementPage />
             </ProtectedRoute>
           }
         />
