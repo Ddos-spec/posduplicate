@@ -17,8 +17,29 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
+
+      // Get user from store after login
+      const user = useAuthStore.getState().user;
+      // Backend sends 'roles' not 'role'
+      const roleName = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+
+      console.log('User logged in:', user);
+      console.log('Role name:', roleName);
+
       toast.success('Login successful!');
-      navigate('/cashier');
+
+      // Redirect based on role
+      if (roleName === 'owner' || roleName === 'admin') {
+        console.log('Redirecting to dashboard');
+        navigate('/dashboard');
+      } else if (roleName === 'cashier' || roleName === 'kasir') {
+        console.log('Redirecting to cashier');
+        navigate('/cashier');
+      } else {
+        // Default to cashier for other roles
+        console.log('Redirecting to cashier (default)');
+        navigate('/cashier');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Login failed');
     } finally {
