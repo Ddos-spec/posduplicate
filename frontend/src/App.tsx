@@ -6,6 +6,7 @@ import CashierPage from './pages/CashierPage';
 import AdminLayout from './pages/AdminLayout';
 import DashboardPage from './pages/DashboardPage';
 import EmployeeManagementPage from './pages/EmployeeManagementPage';
+import PromotionsPage from './pages/PromotionsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
@@ -44,6 +45,14 @@ function App() {
           element={
             <ProtectedRoute>
               <EmployeeManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/promotions"
+          element={
+            <ProtectedRoute>
+              <PromotionsPage />
             </ProtectedRoute>
           }
         />
