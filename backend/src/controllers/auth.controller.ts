@@ -23,9 +23,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        role: true,
-        tenant: true,
-        outlet: true
+        roles: true,
+        tenants: true,
+        outlets: true
       }
     });
 
@@ -54,15 +54,15 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     // Check tenant status (if not Super Admin)
-    if (user.role.name !== 'Super Admin') {
-      if (!user.tenant || !user.tenant.isActive) {
+    if (user.roles.name !== 'Super Admin') {
+      if (!user.tenants || !user.tenants.isActive) {
         return res.status(403).json({
           success: false,
           error: { code: 'TENANT_INACTIVE', message: 'Tenant account is inactive' }
         });
       }
 
-      if (user.tenant.subscriptionStatus !== 'active' && user.tenant.subscriptionStatus !== 'trial') {
+      if (user.tenants.subscriptionStatus !== 'active' && user.tenants.subscriptionStatus !== 'trial') {
         return res.status(403).json({
           success: false,
           error: { code: 'SUBSCRIPTION_EXPIRED', message: 'Subscription has expired' }
@@ -82,7 +82,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         userId: user.id,
         email: user.email,
         roleId: user.roleId,
-        roleName: user.role.name,
+        roleName: user.roles.name,
         tenantId: user.tenantId,
         outletId: user.outletId
       },
@@ -143,9 +143,9 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         outletId
       },
       include: {
-        role: true,
-        tenant: true,
-        outlet: true
+        roles: true,
+        tenants: true,
+        outlets: true
       }
     });
 
@@ -169,9 +169,9 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
       include: {
-        role: true,
-        tenant: true,
-        outlet: true
+        roles: true,
+        tenants: true,
+        outlets: true
       }
     });
 

@@ -11,7 +11,18 @@
       "Bash(echo:*)",
       "Bash(.env)",
       "Bash(npm run build:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(node generate-password.js:*)",
+      "Bash(node:*)",
+      "Bash(npx prisma generate)",
+      "Bash(timeout 3 echo:*)",
+      "Bash(exit 0)",
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 5 echo:*)",
+      "Bash(taskkill:*)",
+      "Bash(nul)",
+      "Bash(timeout 8 echo:*)"
     ],
     "deny": [],
     "ask": []

@@ -33,6 +33,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
+// Root route
+app.get('/', (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    message: 'MyPOS API Server',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api: '/api',
+      auth: '/api/auth/login',
+      products: '/api/products',
+      categories: '/api/categories',
+      transactions: '/api/transactions'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check
 app.get('/health', (req: Request, res: Response) => {
   res.json({

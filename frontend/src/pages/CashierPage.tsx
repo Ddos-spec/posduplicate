@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { useCartStore } from '../store/cartStore';
 import api from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
-import { ShoppingCart, Search, X, Plus, Minus, Trash2, CreditCard } from 'lucide-react';
+import { ShoppingCart, Search, X, Plus, Minus, Trash2, CreditCard, Edit, Settings, Receipt, UtensilsCrossed, Tag, Menu } from 'lucide-react';
+import TransactionHistory from '../components/transaction/TransactionHistory';
+import TableManagement from '../components/table/TableManagement';
+import ModifierManagement from '../components/modifiers/ModifierManagement';
 
 interface Product {
   id: number;
   name: string;
   price: number;
-  category?: { name: string };
+  category?: { id: number; name: string };
   image?: string;
+  description?: string;
 }
 
 interface Category {
@@ -26,6 +30,42 @@ export default function CashierPage() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [cashReceived, setCashReceived] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Split bill states
+  const [splitBillMode, setSplitBillMode] = useState(false);
+  const [payments, setPayments] = useState<Array<{ method: string; amount: string; cashReceived?: string }>>([]);
+  const [currentPaymentAmount, setCurrentPaymentAmount] = useState('');
+
+  // Product management states
+  const [managementMode, setManagementMode] = useState(false);
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productForm, setProductForm] = useState({
+    name: '',
+    categoryId: '',
+    price: '',
+    image: '',
+    description: ''
+  });
+
+  // Category management states
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    type: 'item'
+  });
+
+  // Transaction history state
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+
+  // Table & Modifier states
+  const [showTableManagement, setShowTableManagement] = useState(false);
+  const [showModifierManagement, setShowModifierManagement] = useState(false);
+
+  // Mobile menu state
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showMobileCart, setShowMobileCart] = useState(false);
 
   const { items, addItem, updateQuantity, removeItem, clearCart, getTotal, getSubtotal } = useCartStore();
 
@@ -70,11 +110,75 @@ export default function CashierPage() {
       return;
     }
     setShowPayment(true);
+    setSplitBillMode(false);
+    setPayments([]);
+    setCurrentPaymentAmount('');
+  };
+
+  const handleAddPayment = () => {
+    if (!currentPaymentAmount || parseFloat(currentPaymentAmount) <= 0) {
+      toast.error('Please enter valid amount');
+      return;
+    }
+
+    const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    const remaining = getTotal() - totalPaid;
+    const amount = parseFloat(currentPaymentAmount);
+
+    if (amount > remaining) {
+      toast.error(`Amount exceeds remaining balance (Rp ${remaining.toLocaleString()})`);
+      return;
+    }
+
+    setPayments([...payments, {
+      method: paymentMethod,
+      amount: currentPaymentAmount,
+      cashReceived: paymentMethod === 'cash' ? cashReceived : undefined
+    }]);
+
+    setCurrentPaymentAmount('');
+    setCashReceived('');
+    toast.success('Payment added');
+  };
+
+  const handleRemovePayment = (index: number) => {
+    setPayments(payments.filter((_, i) => i !== index));
+  };
+
+  const getTotalPaid = () => {
+    return payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+  };
+
+  const getRemainingAmount = () => {
+    return getTotal() - getTotalPaid();
   };
 
   const handlePayment = async () => {
     setIsProcessing(true);
     try {
+      let finalPayments;
+
+      if (splitBillMode) {
+        if (getRemainingAmount() > 0) {
+          toast.error('Please complete all payments');
+          setIsProcessing(false);
+          return;
+        }
+        finalPayments = payments.map(p => ({
+          method: p.method,
+          amount: parseFloat(p.amount),
+          changeAmount: p.method === 'cash' && p.cashReceived
+            ? parseFloat(p.cashReceived) - parseFloat(p.amount)
+            : 0
+        }));
+      } else {
+        finalPayments = [{
+          method: paymentMethod,
+          amount: getTotal(),
+          changeAmount: paymentMethod === 'cash' ? parseFloat(cashReceived || '0') - getTotal() : 0,
+        }];
+      }
+
       const orderData = {
         orderType: 'dine_in',
         items: items.map(item => ({
@@ -91,11 +195,7 @@ export default function CashierPage() {
         taxAmount: 0,
         serviceCharge: 0,
         total: getTotal(),
-        payments: [{
-          method: paymentMethod,
-          amount: getTotal(),
-          changeAmount: paymentMethod === 'cash' ? parseFloat(cashReceived || '0') - getTotal() : 0,
-        }],
+        payments: finalPayments,
       };
 
       await api.post('/transactions', orderData);
@@ -103,6 +203,8 @@ export default function CashierPage() {
       clearCart();
       setShowPayment(false);
       setCashReceived('');
+      setPayments([]);
+      setSplitBillMode(false);
     } catch (error: any) {
       toast.error(error.response?.data?.error?.message || 'Payment failed');
     } finally {
@@ -112,6 +214,139 @@ export default function CashierPage() {
 
   const changeAmount = cashReceived ? parseFloat(cashReceived) - getTotal() : 0;
 
+  // Product management handlers
+  const handleOpenProductForm = (product?: Product) => {
+    if (product) {
+      setEditingProduct(product);
+      setProductForm({
+        name: product.name,
+        categoryId: product.category?.id?.toString() || '',
+        price: product.price.toString(),
+        image: product.image || '',
+        description: product.description || ''
+      });
+    } else {
+      setEditingProduct(null);
+      setProductForm({
+        name: '',
+        categoryId: '',
+        price: '',
+        image: '',
+        description: ''
+      });
+    }
+    setShowProductForm(true);
+  };
+
+  const handleSaveProduct = async () => {
+    if (!productForm.name || !productForm.categoryId || !productForm.price) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const data = {
+        name: productForm.name,
+        categoryId: parseInt(productForm.categoryId),
+        price: parseFloat(productForm.price),
+        image: productForm.image || null,
+        description: productForm.description || null,
+        isActive: true
+      };
+
+      if (editingProduct) {
+        await api.put(`/products/${editingProduct.id}`, data);
+        toast.success('Product updated successfully');
+      } else {
+        await api.post('/products', data);
+        toast.success('Product created successfully');
+      }
+
+      setShowProductForm(false);
+      loadProducts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error?.message || 'Failed to save product');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: number) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+
+    try {
+      await api.delete(`/products/${productId}`);
+      toast.success('Product deleted successfully');
+      loadProducts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error?.message || 'Failed to delete product');
+    }
+  };
+
+  // Category management handlers
+  const handleOpenCategoryForm = (category?: Category) => {
+    if (category) {
+      setEditingCategory(category);
+      setCategoryForm({
+        name: category.name,
+        type: 'item'
+      });
+    } else {
+      setEditingCategory(null);
+      setCategoryForm({
+        name: '',
+        type: 'item'
+      });
+    }
+    setShowCategoryForm(true);
+  };
+
+  const handleSaveCategory = async () => {
+    if (!categoryForm.name) {
+      toast.error('Category name is required');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const data = {
+        name: categoryForm.name,
+        type: categoryForm.type
+      };
+
+      if (editingCategory) {
+        await api.put(`/categories/${editingCategory.id}`, data);
+        toast.success('Category updated successfully');
+      } else {
+        await api.post('/categories', data);
+        toast.success('Category created successfully');
+      }
+
+      setShowCategoryForm(false);
+      loadCategories();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error?.message || 'Failed to save category');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: number) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
+
+    try {
+      await api.delete(`/categories/${categoryId}`);
+      toast.success('Category deleted successfully');
+      loadCategories();
+      if (selectedCategory === categoryId) {
+        setSelectedCategory(null);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error?.message || 'Failed to delete category');
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-100">
       <Toaster position="top-right" />
@@ -120,8 +355,8 @@ export default function CashierPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="bg-white p-4 shadow-sm">
-          <div className="flex gap-4">
-            <div className="flex-1 relative">
+          <div className="flex gap-2 md:gap-4 flex-wrap">
+            <div className="flex-1 min-w-[200px] relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
@@ -132,41 +367,145 @@ export default function CashierPage() {
                 onKeyUp={(e) => e.key === 'Enter' && loadProducts()}
               />
             </div>
+            {/* Desktop Buttons */}
+            <div className="hidden md:flex gap-2">
+              <button
+                onClick={() => setShowTableManagement(true)}
+                className="px-4 py-2 rounded-lg bg-indigo-500 text-white flex items-center gap-2 hover:bg-indigo-600"
+              >
+                <UtensilsCrossed className="w-5 h-5" />
+                Tables
+              </button>
+              <button
+                onClick={() => setShowModifierManagement(true)}
+                className="px-4 py-2 rounded-lg bg-pink-500 text-white flex items-center gap-2 hover:bg-pink-600"
+              >
+                <Tag className="w-5 h-5" />
+                Modifiers
+              </button>
+              <button
+                onClick={() => setShowTransactionHistory(true)}
+                className="px-4 py-2 rounded-lg bg-purple-500 text-white flex items-center gap-2 hover:bg-purple-600"
+              >
+                <Receipt className="w-5 h-5" />
+                Transactions
+              </button>
+              <button
+                onClick={() => setManagementMode(!managementMode)}
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                  managementMode ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                <Settings className="w-5 h-5" />
+                {managementMode ? 'Exit' : 'Manage'}
+              </button>
+              {managementMode && (
+                <button
+                  onClick={() => handleOpenProductForm()}
+                  className="px-4 py-2 rounded-lg bg-green-500 text-white flex items-center gap-2 hover:bg-green-600"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add
+                </button>
+              )}
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="md:hidden px-4 py-2 rounded-lg bg-blue-500 text-white"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Mobile Cart Button */}
+            <button
+              onClick={() => setShowMobileCart(true)}
+              className="md:hidden px-4 py-2 rounded-lg bg-blue-500 text-white flex items-center gap-2"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              <span className="font-semibold">{items.length}</span>
+            </button>
           </div>
 
           {/* Categories */}
-          <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+          <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-2">
             <button
               onClick={() => setSelectedCategory(null)}
               className={`px-4 py-2 rounded-lg whitespace-nowrap ${
                 !selectedCategory ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
               }`}
+              disabled={managementMode}
             >
               All
             </button>
             {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-                  selectedCategory === cat.id ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                {cat.name}
-              </button>
+              <div key={cat.id} className="relative inline-block">
+                <button
+                  onClick={() => !managementMode && setSelectedCategory(cat.id)}
+                  className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+                    selectedCategory === cat.id ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+                  } ${managementMode ? 'pr-20' : ''}`}
+                >
+                  {cat.name}
+                </button>
+                {managementMode && (
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
+                    <button
+                      onClick={() => handleOpenCategoryForm(cat)}
+                      className="bg-blue-500 text-white p-1.5 rounded hover:bg-blue-600"
+                    >
+                      <Edit className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategory(cat.id)}
+                      className="bg-red-500 text-white p-1.5 rounded hover:bg-red-600"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
             ))}
+            {managementMode && (
+              <button
+                onClick={() => handleOpenCategoryForm()}
+                className="px-4 py-2 rounded-lg bg-green-500 text-white flex items-center gap-2 hover:bg-green-600 whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" />
+                Add Category
+              </button>
+            )}
           </div>
         </div>
 
         {/* Products Grid */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="flex-1 overflow-y-auto p-2 md:p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
             {products.map((product) => (
               <div
                 key={product.id}
-                onClick={() => handleAddToCart(product)}
-                className="bg-white rounded-lg p-4 shadow hover:shadow-lg cursor-pointer transition"
+                onClick={() => !managementMode && handleAddToCart(product)}
+                className={`bg-white rounded-lg p-4 shadow hover:shadow-lg transition relative ${
+                  !managementMode ? 'cursor-pointer' : ''
+                }`}
               >
+                {managementMode && (
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button
+                      onClick={() => handleOpenProductForm(product)}
+                      className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProduct(product.id)}
+                      className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
                 <div className="aspect-square bg-gray-200 rounded-lg mb-3 flex items-center justify-center">
                   {product.image ? (
                     <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded-lg" />
@@ -185,8 +524,8 @@ export default function CashierPage() {
         </div>
       </div>
 
-      {/* Cart Section */}
-      <div className="w-96 bg-white border-l flex flex-col">
+      {/* Cart Section - Desktop */}
+      <div className="hidden md:flex w-96 bg-white border-l flex-col">
         <div className="p-4 border-b">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <ShoppingCart className="w-6 h-6" />
@@ -261,7 +600,7 @@ export default function CashierPage() {
       {/* Payment Modal */}
       {showPayment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
+          <div className="bg-white rounded-lg p-6 w-[500px] max-w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Payment</h3>
               <button onClick={() => setShowPayment(false)} className="text-gray-400 hover:text-gray-600">
@@ -269,57 +608,486 @@ export default function CashierPage() {
               </button>
             </div>
 
-            <div className="mb-4">
+            <div className="mb-4 pb-4 border-b">
               <p className="text-sm text-gray-600 mb-1">Total Amount</p>
               <p className="text-3xl font-bold text-blue-600">Rp {getTotal().toLocaleString()}</p>
             </div>
 
+            {/* Split Bill Toggle */}
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Payment Method</label>
-              <div className="grid grid-cols-3 gap-2">
-                {['cash', 'card', 'qris'].map((method) => (
-                  <button
-                    key={method}
-                    onClick={() => setPaymentMethod(method)}
-                    className={`py-2 rounded-lg capitalize ${
-                      paymentMethod === method
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {method}
-                  </button>
-                ))}
-              </div>
+              <button
+                onClick={() => {
+                  setSplitBillMode(!splitBillMode);
+                  if (!splitBillMode) {
+                    setPayments([]);
+                    setCurrentPaymentAmount('');
+                  }
+                }}
+                className={`w-full py-2 rounded-lg font-semibold ${
+                  splitBillMode
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {splitBillMode ? '✓ Split Bill Mode' : 'Enable Split Bill'}
+              </button>
             </div>
 
-            {paymentMethod === 'cash' && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Cash Received</label>
-                <input
-                  type="number"
-                  value={cashReceived}
-                  onChange={(e) => setCashReceived(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="0"
-                />
-                {changeAmount >= 0 && cashReceived && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    Change: <span className="font-semibold">Rp {changeAmount.toLocaleString()}</span>
-                  </p>
-                )}
-              </div>
-            )}
+            {splitBillMode ? (
+              <>
+                {/* Split Bill UI */}
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Total Paid:</span>
+                    <span className="text-lg font-bold text-green-600">Rp {getTotalPaid().toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Remaining:</span>
+                    <span className="text-lg font-bold text-red-600">Rp {getRemainingAmount().toLocaleString()}</span>
+                  </div>
+                </div>
 
-            <button
-              onClick={handlePayment}
-              disabled={isProcessing || (paymentMethod === 'cash' && changeAmount < 0)}
-              className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              {isProcessing ? 'Processing...' : 'Confirm Payment'}
-            </button>
+                {/* Payment List */}
+                {payments.length > 0 && (
+                  <div className="mb-4 space-y-2">
+                    {payments.map((payment, index) => (
+                      <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                        <div>
+                          <span className="font-semibold capitalize">{payment.method}</span>
+                          <p className="text-sm text-gray-600">Rp {parseFloat(payment.amount).toLocaleString()}</p>
+                        </div>
+                        <button
+                          onClick={() => handleRemovePayment(index)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add Payment Form */}
+                {getRemainingAmount() > 0 && (
+                  <>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2">Payment Method</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['cash', 'card', 'qris'].map((method) => (
+                          <button
+                            key={method}
+                            onClick={() => setPaymentMethod(method)}
+                            className={`py-2 rounded-lg capitalize text-sm ${
+                              paymentMethod === method
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            {method}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2">Amount</label>
+                      <input
+                        type="number"
+                        value={currentPaymentAmount}
+                        onChange={(e) => setCurrentPaymentAmount(e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter amount"
+                      />
+                      <button
+                        onClick={() => setCurrentPaymentAmount(getRemainingAmount().toString())}
+                        className="text-xs text-blue-600 hover:underline mt-1"
+                      >
+                        Pay Remaining (Rp {getRemainingAmount().toLocaleString()})
+                      </button>
+                    </div>
+
+                    {paymentMethod === 'cash' && currentPaymentAmount && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium mb-2">Cash Received</label>
+                        <input
+                          type="number"
+                          value={cashReceived}
+                          onChange={(e) => setCashReceived(e.target.value)}
+                          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Cash received"
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleAddPayment}
+                      className="w-full bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 mb-4"
+                    >
+                      <Plus className="w-4 h-4 inline mr-2" />
+                      Add Payment
+                    </button>
+                  </>
+                )}
+
+                <button
+                  onClick={handlePayment}
+                  disabled={isProcessing || getRemainingAmount() > 0}
+                  className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Processing...' : 'Complete Transaction'}
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Single Payment UI */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Payment Method</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['cash', 'card', 'qris'].map((method) => (
+                      <button
+                        key={method}
+                        onClick={() => setPaymentMethod(method)}
+                        className={`py-2 rounded-lg capitalize ${
+                          paymentMethod === method
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {paymentMethod === 'cash' && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-2">Cash Received</label>
+                    <input
+                      type="number"
+                      value={cashReceived}
+                      onChange={(e) => setCashReceived(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="0"
+                    />
+                    {changeAmount >= 0 && cashReceived && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        Change: <span className="font-semibold">Rp {changeAmount.toLocaleString()}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  onClick={handlePayment}
+                  disabled={isProcessing || (paymentMethod === 'cash' && changeAmount < 0)}
+                  className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Processing...' : 'Confirm Payment'}
+                </button>
+              </>
+            )}
           </div>
         </div>
+      )}
+
+      {/* Category Form Modal */}
+      {showCategoryForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">{editingCategory ? 'Edit Category' : 'Add New Category'}</h3>
+              <button onClick={() => setShowCategoryForm(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Category Name *</label>
+                <input
+                  type="text"
+                  value={categoryForm.name}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter category name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Category Type</label>
+                <select
+                  value={categoryForm.type}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, type: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="item">Item</option>
+                  <option value="ingredient">Ingredient</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={() => setShowCategoryForm(false)}
+                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveCategory}
+                  disabled={isProcessing}
+                  className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Saving...' : editingCategory ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product Form Modal */}
+      {showProductForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[500px] max-w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
+              <button onClick={() => setShowProductForm(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Product Name *</label>
+                <input
+                  type="text"
+                  value={productForm.name}
+                  onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter product name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Category *</label>
+                <select
+                  value={productForm.categoryId}
+                  onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Price *</label>
+                <input
+                  type="number"
+                  value={productForm.price}
+                  onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Image URL</label>
+                <input
+                  type="text"
+                  value={productForm.image}
+                  onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Description</label>
+                <textarea
+                  value={productForm.description}
+                  onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter product description"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={() => setShowProductForm(false)}
+                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveProduct}
+                  disabled={isProcessing}
+                  className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Saving...' : editingProduct ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Cart Drawer */}
+      {showMobileCart && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden">
+          <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <ShoppingCart className="w-6 h-6" />
+                Cart ({items.length})
+              </h2>
+              <button onClick={() => setShowMobileCart(false)} className="text-gray-400">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {items.length === 0 ? (
+                <div className="text-center text-gray-400 mt-8">
+                  <ShoppingCart className="w-16 h-16 mx-auto mb-2 opacity-50" />
+                  <p>Cart is empty</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {items.map((item) => (
+                    <div key={item.id} className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex justify-between mb-2">
+                        <span className="font-medium">{item.name}</span>
+                        <button onClick={() => removeItem(item.id)} className="text-red-500">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <span className="w-8 text-center font-semibold">{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <span className="font-semibold text-blue-600">
+                          Rp {(item.price * item.quantity).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t p-4">
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total:</span>
+                  <span className="text-blue-600">Rp {getTotal().toLocaleString()}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowMobileCart(false);
+                  handleCheckout();
+                }}
+                disabled={items.length === 0}
+                className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold disabled:bg-gray-300 flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-5 h-5" />
+                Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Menu */}
+      {showMobileMenu && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden">
+          <div className="absolute left-0 top-0 bottom-0 w-full max-w-xs bg-white p-4">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Menu</h2>
+              <button onClick={() => setShowMobileMenu(false)} className="text-gray-400">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  setShowTableManagement(true);
+                  setShowMobileMenu(false);
+                }}
+                className="w-full px-4 py-3 bg-indigo-500 text-white rounded-lg flex items-center gap-2"
+              >
+                <UtensilsCrossed className="w-5 h-5" />
+                Tables
+              </button>
+              <button
+                onClick={() => {
+                  setShowModifierManagement(true);
+                  setShowMobileMenu(false);
+                }}
+                className="w-full px-4 py-3 bg-pink-500 text-white rounded-lg flex items-center gap-2"
+              >
+                <Tag className="w-5 h-5" />
+                Modifiers
+              </button>
+              <button
+                onClick={() => {
+                  setShowTransactionHistory(true);
+                  setShowMobileMenu(false);
+                }}
+                className="w-full px-4 py-3 bg-purple-500 text-white rounded-lg flex items-center gap-2"
+              >
+                <Receipt className="w-5 h-5" />
+                Transactions
+              </button>
+              <button
+                onClick={() => {
+                  setManagementMode(!managementMode);
+                  setShowMobileMenu(false);
+                }}
+                className="w-full px-4 py-3 bg-orange-500 text-white rounded-lg flex items-center gap-2"
+              >
+                <Settings className="w-5 h-5" />
+                {managementMode ? 'Exit Manage' : 'Manage Products'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transaction History Modal */}
+      {showTransactionHistory && (
+        <TransactionHistory onClose={() => setShowTransactionHistory(false)} />
+      )}
+
+      {/* Table Management Modal */}
+      {showTableManagement && (
+        <TableManagement onClose={() => setShowTableManagement(false)} />
+      )}
+
+      {/* Modifier Management Modal */}
+      {showModifierManagement && (
+        <ModifierManagement onClose={() => setShowModifierManagement(false)} />
       )}
     </div>
   );
