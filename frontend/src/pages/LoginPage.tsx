@@ -29,16 +29,19 @@ export default function LoginPage() {
       toast.success('Login successful!');
 
       // Redirect based on role
-      if (roleName === 'owner' || roleName === 'admin') {
-        console.log('Redirecting to dashboard');
-        navigate('/dashboard');
+      if (roleName === 'owner') {
+        console.log('Redirecting to owner dashboard');
+        navigate('/owner/dashboard');
+      } else if (roleName === 'admin' || roleName === 'super admin') {
+        console.log('Redirecting to admin dashboard');
+        navigate('/admin/dashboard');
       } else if (roleName === 'cashier' || roleName === 'kasir') {
         console.log('Redirecting to cashier');
         navigate('/cashier');
       } else {
-        // Default to cashier for other roles
-        console.log('Redirecting to cashier (default)');
-        navigate('/cashier');
+        // Default to owner dashboard for other roles
+        console.log('Redirecting to owner dashboard (default)');
+        navigate('/owner/dashboard');
       }
     } catch (error: any) {
       toast.error(error.message || 'Login failed');
@@ -92,9 +95,12 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>Demo Accounts:</p>
-          <p className="mt-2">Owner: owner@kebuliutsman.com / password123</p>
-          <p>Cashier: kasir@kebuliutsman.com / password123</p>
+          <p className="font-medium mb-2">Demo Accounts:</p>
+          <div className="space-y-1">
+            <p><strong>Admin:</strong> admin@mypos.com / admin123 (→ /admin/login)</p>
+            <p><strong>Owner:</strong> owner@kebuliutsman.com / password123</p>
+            <p><strong>Cashier:</strong> kasir@kebuliutsman.com / password123</p>
+          </div>
         </div>
       </div>
     </div>
