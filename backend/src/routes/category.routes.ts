@@ -6,18 +6,18 @@ import {
   updateCategory,
   deleteCategory
 } from '../controllers/category.controller';
-import { authMiddleware } from '../middlewares/auth.middleware';
+import { authMiddleware, optionalAuth } from '../middlewares/auth.middleware';
 import { tenantMiddleware } from '../middlewares/tenant.middleware';
 
 const router = Router();
 
-// All routes require auth + tenant isolation
-router.use(authMiddleware, tenantMiddleware);
+// Public routes (no auth required for GET)
+router.get('/', optionalAuth, getCategories);
+router.get('/:id', optionalAuth, getCategoryById);
 
-router.get('/', getCategories);
-router.get('/:id', getCategoryById);
-router.post('/', createCategory);
-router.put('/:id', updateCategory);
-router.delete('/:id', deleteCategory);
+// Protected routes (require auth)
+router.post('/', authMiddleware, tenantMiddleware, createCategory);
+router.put('/:id', authMiddleware, tenantMiddleware, updateCategory);
+router.delete('/:id', authMiddleware, tenantMiddleware, deleteCategory);
 
 export default router;

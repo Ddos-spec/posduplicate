@@ -16,7 +16,7 @@ export const getCategories = async (
 
     // Tenant isolation (except Super Admin)
     if (req.tenantId) {
-      where.outlet = { tenantId: req.tenantId };
+      where.outlets = { tenantId: req.tenantId };
     }
 
     if (type) {
@@ -27,10 +27,10 @@ export const getCategories = async (
       where.outletId = parseInt(outlet_id as string);
     }
 
-    const categories = await prisma.category.findMany({
+    const categories = await prisma.categories.findMany({
       where,
       include: {
-        outlet: {
+        outlets: {
           select: {
             id: true,
             name: true
@@ -67,7 +67,7 @@ export const getCategoryById = async (
   try {
     const { id } = req.params;
 
-    const category = await prisma.category.findUnique({
+    const category = await prisma.categories.findUnique({
       where: { id: parseInt(id) },
       include: {
         outlet: true,
@@ -127,7 +127,7 @@ export const createCategory = async (
       });
     }
 
-    const category = await prisma.category.create({
+    const category = await prisma.categories.create({
       data: {
         name,
         type: type || 'item',
@@ -157,7 +157,7 @@ export const updateCategory = async (
     const { id } = req.params;
     const { name, type, isActive } = req.body;
 
-    const category = await prisma.category.update({
+    const category = await prisma.categories.update({
       where: { id: parseInt(id) },
       data: {
         ...(name && { name }),
@@ -187,7 +187,7 @@ export const deleteCategory = async (
   try {
     const { id } = req.params;
 
-    const category = await prisma.category.update({
+    const category = await prisma.categories.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });

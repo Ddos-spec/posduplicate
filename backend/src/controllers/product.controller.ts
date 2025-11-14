@@ -6,14 +6,16 @@ import prisma from '../utils/prisma';
  */
 export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { category, search, outlet_id } = req.query;
+    const { category, category_id, search, outlet_id } = req.query;
 
     const where: any = {
       isActive: true
     };
 
-    if (category) {
-      where.category = { name: category as string };
+    if (category_id) {
+      where.categoryId = parseInt(category_id as string);
+    } else if (category) {
+      where.categories = { name: category as string };
     }
 
     if (search) {
@@ -24,20 +26,18 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
       where.outletId = parseInt(outlet_id as string);
     }
 
-    const products = await prisma.item.findMany({
+    const products = await prisma.items.findMany({
       where,
       include: {
-        category: {
+        categories: {
           select: { id: true, name: true }
         },
         variants: {
-          where: { isActive: true }
+          where: { is_active: true }
         },
-        modifiers: {
+        item_modifiers: {
           include: {
-            modifier: {
-              where: { isActive: true }
-            }
+            modifiers: true
           }
         }
       },
@@ -61,7 +61,7 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
   try {
     const { id } = req.params;
 
-    const product = await prisma.item.findUnique({
+    const product = await prisma.items.findUnique({
       where: { id: parseInt(id) },
       include: {
         category: true,
@@ -104,7 +104,7 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
   try {
     const productData = req.body;
 
-    const product = await prisma.item.create({
+    const product = await prisma.items.create({
       data: productData
     });
 
@@ -126,7 +126,7 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
     const { id } = req.params;
     const updateData = req.body;
 
-    const product = await prisma.item.update({
+    const product = await prisma.items.update({
       where: { id: parseInt(id) },
       data: updateData
     });
@@ -148,7 +148,7 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
   try {
     const { id } = req.params;
 
-    const product = await prisma.item.update({
+    const product = await prisma.items.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });

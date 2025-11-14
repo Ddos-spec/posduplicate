@@ -16,7 +16,7 @@ export const getTransactions = async (
 
     // Tenant isolation
     if (req.tenantId) {
-      where.outlet = { tenantId: req.tenantId };
+      where.outlets = { tenantId: req.tenantId };
     }
 
     if (status) {
@@ -115,7 +115,7 @@ export const getTransactionById = async (
     }
 
     // Tenant isolation
-    if (req.tenantId && transaction.outlet?.tenantId !== req.tenantId) {
+    if (req.tenantId && transaction.outlets?.tenantId !== req.tenantId) {
       return res.status(403).json({
         success: false,
         error: {
