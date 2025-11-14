@@ -26,8 +26,11 @@ import {
   Calendar,
   ArrowUp,
   ArrowDown,
-  Activity
+  Activity,
+  LogOut
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 
 interface DashboardStats {
   totalRevenue: number;
@@ -70,6 +73,8 @@ interface RecentTransaction {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [salesChart, setSalesChart] = useState<SalesData[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
@@ -77,6 +82,11 @@ export default function DashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('week');
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   useEffect(() => {
     loadDashboardData();
@@ -118,15 +128,48 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-          <Activity className="w-8 h-8 text-blue-500" />
-          Sales Dashboard
-        </h1>
-        <p className="text-gray-600 mt-1">Monitor your business performance in real-time</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation Bar */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <h2 className="text-xl font-bold text-gray-800">MyPOS</h2>
+              <nav className="flex gap-4">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg"
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => navigate('/employees')}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  Employees
+                </button>
+              </nav>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
+        </div>
       </div>
+
+      <div className="p-6">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
+            <Activity className="w-8 h-8 text-blue-500" />
+            Sales Dashboard
+          </h1>
+          <p className="text-gray-600 mt-1">Monitor your business performance in real-time</p>
+        </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -364,6 +407,7 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

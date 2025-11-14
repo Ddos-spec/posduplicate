@@ -22,7 +22,8 @@
       "Bash(timeout 5 echo:*)",
       "Bash(taskkill:*)",
       "Bash(nul)",
-      "Bash(timeout 8 echo:*)"
+      "Bash(timeout 8 echo:*)",
+      "Bash(npx prisma:*)"
     ],
     "deny": [],
     "ask": []

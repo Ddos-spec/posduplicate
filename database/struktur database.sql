@@ -109,6 +109,26 @@ CREATE TABLE "public"."payments" (
   "created_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
   CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
 );
+CREATE TABLE "public"."promotions" ( 
+  "id" SERIAL,
+  "outlet_id" INTEGER NULL,
+  "name" VARCHAR(255) NOT NULL,
+  "description" TEXT NULL,
+  "discount_type" VARCHAR(50) NOT NULL,
+  "discount_value" NUMERIC NOT NULL,
+  "min_purchase" NUMERIC NULL DEFAULT 0 ,
+  "max_discount" NUMERIC NULL,
+  "applicable_to" VARCHAR(50) NULL DEFAULT 'all'::character varying ,
+  "applicable_ids" JSON NULL,
+  "start_date" TIMESTAMP NULL,
+  "end_date" TIMESTAMP NULL,
+  "usage_limit" INTEGER NULL,
+  "usage_count" INTEGER NULL DEFAULT 0 ,
+  "is_active" BOOLEAN NULL DEFAULT true ,
+  "created_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
+  "updated_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
+  CONSTRAINT "promotions_pkey" PRIMARY KEY ("id")
+);
 CREATE TABLE "public"."roles" ( 
   "id" SERIAL,
   "name" VARCHAR(50) NOT NULL,
@@ -196,6 +216,7 @@ CREATE TABLE "public"."transactions" (
   "created_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
   "updated_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
   "completed_at" TIMESTAMP NULL,
+  "promotion_id" INTEGER NULL,
   CONSTRAINT "transactions_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "transactions_transaction_number_key" UNIQUE ("transaction_number")
 );
@@ -257,6 +278,19 @@ CREATE INDEX "idx_outlets_tenant"
 ON "public"."outlets" (
   "tenant_id" ASC
 );
+CREATE INDEX "idx_promotions_outlet" 
+ON "public"."promotions" (
+  "outlet_id" ASC
+);
+CREATE INDEX "idx_promotions_active" 
+ON "public"."promotions" (
+  "is_active" ASC
+);
+CREATE INDEX "idx_promotions_dates" 
+ON "public"."promotions" (
+  "start_date" ASC,
+  "end_date" ASC
+);
 CREATE INDEX "idx_tenants_active" 
 ON "public"."tenants" (
   "is_active" ASC
@@ -273,6 +307,10 @@ CREATE INDEX "idx_transaction_items_transaction"
 ON "public"."transaction_items" (
   "transaction_id" ASC
 );
+CREATE INDEX "idx_transactions_created" 
+ON "public"."transactions" (
+  "created_at" ASC
+);
 CREATE INDEX "idx_transactions_number" 
 ON "public"."transactions" (
   "transaction_number" ASC
@@ -288,10 +326,6 @@ ON "public"."transactions" (
 CREATE INDEX "idx_transactions_status" 
 ON "public"."transactions" (
   "status" ASC
-);
-CREATE INDEX "idx_transactions_created" 
-ON "public"."transactions" (
-  "created_at" ASC
 );
 CREATE INDEX "idx_users_email" 
 ON "public"."users" (
@@ -324,13 +358,13 @@ ALTER TABLE "public"."transaction_items" ADD CONSTRAINT "transaction_items_item_
 ALTER TABLE "public"."transaction_items" ADD CONSTRAINT "transaction_items_variant_id_fkey" FOREIGN KEY ("variant_id") REFERENCES "public"."variants" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE "public"."transaction_modifiers" ADD CONSTRAINT "transaction_modifiers_transaction_item_id_fkey" FOREIGN KEY ("transaction_item_id") REFERENCES "public"."transaction_items" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "public"."transaction_modifiers" ADD CONSTRAINT "transaction_modifiers_modifier_id_fkey" FOREIGN KEY ("modifier_id") REFERENCES "public"."modifiers" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
-ALTER TABLE "public"."transactions" ADD CONSTRAINT "transactions_table_id_fkey" FOREIGN KEY ("table_id") REFERENCES "public"."tables" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
-ALTER TABLE "public"."transactions" ADD CONSTRAINT "transactions_outlet_id_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
-ALTER TABLE "public"."transactions" ADD CONSTRAINT "transactions_cashier_id_fkey" FOREIGN KEY ("cashier_id") REFERENCES "public"."users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE "public"."transactions" ADD CONSTRAINT "transactions_promotion_id_fkey" FOREIGN KEY ("promotion_id") REFERENCES "public"."promotions" ("id") ON DELETE SET NULL ON UPDATE NO ACTION;
 ALTER TABLE "public"."users" ADD CONSTRAINT "users_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "public"."users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "public"."roles" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE "public"."users" ADD CONSTRAINT "users_outlet_id_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE "public"."variants" ADD CONSTRAINT "variants_item_id_fkey" FOREIGN KEY ("item_id") REFERENCES "public"."items" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "public"."discount_usage" ADD CONSTRAINT "discount_usage_promotion_id_fkey" FOREIGN KEY ("promotion_id") REFERENCES "public"."promotions" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "public"."discount_usage" ADD CONSTRAINT "discount_usage_transaction_id_fkey" FOREIGN KEY ("transaction_id") REFERENCES "public"."transactions" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 CREATE FUNCTION "public"."update_updated_at"() RETURNS TRIGGER LANGUAGE PLPGSQL
 AS
 $$

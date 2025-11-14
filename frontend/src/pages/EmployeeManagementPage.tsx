@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Users, Plus, Edit, Trash2, X, Mail, UserCircle, Shield } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, X, Mail, UserCircle, Shield, LogOut, Activity } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 
 interface Employee {
   id: number;
@@ -14,6 +16,8 @@ interface Employee {
 }
 
 export default function EmployeeManagementPage() {
+  const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -26,6 +30,11 @@ export default function EmployeeManagementPage() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   useEffect(() => {
     loadEmployees();
   }, []);
@@ -33,7 +42,7 @@ export default function EmployeeManagementPage() {
   const loadEmployees = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/employees');
+      const { data } = await api.get('/users');
       setEmployees(data.data);
     } catch (error: any) {
       toast.error('Failed to load employees');
@@ -83,10 +92,10 @@ export default function EmployeeManagementPage() {
       }
 
       if (editingEmployee) {
-        await api.put(`/employees/${editingEmployee.id}`, data);
+        await api.put(`/users/${editingEmployee.id}`, data);
         toast.success('Employee updated successfully');
       } else {
-        await api.post('/employees', data);
+        await api.post('/users', data);
         toast.success('Employee created successfully');
       }
 
@@ -103,7 +112,7 @@ export default function EmployeeManagementPage() {
     if (!confirm('Are you sure you want to delete this employee?')) return;
 
     try {
-      await api.delete(`/employees/${employeeId}`);
+      await api.delete(`/users/${employeeId}`);
       toast.success('Employee deleted successfully');
       loadEmployees();
     } catch (error: any) {
@@ -113,7 +122,7 @@ export default function EmployeeManagementPage() {
 
   const handleToggleStatus = async (employeeId: number, currentStatus: boolean) => {
     try {
-      await api.put(`/employees/${employeeId}`, { isActive: !currentStatus });
+      await api.put(`/users/${employeeId}`, { isActive: !currentStatus });
       toast.success(`Employee ${!currentStatus ? 'activated' : 'deactivated'}`);
       loadEmployees();
     } catch (error: any) {
@@ -122,15 +131,48 @@ export default function EmployeeManagementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
-          <Users className="w-8 h-8 text-blue-500" />
-          Employee Management
-        </h1>
-        <p className="text-gray-600 mt-1">Manage your team members and their access</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation Bar */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <h2 className="text-xl font-bold text-gray-800">MyPOS</h2>
+              <nav className="flex gap-4">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => navigate('/employees')}
+                  className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg"
+                >
+                  Employees
+                </button>
+              </nav>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
+        </div>
       </div>
+
+      <div className="p-6">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
+            <Users className="w-8 h-8 text-blue-500" />
+            Employee Management
+          </h1>
+          <p className="text-gray-600 mt-1">Manage your team members and their access</p>
+        </div>
 
       {/* Add Employee Button */}
       <div className="mb-6">
@@ -332,6 +374,7 @@ export default function EmployeeManagementPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

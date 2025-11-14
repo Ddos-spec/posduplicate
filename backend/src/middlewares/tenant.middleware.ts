@@ -41,9 +41,9 @@ export const tenantMiddleware = async (
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        role: true,
-        tenant: true,
-        outlet: true
+        roles: true,
+        tenants: true,
+        outlets: true
       }
     });
 
@@ -69,7 +69,7 @@ export const tenantMiddleware = async (
     }
 
     // Super Admin can access all tenants (no filtering)
-    if (user.role.name === 'Super Admin') {
+    if (user.roles?.name === 'Super Admin') {
       req.userRole = 'Super Admin';
       req.userId = user.id;
       return next();
@@ -87,7 +87,7 @@ export const tenantMiddleware = async (
     }
 
     // Check tenant status
-    if (user.tenant && !user.tenant.isActive) {
+    if (user.tenants && !user.tenants.isActive) {
       return res.status(403).json({
         success: false,
         error: {
@@ -98,7 +98,7 @@ export const tenantMiddleware = async (
     }
 
     // Check subscription status
-    if (user.tenant && user.tenant.subscriptionStatus !== 'active' && user.tenant.subscriptionStatus !== 'trial') {
+    if (user.tenants && user.tenants.subscriptionStatus !== 'active' && user.tenants.subscriptionStatus !== 'trial') {
       return res.status(403).json({
         success: false,
         error: {
@@ -110,9 +110,9 @@ export const tenantMiddleware = async (
 
     // Attach tenant info to request
     req.tenantId = user.tenantId;
-    req.tenant = user.tenant;
+    req.tenant = user.tenants;
     req.userId = user.id;
-    req.userRole = user.role.name;
+    req.userRole = user.roles?.name;
 
     next();
   } catch (error) {
