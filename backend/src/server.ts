@@ -20,6 +20,7 @@ import modifierRoutes from './routes/modifier.routes';
 import variantRoutes from './routes/variant.routes';
 import ingredientRoutes from './routes/ingredient.routes';
 import supplierRoutes from './routes/supplier.routes';
+import analyticsRoutes from './routes/analytics.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -74,6 +75,7 @@ app.use('/api/modifiers', modifierRoutes);
 app.use('/api/variants', variantRoutes);
 app.use('/api/ingredients', ingredientRoutes);
 app.use('/api/suppliers', supplierRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
