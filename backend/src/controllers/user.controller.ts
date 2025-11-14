@@ -5,17 +5,29 @@ import prisma from '../utils/prisma';
 // Get all users (employees)
 export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const users = await prisma.user.findMany({
-      where: {
-        tenantId: req.tenantId
-      },
+    const { outlet_id } = req.query;
+    const where: any = {};
+
+    if (req.tenantId) {
+      where.tenantId = req.tenantId;
+    }
+
+    if (outlet_id) {
+      where.outletId = parseInt(outlet_id as string);
+    }
+
+    const users = await prisma.users.findMany({
+      where,
       select: {
         id: true,
         name: true,
         email: true,
         isActive: true,
+        outletId: true,
+        tenantId: true,
         roles: {
           select: {
+            id: true,
             name: true
           }
         },
@@ -36,13 +48,15 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
   try {
     const { id } = req.params;
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: parseInt(id) },
       select: {
         id: true,
         name: true,
         email: true,
         isActive: true,
+        outletId: true,
+        tenantId: true,
         roles: {
           select: {
             id: true,
@@ -70,7 +84,7 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 // Create new user
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, password, roleId } = req.body;
+    const { name, email, password, roleId, outletId } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -80,7 +94,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     }
 
     // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { email }
     });
 
@@ -92,16 +106,17 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
     // Create user
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         name,
         email,
-        password: hashedPassword,
+        passwordHash,
         tenantId: req.tenantId,
-        roleId: roleId || 2, // Default to Cashier role
+        outletId: outletId || null,
+        roleId: roleId || 3, // Default to Cashier role (assuming ID 3)
         isActive: true
       },
       select: {
@@ -109,8 +124,10 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
         name: true,
         email: true,
         isActive: true,
+        outletId: true,
         roles: {
           select: {
+            id: true,
             name: true
           }
         },
@@ -128,19 +145,20 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, email, password, roleId, isActive } = req.body;
+    const { name, email, password, roleId, outletId, isActive } = req.body;
 
     const data: any = {};
 
     if (name) data.name = name;
     if (email) data.email = email;
     if (password) {
-      data.password = await bcrypt.hash(password, 10);
+      data.passwordHash = await bcrypt.hash(password, 10);
     }
     if (roleId !== undefined) data.roleId = roleId;
+    if (outletId !== undefined) data.outletId = outletId;
     if (isActive !== undefined) data.isActive = isActive;
 
-    const user = await prisma.user.update({
+    const user = await prisma.users.update({
       where: { id: parseInt(id) },
       data,
       select: {
@@ -148,8 +166,10 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
         name: true,
         email: true,
         isActive: true,
+        outletId: true,
         roles: {
           select: {
+            id: true,
             name: true
           }
         },
@@ -163,12 +183,38 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+// Reset user password (by admin/owner)
+export const resetUserPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'New password is required' }
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await prisma.users.update({
+      where: { id: parseInt(id) },
+      data: { passwordHash }
+    });
+
+    res.json({ success: true, message: 'Password reset successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Delete user (soft delete by setting inactive)
 export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });

@@ -33,25 +33,25 @@ export const getTransactions = async (
       if (date_to) where.createdAt.lte = new Date(date_to as string);
     }
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where,
       include: {
-        outlet: {
+        outlets: {
           select: { id: true, name: true }
         },
-        table: {
+        tables: {
           select: { id: true, name: true }
         },
-        cashier: {
+        users: {
           select: { id: true, name: true, email: true }
         },
-        transactionItems: {
+        transaction_items: {
           include: {
-            item: true,
-            variant: true,
-            transactionModifiers: {
+            items: true,
+            variants: true,
+            transaction_modifiers: {
               include: {
-                modifier: true
+                modifiers: true
               }
             }
           }
@@ -83,19 +83,19 @@ export const getTransactionById = async (
   try {
     const { id } = req.params;
 
-    const transaction = await prisma.transaction.findUnique({
+    const transaction = await prisma.transactions.findUnique({
       where: { id: parseInt(id) },
       include: {
-        outlet: true,
-        table: true,
-        cashier: true,
-        transactionItems: {
+        outlets: true,
+        tables: true,
+        users: true,
+        transaction_items: {
           include: {
-            item: true,
-            variant: true,
-            transactionModifiers: {
+            items: true,
+            variants: true,
+            transaction_modifiers: {
               include: {
-                modifier: true
+                modifiers: true
               }
             }
           }
@@ -170,75 +170,117 @@ export const createTransaction = async (
     // Generate transaction number
     const transactionNumber = `TRX-${Date.now()}`;
 
-    // Calculate totals
+    // Calculate totals and validate
     let subtotal = 0;
+    const itemsWithPrices: any[] = [];
+
     for (const item of items) {
-      const itemData = await prisma.item.findUnique({
+      const itemData = await prisma.items.findUnique({
         where: { id: item.itemId }
       });
-      if (!itemData) continue;
+
+      if (!itemData) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'ITEM_NOT_FOUND',
+            message: `Item with ID ${item.itemId} not found`
+          }
+        });
+      }
 
       let itemPrice = parseFloat(itemData.price.toString());
+      const modifiersData: any[] = [];
 
       // Add variant price adjustment
       if (item.variantId) {
-        const variant = await prisma.variant.findUnique({
+        const variant = await prisma.variants.findUnique({
           where: { id: item.variantId }
         });
         if (variant) {
-          itemPrice += parseFloat(variant.priceAdjust.toString());
+          itemPrice += parseFloat(variant.price_adjust.toString());
         }
       }
 
       // Add modifiers price
       if (item.modifiers && item.modifiers.length > 0) {
         for (const modifierId of item.modifiers) {
-          const modifier = await prisma.modifier.findUnique({
+          const modifier = await prisma.modifiers.findUnique({
             where: { id: modifierId }
           });
           if (modifier) {
-            itemPrice += parseFloat(modifier.price.toString());
+            const modPrice = parseFloat(modifier.price?.toString() || '0');
+            itemPrice += modPrice;
+            modifiersData.push({
+              modifierId,
+              modifierName: modifier.name,
+              price: modPrice
+            });
           }
         }
       }
 
-      subtotal += itemPrice * item.quantity;
+      const itemSubtotal = itemPrice * item.quantity;
+      subtotal += itemSubtotal;
+
+      itemsWithPrices.push({
+        ...item,
+        itemName: itemData.name,
+        unitPrice: itemPrice,
+        subtotal: itemSubtotal,
+        modifiersData
+      });
     }
 
     const total = subtotal - discountAmount + taxAmount + serviceCharge;
 
+    // Validate payments
+    if (payments && payments.length > 0) {
+      const totalPaid = payments.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
+      if (totalPaid < total) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INSUFFICIENT_PAYMENT',
+            message: `Total payment (${totalPaid}) is less than transaction total (${total})`
+          }
+        });
+      }
+    }
+
     // Create transaction with items
-    const transaction = await prisma.transaction.create({
+    const transaction = await prisma.transactions.create({
       data: {
-        transactionNumber,
-        orderType,
-        tableId,
-        customerName,
-        customerPhone,
+        transaction_number: transactionNumber,
+        order_type: orderType,
+        table_id: tableId,
+        customer_name: customerName,
+        customer_phone: customerPhone,
         subtotal,
         discountAmount,
         taxAmount,
-        serviceCharge,
+        service_charge: serviceCharge,
         total,
         status: 'completed',
         outletId,
-        cashierId: req.userId,
+        cashier_id: req.userId,
         notes,
-        transactionItems: {
-          create: items.map((item: any) => ({
-            itemId: item.itemId,
-            variantId: item.variantId,
-            itemName: item.name,
+        completed_at: new Date(),
+        transaction_items: {
+          create: itemsWithPrices.map((item: any) => ({
+            item_id: item.itemId,
+            variant_id: item.variantId,
+            item_name: item.itemName,
             quantity: item.quantity,
-            unitPrice: item.price,
-            subtotal: item.price * item.quantity,
-            discountAmount: 0,
+            unit_price: item.unitPrice,
+            subtotal: item.subtotal,
+            discount_amount: 0,
             notes: item.notes,
-            transactionModifiers: item.modifiers ? {
-              create: item.modifiers.map((modId: number) => ({
-                modifierId: modId,
-                modifierName: '',
-                price: 0
+            transaction_modifiers: item.modifiersData && item.modifiersData.length > 0 ? {
+              create: item.modifiersData.map((mod: any) => ({
+                modifier_id: mod.modifierId,
+                modifier_name: mod.modifierName,
+                price: mod.price
               }))
             } : undefined
           }))
@@ -246,22 +288,41 @@ export const createTransaction = async (
         payments: payments ? {
           create: payments.map((p: any) => ({
             method: p.method,
-            amount: p.amount,
-            changeAmount: p.changeAmount || 0,
-            referenceNumber: p.referenceNumber,
+            amount: parseFloat(p.amount),
+            change_amount: parseFloat(p.changeAmount || 0),
+            reference_number: p.referenceNumber,
             status: 'completed'
           }))
         } : undefined
       },
       include: {
-        transactionItems: {
+        transaction_items: {
           include: {
-            transactionModifiers: true
+            transaction_modifiers: true
           }
         },
         payments: true
       }
     });
+
+    // Update stock for items with tracking enabled
+    for (const item of itemsWithPrices) {
+      const itemData = await prisma.items.findUnique({
+        where: { id: item.itemId },
+        select: { trackStock: true, stock: true }
+      });
+
+      if (itemData?.trackStock) {
+        await prisma.items.update({
+          where: { id: item.itemId },
+          data: {
+            stock: {
+              decrement: item.quantity
+            }
+          }
+        });
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -274,7 +335,7 @@ export const createTransaction = async (
 };
 
 /**
- * Hold order
+ * Hold order (Save as pending transaction)
  */
 export const holdOrder = async (
   req: Request,
@@ -284,11 +345,25 @@ export const holdOrder = async (
   try {
     const { orderData } = req.body;
 
-    const heldOrder = await prisma.heldOrder.create({
+    // Store as pending transaction instead of separate table
+    const transactionNumber = `HOLD-${Date.now()}`;
+
+    const heldOrder = await prisma.transactions.create({
       data: {
-        orderData,
-        cashierId: req.userId,
-        outletId: orderData.outletId
+        transaction_number: transactionNumber,
+        order_type: orderData.orderType || 'dine-in',
+        table_id: orderData.tableId,
+        customer_name: orderData.customerName,
+        customer_phone: orderData.customerPhone,
+        subtotal: orderData.subtotal || 0,
+        discountAmount: orderData.discountAmount || 0,
+        taxAmount: orderData.taxAmount || 0,
+        service_charge: orderData.serviceCharge || 0,
+        total: orderData.total || 0,
+        status: 'pending',
+        outletId: orderData.outletId,
+        cashier_id: req.userId,
+        notes: 'Held order - ' + (orderData.notes || '')
       }
     });
 
@@ -303,7 +378,7 @@ export const holdOrder = async (
 };
 
 /**
- * Get held orders
+ * Get held orders (pending transactions)
  */
 export const getHeldOrders = async (
   req: Request,
@@ -311,9 +386,10 @@ export const getHeldOrders = async (
   next: NextFunction
 ) => {
   try {
-    const heldOrders = await prisma.heldOrder.findMany({
+    const heldOrders = await prisma.transactions.findMany({
       where: {
-        cashierId: req.userId
+        cashier_id: req.userId,
+        status: 'pending'
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -340,11 +416,11 @@ export const updateTransactionStatus = async (
     const { id } = req.params;
     const { status } = req.body;
 
-    const transaction = await prisma.transaction.update({
+    const transaction = await prisma.transactions.update({
       where: { id: parseInt(id) },
       data: {
         status,
-        ...(status === 'completed' && { completedAt: new Date() })
+        ...(status === 'completed' && { completed_at: new Date() })
       }
     });
 

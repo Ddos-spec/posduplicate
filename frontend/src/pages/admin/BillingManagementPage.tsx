@@ -126,7 +126,7 @@ const billingHistory: BillingRecord[] = [
 ];
 
 export default function BillingManagementPage() {
-  const [activeTab, setActiveTab] = useState<'plans' | 'history' | 'overdue'>('plans');
+  const [activeTab, setActiveTab] = useState<'history' | 'overdue'>('history');
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
 
@@ -171,19 +171,20 @@ export default function BillingManagementPage() {
         <p className="text-gray-600">Manage subscription plans and billing</p>
       </div>
 
+      {/* Info Box */}
+      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center gap-3">
+          <CreditCard className="w-5 h-5 text-blue-600" />
+          <div>
+            <p className="text-sm font-medium text-blue-800">Subscription Plan: Pro (Rp 500,000/month)</p>
+            <p className="text-xs text-blue-700">All tenants have the same subscription price</p>
+          </div>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div className="mb-6 border-b">
         <div className="flex gap-4">
-          <button
-            onClick={() => setActiveTab('plans')}
-            className={`px-4 py-2 font-medium border-b-2 transition ${
-              activeTab === 'plans'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            Subscription Plans
-          </button>
           <button
             onClick={() => setActiveTab('history')}
             className={`px-4 py-2 font-medium border-b-2 transition ${
@@ -213,63 +214,6 @@ export default function BillingManagementPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'plans' && (
-        <div>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-800">Subscription Plans</h2>
-            <button
-              onClick={handleAddPlan}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Add Plan
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {subscriptionPlans.map((plan) => (
-              <div
-                key={plan.id}
-                className={`bg-white rounded-lg shadow-lg border-2 ${
-                  plan.name === 'Pro' ? 'border-purple-500 relative' : 'border-gray-200'
-                } p-6`}
-              >
-                {plan.name === 'Pro' && (
-                  <div className="absolute top-0 right-0 bg-purple-500 text-white px-4 py-1 rounded-bl-lg rounded-tr-lg text-sm font-semibold">
-                    Popular
-                  </div>
-                )}
-
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">{plan.name}</h3>
-                <div className="mb-6">
-                  <span className="text-4xl font-bold text-gray-900">
-                    {formatCurrency(plan.price)}
-                  </span>
-                  <span className="text-gray-600">/month</span>
-                </div>
-
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700 text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  onClick={() => handleEditPlan(plan)}
-                  className="w-full px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit Plan
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {activeTab === 'history' && (
         <div>
           <div className="flex justify-between items-center mb-6">

@@ -23,6 +23,8 @@ import supplierRoutes from './routes/supplier.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import userRoutes from './routes/user.routes';
 import promotionRoutes from './routes/promotion.routes';
+import dashboardRoutes from './routes/dashboard.routes';
+import outletRoutes from './routes/outlet.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -66,6 +68,8 @@ app.get('/health', (req: Request, res: Response) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tenants', tenantRoutes);
+app.use('/api/outlets', outletRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/transactions', transactionRoutes);
