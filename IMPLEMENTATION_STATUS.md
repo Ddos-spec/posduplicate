@@ -1,877 +1,730 @@
-# MyPOS Implementation Status & Development Roadmap
-
-**Last Updated:** 14 November 2025 - MAJOR FEATURES UPDATE
-**Status:** PRODUCTION-READY MVP - HIGH PRIORITY FEATURES COMPLETE
-
----
-
-## 🎉 CURRENT STATUS (Latest Session - 14 Nov 2025)
-
-### ✅ NEW FEATURES COMPLETED TODAY
-
-#### 1. Category Management - COMPLETE ✅
-- ✅ Full CRUD for categories integrated in CashierPage
-- ✅ Add new category modal with name & type fields
-- ✅ Edit existing categories inline
-- ✅ Delete categories with confirmation
-- ✅ Category type selection (item/ingredient)
-- ✅ Terintegrasi dengan backend `/api/categories`
-- ✅ Auto-refresh category list after CRUD operations
-
-#### 2. Transaction History - COMPLETE ✅
-- ✅ **Full transaction history viewer** (`TransactionHistory.tsx`)
-- ✅ Split view: List transactions (left) + Detail view (right)
-- ✅ Date range filtering (from-to)
-- ✅ Status filtering (completed, pending, cancelled)
-- ✅ Transaction detail with items, payments, cashier info
-- ✅ **Receipt printing functionality** (thermal printer format)
-- ✅ Summary: Total transactions & total revenue
-- ✅ Real-time data from `/api/transactions`
-
-#### 3. Table Management - COMPLETE ✅
-- ✅ **Table Management component** (`TableManagement.tsx`)
-- ✅ Grid view untuk semua tables
-- ✅ Add/Edit/Delete tables with capacity
-- ✅ **Status tracking**: Available, Occupied, Reserved
-- ✅ **Quick status change buttons** per table
-- ✅ Color-coded status (Green/Red/Yellow)
-- ✅ Summary statistics (total, available, occupied, reserved)
-- ✅ Terintegrasi dengan backend `/api/tables`
-
-#### 4. Modifiers/Variants System - COMPLETE ✅
-- ✅ **Modifier Management component** (`ModifierManagement.tsx`)
-- ✅ Table view dengan semua modifiers
-- ✅ Add/Edit/Delete modifiers
-- ✅ **Categories**: addon, size, temperature, spice, topping
-- ✅ Price adjustment per modifier (support free modifiers)
-- ✅ Color-coded categories
-- ✅ Active/Inactive status tracking
-- ✅ Terintegrasi dengan backend `/api/modifiers`
-
-#### 5. Mobile Responsive - COMPLETE ✅
-- ✅ **Mobile menu drawer** (slide from left)
-- ✅ **Mobile cart drawer** (slide from right)
-- ✅ Responsive grid: 2 cols (mobile) → 5 cols (desktop)
-- ✅ Touch-friendly buttons dengan badge counts
-- ✅ Desktop cart hidden, replaced with drawer di mobile
-- ✅ Adaptive spacing & padding
-- ✅ Breakpoints: sm, md, lg, xl optimized
-
-#### 6. Split Bill Payment - COMPLETE ✅
-- ✅ **Toggle split bill mode** in payment modal
-- ✅ **Multiple payment support** (cash + card + qris dalam satu transaksi)
-- ✅ **Real-time tracking**: Total Paid (green) & Remaining (red)
-- ✅ Add/Remove payments dengan validation
-- ✅ Quick "Pay Remaining" button
-- ✅ Cash change calculation per payment
-- ✅ Prevent overpayment validation
-- ✅ Backend integration dengan multiple payments array
+# MyPOS - Role-Based POS System
+**Last Updated:** 14 November 2025
+**Project Type:** Multi-Tenant Restaurant POS System
 
 ---
 
-### ✅ PREVIOUS FIXES (Still Active)
+## 🎯 CURRENT FOCUS
 
-#### Database Schema - FIXED ✅
-- ✅ Database 17 tables ready
-- ✅ Login: `owner@kebuliutsman.com` / `password123`
+**PRIORITY: FRONTEND UI COMPLETE FIRST → BACKEND FUNCTIONALITY LATER**
 
-#### Backend API - WORKING ✅
-- ✅ Categories, Products, Transactions APIs fixed
-- ✅ Tables, Modifiers APIs integrated
-- ✅ All endpoints returning 200
-
-#### Frontend Core - WORKING ✅
-- ✅ Login Flow functional
-- ✅ Category filtering
-- ✅ Add to Cart
-- ✅ Product CRUD (Manage Products mode)
-
-### 🎯 MVP FEATURES - UPDATED STATUS
-
-```
-┌──────────────────────────────────────────────────────┐
-│  FEATURE                    STATUS      QUALITY      │
-├──────────────────────────────────────────────────────┤
-│  🔐 Authentication          ✅ WORKS    PRODUCTION  │
-│  👤 Multi-tenant Isolation  ✅ WORKS    PRODUCTION  │
-│  🏪 Cashier POS             ✅ WORKS    PRODUCTION  │
-│  🛒 Cart Management         ✅ WORKS    PRODUCTION  │
-│  💰 Checkout/Payment        ✅ WORKS    PRODUCTION  │
-│  💰 Split Bill Payment      ✅ NEW!     PRODUCTION  │
-│  📦 Product CRUD (Kasir)    ✅ WORKS    PRODUCTION  │
-│  🏷️  Category Management     ✅ NEW!     PRODUCTION  │
-│  🧾 Transaction History     ✅ NEW!     PRODUCTION  │
-│  🖨️  Receipt Printing        ✅ NEW!     PRODUCTION  │
-│  🍽️  Table Management        ✅ NEW!     PRODUCTION  │
-│  🧩 Modifiers/Variants      ✅ NEW!     PRODUCTION  │
-│  📱 Mobile Responsive       ✅ NEW!     PRODUCTION  │
-│  ─────────────────────────────────────────────────  │
-│  📊 Dashboard/Reports       ⚠️  BASIC    NEEDS      │
-│  👥 User Management         ⚠️  BASIC    NEEDS      │
-│  🏢 Outlet Management       ❌ MISSING   NEEDS      │
-│  📦 Inventory System        ❌ MISSING   NEEDS      │
-│  🔔 Notifications           ❌ MISSING   NEEDS      │
-│  📈 Advanced Analytics      ❌ MISSING   NEEDS      │
-└──────────────────────────────────────────────────────┘
-```
-
-### 📊 DEVELOPMENT PROGRESS
-
-**Session Summary (14 Nov 2025):**
-- ✅ **6 Major Features** completed in one day
-- ✅ **5 New Components** created
-- ✅ **1 Major Component** enhanced (CashierPage)
-- ⚡ Total development time: ~2 hours
-- 🚀 Efficiency: Copy-paste & modify strategy
-
-**Files Created:**
-1. `frontend/src/components/transaction/TransactionHistory.tsx` (400+ lines)
-2. `frontend/src/components/table/TableManagement.tsx` (273 lines)
-3. `frontend/src/components/modifiers/ModifierManagement.tsx` (264 lines)
-
-**Files Enhanced:**
-1. `frontend/src/pages/CashierPage.tsx` (900+ lines)
-   - Category CRUD integration
-   - Table & Modifier management buttons
-   - Mobile responsive UI
-   - Split bill payment system
+### Goals:
+1. ✅ Login works for all 3 roles (Admin, Owner, Kasir)
+2. ✅ All UI features visible (can use mock data)
+3. ✅ Clear navigation per role
+4. ⏳ Backend functionality comes AFTER all UI is complete
 
 ---
 
-## 📋 REMAINING DEVELOPMENT PLAN
-
-### ✅ PHASE 1: HIGH PRIORITY FEATURES - **COMPLETED!**
-
-**ALL HIGH PRIORITY FEATURES SELESAI:**
-- ✅ Category Management (CRUD inline di CashierPage)
-- ✅ Transaction History (dengan filtering & detail view)
-- ✅ Receipt Printing (thermal printer format)
-- ✅ Table Management (CRUD + status tracking)
-- ✅ Modifiers/Variants (CRUD + categories)
-- ✅ Mobile Responsive (drawer menu & cart)
-- ✅ Split Bill Payment (multiple payment methods)
-
----
-
-### PHASE 2: MEDIUM PRIORITY FEATURES (Next Steps)
-
-#### Task 2.1: Dashboard & Reports ⚠️ BASIC EXISTS
-**Status:** Basic backend exists, needs enhanced frontend
-
-**What's Needed:**
-```typescript
-Frontend:
-- [ ] Sales dashboard page dengan charts
-- [ ] Daily/Weekly/Monthly sales reports
-- [ ] Sales by category/product breakdown
-- [ ] Sales by cashier/outlet comparison
-- [ ] Export reports to PDF/Excel
-- [ ] Real-time sales updates
-- [ ] Top selling products widget
-- [ ] Peak hours analysis chart
-
-Backend Enhancement:
-- [ ] Sales aggregation endpoints
-- [ ] Report generation service (PDF/Excel)
-- [ ] Scheduled reports (email/download)
-```
-
-**Files to Create:**
-- `frontend/src/pages/DashboardPage.tsx`
-- `frontend/src/components/reports/SalesChart.tsx`
-- `frontend/src/components/reports/ReportFilters.tsx`
-- `backend/src/services/reportGenerator.service.ts`
-
-#### Task 2.2: User & Employee Management ⚠️ BASIC EXISTS
-**Status:** Backend exists, needs frontend
-
-**What's Needed:**
-```typescript
-Frontend:
-- [ ] User management page (Admin only)
-- [ ] Employee list dengan filters
-- [ ] Add/Edit employee form
-- [ ] Assign roles and permissions
-- [ ] Employee PIN for quick login
-- [ ] Employee shift tracking
-- [ ] Performance dashboard per employee
-
-Backend Enhancement:
-- [ ] PIN authentication endpoint
-- [ ] Employee shift tracking
-- [ ] Performance metrics API
-```
-
-**Files to Create:**
-- `frontend/src/pages/EmployeeManagementPage.tsx`
-- `frontend/src/components/employee/EmployeeList.tsx`
-- `frontend/src/components/employee/PinLogin.tsx`
-
-#### Task 1.4: Implement Proper Error Handling
-**Current:** Basic toast notifications, no retry logic
-
-**Implementation:**
-```typescript
-Frontend:
-- [ ] Create error boundary component
-- [ ] Add retry mechanism for failed API calls
-- [ ] Better error messages (user-friendly)
-- [ ] Offline detection with queue
-- [ ] Form validation before submit
-- [ ] Network timeout handling
-
-Backend:
-- [ ] Standardize error response format
-- [ ] Add validation middleware
-- [ ] Add request logging
-- [ ] Add error tracking (Sentry integration)
-```
-
-**Files to Create:**
-- `frontend/src/components/ErrorBoundary.tsx`
-- `frontend/src/utils/errorHandler.ts`
-- `backend/src/middlewares/errorHandler.middleware.ts`
-- `backend/src/middlewares/validation.middleware.ts`
-
----
-
-### PHASE 2: ADD MISSING CORE FEATURES (Priority: HIGH)
-
-#### Task 2.1: Table Management System
-**Status:** Backend exists, frontend missing
-
-**Implementation:**
-```typescript
-Frontend:
-- [ ] Create TableManagement page/component
-- [ ] Table layout/floor plan view
-- [ ] Add/edit/delete tables
-- [ ] Table status (available, occupied, reserved)
-- [ ] Assign transaction to table
-- [ ] Table merge functionality
-- [ ] Table transfer functionality
-
-Backend:
-- [ ] Add table occupancy tracking
-- [ ] Add table status endpoints
-- [ ] Enhance transaction-table relationship
-```
-
-**Files to Create:**
-- `frontend/src/pages/TableManagementPage.tsx`
-- `frontend/src/components/table/TableGrid.tsx`
-- `frontend/src/components/table/TableCard.tsx`
-- `backend/src/controllers/table.controller.ts` (enhance existing)
-
-#### Task 2.2: Modifiers & Variants System
-**Status:** Database schema exists, no UI/logic
-
-**Current Need:**
-- Coffee size (Small, Medium, Large) with price adjustment
-- Toppings/add-ons (Extra shot, Whipped cream)
-- Temperature (Hot, Cold)
-- Spice level (Mild, Medium, Spicy)
-
-**Implementation:**
-```typescript
-Frontend:
-- [ ] Modifier management page for admin
-- [ ] Variant management per product
-- [ ] Modifier selection modal in POS
-- [ ] Price adjustment display
-- [ ] Modifier categories (size, addon, preference)
-
-Backend:
-- [ ] Create modifier CRUD endpoints
-- [ ] Create variant CRUD endpoints
-- [ ] Enhance product endpoints to include modifiers
-- [ ] Transaction item modifiers tracking
-```
-
-**Files to Create:**
-- `frontend/src/pages/ModifierManagementPage.tsx`
-- `frontend/src/components/modifiers/ModifierManager.tsx`
-- `frontend/src/components/modifiers/VariantManager.tsx`
-- `frontend/src/components/pos/ModifierSelector.tsx`
-- `backend/src/controllers/modifier.controller.ts`
-- `backend/src/controllers/variant.controller.ts`
-
-#### Task 2.3: User & Employee Management
-**Status:** Backend basic, frontend missing
-
-**Implementation:**
-```typescript
-Frontend:
-- [ ] User management page (Admin only)
-- [ ] Employee list with filters
-- [ ] Add new employee form
-- [ ] Edit employee details
-- [ ] Assign roles and permissions
-- [ ] Employee PIN for quick login (kasir)
-- [ ] Employee shift tracking
-- [ ] Performance dashboard per employee
-
-Backend:
-- [ ] Employee CRUD endpoints (enhance existing)
-- [ ] PIN authentication endpoint
-- [ ] Employee shift tracking endpoints
-- [ ] Employee performance metrics
-- [ ] Role-based access control enhancement
-```
-
-**Files to Create:**
-- `frontend/src/pages/EmployeeManagementPage.tsx`
-- `frontend/src/components/employee/EmployeeList.tsx`
-- `frontend/src/components/employee/EmployeeForm.tsx`
-- `frontend/src/components/employee/PinLogin.tsx`
-- `backend/src/controllers/employee.controller.ts` (enhance)
-
-#### Task 2.4: Inventory Management
-**Status:** Schema exists, no implementation
-
-**Implementation:**
-```typescript
-Frontend:
-- [ ] Inventory dashboard
-- [ ] Ingredient management (CRUD)
-- [ ] Stock tracking per outlet
-- [ ] Low stock alerts
-- [ ] Stock adjustment form
-- [ ] Supplier management
-- [ ] Purchase order system
-- [ ] Stock history/audit log
-
-Backend:
-- [ ] Ingredient CRUD endpoints
-- [ ] Stock adjustment endpoints
-- [ ] Low stock alert system
-- [ ] Supplier management endpoints
-- [ ] Purchase order endpoints
-```
-
-**Files to Create:**
-- `frontend/src/pages/InventoryPage.tsx`
-- `frontend/src/components/inventory/IngredientList.tsx`
-- `frontend/src/components/inventory/StockAdjustment.tsx`
-- `frontend/src/components/inventory/SupplierManager.tsx`
-- `backend/src/controllers/ingredient.controller.ts`
-- `backend/src/controllers/supplier.controller.ts`
-
----
-
-### PHASE 3: REPORTING & ANALYTICS (Priority: MEDIUM)
-
-#### Task 3.1: Sales Reports
-**Implementation:**
-```typescript
-Frontend:
-- [ ] Sales dashboard with charts
-- [ ] Daily/weekly/monthly sales reports
-- [ ] Sales by category/product
-- [ ] Sales by cashier/outlet
-- [ ] Export to PDF/Excel
-- [ ] Date range filter
-- [ ] Real-time sales chart
-
-Backend:
-- [ ] Sales aggregation endpoints
-- [ ] Report generation service
-- [ ] PDF generation (puppeteer/pdfkit)
-- [ ] Excel export (exceljs)
-- [ ] Scheduled reports (cron)
-```
-
-**Files to Create:**
-- `frontend/src/pages/ReportsPage.tsx`
-- `frontend/src/components/reports/SalesChart.tsx`
-- `frontend/src/components/reports/ReportFilters.tsx`
-- `frontend/src/utils/chartConfig.ts`
-- `backend/src/services/reportGenerator.service.ts`
-- `backend/src/controllers/report.controller.ts`
-
-#### Task 3.2: Advanced Analytics
-**Implementation:**
-```typescript
-- [ ] Top selling products
-- [ ] Peak hours analysis
-- [ ] Customer behavior insights
-- [ ] Profit margin analysis
-- [ ] Inventory turnover rate
-- [ ] Employee performance metrics
-- [ ] Trend predictions
-```
-
----
-
-### PHASE 4: MULTI-TENANT ENHANCEMENTS (Priority: MEDIUM)
-
-#### Task 4.1: Tenant Management Dashboard
-**Status:** Backend exists, no admin UI
-
-**Implementation:**
-```typescript
-Frontend (Super Admin):
-- [ ] Tenant list/management page
-- [ ] Create new tenant form
-- [ ] Edit tenant details
-- [ ] Subscription management
-- [ ] Usage analytics per tenant
-- [ ] Feature flags per tenant
-- [ ] Billing management
-
-Backend:
-- [ ] Tenant usage tracking
-- [ ] Subscription expiry checks
-- [ ] Auto-suspend expired tenants
-- [ ] Usage limits enforcement
-```
-
-**Files to Create:**
-- `frontend/src/pages/admin/TenantManagementPage.tsx`
-- `frontend/src/components/admin/TenantList.tsx`
-- `frontend/src/components/admin/SubscriptionManager.tsx`
-- `backend/src/services/subscription.service.ts`
-
-#### Task 4.2: Outlet Management
-**Status:** Database exists, no UI
-
-**Implementation:**
-```typescript
-Frontend:
-- [ ] Outlet management page (Owner)
-- [ ] Add new outlet
-- [ ] Edit outlet details
-- [ ] Outlet-specific settings
-- [ ] Transfer products between outlets
-- [ ] Outlet performance comparison
-
-Backend:
-- [ ] Outlet CRUD endpoints (enhance)
-- [ ] Outlet settings management
-- [ ] Cross-outlet reporting
-```
-
-**Files to Create:**
-- `frontend/src/pages/OutletManagementPage.tsx`
-- `frontend/src/components/outlet/OutletList.tsx`
-- `frontend/src/components/outlet/OutletForm.tsx`
-
----
-
-### PHASE 5: UX/UI ENHANCEMENTS (Priority: MEDIUM)
-
-#### Task 5.1: Mobile Responsiveness
-**Current:** Partial mobile support
-
-**Implementation:**
-```css
-- [ ] Optimize CashierPage for tablets
-- [ ] Touch-friendly buttons (larger tap targets)
-- [ ] Swipe gestures for cart
-- [ ] Mobile-first product grid
-- [ ] Responsive navigation
-- [ ] Mobile payment flow
-```
-
-#### Task 5.2: Keyboard Shortcuts
-**Implementation:**
-```typescript
-- [ ] F2: Add product (quick search)
-- [ ] F3: Checkout
-- [ ] F4: Hold order
-- [ ] F9: Open cash drawer
-- [ ] ESC: Cancel/close modal
-- [ ] Ctrl+P: Print receipt
-- [ ] Numpad support for quantity
-```
-
-**Files to Create:**
-- `frontend/src/hooks/useKeyboardShortcuts.ts`
-
-#### Task 5.3: Theming & Branding
-**Implementation:**
-```typescript
-- [ ] Dark mode support
-- [ ] Tenant-specific branding (logo, colors)
-- [ ] Customizable POS layout
-- [ ] Receipt template customization
-- [ ] Print logo on receipt
-```
-
----
-
-### PHASE 6: ADVANCED FEATURES (Priority: LOW)
-
-#### Task 6.1: Customer Management
-**Status:** Database exists, no implementation
-
-**Implementation:**
-```typescript
-- [ ] Customer database (CRUD)
-- [ ] Customer loyalty program
-- [ ] Purchase history per customer
-- [ ] Customer preferences
-- [ ] Birthday/anniversary tracking
-- [ ] SMS/Email notifications
-```
-
-#### Task 6.2: Promotions & Discounts
-**Implementation:**
-```typescript
-- [ ] Discount types (percentage, fixed, BOGO)
-- [ ] Coupon codes
-- [ ] Happy hour pricing
-- [ ] Member discounts
-- [ ] Bundle deals
-- [ ] Automatic discount application
-```
-
-#### Task 6.3: Kitchen Display System (KDS)
-**Implementation:**
-```typescript
-- [ ] Order routing to kitchen
-- [ ] Kitchen order queue
-- [ ] Order status (new, preparing, ready)
-- [ ] Order completion tracking
-- [ ] Kitchen performance metrics
-```
-
-#### Task 6.4: Integration Features
-**Implementation:**
-```typescript
-- [ ] WhatsApp integration for orders
-- [ ] Email notifications
-- [ ] SMS notifications
-- [ ] Payment gateway integration (Midtrans)
-- [ ] E-wallet integration (GoPay, OVO, Dana)
-- [ ] Accounting software export (Jurnal, Accurate)
-```
-
----
-
-## 🛠️ TECHNICAL DEBT & IMPROVEMENTS
-
-### Code Quality
-- [ ] Add comprehensive TypeScript types for all API responses
-- [ ] Extract reusable components from CashierPage
-- [ ] Create component library (Button, Input, Modal, etc.)
-- [ ] Add PropTypes/JSDoc documentation
-- [ ] Implement code splitting for faster load
-- [ ] Add Storybook for component documentation
-
-### Performance
-- [ ] Implement React Query for caching
-- [ ] Add pagination for large product lists
-- [ ] Optimize images (lazy loading, WebP format)
-- [ ] Add service worker for offline support
-- [ ] Database indexing optimization
-- [ ] API response caching (Redis)
-
-### Testing
-- [ ] Unit tests for controllers (Jest)
-- [ ] Integration tests for API endpoints (Supertest)
-- [ ] E2E tests for critical flows (Playwright)
-- [ ] Component tests (React Testing Library)
-- [ ] Load testing (k6/Artillery)
-- [ ] Security testing (OWASP checks)
-
-### DevOps
-- [ ] Docker Compose for local development
-- [ ] CI/CD pipeline (GitHub Actions)
-- [ ] Automated testing in pipeline
-- [ ] Staging environment setup
-- [ ] Production deployment guide
-- [ ] Database migration strategy
-- [ ] Backup & restore procedures
-- [ ] Monitoring setup (PM2, New Relic)
-
-### Security
-- [ ] Add rate limiting (express-rate-limit)
-- [ ] Input sanitization (DOMPurify)
-- [ ] SQL injection prevention audit
-- [ ] XSS prevention audit
-- [ ] CSRF token implementation
-- [ ] Security headers (Helmet.js)
-- [ ] Audit logging for sensitive operations
-- [ ] Two-factor authentication (2FA)
-
----
-
-## 📁 NEW FILES TO CREATE
-
-### Frontend Components
-```
-frontend/src/
-├── components/
-│   ├── common/
-│   │   ├── Button.tsx
-│   │   ├── Input.tsx
-│   │   ├── Modal.tsx
-│   │   ├── Card.tsx
-│   │   ├── Table.tsx
-│   │   └── Loader.tsx
-│   ├── product/
-│   │   ├── ProductForm.tsx ⭐ PRIORITY
-│   │   ├── ProductCard.tsx
-│   │   ├── ProductList.tsx
-│   │   ├── ImageUpload.tsx ⭐ PRIORITY
-│   │   └── StockBadge.tsx
-│   ├── category/
-│   │   ├── CategoryManager.tsx ⭐ PRIORITY
-│   │   └── CategoryForm.tsx ⭐ PRIORITY
-│   ├── transaction/
-│   │   ├── TransactionHistory.tsx ⭐ PRIORITY
-│   │   ├── ReceiptPrint.tsx ⭐ PRIORITY
-│   │   └── TransactionDetail.tsx
-│   ├── table/
-│   │   ├── TableGrid.tsx
-│   │   ├── TableCard.tsx
-│   │   └── TableSelector.tsx
-│   ├── modifiers/
-│   │   ├── ModifierManager.tsx
-│   │   ├── VariantManager.tsx
-│   │   └── ModifierSelector.tsx
-│   ├── employee/
-│   │   ├── EmployeeList.tsx
-│   │   ├── EmployeeForm.tsx
-│   │   └── PinLogin.tsx
-│   └── reports/
-│       ├── SalesChart.tsx
-│       ├── ReportFilters.tsx
-│       └── ExportButton.tsx
-├── pages/
-│   ├── TableManagementPage.tsx
-│   ├── ModifierManagementPage.tsx
-│   ├── EmployeeManagementPage.tsx
-│   ├── InventoryPage.tsx
-│   ├── ReportsPage.tsx
-│   └── admin/
-│       └── TenantManagementPage.tsx
-├── utils/
-│   ├── validation.ts ⭐ PRIORITY
-│   ├── errorHandler.ts ⭐ PRIORITY
-│   ├── receiptTemplate.ts ⭐ PRIORITY
-│   └── chartConfig.ts
-└── hooks/
-    ├── useKeyboardShortcuts.ts
-    └── useOfflineQueue.ts
-```
-
-### Backend Files
-```
-backend/src/
-├── controllers/
-│   ├── receipt.controller.ts ⭐ PRIORITY
-│   ├── modifier.controller.ts
-│   ├── variant.controller.ts
-│   ├── report.controller.ts
-│   └── supplier.controller.ts
-├── services/
-│   ├── reportGenerator.service.ts
-│   ├── subscription.service.ts
-│   └── email.service.ts
-├── middlewares/
-│   ├── errorHandler.middleware.ts ⭐ PRIORITY
-│   ├── validation.middleware.ts ⭐ PRIORITY
-│   └── rateLimit.middleware.ts
-└── utils/
-    ├── pdfGenerator.ts
-    └── excelExporter.ts
-```
-
-⭐ = High Priority for Next Session
-
----
-
-## 🎯 RECOMMENDED NEXT SESSION PLAN (Updated)
-
-### ✅ Session 1-3: HIGH PRIORITY FEATURES - **COMPLETED!**
-~~1. Category Management~~ ✅ DONE
-~~2. Transaction History~~ ✅ DONE
-~~3. Receipt Printing~~ ✅ DONE
-~~4. Table Management~~ ✅ DONE
-~~5. Modifiers/Variants~~ ✅ DONE
-~~6. Mobile Responsive~~ ✅ DONE
-~~7. Split Bill Payment~~ ✅ DONE
-
----
-
-### 📋 Next Session: MEDIUM PRIORITY FEATURES
-
-#### Session 1: Dashboard & Analytics (3-4 hours)
-1. Create sales dashboard page with charts
-2. Implement daily/weekly/monthly reports
-3. Add sales by category breakdown
-4. Create top products widget
-5. Add export to PDF/Excel
-
-**Priority:** Medium
-**Impact:** Business insights & decision making
-
-#### Session 2: Employee & User Management (3-4 hours)
-1. Build employee management page
-2. Implement PIN login for cashiers
-3. Add role assignment UI
-4. Create shift tracking
-5. Employee performance metrics
-
-**Priority:** Medium
-**Impact:** Multi-user operations & accountability
-
-#### Session 3: Inventory System (4-5 hours)
-1. Build inventory dashboard
-2. Ingredient CRUD management
-3. Stock tracking per outlet
-4. Low stock alerts
-5. Purchase order system
-
-**Priority:** Medium-Low
-**Impact:** Stock control & cost management
-
----
-
-## 📊 OVERALL PROJECT STATUS (Updated 14 Nov 2025)
+## 🎭 ROLE HIERARCHY
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  CATEGORY               COMPLETION   PRIORITY       │
+│                 ADMIN (Super Admin)                 │
+│  Route: /admin                                      │
+│  Access: Full system control                        │
 ├─────────────────────────────────────────────────────┤
-│  🔐 Authentication       100%        ✅ DONE        │
-│  👤 Multi-Tenancy        100%        ✅ DONE        │
-│  💾 Database Schema      100%        ✅ DONE        │
-│  🏪 Basic POS            100%        ✅ DONE        │
-│  📦 Product CRUD         100%        ✅ DONE        │
-│  🛒 Cart System          100%        ✅ DONE        │
-│  💰 Payment Flow         100%        ✅ DONE        │
-│  💰 Split Bill           100%        ✅ NEW!        │
-│  🏷️  Category Mgmt        100%        ✅ NEW!        │
-│  🧾 Transaction History  100%        ✅ NEW!        │
-│  🖨️  Receipt Printing     100%        ✅ NEW!        │
-│  📱 Mobile Responsive    100%        ✅ NEW!        │
-│  🍽️  Table Management     100%        ✅ NEW!        │
-│  🧩 Modifiers/Variants   100%        ✅ NEW!        │
-│  ──────────────────────────────────────────────────│
-│  👥 Employee Mgmt         20%        📌 MED         │
-│  📊 Reports/Analytics     10%        📌 MED         │
-│  🏢 Outlet Management     10%        📌 MED         │
-│  📦 Inventory System       0%        📌 MED         │
-│  🎁 Promotions/Discounts   0%        🔵 LOW         │
-│  👨‍🍳 Kitchen Display         0%        🔵 LOW         │
-│  🔔 Notifications          0%        🔵 LOW         │
+│  Pages:                                             │
+│  • Admin Login (/admin/login)                       │
+│  • Tenant Management                                │
+│  • System Analytics                                 │
+│  • Billing Management                               │
+│  • Subscription Plans                               │
+└─────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────┐
+│              OWNER (Tenant/Business Owner)          │
+│  Route: /owner or /dashboard                        │
+│  Access: Own business only                          │
 ├─────────────────────────────────────────────────────┤
-│  🎯 OVERALL MVP          100%        ✅ COMPLETE   │
-│  🎯 HIGH PRIORITY        100%        ✅ COMPLETE   │
-│  🎯 PRODUCTION READY      75%        🔥 READY      │
-│  🎯 FEATURE COMPLETE      60%        📌 PROGRESS   │
+│  Pages:                                             │
+│  • Owner Dashboard (analytics & charts)             │
+│  • Employee Management                              │
+│  • User Management                                  │
+│  • Outlet Management                                │
+│  • Product Management                               │
+│  • Reports & Analytics                              │
+│  • Settings                                         │
+│  • Inventory (future)                               │
+└─────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────┐
+│              KASIR (Cashier/Employee)               │
+│  Route: /cashier or /pos                            │
+│  Access: POS only                                   │
+├─────────────────────────────────────────────────────┤
+│  Pages:                                             │
+│  • POS Interface (already complete ✅)              │
+│  • Transaction History                              │
+│  • Table Management (view only)                     │
 └─────────────────────────────────────────────────────┘
 ```
 
-### 🎉 **MAJOR MILESTONE ACHIEVED!**
+---
 
-**Completion Metrics:**
-- ✅ **ALL High Priority Features**: 100% Complete
-- ✅ **Core POS Functionality**: 100% Complete
-- ✅ **Payment System**: 100% Complete (with Split Bill)
-- ✅ **Mobile Experience**: 100% Complete
-- 🚀 **Production Ready**: 75% (Ready for deployment!)
+## ✅ CURRENT STATUS
 
-**What's Production Ready:**
-1. ✅ Login & Authentication
-2. ✅ Multi-tenant support
-3. ✅ Product & Category management
-4. ✅ POS cashier interface
-5. ✅ Cart & Checkout
-6. ✅ Split bill payments
-7. ✅ Table management
-8. ✅ Modifiers/variants
-9. ✅ Transaction history
-10. ✅ Receipt printing
-11. ✅ Mobile responsive
+### 1. KASIR (Cashier) - ✅ FRONTEND COMPLETE
+**Status:** Frontend complete, backend needs fixes (later)
 
-**What Still Needs Work:**
-- 📌 Advanced reporting & analytics
-- 📌 Employee management & PIN login
-- 📌 Inventory tracking
-- 🔵 Promotions & discounts
-- 🔵 Kitchen display system
+**Available Features:**
+- ✅ Login works
+- ✅ POS Interface complete
+- ✅ Product grid + category filter
+- ✅ Cart management
+- ✅ Checkout + payment modal
+- ✅ Split bill support
+- ✅ Receipt printing
+- ✅ Transaction history
+- ✅ Table management
+- ✅ Mobile responsive
+
+**Backend Issues (fix later):**
+- Transaction API validation
+- Payment recording
+- Stock updates
 
 ---
 
-## 🚀 QUICK START FOR NEXT SESSION
+### 2. OWNER (Tenant) - ⚠️ INCOMPLETE
+**Status:** Login works, but pages are missing/incomplete
 
-```bash
-# 1. Start Backend
-cd "C:\Users\Administrator\Documents\projek web\posduplicate\backend"
-npm run dev
+**Working:**
+- ✅ Login works (owner@kebuliutsman.com / password123)
+- ✅ Basic dashboard exists
 
-# 2. Start Frontend
-cd "C:\Users\Administrator\Documents\projek web\posduplicate\frontend"
-npm run dev
+**Missing Frontend Pages:**
+- ❌ Dashboard with charts & analytics UI
+- ❌ Employee Management page
+- ❌ User Management page
+- ❌ Outlet Management page
+- ❌ Reports page
+- ❌ Settings page
+- ❌ Proper navigation menu
 
-# 3. Open Browser
-# http://localhost:5173
-# Login: owner@kebuliutsman.com / password123
+---
 
-# 4. Test Current Features
-# ✅ Login works
-# ✅ Products load with categories
-# ✅ Category filter works (Makanan/Minuman)
-# ✅ Add to cart works
-# ✅ Checkout payment works
-# ✅ Product CRUD works (click "Manage Products")
+### 3. ADMIN (Super Admin) - ❌ NOT STARTED
+**Status:** Completely missing
+
+**Missing:**
+- ❌ Admin login page (/admin/login)
+- ❌ Admin dashboard/layout
+- ❌ Tenant management page
+- ❌ System analytics page
+- ❌ Billing management page
+- ❌ Navigation menu
+
+---
+
+## 🚀 FRONTEND-FIRST ROADMAP
+
+### PHASE 1: ADMIN ROLE - COMPLETE FRONTEND 🔥
+
+#### Task 1.1: Admin Login Page
+**File:** `frontend/src/pages/admin/AdminLoginPage.tsx`
+**Route:** `/admin/login`
+
+**UI Components:**
+- [ ] Login form (email + password)
+- [ ] "Admin Login" header/title
+- [ ] Remember me checkbox
+- [ ] Login button
+- [ ] Error message display
+- [ ] Redirect to admin dashboard after login
+
+**Mock Credentials:**
+- Email: admin@mypos.com
+- Password: admin123
+
+---
+
+#### Task 1.2: Admin Layout & Navigation
+**File:** `frontend/src/components/admin/AdminLayout.tsx`
+**Route:** `/admin/*`
+
+**UI Components:**
+- [ ] Sidebar navigation
+  - Dashboard
+  - Tenant Management
+  - System Analytics
+  - Billing Management
+  - Subscription Plans
+  - Logout
+- [ ] Top header with admin name
+- [ ] Main content area
+- [ ] Responsive mobile menu
+
+---
+
+#### Task 1.3: Tenant Management Page
+**File:** `frontend/src/pages/admin/TenantManagementPage.tsx`
+**Route:** `/admin/tenants`
+
+**UI Components:**
+- [ ] Header with "Add New Tenant" button
+- [ ] Search bar
+- [ ] Filters (active/inactive, subscription status)
+- [ ] Tenant list table
+  - Columns: Business Name, Owner Name, Email, Phone, Plan, Status, Created, Actions
+  - Actions: Edit, View Details, Deactivate/Activate
+- [ ] Pagination
+
+**Add/Edit Tenant Modal:**
+- [ ] Business Name input
+- [ ] Owner Name input
+- [ ] Email input
+- [ ] Phone input
+- [ ] Business Type dropdown (Restaurant, Retail, Cafe, etc)
+- [ ] Subscription Plan dropdown (Basic, Pro, Enterprise)
+- [ ] Max Outlets input
+- [ ] Max Users input
+- [ ] Start Date picker
+- [ ] Expiry Date picker
+- [ ] Save button
+
+**Mock Data (10 tenants for demo):**
+```javascript
+const mockTenants = [
+  { id: 1, business: "Kebuli Utsman", owner: "Ahmad", email: "owner@kebuliutsman.com", plan: "Pro", status: "Active" },
+  { id: 2, business: "Warung Sate Pak Eko", owner: "Eko", email: "eko@sate.com", plan: "Basic", status: "Active" },
+  // ... 8 more
+]
 ```
 
 ---
 
-## 📝 KEY DECISIONS FOR OWNER
+#### Task 1.4: System Analytics Page
+**File:** `frontend/src/pages/admin/SystemAnalyticsPage.tsx`
+**Route:** `/admin/analytics`
 
-Before starting enhancements, decide:
+**UI Components:**
+- [ ] Summary Cards (4 cards)
+  - Total Tenants (with trend)
+  - Total Users (all tenants)
+  - Total Transactions (system-wide)
+  - Total Revenue (system-wide)
+- [ ] Tenant Growth Chart (line chart)
+- [ ] Revenue Chart (bar chart - monthly)
+- [ ] Top Performing Tenants Table (top 10)
+- [ ] Active vs Inactive Tenants (pie chart)
+- [ ] Date range filter
 
-1. **Priority Features**: Which features are most important for your business?
-   - Tables (for dine-in)?
-   - Modifiers (for customization)?
-   - Reports (for analysis)?
-   - Inventory (for stock tracking)?
-
-2. **Target Devices**:
-   - Desktop POS only?
-   - Tablet-friendly?
-   - Mobile-first?
-
-3. **Integrations Needed**:
-   - Payment gateway?
-   - Accounting software?
-   - WhatsApp ordering?
-
-4. **Deployment Timeline**:
-   - When do you need this live?
-   - Phased rollout or all-at-once?
+**Use Mock Data / Recharts for charts**
 
 ---
 
-**Document Maintained By:** Claude Code Assistant
-**Purpose:** Self-contained execution plan for future AI sessions
-**Usage:** AI can read this file and execute tasks without additional instructions
+#### Task 1.5: Billing Management Page
+**File:** `frontend/src/pages/admin/BillingManagementPage.tsx`
+**Route:** `/admin/billing`
 
-**Next AI Session:** Start with PHASE 1, Task 1.1 (Product Management Enhancement)
+**UI Components:**
+
+**Tab 1: Subscription Plans**
+- [ ] Plan cards (Basic, Pro, Enterprise)
+- [ ] Add/Edit plan button
+- [ ] Plan details (price, features, limits)
+
+**Tab 2: Billing History**
+- [ ] Filter by tenant, date range
+- [ ] Billing table
+  - Columns: Tenant, Plan, Amount, Paid Date, Next Billing, Status
+- [ ] Export to Excel button
+
+**Tab 3: Overdue**
+- [ ] Overdue subscriptions list (red alert)
+- [ ] Send reminder button
+- [ ] Auto-suspend toggle
+
+**Mock subscription plans:**
+```javascript
+const plans = [
+  { name: "Basic", price: 99000, maxOutlets: 1, maxUsers: 5 },
+  { name: "Pro", price: 299000, maxOutlets: 5, maxUsers: 20 },
+  { name: "Enterprise", price: 999000, maxOutlets: 999, maxUsers: 999 }
+]
+```
 
 ---
 
-## 💡 NOTES FOR FUTURE AI SESSIONS
+### PHASE 2: OWNER ROLE - COMPLETE FRONTEND 🔥
 
-When you read this file:
-1. Check "CURRENT STATUS" to see what's done
-2. Go to "RECOMMENDED NEXT SESSION PLAN"
-3. Follow the tasks in order
-4. Update this file after completing tasks
-5. Mark completed items with ✅
-6. Add any new issues to appropriate sections
+#### Task 2.1: Owner Dashboard Page (Rebuild)
+**File:** `frontend/src/pages/OwnerDashboardPage.tsx`
+**Route:** `/dashboard` or `/owner/dashboard`
 
-**Remember:** User wants features to be "more proper" - focus on:
-- Better validation
-- Better error handling
-- Better UX/UI polish
-- Production-ready code quality
-- Comprehensive testing
+**UI Components:**
+- [ ] Welcome header with owner name
+- [ ] Date range filter (Today, This Week, This Month, Custom)
+- [ ] Outlet selector dropdown (if multiple outlets)
 
-Good luck! 🚀
+**Summary Cards (4 cards):**
+- [ ] Total Sales (with % change)
+- [ ] Total Transactions (with % change)
+- [ ] Total Products
+- [ ] Total Customers
+
+**Charts:**
+- [ ] Sales Trend Chart (line chart - last 7/30 days)
+- [ ] Sales by Category (pie chart)
+- [ ] Top 5 Products (bar chart)
+
+**Tables:**
+- [ ] Recent Transactions (last 10)
+  - Columns: Transaction #, Date, Total, Status
+  - View detail button
+- [ ] Low Stock Alerts (if any)
+
+**Quick Actions Buttons:**
+- [ ] Go to POS
+- [ ] Add Product
+- [ ] View Reports
+- [ ] Settings
+
+**Use Mock Data / Recharts**
+
+---
+
+#### Task 2.2: Employee Management Page
+**File:** `frontend/src/pages/EmployeeManagementPage.tsx`
+**Route:** `/owner/employees`
+
+**UI Components:**
+- [ ] Header with "Add New Employee" button
+- [ ] Search bar
+- [ ] Filter by status (Active/Inactive), position, outlet
+- [ ] Employee list table
+  - Columns: Photo, Name, Position, Employee Code, PIN, Outlet, Status, Actions
+  - Actions: Edit, Deactivate, View Performance
+- [ ] Pagination
+
+**Add/Edit Employee Modal:**
+- [ ] Photo upload
+- [ ] Name input
+- [ ] Employee Code input (auto-generated option)
+- [ ] PIN input (6 digits for quick login)
+- [ ] Position dropdown (Cashier, Manager, Kitchen, Waiter)
+- [ ] Outlet dropdown
+- [ ] Salary input
+- [ ] Hire Date picker
+- [ ] Link to User Account dropdown (optional)
+- [ ] Active/Inactive toggle
+- [ ] Save button
+
+**Mock Data (20 employees):**
+```javascript
+const mockEmployees = [
+  { id: 1, name: "Budi Santoso", code: "EMP001", pin: "123456", position: "Cashier", outlet: "Main Store", status: "Active" },
+  // ... 19 more
+]
+```
+
+---
+
+#### Task 2.3: User Management Page
+**File:** `frontend/src/pages/UserManagementPage.tsx`
+**Route:** `/owner/users`
+
+**UI Components:**
+- [ ] Header with "Create New User" button
+- [ ] Search bar
+- [ ] Filter by role, outlet, status
+- [ ] User list table
+  - Columns: Name, Email, Role, Outlet, Last Login, Status, Actions
+  - Actions: Edit, Reset Password, Deactivate
+- [ ] Pagination
+
+**Create/Edit User Modal:**
+- [ ] Name input
+- [ ] Email input
+- [ ] Password input (only for create)
+- [ ] Role dropdown (Owner, Manager, Cashier, Kitchen)
+- [ ] Outlet dropdown
+- [ ] Active/Inactive toggle
+- [ ] Save button
+
+**Reset Password Modal:**
+- [ ] New password input
+- [ ] Confirm password input
+- [ ] Generate random password button
+- [ ] Save button
+
+**Mock Data (15 users):**
+```javascript
+const mockUsers = [
+  { id: 1, name: "Owner", email: "owner@kebuliutsman.com", role: "Owner", outlet: "All", lastLogin: "2025-11-14 10:30" },
+  { id: 2, name: "Kasir 1", email: "kasir1@kebuli.com", role: "Cashier", outlet: "Main Store", lastLogin: "2025-11-14 09:15" },
+  // ... 13 more
+]
+```
+
+---
+
+#### Task 2.4: Outlet Management Page
+**File:** `frontend/src/pages/OutletManagementPage.tsx`
+**Route:** `/owner/outlets`
+
+**UI Components:**
+- [ ] Header with "Add New Outlet" button
+- [ ] Outlet cards grid (card view, not table)
+  - Card shows: Outlet name, address, phone, status, active users, active products
+  - Actions: Edit, Settings, View Stats, Deactivate
+
+**Add/Edit Outlet Modal:**
+- [ ] Outlet Name input
+- [ ] Address textarea
+- [ ] Phone input
+- [ ] Email input
+- [ ] NPWP input (tax ID)
+- [ ] Active/Inactive toggle
+- [ ] Save button
+
+**Outlet Settings Modal:**
+- [ ] Tax Rate input (%)
+- [ ] Tax Name input (e.g., "PB1")
+- [ ] Service Charge input (%)
+- [ ] Currency dropdown (IDR, USD, etc)
+- [ ] Receipt Header textarea
+- [ ] Receipt Footer textarea
+- [ ] Save button
+
+**Mock Data (3 outlets):**
+```javascript
+const mockOutlets = [
+  { id: 1, name: "Main Store", address: "Jl. Sudirman No. 123", phone: "021-1234567", status: "Active", users: 5, products: 45 },
+  { id: 2, name: "Branch Kemang", address: "Jl. Kemang Raya 45", phone: "021-7654321", status: "Active", users: 3, products: 40 },
+  { id: 3, name: "Branch BSD", address: "BSD City Blok A", phone: "021-9999888", status: "Inactive", users: 0, products: 0 },
+]
+```
+
+---
+
+#### Task 2.5: Reports & Analytics Page
+**File:** `frontend/src/pages/ReportsPage.tsx`
+**Route:** `/owner/reports`
+
+**UI Components:**
+
+**Filters Panel:**
+- [ ] Date range picker (From - To)
+- [ ] Outlet selector
+- [ ] Report type dropdown
+- [ ] Export buttons (PDF, Excel, Print)
+
+**Tab Navigation:**
+- [ ] Sales Report
+- [ ] Product Performance
+- [ ] Category Performance
+- [ ] Cashier Performance
+- [ ] Payment Methods
+
+**Tab 1: Sales Report**
+- [ ] Summary cards (Total Sales, Total Transactions, Avg Transaction)
+- [ ] Sales chart (daily breakdown)
+- [ ] Sales table (date, transactions, total, growth %)
+
+**Tab 2: Product Performance**
+- [ ] Top 10 products table (product, sold qty, revenue, profit)
+- [ ] Product sales chart (bar chart)
+- [ ] Worst performing products (bottom 5)
+
+**Tab 3: Category Performance**
+- [ ] Sales by category pie chart
+- [ ] Category table (category, items sold, revenue, % of total)
+
+**Tab 4: Cashier Performance**
+- [ ] Cashier leaderboard table (cashier, transactions, total sales, avg transaction)
+- [ ] Hourly performance chart
+
+**Tab 5: Payment Methods**
+- [ ] Payment method breakdown pie chart
+- [ ] Payment table (method, count, total amount, % of total)
+
+**Use Mock Data / Recharts**
+
+---
+
+#### Task 2.6: Settings Page
+**File:** `frontend/src/pages/SettingsPage.tsx`
+**Route:** `/owner/settings`
+
+**UI Components (Tab-based):**
+
+**Tab 1: Business Information**
+- [ ] Business name input (from tenant)
+- [ ] Owner name input
+- [ ] Email input
+- [ ] Phone input
+- [ ] Address textarea
+- [ ] Logo upload
+- [ ] Save button
+
+**Tab 2: Tax & Charges**
+- [ ] Enable Tax toggle
+- [ ] Tax Rate input (%)
+- [ ] Tax Name input
+- [ ] Enable Service Charge toggle
+- [ ] Service Charge Rate input (%)
+- [ ] Save button
+
+**Tab 3: Receipt Settings**
+- [ ] Receipt Header textarea
+- [ ] Receipt Footer textarea
+- [ ] Show Logo on Receipt toggle
+- [ ] Thermal Printer Width dropdown (58mm, 80mm)
+- [ ] Preview Receipt button
+- [ ] Save button
+
+**Tab 4: Notifications**
+- [ ] Email notifications toggle
+- [ ] Low stock alerts toggle
+- [ ] Daily sales report email toggle
+- [ ] WhatsApp notifications toggle (future)
+- [ ] Save button
+
+**Tab 5: System Preferences**
+- [ ] Currency dropdown (IDR, USD)
+- [ ] Date format dropdown (DD/MM/YYYY, MM/DD/YYYY)
+- [ ] Time format dropdown (24h, 12h)
+- [ ] Timezone dropdown
+- [ ] Language dropdown (English, Indonesia)
+- [ ] Save button
+
+**Tab 6: Change Password**
+- [ ] Current password input
+- [ ] New password input
+- [ ] Confirm password input
+- [ ] Change password button
+
+---
+
+#### Task 2.7: Owner Layout & Navigation
+**File:** `frontend/src/components/owner/OwnerLayout.tsx`
+
+**UI Components:**
+- [ ] Sidebar navigation
+  - Dashboard
+  - Employees
+  - Users
+  - Outlets
+  - Products (link to existing page)
+  - Reports
+  - Settings
+  - Go to POS (link to cashier page)
+  - Logout
+- [ ] Top header
+  - Current outlet selector
+  - Notifications bell icon
+  - User profile dropdown
+- [ ] Main content area
+- [ ] Responsive mobile menu
+
+---
+
+### PHASE 3: ROUTING & AUTHENTICATION 🔥
+
+#### Task 3.1: Setup Routing for All Roles
+**File:** `frontend/src/App.tsx` or router file
+
+**Routes to Add:**
+
+```javascript
+// Admin Routes
+/admin/login
+/admin/dashboard (or /admin)
+/admin/tenants
+/admin/analytics
+/admin/billing
+
+// Owner Routes
+/owner/dashboard (or /dashboard)
+/owner/employees
+/owner/users
+/owner/outlets
+/owner/products
+/owner/reports
+/owner/settings
+
+// Cashier Routes
+/cashier (or /pos) - already exists
+/login - general login (redirect based on role)
+```
+
+**Protected Routes:**
+- [ ] Admin routes → require admin role
+- [ ] Owner routes → require owner/admin role
+- [ ] Cashier routes → require cashier/owner/admin role
+
+---
+
+#### Task 3.2: Role-Based Login & Redirect
+**File:** `frontend/src/pages/LoginPage.tsx` or auth service
+
+**Login Logic:**
+```javascript
+// After successful login, check user role:
+if (role === 'admin') {
+  navigate('/admin/dashboard')
+} else if (role === 'owner') {
+  navigate('/owner/dashboard')
+} else if (role === 'cashier') {
+  navigate('/cashier')
+}
+```
+
+**Create Test Users in DB (mock or seed):**
+```sql
+-- Admin user
+INSERT INTO users (email, password_hash, name, role_id) VALUES
+('admin@mypos.com', 'hashed_admin123', 'Super Admin', 1);
+
+-- Owner user (already exists)
+-- owner@kebuliutsman.com / password123
+
+-- Cashier user
+INSERT INTO users (email, password_hash, name, role_id, tenant_id, outlet_id) VALUES
+('kasir@kebuli.com', 'hashed_kasir123', 'Kasir 1', 3, 1, 1);
+```
+
+---
+
+#### Task 3.3: Role Guard / Route Protection
+**File:** `frontend/src/components/auth/RoleGuard.tsx`
+
+**Component:**
+```javascript
+// Protect routes based on user role
+<RoleGuard allowedRoles={['admin']}>
+  <AdminDashboard />
+</RoleGuard>
+
+<RoleGuard allowedRoles={['owner', 'admin']}>
+  <OwnerDashboard />
+</RoleGuard>
+
+<RoleGuard allowedRoles={['cashier', 'owner', 'admin']}>
+  <CashierPage />
+</RoleGuard>
+```
+
+---
+
+## 📋 IMPLEMENTATION CHECKLIST
+
+### PHASE 1: ADMIN FRONTEND ✅
+- [ ] Task 1.1: Admin Login Page
+- [ ] Task 1.2: Admin Layout & Navigation
+- [ ] Task 1.3: Tenant Management Page (with mock data)
+- [ ] Task 1.4: System Analytics Page (with mock charts)
+- [ ] Task 1.5: Billing Management Page (with mock data)
+
+### PHASE 2: OWNER FRONTEND ✅
+- [ ] Task 2.1: Owner Dashboard Page (rebuild with charts)
+- [ ] Task 2.2: Employee Management Page (with mock data)
+- [ ] Task 2.3: User Management Page (with mock data)
+- [ ] Task 2.4: Outlet Management Page (with mock data)
+- [ ] Task 2.5: Reports & Analytics Page (with mock charts)
+- [ ] Task 2.6: Settings Page (all tabs)
+- [ ] Task 2.7: Owner Layout & Navigation
+
+### PHASE 3: ROUTING & AUTH ✅
+- [ ] Task 3.1: Setup all routes
+- [ ] Task 3.2: Role-based login redirect
+- [ ] Task 3.3: Route protection by role
+
+### PHASE 4: BACKEND (AFTER UI COMPLETE) ⏳
+- [ ] Fix transaction API
+- [ ] Create dashboard analytics API
+- [ ] Create employee API
+- [ ] Create user management API
+- [ ] Create outlet API
+- [ ] Create reports API
+- [ ] Create admin tenant API
+- [ ] Create admin analytics API
+- [ ] Create billing API
+
+---
+
+## 🎯 SUCCESS CRITERIA (FRONTEND)
+
+### Admin Role ✅
+- [ ] Can login at /admin/login
+- [ ] Can see tenant list (mock data ok)
+- [ ] Can see "Add Tenant" form (doesn't need to save)
+- [ ] Can see system analytics page with charts
+- [ ] Can see billing management page
+- [ ] All navigation works
+
+### Owner Role ✅
+- [ ] Can login and redirect to owner dashboard
+- [ ] Can see dashboard with charts (mock data ok)
+- [ ] Can see employee management page
+- [ ] Can see user management page
+- [ ] Can see outlet management page
+- [ ] Can see reports page with charts
+- [ ] Can see settings page (all tabs)
+- [ ] All navigation works
+
+### Cashier Role ✅
+- [ ] Can login and redirect to POS
+- [ ] POS interface works (already done ✅)
+- [ ] Can only access POS (blocked from owner pages)
+
+### All Roles ✅
+- [ ] Login redirects to correct page based on role
+- [ ] Logout works
+- [ ] Navigation restricted by role
+- [ ] UI is responsive (mobile-friendly)
+
+---
+
+## 📦 REQUIRED DEPENDENCIES
+
+```bash
+# If not already installed:
+npm install recharts          # For charts
+npm install react-router-dom  # For routing
+npm install lucide-react      # For icons
+npm install date-fns          # For date formatting
+```
+
+---
+
+## 🚀 EXECUTION ORDER
+
+**Start Here:**
+1. Install dependencies (if needed)
+2. Create admin pages (Phase 1) - 5 pages
+3. Create owner pages (Phase 2) - 6 pages
+4. Setup routing (Phase 3)
+5. Test all 3 roles can login and navigate
+
+**Later (After UI Complete):**
+6. Connect to real backend APIs (Phase 4)
+
+---
+
+## 📝 NOTES
+
+**For Mock Data:**
+- Use dummy/hardcoded data in components
+- Mock charts with sample datasets
+- Forms don't need to save (can just show success toast)
+- Focus on UI/UX complete, not functionality
+
+**For Charts:**
+- Use Recharts library
+- Sample data is fine
+- Make it look good visually
+
+**For Tables:**
+- Mock data arrays in component state
+- Pagination can be frontend-only
+- Search/filter can be simple array filter
+
+---
+
+**Last Updated:** 14 November 2025
+**Current Focus:** Frontend UI Complete First
+**Next Action:** Start PHASE 1 - Build Admin Pages
+

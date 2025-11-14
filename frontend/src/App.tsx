@@ -1,15 +1,32 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { Toaster } from 'react-hot-toast';
+
+// Auth
 import LoginPage from './pages/LoginPage';
+
+// Cashier
 import CashierPage from './pages/CashierPage';
-import AdminLayout from './pages/AdminLayout';
-import DashboardPage from './pages/DashboardPage';
-import EmployeeManagementPage from './pages/EmployeeManagementPage';
-import PromotionsPage from './pages/PromotionsPage';
+
+// Admin (Super Admin)
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminLayout from './components/admin/AdminLayout';
+import TenantManagementPage from './pages/admin/TenantManagementPage';
+import SystemAnalyticsPage from './pages/admin/SystemAnalyticsPage';
+import BillingManagementPage from './pages/admin/BillingManagementPage';
+
+// Owner
+import OwnerLayout from './components/owner/OwnerLayout';
+import OwnerDashboardPage from './pages/owner/OwnerDashboardPage';
+import EmployeeManagementPage from './pages/owner/EmployeeManagementPage';
+import UserManagementPage from './pages/owner/UserManagementPage';
+import OutletManagementPage from './pages/owner/OutletManagementPage';
+import ReportsPage from './pages/owner/ReportsPage';
+import SettingsPage from './pages/owner/SettingsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((state) => state.token);
+  const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
   return token ? <>{children}</> : <Navigate to="/login" />;
 }
 
@@ -22,40 +39,13 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="top-right" />
       <Routes>
+        {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/cashier"
-          element={
-            <ProtectedRoute>
-              <CashierPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/employees"
-          element={
-            <ProtectedRoute>
-              <EmployeeManagementPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/promotions"
-          element={
-            <ProtectedRoute>
-              <PromotionsPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+
+        {/* Admin Routes (Super Admin) */}
         <Route
           path="/admin"
           element={
@@ -64,12 +54,48 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<DashboardPage />} />
-          <Route path="products" element={<div className="text-center py-8 text-gray-500">Products page - Coming soon</div>} />
-          <Route path="customers" element={<div className="text-center py-8 text-gray-500">Customers page - Coming soon</div>} />
-          <Route path="settings" element={<div className="text-center py-8 text-gray-500">Settings page - Coming soon</div>} />
+          <Route path="dashboard" element={<SystemAnalyticsPage />} />
+          <Route path="tenants" element={<TenantManagementPage />} />
+          <Route path="analytics" element={<SystemAnalyticsPage />} />
+          <Route path="billing" element={<BillingManagementPage />} />
+          <Route index element={<Navigate to="/admin/dashboard" />} />
         </Route>
+
+        {/* Owner Routes */}
+        <Route
+          path="/owner"
+          element={
+            <ProtectedRoute>
+              <OwnerLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard" element={<OwnerDashboardPage />} />
+          <Route path="employees" element={<EmployeeManagementPage />} />
+          <Route path="users" element={<UserManagementPage />} />
+          <Route path="outlets" element={<OutletManagementPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route index element={<Navigate to="/owner/dashboard" />} />
+        </Route>
+
+        {/* Cashier Route */}
+        <Route
+          path="/cashier"
+          element={
+            <ProtectedRoute>
+              <CashierPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Legacy/Compatibility Routes */}
+        <Route path="/dashboard" element={<Navigate to="/owner/dashboard" />} />
+        <Route path="/employees" element={<Navigate to="/owner/employees" />} />
+
+        {/* Default Route */}
         <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
   );
