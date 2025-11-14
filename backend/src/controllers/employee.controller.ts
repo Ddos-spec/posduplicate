@@ -3,40 +3,42 @@ import prisma from '../utils/prisma';
 
 export const getEmployees = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { outlet_id, status } = req.query;
+    const { outlet_id, is_active } = req.query;
     const where: any = {};
 
     if (req.tenantId) {
-      where.user = { tenantId: req.tenantId };
+      where.users = { tenantId: req.tenantId };
     }
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
-    if (status) {
-      where.status = status;
+    if (is_active !== undefined) {
+      where.is_active = is_active === 'true';
     }
 
-    const employees = await prisma.employee.findMany({
+    const employees = await prisma.employees.findMany({
       where,
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             name: true,
             email: true,
-            role: true
+            roles: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
           }
         },
-        outlet: {
+        outlets: {
           select: { id: true, name: true }
-        },
-        _count: {
-          select: { shifts: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
 
     res.json({ success: true, data: employees, count: employees.length });
@@ -49,22 +51,23 @@ export const getEmployeeById = async (req: Request, res: Response, next: NextFun
   try {
     const { id } = req.params;
 
-    const employee = await prisma.employee.findUnique({
+    const employee = await prisma.employees.findUnique({
       where: { id: parseInt(id) },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             name: true,
             email: true,
-            role: true
+            roles: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
           }
         },
-        outlet: true,
-        shifts: {
-          orderBy: { shiftDate: 'desc' },
-          take: 30
-        }
+        outlets: true
       }
     });
 
@@ -83,7 +86,7 @@ export const getEmployeeById = async (req: Request, res: Response, next: NextFun
 
 export const createEmployee = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userId, outletId, position, salary, joinDate } = req.body;
+    const { userId, outletId, employeeCode, pinCode, position, salary, hiredAt } = req.body;
 
     if (!userId || !outletId) {
       return res.status(400).json({
@@ -92,17 +95,35 @@ export const createEmployee = async (req: Request, res: Response, next: NextFunc
       });
     }
 
-    const employee = await prisma.employee.create({
+    // Check if user already has an employee record for this outlet
+    const existing = await prisma.employees.findFirst({
+      where: {
+        user_id: userId,
+        outlet_id: outletId
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'EMPLOYEE_EXISTS', message: 'Employee already exists for this user and outlet' }
+      });
+    }
+
+    const employee = await prisma.employees.create({
       data: {
-        userId,
-        outletId,
+        user_id: userId,
+        outlet_id: outletId,
+        employee_code: employeeCode,
+        pin_code: pinCode,
         position,
         salary: salary || 0,
-        joinDate: joinDate ? new Date(joinDate) : new Date()
+        hired_at: hiredAt ? new Date(hiredAt) : new Date(),
+        is_active: true
       },
       include: {
-        user: { select: { id: true, name: true, email: true } },
-        outlet: { select: { id: true, name: true } }
+        users: { select: { id: true, name: true, email: true } },
+        outlets: { select: { id: true, name: true } }
       }
     });
 
@@ -115,14 +136,21 @@ export const createEmployee = async (req: Request, res: Response, next: NextFunc
 export const updateEmployee = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { position, salary, status } = req.body;
+    const { employeeCode, pinCode, position, salary, isActive } = req.body;
 
-    const employee = await prisma.employee.update({
+    const data: any = {};
+    if (employeeCode !== undefined) data.employee_code = employeeCode;
+    if (pinCode !== undefined) data.pin_code = pinCode;
+    if (position !== undefined) data.position = position;
+    if (salary !== undefined) data.salary = salary;
+    if (isActive !== undefined) data.is_active = isActive;
+
+    const employee = await prisma.employees.update({
       where: { id: parseInt(id) },
-      data: {
-        ...(position && { position }),
-        ...(salary !== undefined && { salary }),
-        ...(status && { status })
+      data,
+      include: {
+        users: { select: { id: true, name: true, email: true } },
+        outlets: { select: { id: true, name: true } }
       }
     });
 
@@ -136,43 +164,12 @@ export const deleteEmployee = async (req: Request, res: Response, next: NextFunc
   try {
     const { id } = req.params;
 
-    await prisma.employee.update({
+    await prisma.employees.update({
       where: { id: parseInt(id) },
-      data: { status: 'inactive' }
+      data: { is_active: false }
     });
 
     res.json({ success: true, message: 'Employee deactivated successfully' });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getEmployeeShifts = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { date_from, date_to } = req.query;
-
-    const where: any = { employeeId: parseInt(id) };
-
-    if (date_from || date_to) {
-      where.shiftDate = {};
-      if (date_from) where.shiftDate.gte = new Date(date_from as string);
-      if (date_to) where.shiftDate.lte = new Date(date_to as string);
-    }
-
-    const shifts = await prisma.shift.findMany({
-      where,
-      include: {
-        employee: {
-          include: {
-            user: { select: { id: true, name: true } }
-          }
-        }
-      },
-      orderBy: { shiftDate: 'desc' }
-    });
-
-    res.json({ success: true, data: shifts, count: shifts.length });
   } catch (error) {
     next(error);
   }

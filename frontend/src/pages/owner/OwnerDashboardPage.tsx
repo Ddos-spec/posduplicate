@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -25,48 +25,58 @@ import {
   Eye,
   Store,
   Settings,
-  BarChart3
+  BarChart3,
+  Loader2
 } from 'lucide-react';
+import { dashboardService, DashboardSummary, SalesTrendData, TopProduct, CategorySales, RecentTransaction } from '../../services/dashboardService';
+import toast from 'react-hot-toast';
 
-// Mock data for sales trend
-const salesTrendData = [
-  { date: '2025-11-01', sales: 2500000 },
-  { date: '2025-11-02', sales: 3200000 },
-  { date: '2025-11-03', sales: 2800000 },
-  { date: '2025-11-04', sales: 3500000 },
-  { date: '2025-11-05', sales: 4200000 },
-  { date: '2025-11-06', sales: 3800000 },
-  { date: '2025-11-07', sales: 4500000 },
-];
-
-// Mock data for sales by category
-const salesByCategoryData = [
-  { name: 'Makanan', value: 15500000, color: '#3b82f6' },
-  { name: 'Minuman', value: 8200000, color: '#10b981' },
-  { name: 'Snack', value: 4300000, color: '#f59e0b' },
-  { name: 'Lainnya', value: 2000000, color: '#6b7280' }
-];
-
-// Mock data for top products
-const topProductsData = [
-  { name: 'Nasi Kebuli', sales: 4500000 },
-  { name: 'Kopi Latte', sales: 3200000 },
-  { name: 'Ayam Bakar', sales: 2800000 },
-  { name: 'Es Teh Manis', sales: 1900000 },
-  { name: 'Nasi Goreng', sales: 1500000 }
-];
-
-// Mock data for recent transactions
-const recentTransactions = [
-  { id: 'TRX-001', date: '2025-11-14 10:30', total: 125000, status: 'Completed' },
-  { id: 'TRX-002', date: '2025-11-14 10:25', total: 85000, status: 'Completed' },
-  { id: 'TRX-003', date: '2025-11-14 10:20', total: 150000, status: 'Completed' },
-  { id: 'TRX-004', date: '2025-11-14 10:15', total: 95000, status: 'Completed' },
-  { id: 'TRX-005', date: '2025-11-14 10:10', total: 200000, status: 'Completed' },
-];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6b7280', '#8b5cf6'];
 
 export default function OwnerDashboardPage() {
   const [dateRange, setDateRange] = useState('week');
+  const [selectedOutlet, setSelectedOutlet] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+
+  // State for API data
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [salesTrend, setSalesTrend] = useState<SalesTrendData[]>([]);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [categorySales, setCategorySales] = useState<CategorySales[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
+
+  // Fetch all dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+
+        const days = dateRange === 'today' ? 1 : dateRange === 'week' ? 7 : 30;
+        const outletId = selectedOutlet === 'all' ? undefined : Number(selectedOutlet);
+
+        const [summaryData, trendData, productsData, categoryData, transactionsData] = await Promise.all([
+          dashboardService.getSummary({ outletId }),
+          dashboardService.getSalesTrend({ days, outletId }),
+          dashboardService.getTopProducts({ limit: 5 }),
+          dashboardService.getSalesByCategory(),
+          dashboardService.getRecentTransactions({ limit: 5 })
+        ]);
+
+        setSummary(summaryData);
+        setSalesTrend(trendData);
+        setTopProducts(productsData);
+        setCategorySales(categoryData);
+        setRecentTransactions(transactionsData);
+      } catch (error: any) {
+        console.error('Error fetching dashboard data:', error);
+        toast.error(error.response?.data?.error?.message || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [dateRange, selectedOutlet]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -75,6 +85,21 @@ export default function OwnerDashboardPage() {
       minimumFractionDigits: 0,
     }).format(value);
   };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <span className="ml-3 text-gray-600">Loading dashboard...</span>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -95,12 +120,15 @@ export default function OwnerDashboardPage() {
               <option value="today">Today</option>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
-              <option value="custom">Custom Range</option>
             </select>
-            <select className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select
+              value={selectedOutlet}
+              onChange={(e) => setSelectedOutlet(e.target.value)}
+              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Outlets</option>
               <option value="1">Main Store</option>
               <option value="2">Branch Kemang</option>
-              <option value="all">All Outlets</option>
             </select>
           </div>
         </div>
@@ -113,14 +141,12 @@ export default function OwnerDashboardPage() {
             <div className="p-3 bg-white bg-opacity-20 rounded-lg">
               <DollarSign className="w-6 h-6" />
             </div>
-            <div className="flex items-center gap-1 text-sm">
-              <ArrowUp className="w-4 h-4" />
-              <span>18%</span>
-            </div>
           </div>
           <p className="text-blue-100 text-sm mb-1">Total Sales</p>
-          <p className="text-3xl font-bold">Rp 30M</p>
-          <p className="text-xs text-blue-100 mt-2">+Rp 4.5M from last week</p>
+          <p className="text-3xl font-bold">{formatCurrency(summary?.totalSales || 0)}</p>
+          <p className="text-xs text-blue-100 mt-2">
+            Avg: {formatCurrency(summary?.averageTransaction || 0)}
+          </p>
         </div>
 
         <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-lg shadow-lg">
@@ -128,14 +154,10 @@ export default function OwnerDashboardPage() {
             <div className="p-3 bg-white bg-opacity-20 rounded-lg">
               <ShoppingCart className="w-6 h-6" />
             </div>
-            <div className="flex items-center gap-1 text-sm">
-              <ArrowUp className="w-4 h-4" />
-              <span>12%</span>
-            </div>
           </div>
           <p className="text-green-100 text-sm mb-1">Total Transactions</p>
-          <p className="text-3xl font-bold">1,245</p>
-          <p className="text-xs text-green-100 mt-2">+134 from last week</p>
+          <p className="text-3xl font-bold">{summary?.totalTransactions || 0}</p>
+          <p className="text-xs text-green-100 mt-2">Completed transactions</p>
         </div>
 
         <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-lg shadow-lg">
@@ -143,14 +165,10 @@ export default function OwnerDashboardPage() {
             <div className="p-3 bg-white bg-opacity-20 rounded-lg">
               <Package className="w-6 h-6" />
             </div>
-            <div className="flex items-center gap-1 text-sm">
-              <ArrowUp className="w-4 h-4" />
-              <span>5%</span>
-            </div>
           </div>
           <p className="text-purple-100 text-sm mb-1">Total Products</p>
-          <p className="text-3xl font-bold">156</p>
-          <p className="text-xs text-purple-100 mt-2">+8 new products</p>
+          <p className="text-3xl font-bold">{summary?.totalProducts || 0}</p>
+          <p className="text-xs text-purple-100 mt-2">Active products</p>
         </div>
 
         <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-lg shadow-lg">
@@ -158,14 +176,10 @@ export default function OwnerDashboardPage() {
             <div className="p-3 bg-white bg-opacity-20 rounded-lg">
               <Users className="w-6 h-6" />
             </div>
-            <div className="flex items-center gap-1 text-sm">
-              <ArrowUp className="w-4 h-4" />
-              <span>8%</span>
-            </div>
           </div>
           <p className="text-orange-100 text-sm mb-1">Total Customers</p>
-          <p className="text-3xl font-bold">842</p>
-          <p className="text-xs text-orange-100 mt-2">+64 new customers</p>
+          <p className="text-3xl font-bold">{summary?.totalCustomers || 0}</p>
+          <p className="text-xs text-orange-100 mt-2">Registered customers</p>
         </div>
       </div>
 
@@ -174,52 +188,64 @@ export default function OwnerDashboardPage() {
         {/* Sales Trend Chart */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Sales Trend</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={salesTrendData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" tickFormatter={(value) => new Date(value).getDate().toString()} />
-              <YAxis tickFormatter={(value) => `Rp ${value / 1000000}M`} />
-              <Tooltip
-                formatter={(value: number) => formatCurrency(value)}
-                labelFormatter={(label) => `Date: ${label}`}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="sales"
-                stroke="#3b82f6"
-                strokeWidth={3}
-                name="Sales"
-                dot={{ fill: '#3b82f6', r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {salesTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={salesTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tickFormatter={(value) => new Date(value).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} />
+                <YAxis tickFormatter={(value) => `Rp ${formatNumber(value)}`} />
+                <Tooltip
+                  formatter={(value: number) => formatCurrency(value)}
+                  labelFormatter={(label) => `Date: ${label}`}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="#3b82f6"
+                  strokeWidth={3}
+                  name="Sales"
+                  dot={{ fill: '#3b82f6', r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-gray-500">
+              No sales data available
+            </div>
+          )}
         </div>
 
         {/* Sales by Category */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Sales by Category</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={salesByCategoryData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) =>
-                  `${name}: ${(percent * 100).toFixed(0)}%`
-                }
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {salesByCategoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
-            </PieChart>
-          </ResponsiveContainer>
+          {categorySales.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={categorySales}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) =>
+                    `${name}: ${(percent * 100).toFixed(0)}%`
+                  }
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {categorySales.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-gray-500">
+              No category data available
+            </div>
+          )}
         </div>
       </div>
 
@@ -228,15 +254,21 @@ export default function OwnerDashboardPage() {
         {/* Top Products */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Top 5 Products</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={topProductsData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" tickFormatter={(value) => `Rp ${value / 1000000}M`} />
-              <YAxis type="category" dataKey="name" width={100} />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              <Bar dataKey="sales" fill="#10b981" />
-            </BarChart>
-          </ResponsiveContainer>
+          {topProducts.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={topProducts.map(p => ({ name: p.name, price: Number(p.price) }))} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" tickFormatter={(value) => `Rp ${formatNumber(value)}`} />
+                <YAxis type="category" dataKey="name" width={100} />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Bar dataKey="price" fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-gray-500">
+              No product data available
+            </div>
+          )}
         </div>
 
         {/* Recent Transactions */}
@@ -246,20 +278,30 @@ export default function OwnerDashboardPage() {
             <button className="text-sm text-blue-600 hover:text-blue-700">View All</button>
           </div>
           <div className="space-y-3">
-            {recentTransactions.map((trx) => (
-              <div key={trx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-800">{trx.id}</p>
-                  <p className="text-xs text-gray-500">{trx.date}</p>
+            {recentTransactions.length > 0 ? (
+              recentTransactions.map((trx) => (
+                <div key={trx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-800">{trx.transactionNumber}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(trx.createdAt).toLocaleString('id-ID')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">{formatCurrency(Number(trx.total))}</p>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      trx.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {trx.status}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900">{formatCurrency(trx.total)}</p>
-                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                    {trx.status}
-                  </span>
-                </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                No recent transactions
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
