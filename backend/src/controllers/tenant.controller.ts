@@ -30,7 +30,7 @@ export const getAllTenants = async (
       ];
     }
 
-    const tenants = await prisma.tenants.findMany({
+    const tenants = await prisma.tenant.findMany({
       where,
       include: {
         outlets: true,
@@ -78,7 +78,7 @@ export const getTenantById = async (
   try {
     const { id } = req.params;
 
-    const tenant = await prisma.tenants.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: parseInt(id) },
       include: {
         outlets: true,
@@ -132,10 +132,7 @@ export const createTenant = async (
       ownerName,
       email,
       phone,
-      address,
-      subscriptionPlan = 'basic',
-      maxOutlets = 1,
-      maxUsers = 5
+      address
     } = req.body;
 
     // Validation
@@ -150,7 +147,7 @@ export const createTenant = async (
     }
 
     // Check if email already exists
-    const existing = await prisma.tenants.findUnique({
+    const existing = await prisma.tenant.findUnique({
       where: { email }
     });
 
@@ -169,7 +166,7 @@ export const createTenant = async (
     const firstBillingDate = new Date();
     firstBillingDate.setMonth(firstBillingDate.getMonth() + 1); // First billing in 1 month
 
-    const tenant = await prisma.tenants.create({
+    const tenant = await prisma.tenant.create({
       data: {
         businessName,
         ownerName,
@@ -218,7 +215,7 @@ export const updateTenant = async (
     // Don't allow email update through this endpoint
     delete updateData.email;
 
-    const tenant = await prisma.tenants.update({
+    const tenant = await prisma.tenant.update({
       where: { id: parseInt(id) },
       data: updateData
     });
@@ -245,7 +242,7 @@ export const toggleTenantStatus = async (
     const { id } = req.params;
     const { isActive } = req.body;
 
-    const tenant = await prisma.tenants.update({
+    const tenant = await prisma.tenant.update({
       where: { id: parseInt(id) },
       data: { isActive }
     });
@@ -301,7 +298,7 @@ export const updateSubscription = async (
       updateData.subscriptionExpiresAt = new Date(expiresAt);
     }
 
-    const tenant = await prisma.tenants.update({
+    const tenant = await prisma.tenant.update({
       where: { id: parseInt(id) },
       data: updateData
     });
@@ -335,7 +332,7 @@ export const getMyTenant = async (
       });
     }
 
-    const tenant = await prisma.tenants.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: req.tenantId },
       include: {
         outlets: true,
@@ -368,7 +365,7 @@ export const deleteTenant = async (
   try {
     const { id } = req.params;
 
-    const tenant = await prisma.tenants.update({
+    const tenant = await prisma.tenant.update({
       where: { id: parseInt(id) },
       data: {
         deletedAt: new Date(),

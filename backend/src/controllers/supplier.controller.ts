@@ -1,6 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 
+/**
+ * IMPORTANT: The 'supplier' model does not exist in the Prisma schema.
+ * This file has been commented out until the supplier model is added to the schema.
+ *
+ * To fix this:
+ * 1. Add the supplier model to prisma/schema.prisma
+ * 2. Run `npx prisma generate` to generate the Prisma client
+ * 3. Uncomment the code below
+ */
+
+/*
 export const getSuppliers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { outlet_id } = req.query;
@@ -76,3 +87,4 @@ export const deleteSupplier = async (req: Request, res: Response, next: NextFunc
     next(error);
   }
 };
+*/

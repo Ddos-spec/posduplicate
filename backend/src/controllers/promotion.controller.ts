@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma';
 
 // Get all promotions
 export const getPromotions = async (req: Request, res: Response, next: NextFunction) => {
@@ -19,17 +17,17 @@ export const getPromotions = async (req: Request, res: Response, next: NextFunct
     if (status === 'active') {
       where.isActive = true;
       where.OR = [
-        { endDate: null },
-        { endDate: { gte: new Date() } }
+        { end_date: null },
+        { end_date: { gte: new Date() } }
       ];
     } else if (status === 'inactive') {
       where.isActive = false;
     } else if (status === 'expired') {
-      where.endDate = { lt: new Date() };
+      where.end_date = { lt: new Date() };
     }
 
     if (applicable_to) {
-      where.applicableTo = applicable_to;
+      where.applicable_to = applicable_to;
     }
 
     const promotions = await prisma.promotions.findMany({
@@ -42,7 +40,7 @@ export const getPromotions = async (req: Request, res: Response, next: NextFunct
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
 
     res.json({ success: true, data: promotions });
@@ -65,19 +63,19 @@ export const getPromotionById = async (req: Request, res: Response, next: NextFu
             name: true
           }
         },
-        discountUsage: {
+        discount_usage: {
           include: {
             transactions: {
               select: {
                 id: true,
                 transactionNumber: true,
                 total: true,
-                createdAt: true
+                created_at: true
               }
             }
           },
           take: 50,
-          orderBy: { createdAt: 'desc' }
+          orderBy: { created_at: 'desc' }
         }
       }
     });
@@ -129,19 +127,19 @@ export const createPromotion = async (req: Request, res: Response, next: NextFun
 
     const promotion = await prisma.promotions.create({
       data: {
-        outletId: outletId || null,
+        outlet_id: outletId || null,
         name,
         description,
-        discountType,
-        discountValue,
-        minPurchase: minPurchase || 0,
-        maxDiscount: maxDiscount || null,
-        applicableTo: applicableTo || 'all',
-        applicableIds: applicableIds || null,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
-        usageLimit: usageLimit || null,
-        usageCount: 0,
+        discount_type: discountType,
+        discount_value: discountValue,
+        min_purchase: minPurchase || 0,
+        max_discount: maxDiscount || null,
+        applicable_to: applicableTo || 'all',
+        applicable_ids: applicableIds || null,
+        start_date: startDate ? new Date(startDate) : null,
+        end_date: endDate ? new Date(endDate) : null,
+        usage_limit: usageLimit || null,
+        usage_count: 0,
         isActive: true
       },
       include: {
@@ -187,15 +185,15 @@ export const updatePromotion = async (req: Request, res: Response, next: NextFun
 
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;
-    if (discountType !== undefined) data.discountType = discountType;
-    if (discountValue !== undefined) data.discountValue = discountValue;
-    if (minPurchase !== undefined) data.minPurchase = minPurchase;
-    if (maxDiscount !== undefined) data.maxDiscount = maxDiscount;
-    if (applicableTo !== undefined) data.applicableTo = applicableTo;
-    if (applicableIds !== undefined) data.applicableIds = applicableIds;
-    if (startDate !== undefined) data.startDate = startDate ? new Date(startDate) : null;
-    if (endDate !== undefined) data.endDate = endDate ? new Date(endDate) : null;
-    if (usageLimit !== undefined) data.usageLimit = usageLimit;
+    if (discountType !== undefined) data.discount_type = discountType;
+    if (discountValue !== undefined) data.discount_value = discountValue;
+    if (minPurchase !== undefined) data.min_purchase = minPurchase;
+    if (maxDiscount !== undefined) data.max_discount = maxDiscount;
+    if (applicableTo !== undefined) data.applicable_to = applicableTo;
+    if (applicableIds !== undefined) data.applicable_ids = applicableIds;
+    if (startDate !== undefined) data.start_date = startDate ? new Date(startDate) : null;
+    if (endDate !== undefined) data.end_date = endDate ? new Date(endDate) : null;
+    if (usageLimit !== undefined) data.usage_limit = usageLimit;
     if (isActive !== undefined) data.isActive = isActive;
 
     const promotion = await prisma.promotions.update({
@@ -250,41 +248,41 @@ export const getApplicablePromotions = async (req: Request, res: Response, next:
       where: {
         isActive: true,
         OR: [
-          { startDate: null },
-          { startDate: { lte: now } }
+          { start_date: null },
+          { start_date: { lte: now } }
         ],
         AND: [
           {
             OR: [
-              { endDate: null },
-              { endDate: { gte: now } }
+              { end_date: null },
+              { end_date: { gte: now } }
             ]
           },
           {
             OR: [
-              { usageLimit: null },
-              { usageCount: { lt: prisma.promotions.fields.usageLimit } }
+              { usage_limit: null },
+              { usage_count: { lt: prisma.promotions.fields.usage_limit } }
             ]
           },
           {
-            minPurchase: { lte: subtotal }
+            min_purchase: { lte: subtotal }
           }
         ]
       },
-      orderBy: { discountValue: 'desc' }
+      orderBy: { discount_value: 'desc' }
     });
 
     // Filter by applicable items/categories
     const applicablePromotions = promotions.filter(promo => {
-      if (promo.applicableTo === 'all') return true;
+      if (promo.applicable_to === 'all') return true;
 
-      if (promo.applicableTo === 'category' && promo.applicableIds) {
-        const promoCategories = promo.applicableIds as any;
+      if (promo.applicable_to === 'category' && promo.applicable_ids) {
+        const promoCategories = promo.applicable_ids as any;
         return categoryIds?.some((catId: number) => promoCategories.includes(catId));
       }
 
-      if (promo.applicableTo === 'item' && promo.applicableIds) {
-        const promoItems = promo.applicableIds as any;
+      if (promo.applicable_to === 'item' && promo.applicable_ids) {
+        const promoItems = promo.applicable_ids as any;
         return items?.some((itemId: number) => promoItems.includes(itemId));
       }
 
@@ -295,13 +293,13 @@ export const getApplicablePromotions = async (req: Request, res: Response, next:
     const promotionsWithDiscount = applicablePromotions.map(promo => {
       let discountAmount = 0;
 
-      if (promo.discountType === 'percentage') {
-        discountAmount = (subtotal * promo.discountValue) / 100;
-        if (promo.maxDiscount && discountAmount > promo.maxDiscount) {
-          discountAmount = promo.maxDiscount;
+      if (promo.discount_type === 'percentage') {
+        discountAmount = (subtotal * promo.discount_value) / 100;
+        if (promo.max_discount && discountAmount > promo.max_discount) {
+          discountAmount = promo.max_discount;
         }
       } else {
-        discountAmount = promo.discountValue;
+        discountAmount = promo.discount_value;
       }
 
       return {
@@ -332,7 +330,7 @@ export const applyPromotion = async (req: Request, res: Response, next: NextFunc
     }
 
     // Record discount usage
-    const usage = await prisma.discountUsage.create({
+    const usage = await prisma.discount_usage.create({
       data: {
         promotionId,
         transactionId,
@@ -344,7 +342,7 @@ export const applyPromotion = async (req: Request, res: Response, next: NextFunc
     await prisma.promotions.update({
       where: { id: promotionId },
       data: {
-        usageCount: { increment: 1 }
+        usage_count: { increment: 1 }
       }
     });
 

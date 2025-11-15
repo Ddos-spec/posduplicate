@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 
-export const getIngredients = async (req: Request, res: Response, next: NextFunction) => {
+export const getIngredients = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, category_id } = req.query;
     const where: any = { isActive: true };
@@ -12,7 +12,7 @@ export const getIngredients = async (req: Request, res: Response, next: NextFunc
     if (outlet_id) where.outletId = parseInt(outlet_id as string);
     if (category_id) where.categoryId = parseInt(category_id as string);
 
-    const ingredients = await prisma.ingredient.findMany({
+    const ingredients = await prisma.ingredients.findMany({
       where,
       include: {
         category: true,
@@ -22,11 +22,11 @@ export const getIngredients = async (req: Request, res: Response, next: NextFunc
     });
     res.json({ success: true, data: ingredients, count: ingredients.length });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const createIngredient = async (req: Request, res: Response, next: NextFunction) => {
+export const createIngredient = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { name, categoryId, unit, stock, minStock, cost, outletId } = req.body;
     if (!name) {
@@ -35,7 +35,7 @@ export const createIngredient = async (req: Request, res: Response, next: NextFu
         error: { code: 'VALIDATION_ERROR', message: 'Ingredient name is required' }
       });
     }
-    const ingredient = await prisma.ingredient.create({
+    const ingredient = await prisma.ingredients.create({
       data: {
         name,
         categoryId,
@@ -48,15 +48,15 @@ export const createIngredient = async (req: Request, res: Response, next: NextFu
     });
     res.status(201).json({ success: true, data: ingredient, message: 'Ingredient created successfully' });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const updateIngredient = async (req: Request, res: Response, next: NextFunction) => {
+export const updateIngredient = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
     const { name, unit, stock, minStock, cost, isActive } = req.body;
-    const ingredient = await prisma.ingredient.update({
+    const ingredient = await prisma.ingredients.update({
       where: { id: parseInt(id) },
       data: {
         ...(name && { name }),
@@ -69,19 +69,19 @@ export const updateIngredient = async (req: Request, res: Response, next: NextFu
     });
     res.json({ success: true, data: ingredient, message: 'Ingredient updated successfully' });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const deleteIngredient = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteIngredient = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
-    await prisma.ingredient.update({
+    await prisma.ingredients.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });
     res.json({ success: true, message: 'Ingredient deleted successfully' });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };

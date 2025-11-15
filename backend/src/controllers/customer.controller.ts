@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 
-export const getCustomers = async (req: Request, res: Response, next: NextFunction) => {
+export const getCustomers = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { search, tier } = req.query;
-    const where: any = { is_active: true };
+    const where: any = { isActive: true };
 
     if (search) {
       where.OR = [
@@ -26,16 +26,16 @@ export const getCustomers = async (req: Request, res: Response, next: NextFuncti
           select: { transactions: true }
         }
       },
-      orderBy: { created_at: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
 
     res.json({ success: true, data: customers, count: customers.length });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const getCustomerById = async (req: Request, res: Response, next: NextFunction) => {
+export const getCustomerById = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
 
@@ -44,11 +44,11 @@ export const getCustomerById = async (req: Request, res: Response, next: NextFun
       include: {
         tier: true,
         transactions: {
-          orderBy: { created_at: 'desc' },
+          orderBy: { createdAt: 'desc' },
           take: 10
         },
         loyaltyPoints: {
-          orderBy: { created_at: 'desc' },
+          orderBy: { createdAt: 'desc' },
           take: 10
         }
       }
@@ -63,11 +63,11 @@ export const getCustomerById = async (req: Request, res: Response, next: NextFun
 
     res.json({ success: true, data: customer });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const createCustomer = async (req: Request, res: Response, next: NextFunction) => {
+export const createCustomer = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { name, phone, email, address, birthday, tierId } = req.body;
 
@@ -85,17 +85,17 @@ export const createCustomer = async (req: Request, res: Response, next: NextFunc
         email,
         address,
         birthday: birthday ? new Date(birthday) : null,
-        tier_id: tierId || null
+        tierId: tierId || null
       }
     });
 
     res.status(201).json({ success: true, data: customer, message: 'Customer created successfully' });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const updateCustomer = async (req: Request, res: Response, next: NextFunction) => {
+export const updateCustomer = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
     const { name, phone, email, address, birthday, tierId } = req.body;
@@ -108,42 +108,42 @@ export const updateCustomer = async (req: Request, res: Response, next: NextFunc
         ...(email && { email }),
         ...(address && { address }),
         ...(birthday && { birthday: new Date(birthday) }),
-        ...(tierId !== undefined && { tier_id: tierId })
+        ...(tierId !== undefined && { tierId: tierId })
       }
     });
 
     res.json({ success: true, data: customer, message: 'Customer updated successfully' });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const deleteCustomer = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteCustomer = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
 
     await prisma.customers.update({
       where: { id: parseInt(id) },
-      data: { is_active: false }
+      data: { isActive: false }
     });
 
     res.json({ success: true, message: 'Customer deleted successfully' });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const getCustomerTransactions = async (req: Request, res: Response, next: NextFunction) => {
+export const getCustomerTransactions = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
 
-    const transactions = await prisma.transaction.findMany({
-      where: { customer_id: parseInt(id) },
-      orderBy: { created_at: 'desc' }
+    const transactions = await prisma.Transaction.findMany({
+      where: { customerId: parseInt(id) },
+      orderBy: { createdAt: 'desc' }
     });
 
     res.json({ success: true, data: transactions, count: transactions.length });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };

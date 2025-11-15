@@ -22,7 +22,7 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
       });
     }
 
-    const tenant = await prisma.tenants.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       select: {
         id: true,
@@ -110,7 +110,7 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
       });
     }
 
-    const updatedTenant = await prisma.tenants.update({
+    const updatedTenant = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
         ...(businessName && { businessName }),
@@ -178,7 +178,7 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
     const bcrypt = require('bcrypt');
 
     // Get user with password
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, password: true }
     });
@@ -210,7 +210,7 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update password
-    await prisma.users.update({
+    await prisma.user.update({
       where: { id: userId },
       data: { password: hashedPassword }
     });
