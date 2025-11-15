@@ -7,7 +7,7 @@ export const getVariants = async (req: Request, res: Response, next: NextFunctio
     const where: any = { isActive: true };
     if (item_id) where.itemId = parseInt(item_id as string);
 
-    const variants = await prisma.variant.findMany({
+    const variants = await prisma.variants.findMany({
       where,
       include: { item: { select: { id: true, name: true } } },
       orderBy: { name: 'asc' }
@@ -27,7 +27,7 @@ export const createVariant = async (req: Request, res: Response, next: NextFunct
         error: { code: 'VALIDATION_ERROR', message: 'Name and item ID are required' }
       });
     }
-    const variant = await prisma.variant.create({
+    const variant = await prisma.variants.create({
       data: { name, itemId, priceAdjust: priceAdjust || 0, sku }
     });
     res.status(201).json({ success: true, data: variant, message: 'Variant created successfully' });
@@ -40,7 +40,7 @@ export const updateVariant = async (req: Request, res: Response, next: NextFunct
   try {
     const { id } = req.params;
     const { name, priceAdjust, sku, isActive } = req.body;
-    const variant = await prisma.variant.update({
+    const variant = await prisma.variants.update({
       where: { id: parseInt(id) },
       data: {
         ...(name && { name }),
@@ -58,7 +58,7 @@ export const updateVariant = async (req: Request, res: Response, next: NextFunct
 export const deleteVariant = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    await prisma.variant.update({
+    await prisma.variants.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });

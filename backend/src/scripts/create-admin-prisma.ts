@@ -21,7 +21,7 @@ async function createAdminUser() {
 
     // Step 1: Create or get Super Admin role
     console.log('📋 Step 1: Creating/Getting Super Admin role...');
-    const role = await prisma.roles.upsert({
+    const role = await prisma.role.upsert({
       where: { name: 'Super Admin' },
       update: {
         permissions: {
@@ -60,7 +60,7 @@ async function createAdminUser() {
 
     // Step 3: Create or update admin user
     console.log('👤 Step 3: Creating/Updating admin user...');
-    const admin = await prisma.users.upsert({
+    const _admin = await prisma.user.upsert({
       where: { email: ADMIN_EMAIL },
       update: {
         password_hash: passwordHash,
@@ -84,7 +84,7 @@ async function createAdminUser() {
 
     // Step 4: Verify
     console.log('🔍 Step 4: Verifying admin user...');
-    const verifiedAdmin = await prisma.users.findUnique({
+    const verifiedAdmin = await prisma.user.findUnique({
       where: { email: ADMIN_EMAIL },
       include: {
         roles: true

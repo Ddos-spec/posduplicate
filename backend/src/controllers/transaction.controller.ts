@@ -33,7 +33,7 @@ export const getTransactions = async (
       if (date_to) where.createdAt.lte = new Date(date_to as string);
     }
 
-    const transactions = await prisma.transactions.findMany({
+    const transactions = await prisma.transaction.findMany({
       where,
       include: {
         outlets: {
@@ -83,7 +83,7 @@ export const getTransactionById = async (
   try {
     const { id } = req.params;
 
-    const transaction = await prisma.transactions.findUnique({
+    const transaction = await prisma.transaction.findUnique({
       where: { id: parseInt(id) },
       include: {
         outlets: true,
@@ -198,7 +198,7 @@ export const createTransaction = async (
           where: { id: item.variantId }
         });
         if (variant) {
-          itemPrice += parseFloat(variant.price_adjust.toString());
+          itemPrice += parseFloat((variant.price_adjust ?? 0).toString());
         }
       }
 
@@ -249,7 +249,7 @@ export const createTransaction = async (
     }
 
     // Create transaction with items
-    const transaction = await prisma.transactions.create({
+    const transaction = await prisma.transaction.create({
       data: {
         transaction_number: transactionNumber,
         order_type: orderType,
@@ -348,7 +348,7 @@ export const holdOrder = async (
     // Store as pending transaction instead of separate table
     const transactionNumber = `HOLD-${Date.now()}`;
 
-    const heldOrder = await prisma.transactions.create({
+    const heldOrder = await prisma.transaction.create({
       data: {
         transaction_number: transactionNumber,
         order_type: orderData.orderType || 'dine-in',
@@ -386,7 +386,7 @@ export const getHeldOrders = async (
   next: NextFunction
 ) => {
   try {
-    const heldOrders = await prisma.transactions.findMany({
+    const heldOrders = await prisma.transaction.findMany({
       where: {
         cashier_id: req.userId,
         status: 'pending'
@@ -416,7 +416,7 @@ export const updateTransactionStatus = async (
     const { id } = req.params;
     const { status } = req.body;
 
-    const transaction = await prisma.transactions.update({
+    const transaction = await prisma.transaction.update({
       where: { id: parseInt(id) },
       data: {
         status,

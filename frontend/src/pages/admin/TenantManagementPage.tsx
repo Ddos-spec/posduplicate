@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Eye, Building2, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Building2, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { tenantService, Tenant, CreateTenantData, UpdateTenantData } from '../../services/tenantService';
+import { tenantService } from '../../services/tenantService';
+import type { Tenant, CreateTenantData, UpdateTenantData } from '../../services/tenantService';
 
 export default function TenantManagementPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [planFilter, setPlanFilter] = useState<string>('all');
+  const [_planFilter, _setPlanFilter] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [formData, setFormData] = useState<CreateTenantData>({
@@ -25,7 +26,7 @@ export default function TenantManagementPage() {
       setLoading(true);
       const params: any = {};
       if (statusFilter !== 'all') params.status = statusFilter;
-      if (planFilter !== 'all') params.plan = planFilter;
+      if (_planFilter !== 'all') params.plan = _planFilter;
       if (searchTerm) params.search = searchTerm;
 
       const result = await tenantService.getAll(params);
@@ -40,7 +41,7 @@ export default function TenantManagementPage() {
 
   useEffect(() => {
     fetchTenants();
-  }, [statusFilter, planFilter]);
+  }, [statusFilter, _planFilter]);
 
   const handleSearch = () => {
     fetchTenants();

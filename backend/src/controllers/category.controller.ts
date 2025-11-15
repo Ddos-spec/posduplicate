@@ -7,7 +7,7 @@ import prisma from '../utils/prisma';
 export const getCategories = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { type, outlet_id } = req.query;
@@ -16,7 +16,7 @@ export const getCategories = async (
 
     // Tenant isolation (except Super Admin)
     if (req.tenantId) {
-      where.outlets = { tenantId: req.tenantId };
+      where.outlet = { tenantId: req.tenantId };
     }
 
     if (type) {
@@ -30,7 +30,7 @@ export const getCategories = async (
     const categories = await prisma.categories.findMany({
       where,
       include: {
-        outlets: {
+        outlet: {
           select: {
             id: true,
             name: true
@@ -52,7 +52,7 @@ export const getCategories = async (
       count: categories.length
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
@@ -62,7 +62,7 @@ export const getCategories = async (
 export const getCategoryById = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { id } = req.params;
@@ -102,7 +102,7 @@ export const getCategoryById = async (
       data: category
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
@@ -112,7 +112,7 @@ export const getCategoryById = async (
 export const createCategory = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { name, type, outletId } = req.body;
@@ -141,7 +141,7 @@ export const createCategory = async (
       message: 'Category created successfully'
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
@@ -151,7 +151,7 @@ export const createCategory = async (
 export const updateCategory = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { id } = req.params;
@@ -172,7 +172,7 @@ export const updateCategory = async (
       message: 'Category updated successfully'
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
@@ -182,12 +182,12 @@ export const updateCategory = async (
 export const deleteCategory = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   try {
     const { id } = req.params;
 
-    const category = await prisma.categories.update({
+    await prisma.categories.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });
@@ -197,6 +197,6 @@ export const deleteCategory = async (
       message: 'Category deleted successfully'
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
