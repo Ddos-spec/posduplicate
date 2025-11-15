@@ -15,14 +15,10 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import {
-  TrendingUp,
   ShoppingCart,
   Package,
   Users,
-  ArrowUp,
-  ArrowDown,
   DollarSign,
-  Eye,
   Store,
   Settings,
   BarChart3,
@@ -234,7 +230,7 @@ export default function OwnerDashboardPage() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {categorySales.map((entry, index) => (
+                  {categorySales.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
