@@ -12,7 +12,7 @@ export const getTables = async (req: Request, res: Response, next: NextFunction)
     if (status) where.status = status;
     if (outlet_id) where.outletId = parseInt(outlet_id as string);
 
-    const tables = await prisma.table.findMany({
+    const tables = await prisma.tables.findMany({
       where,
       include: { outlet: { select: { id: true, name: true } } },
       orderBy: { name: 'asc' }
@@ -34,7 +34,7 @@ export const getAvailableTables = async (req: Request, res: Response, next: Next
     }
     if (outlet_id) where.outletId = parseInt(outlet_id as string);
 
-    const tables = await prisma.table.findMany({ where, orderBy: { name: 'asc' } });
+    const tables = await prisma.tables.findMany({ where, orderBy: { name: 'asc' } });
     res.json({ success: true, data: tables, count: tables.length });
   } catch (error) {
     next(error);
@@ -46,7 +46,7 @@ export const updateTableStatus = async (req: Request, res: Response, next: NextF
     const { id } = req.params;
     const { status } = req.body;
 
-    const table = await prisma.table.update({
+    const table = await prisma.tables.update({
       where: { id: parseInt(id) },
       data: { status }
     });
@@ -68,7 +68,7 @@ export const createTable = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    const table = await prisma.table.create({
+    const table = await prisma.tables.create({
       data: { name, capacity: capacity || 4, outletId }
     });
 

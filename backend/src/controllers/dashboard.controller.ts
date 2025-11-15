@@ -4,7 +4,7 @@ import prisma from '../utils/prisma';
 /**
  * Get Owner Dashboard Summary
  */
-export const getDashboardSummary = async (req: Request, res: Response, next: NextFunction) => {
+export const getDashboardSummary = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { tenantId } = req;
     const { outletId, startDate, endDate } = req.query;
@@ -21,7 +21,7 @@ export const getDashboardSummary = async (req: Request, res: Response, next: Nex
     }
 
     // Get total sales
-    const totalSales = await prisma.transaction.aggregate({
+    const totalSales = await prisma.Transaction.aggregate({
       where: { ...where, status: 'completed' },
       _sum: { total: true },
       _count: { id: true }
@@ -48,14 +48,14 @@ export const getDashboardSummary = async (req: Request, res: Response, next: Nex
       }
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
 /**
  * Get Sales Trend
  */
-export const getSalesTrend = async (req: Request, res: Response, next: NextFunction) => {
+export const getSalesTrend = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { tenantId } = req;
     const { days = 7, outletId } = req.query;
@@ -71,7 +71,7 @@ export const getSalesTrend = async (req: Request, res: Response, next: NextFunct
     if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
     if (outletId) where.outletId = Number(outletId);
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.Transaction.findMany({
       where,
       select: {
         createdAt: true,
@@ -97,14 +97,14 @@ export const getSalesTrend = async (req: Request, res: Response, next: NextFunct
       data
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
 /**
  * Get Top Products
  */
-export const getTopProducts = async (req: Request, res: Response, next: NextFunction) => {
+export const getTopProducts = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { tenantId } = req;
     const { limit = 5 } = req.query;
@@ -127,14 +127,14 @@ export const getTopProducts = async (req: Request, res: Response, next: NextFunc
       data: products
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
 /**
  * Get Sales by Category
  */
-export const getSalesByCategory = async (req: Request, res: Response, next: NextFunction) => {
+export const getSalesByCategory = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { tenantId } = req;
 
@@ -158,14 +158,14 @@ export const getSalesByCategory = async (req: Request, res: Response, next: Next
       data
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
 /**
  * Get Recent Transactions
  */
-export const getRecentTransactions = async (req: Request, res: Response, next: NextFunction) => {
+export const getRecentTransactions = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { tenantId } = req;
     const { limit = 10 } = req.query;
@@ -173,7 +173,7 @@ export const getRecentTransactions = async (req: Request, res: Response, next: N
     const where: any = {};
     if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.Transaction.findMany({
       where,
       take: Number(limit),
       orderBy: { createdAt: 'desc' },
@@ -191,13 +191,13 @@ export const getRecentTransactions = async (req: Request, res: Response, next: N
       data: transactions
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
 // Helper function
 async function getOutletIdsByTenant(tenantId: number): Promise<number[]> {
-  const outlets = await prisma.outlet.findMany({
+  const outlets = await prisma.Outlet.findMany({
     where: { tenantId },
     select: { id: true }
   });
