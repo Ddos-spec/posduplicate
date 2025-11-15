@@ -28,21 +28,21 @@ export const getCashierPerformance = async (req: AuthRequest, res: Response, nex
     startDate.setDate(startDate.getDate() - daysInt);
 
     // Get transactions with cashier info
-    const transactions = await prisma.transactions.findMany({
+    const transactions = await prisma.transaction.findMany({
       where: {
-        tenantId,
-        createdAt: {
+        tenant_id: tenantId,
+        created_at: {
           gte: startDate
         },
-        cashierId: {
+        cashier_id: {
           not: null
         }
       },
       select: {
         id: true,
         total: true,
-        createdAt: true,
-        cashierId: true,
+        created_at: true,
+        cashier_id: true,
         users: {
           select: {
             id: true,
@@ -56,9 +56,9 @@ export const getCashierPerformance = async (req: AuthRequest, res: Response, nex
     const cashierMap = new Map();
 
     transactions.forEach(txn => {
-      if (!txn.cashierId || !txn.users) return;
+      if (!txn.cashier_id || !txn.users) return;
 
-      const cashierId = txn.cashierId;
+      const cashierId = txn.cashier_id;
       const cashierName = txn.users.name;
 
       if (!cashierMap.has(cashierId)) {
@@ -73,7 +73,7 @@ export const getCashierPerformance = async (req: AuthRequest, res: Response, nex
 
       const cashierData = cashierMap.get(cashierId);
       cashierData.totalTransactions++;
-      cashierData.totalSales += parseFloat(txn.total.toString());
+      cashierData.totalSales += parseFloat((txn.total ?? 0).toString());
     });
 
     // Calculate averages and convert to array

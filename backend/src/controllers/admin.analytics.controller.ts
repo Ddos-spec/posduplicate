@@ -13,7 +13,7 @@ export const getTenantGrowth = async (req: Request, res: Response, next: NextFun
     startDate.setMonth(startDate.getMonth() - monthsInt);
 
     // Get tenants grouped by month
-    const tenants = await prisma.tenants.findMany({
+    const tenants = await prisma.tenant.findMany({
       where: {
         createdAt: { gte: startDate }
       },
@@ -25,12 +25,12 @@ export const getTenantGrowth = async (req: Request, res: Response, next: NextFun
 
     // Group by month
     const monthlyData: { [key: string]: number } = {};
-    let cumulativeCount = await prisma.tenants.count({
-      where: { createdAt: { lt: startDate } }
+    let cumulativeCount = await prisma.tenant.count({
+      where: { created_at: { lt: startDate } }
     });
 
-    tenants.forEach(tenant => {
-      const monthKey = tenant.createdAt.toISOString().substring(0, 7); // YYYY-MM
+    tenants.forEach((tenant: any) => {
+      const monthKey = tenant.created_at.toISOString().substring(0, 7); // YYYY-MM
       monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
     });
 
@@ -61,7 +61,7 @@ export const getSystemRevenue = async (req: Request, res: Response, next: NextFu
     startDate.setMonth(startDate.getMonth() - monthsInt);
 
     // Get transactions from all tenants
-    const transactions = await prisma.transactions.findMany({
+    const transactions = await prisma.transaction.findMany({
       where: {
         status: 'completed',
         createdAt: { gte: startDate }
@@ -75,14 +75,14 @@ export const getSystemRevenue = async (req: Request, res: Response, next: NextFu
 
     // Group by month
     const monthlyRevenue: { [key: string]: number } = {};
-    transactions.forEach(t => {
-      const monthKey = t.createdAt.toISOString().substring(0, 7);
-      monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + Number(t.total);
+    transactions.forEach((t: any) => {
+      const monthKey = t.created_at.toISOString().substring(0, 7);
+      monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + Number(t.total ?? 0);
     });
 
-    const result = Object.keys(monthlyRevenue).sort().map(month => ({
+    const result = Object.keys(monthlyRevenue).sort().map((month: string) => ({
       month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short' }),
-      revenue: monthlyRevenue[month]
+      revenue: monthlyRevenue[month] ?? 0
     }));
 
     res.json({ success: true, data: result });
@@ -96,7 +96,7 @@ export const getSystemRevenue = async (req: Request, res: Response, next: NextFu
  */
 export const getTenantStatusDistribution = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const statusCounts = await prisma.tenants.groupBy({
+    const statusCounts = await prisma.tenant.groupBy({
       by: ['subscriptionStatus'],
       _count: { id: true }
     });
@@ -122,8 +122,8 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
     const { limit = 10 } = req.query;
 
     // Get transaction counts and totals per tenant
-    const tenantStats = await prisma.transactions.groupBy({
-      by: ['outletId'],
+    const tenantStats = await prisma.transaction.groupBy({
+      by: ['outlet_id'],
       where: { status: 'completed' },
       _count: { id: true },
       _sum: { total: true },
@@ -133,21 +133,21 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
 
     // Get tenant details
     const result = await Promise.all(
-      tenantStats.map(async (stat, index) => {
-        const outlet = await prisma.outlets.findUnique({
-          where: { id: stat.outletId || 0 },
+      tenantStats.map(async (stat: any, index: number) => {
+        const outlet = await prisma.outlet.findUnique({
+          where: { id: stat.outlet_id || 0 },
           include: {
-            tenants: {
-              select: { businessName: true }
+            tenant: {
+              select: { business_name: true }
             }
           }
         });
 
         return {
           rank: index + 1,
-          name: outlet?.tenants?.businessName || 'Unknown',
+          name: outlet?.tenant?.business_name || 'Unknown',
           transactions: stat._count.id,
-          revenue: Number(stat._sum.total || 0)
+          revenue: Number((stat._sum.total ?? 0) || 0)
         };
       })
     );
@@ -169,10 +169,10 @@ export const getSystemSummary = async (req: Request, res: Response, next: NextFu
       totalTransactions,
       totalRevenue
     ] = await Promise.all([
-      prisma.tenants.count(),
-      prisma.tenants.count({ where: { isActive: true, subscriptionStatus: 'active' } }),
-      prisma.transactions.count({ where: { status: 'completed' } }),
-      prisma.transactions.aggregate({
+      prisma.tenant.count(),
+      prisma.tenant.count({ where: { isActive: true, subscriptionStatus: 'active' } }),
+      prisma.transaction.count({ where: { status: 'completed' } }),
+      prisma.transaction.aggregate({
         where: { status: 'completed' },
         _sum: { total: true }
       })
@@ -184,7 +184,7 @@ export const getSystemSummary = async (req: Request, res: Response, next: NextFu
         totalTenants,
         activeTenants,
         totalTransactions,
-        totalRevenue: Number(totalRevenue._sum.total || 0)
+        totalRevenue: Number((totalRevenue._sum.total ?? 0) || 0)
       }
     });
   } catch (error) {

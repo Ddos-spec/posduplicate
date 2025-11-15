@@ -15,33 +15,33 @@ export const getBillingHistory = async (req: Request, res: Response, next: NextF
       where.subscriptionStatus = status;
     }
 
-    const billingRecords = await prisma.tenants.findMany({
+    const billingRecords = await prisma.tenant.findMany({
       where,
       select: {
         id: true,
-        businessName: true,
-        subscriptionPlan: true,
-        subscriptionStatus: true,
-        subscriptionStartsAt: true,
-        subscriptionExpiresAt: true,
-        nextBillingDate: true,
-        lastPaymentAt: true,
-        createdAt: true
+        business_name: true,
+        subscription_plan: true,
+        subscription_status: true,
+        subscription_starts_at: true,
+        subscription_expires_at: true,
+        next_billing_date: true,
+        last_payment_at: true,
+        created_at: true
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       take: parseInt(limit as string)
     });
 
     // Transform to billing format
     const result = billingRecords.map(tenant => ({
       id: tenant.id,
-      tenant: tenant.businessName,
-      plan: tenant.subscriptionPlan || 'basic',
-      status: tenant.subscriptionStatus || 'trial',
-      startDate: tenant.subscriptionStartsAt,
-      expiresAt: tenant.subscriptionExpiresAt,
-      nextBilling: tenant.nextBillingDate,
-      lastPayment: tenant.lastPaymentAt
+      tenant: tenant.business_name,
+      plan: tenant.subscription_plan || 'basic',
+      status: tenant.subscription_status || 'trial',
+      startDate: tenant.subscription_starts_at,
+      expiresAt: tenant.subscription_expires_at,
+      nextBilling: tenant.next_billing_date,
+      lastPayment: tenant.last_payment_at
     }));
 
     res.json({ success: true, data: result, count: result.length });
@@ -132,14 +132,14 @@ export const recordPayment = async (req: Request, res: Response, next: NextFunct
     }
 
     // Update tenant's payment info
-    const tenant = await prisma.tenants.update({
+    const tenant = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
-        lastPaymentAt: new Date(),
-        subscriptionStatus: 'active',
+        last_payment_at: new Date(),
+        subscription_status: 'active',
         // Extend subscription by 30 days
-        subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       }
     });
 
@@ -172,10 +172,10 @@ export const getBillingStats = async (req: Request, res: Response, next: NextFun
       totalTenants
     ] = await Promise.all([
       // In production, sum from payments table
-      prisma.tenants.count({ where: { subscriptionStatus: 'active' } }),
-      prisma.tenants.count({ where: { subscriptionStatus: 'active' } }),
-      prisma.tenants.count({ where: { subscriptionStatus: 'pending' } }),
-      prisma.tenants.count()
+      prisma.tenant.count({ where: { subscription_status: 'active' } }),
+      prisma.tenant.count({ where: { subscription_status: 'active' } }),
+      prisma.tenant.count({ where: { subscription_status: 'pending' } }),
+      prisma.tenant.count()
     ]);
 
     // Rough estimate - in production calculate from actual payments

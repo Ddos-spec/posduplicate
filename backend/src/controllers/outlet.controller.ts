@@ -15,20 +15,20 @@ export const getOutlets = async (
 
     // Tenant isolation
     if (req.tenantId) {
-      where.tenantId = req.tenantId;
+      where.tenant_id = req.tenantId;
     }
 
     if (is_active !== undefined) {
-      where.isActive = is_active === 'true';
+      where.is_active = is_active === 'true';
     }
 
-    const outlets = await prisma.outlets.findMany({
+    const outlets = await prisma.outlet.findMany({
       where,
       include: {
         tenants: {
           select: {
             id: true,
-            businessName: true,
+            business_name: true,
             email: true
           }
         },
@@ -40,7 +40,7 @@ export const getOutlets = async (
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
 
     res.json({
@@ -64,14 +64,14 @@ export const getOutletById = async (
   try {
     const { id } = req.params;
 
-    const outlet = await prisma.outlets.findUnique({
+    const outlet = await prisma.outlet.findUnique({
       where: { id: parseInt(id) },
       include: {
         tenants: {
           select: {
             id: true,
-            businessName: true,
-            ownerName: true,
+            business_name: true,
+            owner_name: true,
             email: true
           }
         },
@@ -97,7 +97,7 @@ export const getOutletById = async (
     }
 
     // Tenant isolation check
-    if (req.tenantId && outlet.tenantId !== req.tenantId) {
+    if (req.tenantId && outlet.tenant_id !== req.tenantId) {
       return res.status(403).json({
         success: false,
         error: {
@@ -139,10 +139,10 @@ export const createOutlet = async (
 
     // Check tenant limits
     if (req.tenantId) {
-      const tenant = await prisma.tenants.findUnique({
+      const tenant = await prisma.tenant.findUnique({
         where: { id: req.tenantId },
         select: {
-          maxOutlets: true,
+          max_outlets: true,
           _count: {
             select: { outlets: true }
           }
@@ -160,28 +160,28 @@ export const createOutlet = async (
       }
     }
 
-    const outlet = await prisma.outlets.create({
+    const outlet = await prisma.outlet.create({
       data: {
-        tenantId: req.tenantId,
+        tenant_id: req.tenantId,
         name,
         address,
         phone,
         email,
         npwp,
         settings: settings || {
-          taxRate: 10,
-          serviceCharge: 5,
-          receiptFooter: 'Thank you for your visit!',
+          tax_rate: 10,
+          service_charge: 5,
+          receipt_footer: 'Thank you for your visit!',
           currency: 'IDR',
           timezone: 'Asia/Jakarta'
         },
-        isActive: true
+        is_active: true
       },
       include: {
         tenants: {
           select: {
             id: true,
-            businessName: true
+            business_name: true
           }
         }
       }
@@ -210,7 +210,7 @@ export const updateOutlet = async (
     const { name, address, phone, email, npwp, settings, isActive } = req.body;
 
     // Check if outlet exists and belongs to tenant
-    const existing = await prisma.outlets.findUnique({
+    const existing = await prisma.outlet.findUnique({
       where: { id: parseInt(id) }
     });
 
@@ -224,7 +224,7 @@ export const updateOutlet = async (
       });
     }
 
-    if (req.tenantId && existing.tenantId !== req.tenantId) {
+    if (req.tenantId && existing.tenant_id !== req.tenantId) {
       return res.status(403).json({
         success: false,
         error: {
@@ -241,16 +241,16 @@ export const updateOutlet = async (
     if (email !== undefined) data.email = email;
     if (npwp !== undefined) data.npwp = npwp;
     if (settings !== undefined) data.settings = settings;
-    if (isActive !== undefined) data.isActive = isActive;
+    if (isActive !== undefined) data.is_active = isActive;
 
-    const outlet = await prisma.outlets.update({
+    const outlet = await prisma.outlet.update({
       where: { id: parseInt(id) },
       data,
       include: {
         tenants: {
           select: {
             id: true,
-            businessName: true
+            business_name: true
           }
         }
       }
@@ -278,7 +278,7 @@ export const deleteOutlet = async (
     const { id } = req.params;
 
     // Check if outlet exists and belongs to tenant
-    const existing = await prisma.outlets.findUnique({
+    const existing = await prisma.outlet.findUnique({
       where: { id: parseInt(id) }
     });
 
@@ -292,7 +292,7 @@ export const deleteOutlet = async (
       });
     }
 
-    if (req.tenantId && existing.tenantId !== req.tenantId) {
+    if (req.tenantId && existing.tenant_id !== req.tenantId) {
       return res.status(403).json({
         success: false,
         error: {
@@ -302,9 +302,9 @@ export const deleteOutlet = async (
       });
     }
 
-    await prisma.outlets.update({
+    await prisma.outlet.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
 
     res.json({
@@ -327,7 +327,7 @@ export const getOutletSettings = async (
   try {
     const { id } = req.params;
 
-    const outlet = await prisma.outlets.findUnique({
+    const outlet = await prisma.outlet.findUnique({
       where: { id: parseInt(id) },
       select: {
         id: true,
@@ -367,7 +367,7 @@ export const updateOutletSettings = async (
     const { id } = req.params;
     const settings = req.body;
 
-    const outlet = await prisma.outlets.update({
+    const outlet = await prisma.outlet.update({
       where: { id: parseInt(id) },
       data: { settings }
     });
