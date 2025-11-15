@@ -31,11 +31,13 @@ export const getCashierPerformance = async (req: AuthRequest, res: Response, _ne
     // Get transactions with cashier info
     const transactions = await prisma.transaction.findMany({
       where: {
-        tenantId: tenantId,
+        outlets: {
+          tenantId: tenantId
+        },
         createdAt: {
           gte: startDate
         },
-        cashierId: {
+        cashier_id: {
           not: null
         }
       },
@@ -43,7 +45,7 @@ export const getCashierPerformance = async (req: AuthRequest, res: Response, _ne
         id: true,
         total: true,
         createdAt: true,
-        cashierId: true,
+        cashier_id: true,
         users: {
           select: {
             id: true,
@@ -57,9 +59,9 @@ export const getCashierPerformance = async (req: AuthRequest, res: Response, _ne
     const cashierMap = new Map();
 
     transactions.forEach((txn: any) => {
-      if (!txn.cashierId || !txn.users) return;
+      if (!txn.cashier_id || !txn.users) return;
 
-      const cashierId = txn.cashierId;
+      const cashierId = txn.cashier_id;
       const cashierName = txn.users.name;
 
       if (!cashierMap.has(cashierId)) {

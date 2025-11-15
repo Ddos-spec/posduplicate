@@ -31,23 +31,8 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
         email: true,
         phone: true,
         address: true,
-        taxRate: true,
-        taxName: true,
-        serviceCharge: true,
-        receiptHeader: true,
-        receiptFooter: true,
-        currency: true,
-        dateFormat: true,
-        timeFormat: true,
-        language: true,
-        enableTax: true,
-        enableServiceCharge: true,
-        showLogoOnReceipt: true,
-        printerWidth: true,
-        emailNotifications: true,
-        lowStockAlerts: true,
-        dailySalesReport: true,
-        whatsappNotifications: true
+        settings: true,
+        features: true
       }
     });
 
@@ -80,23 +65,8 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
       email,
       phone,
       address,
-      taxRate,
-      taxName,
-      serviceCharge,
-      receiptHeader,
-      receiptFooter,
-      currency,
-      dateFormat,
-      timeFormat,
-      language,
-      enableTax,
-      enableServiceCharge,
-      showLogoOnReceipt,
-      printerWidth,
-      emailNotifications,
-      lowStockAlerts,
-      dailySalesReport,
-      whatsappNotifications
+      settings,
+      features
     } = req.body;
 
     if (!tenantId) {
@@ -117,23 +87,8 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
         ...(email && { email }),
         ...(phone && { phone }),
         ...(address && { address }),
-        ...(taxRate !== undefined && { taxRate: parseFloat(taxRate) }),
-        ...(taxName && { taxName }),
-        ...(serviceCharge !== undefined && { serviceCharge: parseFloat(serviceCharge) }),
-        ...(receiptHeader && { receiptHeader }),
-        ...(receiptFooter && { receiptFooter }),
-        ...(currency && { currency }),
-        ...(dateFormat && { dateFormat }),
-        ...(timeFormat && { timeFormat }),
-        ...(language && { language }),
-        ...(enableTax !== undefined && { enableTax }),
-        ...(enableServiceCharge !== undefined && { enableServiceCharge }),
-        ...(showLogoOnReceipt !== undefined && { showLogoOnReceipt }),
-        ...(printerWidth && { printerWidth }),
-        ...(emailNotifications !== undefined && { emailNotifications }),
-        ...(lowStockAlerts !== undefined && { lowStockAlerts }),
-        ...(dailySalesReport !== undefined && { dailySalesReport }),
-        ...(whatsappNotifications !== undefined && { whatsappNotifications }),
+        ...(settings && { settings }),
+        ...(features && { features }),
         updatedAt: new Date()
       }
     });

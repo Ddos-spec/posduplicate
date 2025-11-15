@@ -41,10 +41,10 @@ export const getDashboardSummary = async (req: Request, res: Response, _next: Ne
       success: true,
       data: {
         totalSales: totalSales._sum.total || 0,
-        totalTransactions: totalSales._count || 0,
+        totalTransactions: totalSales._count.id || 0,
         totalProducts,
         totalCustomers,
-        averageTransaction: totalSales._count > 0 ? (totalSales._sum.total || 0) / totalSales._count : 0
+        averageTransaction: totalSales._count.id > 0 ? Number(totalSales._sum.total || 0) / totalSales._count.id : 0
       }
     });
   } catch (error) {
@@ -179,7 +179,7 @@ export const getRecentTransactions = async (req: Request, res: Response, _next: 
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
-        transactionNumber: true,
+        transaction_number: true,
         total: true,
         status: true,
         createdAt: true

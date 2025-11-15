@@ -11,11 +11,11 @@ export const getEmployees = async (req: Request, res: Response, _next: NextFunct
     }
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (is_active !== undefined) {
-      where.isActive = is_active === 'true';
+      where.is_active = is_active === 'true';
     }
 
     const employees = await prisma.employees.findMany({
@@ -34,7 +34,7 @@ export const getEmployees = async (req: Request, res: Response, _next: NextFunct
             }
           }
         },
-        outlet: {
+        outlets: {
           select: { id: true, name: true }
         }
       },
@@ -67,7 +67,7 @@ export const getEmployeeById = async (req: Request, res: Response, _next: NextFu
             }
           }
         },
-        outlet: true
+        outlets: true
       }
     });
 
@@ -99,7 +99,7 @@ export const createEmployee = async (req: Request, res: Response, _next: NextFun
     const existing = await prisma.employees.findFirst({
       where: {
         user_id: userId,
-        outletId: outletId
+        outlet_id: outletId
       }
     });
 
@@ -113,17 +113,17 @@ export const createEmployee = async (req: Request, res: Response, _next: NextFun
     const employee = await prisma.employees.create({
       data: {
         user_id: userId,
-        outletId: outletId,
-        employeeCode: employeeCode,
-        pinCode: pinCode,
+        outlet_id: outletId,
+        employee_code: employeeCode,
+        pin_code: pinCode,
         position,
         salary: salary || 0,
-        hiredAt: hiredAt ? new Date(hiredAt) : new Date(),
-        isActive: true
+        hired_at: hiredAt ? new Date(hiredAt) : new Date(),
+        is_active: true
       },
       include: {
         users: { select: { id: true, name: true, email: true } },
-        outlet: { select: { id: true, name: true } }
+        outlets: { select: { id: true, name: true } }
       }
     });
 
@@ -139,18 +139,18 @@ export const updateEmployee = async (req: Request, res: Response, _next: NextFun
     const { employeeCode, pinCode, position, salary, isActive } = req.body;
 
     const data: any = {};
-    if (employeeCode !== undefined) data.employeeCode = employeeCode;
-    if (pinCode !== undefined) data.pinCode = pinCode;
+    if (employeeCode !== undefined) data.employee_code = employeeCode;
+    if (pinCode !== undefined) data.pin_code = pinCode;
     if (position !== undefined) data.position = position;
     if (salary !== undefined) data.salary = salary;
-    if (isActive !== undefined) data.isActive = isActive;
+    if (isActive !== undefined) data.is_active = isActive;
 
     const employee = await prisma.employees.update({
       where: { id: parseInt(id) },
       data,
       include: {
         users: { select: { id: true, name: true, email: true } },
-        outlet: { select: { id: true, name: true } }
+        outlets: { select: { id: true, name: true } }
       }
     });
 

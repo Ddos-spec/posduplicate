@@ -28,7 +28,7 @@ export const createVariant = async (req: Request, res: Response, next: NextFunct
       });
     }
     const variant = await prisma.variants.create({
-      data: { name, item_id: itemId, priceAdjust: priceAdjust || 0, sku }
+      data: { name, item_id: itemId, price_adjust: priceAdjust || 0, sku }
     });
     res.status(201).json({ success: true, data: variant, message: 'Variant created successfully' });
   } catch (error) {
@@ -44,7 +44,7 @@ export const updateVariant = async (req: Request, res: Response, next: NextFunct
       where: { id: parseInt(id) },
       data: {
         ...(name && { name }),
-        ...(priceAdjust !== undefined && { priceAdjust }),
+        ...(priceAdjust !== undefined && { price_adjust: priceAdjust }),
         ...(sku && { sku }),
         ...(isActive !== undefined && { is_active: isActive })
       }
