@@ -15,16 +15,11 @@ export const getCustomers = async (req: Request, res: Response, _next: NextFunct
     }
 
     if (tier) {
-      where.tierId = parseInt(tier as string);
+      // Tier functionality removed as customers table doesn't have tierId field
     }
 
     const customers = await prisma.customers.findMany({
       where,
-      include: {
-        _count: {
-          select: { transactions: true }
-        }
-      },
       orderBy: { id: 'desc' }
     });
 
@@ -39,17 +34,7 @@ export const getCustomerById = async (req: Request, res: Response, _next: NextFu
     const { id } = req.params;
 
     const customer = await prisma.customers.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        transactions: {
-          orderBy: { createdAt: 'desc' },
-          take: 10
-        },
-        loyaltyPoints: {
-          orderBy: { createdAt: 'desc' },
-          take: 10
-        }
-      }
+      where: { id: parseInt(id) }
     });
 
     if (!customer) {
@@ -67,7 +52,7 @@ export const getCustomerById = async (req: Request, res: Response, _next: NextFu
 
 export const createCustomer = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { name, phone, email, address, birthday, tierId } = req.body;
+    const { name, phone, email, address, date_of_birth } = req.body;
 
     if (!name || !phone) {
       return res.status(400).json({
@@ -82,7 +67,7 @@ export const createCustomer = async (req: Request, res: Response, _next: NextFun
         phone,
         email,
         address,
-        tierId: tierId || null
+        date_of_birth: date_of_birth ? new Date(date_of_birth) : null
       }
     });
 
@@ -95,7 +80,7 @@ export const createCustomer = async (req: Request, res: Response, _next: NextFun
 export const updateCustomer = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, phone, email, address, birthday, tierId } = req.body;
+    const { name, phone, email, address, date_of_birth } = req.body;
 
     const customer = await prisma.customers.update({
       where: { id: parseInt(id) },
@@ -104,8 +89,7 @@ export const updateCustomer = async (req: Request, res: Response, _next: NextFun
         ...(phone && { phone }),
         ...(email && { email }),
         ...(address && { address }),
-        ...(birthday && { birthday: new Date(birthday) }),
-        ...(tierId !== undefined && { tierId: tierId })
+        ...(date_of_birth && { date_of_birth: new Date(date_of_birth) })
       }
     });
 
@@ -133,8 +117,25 @@ export const getCustomerTransactions = async (req: Request, res: Response, _next
   try {
     const { id } = req.params;
 
+    // Get customer first to match by name/phone since there's no direct relation
+    const customer = await prisma.customers.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'CUSTOMER_NOT_FOUND', message: 'Customer not found' }
+      });
+    }
+
     const transactions = await prisma.transaction.findMany({
-      where: { customerId: parseInt(id) },
+      where: {
+        OR: [
+          { customer_name: customer.name },
+          { customer_phone: customer.phone }
+        ]
+      },
       orderBy: { createdAt: 'desc' }
     });
 

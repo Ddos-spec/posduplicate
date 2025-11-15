@@ -7,7 +7,7 @@ export const getInventory = async (req: Request, res: Response, _next: NextFunct
     const where: any = { isActive: true };
 
     if (req.tenantId) {
-      where.outlet = { tenantId: req.tenantId };
+      where.outlets = { tenantId: req.tenantId };
     }
 
     if (outlet_id) {
@@ -22,7 +22,7 @@ export const getInventory = async (req: Request, res: Response, _next: NextFunct
     const items = await prisma.items.findMany({
       where,
       include: {
-        outlet: { select: { id: true, name: true } }
+        outlets: { select: { id: true, name: true } }
       },
       orderBy: { stock: 'asc' }
     });
@@ -35,7 +35,7 @@ export const getInventory = async (req: Request, res: Response, _next: NextFunct
 
 export const adjustStock = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { itemId, quantity, type, notes, outletId } = req.body;
+    const { itemId, quantity, type } = req.body;
 
     if (!itemId || !quantity || !type) {
       return res.status(400).json({
@@ -140,7 +140,7 @@ export const getLowStock = async (req: Request, res: Response, _next: NextFuncti
     };
 
     if (req.tenantId) {
-      where.outlet = { tenantId: req.tenantId };
+      where.outlets = { tenantId: req.tenantId };
     }
 
     if (outlet_id) {
