@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Check, AlertTriangle, Plus, Edit, FileDown, Loader2, DollarSign } from 'lucide-react';
+import { Check, AlertTriangle, FileDown, Loader2, DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { billingService, BillingRecord, SubscriptionPlan, BillingStats } from '../../services/billingService';
+import { billingService } from '../../services/billingService';
+import type { BillingRecord, SubscriptionPlan, BillingStats } from '../../services/billingService';
 
 export default function BillingManagementPage() {
   const [activeTab, setActiveTab] = useState<'history' | 'overdue'>('history');
@@ -11,7 +12,7 @@ export default function BillingManagementPage() {
 
   // API State
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [_plans, _setPlans] = useState<SubscriptionPlan[]>([]);
   const [stats, setStats] = useState<BillingStats>({
     totalRevenue: 0,
     activeSubscriptions: 0,
@@ -41,7 +42,7 @@ export default function BillingManagementPage() {
       ]);
 
       setBillingRecords(historyRes.data);
-      setPlans(plansRes.data);
+      _setPlans(plansRes.data);
       setStats(statsRes.data);
     } catch (error: any) {
       console.error('Error fetching billing data:', error);
@@ -295,7 +296,7 @@ export default function BillingManagementPage() {
                         Record Payment
                       </button>
                       <button
-                        onClick={() => toast.info('Send reminder feature coming soon')}
+                        onClick={() => toast.success('Send reminder feature coming soon')}
                         className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
                       >
                         Send Reminder

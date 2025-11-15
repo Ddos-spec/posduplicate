@@ -13,7 +13,7 @@ export const getTenantGrowth = async (req: Request, res: Response, next: NextFun
     startDate.setMonth(startDate.getMonth() - monthsInt);
 
     // Get tenants grouped by month
-    const tenants = await prisma.tenants.findMany({
+    const tenants = await prisma.tenant.findMany({
       where: {
         createdAt: { gte: startDate }
       },
@@ -25,7 +25,7 @@ export const getTenantGrowth = async (req: Request, res: Response, next: NextFun
 
     // Group by month
     const monthlyData: { [key: string]: number } = {};
-    let cumulativeCount = await prisma.tenants.count({
+    let cumulativeCount = await prisma.tenant.count({
       where: { createdAt: { lt: startDate } }
     });
 
@@ -76,7 +76,7 @@ export const getSystemRevenue = async (req: Request, res: Response, next: NextFu
     // Group by month
     const monthlyRevenue: { [key: string]: number } = {};
     transactions.forEach((t: any) => {
-      const monthKey = t.created_at.toISOString().substring(0, 7);
+      const monthKey = t.createdAt.toISOString().substring(0, 7);
       monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + Number(t.total ?? 0);
     });
 

@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma';
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
@@ -29,29 +27,26 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     });
 
     // Calculate stats
-    const totalRevenue = transactions.reduce((sum, t) => sum + parseFloat(t.total.toString()), 0);
+    const totalRevenue = transactions.reduce((sum, t) => sum + parseFloat((t.total ?? 0).toString()), 0);
     const totalTransactions = transactions.length;
     const averageTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
     // Calculate total items sold
     const totalItemsSold = transactions.reduce((sum, t) => {
-      return sum + t.transaction_items.reduce((itemSum, item) => itemSum + item.quantity, 0);
+      return sum + t.transaction_items.reduce((itemSum, item) => itemSum + parseFloat(item.quantity.toString()), 0);
     }, 0);
 
     // Get today's stats
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayTransactions = transactions.filter(t => new Date(t.createdAt) >= today);
-    const todayRevenue = todayTransactions.reduce((sum, t) => sum + parseFloat(t.total.toString()), 0);
+    const todayTransactions = transactions.filter(t => t.createdAt && new Date(t.createdAt) >= today);
+    const todayRevenue = todayTransactions.reduce((sum, t) => sum + parseFloat((t.total ?? 0).toString()), 0);
 
     // Get yesterday's revenue for comparison
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayTransactions = await prisma.transaction.findMany({
       where: {
-        outlet: {
-          tenantId: tenantId
-        },
         status: 'completed',
         createdAt: {
           gte: yesterday,
@@ -59,7 +54,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         }
       }
     });
-    const yesterdayRevenue = yesterdayTransactions.reduce((sum, t) => sum + parseFloat(t.total.toString()), 0);
+    const yesterdayRevenue = yesterdayTransactions.reduce((sum, t) => sum + parseFloat((t.total ?? 0).toString()), 0);
     const revenueChange = yesterdayRevenue > 0
       ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
       : 0;
@@ -135,7 +130,7 @@ export const getSalesChart = async (req: Request, res: Response) => {
         };
       }
 
-      salesByDate[key].revenue += parseFloat(t.total.toString());
+      salesByDate[key].revenue += parseFloat((t.total ?? 0).toString());
       salesByDate[key].transactions += 1;
     });
 
@@ -162,7 +157,7 @@ export const getTopProducts = async (req: Request, res: Response) => {
 
     const transactionItems = await prisma.transactionItem.findMany({
       where: {
-        transaction: {
+        transactions: {
           status: 'completed'
         }
       },
@@ -183,7 +178,7 @@ export const getTopProducts = async (req: Request, res: Response) => {
           revenue: 0
         };
       }
-      productStats[item.item_name].quantity += item.quantity;
+      productStats[item.item_name].quantity += parseFloat(item.quantity.toString());
       productStats[item.item_name].revenue += parseFloat(item.subtotal.toString());
     });
 
@@ -208,22 +203,22 @@ export const getTopProducts = async (req: Request, res: Response) => {
 export const getSalesByCategory = async (req: Request, res: Response) => {
   try {
     // Get all items with their categories
-    const items = await prisma.item.findMany({
+    const items = await prisma.items.findMany({
       include: {
-        category: true
+        categories: true
       }
     });
 
     // Create a map of item name to category
     const itemCategoryMap: any = {};
-    items.forEach(item => {
-      itemCategoryMap[item.name] = item.category?.name || 'Uncategorized';
+    items.forEach((item: any) => {
+      itemCategoryMap[item.name] = item.categories?.name || 'Uncategorized';
     });
 
     // Get transaction items
     const transactionItems = await prisma.transactionItem.findMany({
       where: {
-        transaction: {
+        transactions: {
           status: 'completed'
         }
       },
@@ -246,7 +241,7 @@ export const getSalesByCategory = async (req: Request, res: Response) => {
           revenue: 0
         };
       }
-      categoryStats[categoryName].quantity += item.quantity;
+      categoryStats[categoryName].quantity += parseFloat(item.quantity.toString());
       categoryStats[categoryName].revenue += parseFloat(item.subtotal.toString());
     });
 
@@ -271,7 +266,7 @@ export const getRecentTransactions = async (req: Request, res: Response) => {
 
     const transactions = await prisma.transaction.findMany({
       include: {
-        cashiers: {
+        users: {
           select: {
             name: true,
             email: true

@@ -42,7 +42,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 // Root route
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'MyPOS API Server',
@@ -60,7 +60,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // Health check
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'OK',
     message: 'MyPOS API is running',
@@ -103,7 +103,7 @@ app.use((req: Request, res: Response) => {
 });
 
 // Error Handler
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Error:', err);
 
   res.status(err.status || 500).json({

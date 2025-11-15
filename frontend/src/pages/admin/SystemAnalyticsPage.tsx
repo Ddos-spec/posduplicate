@@ -16,7 +16,8 @@ import {
 } from 'recharts';
 import { TrendingUp, Users, Building2, DollarSign, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminAnalyticsService, TenantGrowthData, RevenueData, TenantStatusData, TopTenant } from '../../services/adminAnalyticsService';
+import { adminAnalyticsService } from '../../services/adminAnalyticsService';
+import type { TenantGrowthData, RevenueData, TenantStatusData, TopTenant } from '../../services/adminAnalyticsService';
 
 export default function SystemAnalyticsPage() {
   const [dateRange, setDateRange] = useState('month');
@@ -200,7 +201,7 @@ export default function SystemAnalyticsPage() {
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
-                data={tenantStatusData}
+                data={tenantStatusData as any}
                 cx="50%"
                 cy="50%"
                 labelLine={false}

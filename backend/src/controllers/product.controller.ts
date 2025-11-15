@@ -4,7 +4,7 @@ import prisma from '../utils/prisma';
 /**
  * Get all products with filters
  */
-export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
+export const getProducts = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { category, category_id, search, outlet_id } = req.query;
 
@@ -15,7 +15,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
     if (category_id) {
       where.categoryId = parseInt(category_id as string);
     } else if (category) {
-      where.categories = { name: category as string };
+      where.category = { name: category as string };
     }
 
     if (search) {
@@ -29,15 +29,15 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
     const products = await prisma.items.findMany({
       where,
       include: {
-        categories: {
+        category: {
           select: { id: true, name: true }
         },
         variants: {
-          where: { is_active: true }
+          where: { isActive: true }
         },
         item_modifiers: {
           include: {
-            modifiers: true
+            modifier: true
           }
         }
       },
@@ -50,14 +50,14 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
       count: products.length
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
 /**
  * Get product by ID
  */
-export const getProductById = async (req: Request, res: Response, next: NextFunction) => {
+export const getProductById = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
 
@@ -68,7 +68,7 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
         variants: {
           where: { isActive: true }
         },
-        modifiers: {
+        item_modifiers: {
           include: {
             modifier: {
               where: { isActive: true }
@@ -93,14 +93,14 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
       data: product
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
 /**
  * Create new product
  */
-export const createProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const createProduct = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const productData = req.body;
 
@@ -114,14 +114,14 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       data: product
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
 /**
  * Update product
  */
-export const updateProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const updateProduct = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -137,18 +137,18 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
       data: product
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
 /**
  * Delete product (soft delete)
  */
-export const deleteProduct = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteProduct = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
 
-    const product = await prisma.items.update({
+    await prisma.items.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });
@@ -158,6 +158,6 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
       message: 'Product deleted successfully'
     });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };

@@ -1,27 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 
-export const getEmployees = async (req: Request, res: Response, next: NextFunction) => {
+export const getEmployees = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, is_active } = req.query;
     const where: any = {};
 
     if (req.tenantId) {
-      where.users = { tenantId: req.tenantId };
+      where.user = { tenantId: req.tenantId };
     }
 
     if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+      where.outletId = parseInt(outlet_id as string);
     }
 
     if (is_active !== undefined) {
-      where.is_active = is_active === 'true';
+      where.isActive = is_active === 'true';
     }
 
     const employees = await prisma.employees.findMany({
       where,
       include: {
-        users: {
+        user: {
           select: {
             id: true,
             name: true,
@@ -34,27 +34,27 @@ export const getEmployees = async (req: Request, res: Response, next: NextFuncti
             }
           }
         },
-        outlets: {
+        outlet: {
           select: { id: true, name: true }
         }
       },
-      orderBy: { created_at: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
 
     res.json({ success: true, data: employees, count: employees.length });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const getEmployeeById = async (req: Request, res: Response, next: NextFunction) => {
+export const getEmployeeById = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
 
     const employee = await prisma.employees.findUnique({
       where: { id: parseInt(id) },
       include: {
-        users: {
+        user: {
           select: {
             id: true,
             name: true,
@@ -67,7 +67,7 @@ export const getEmployeeById = async (req: Request, res: Response, next: NextFun
             }
           }
         },
-        outlets: true
+        outlet: true
       }
     });
 
@@ -80,11 +80,11 @@ export const getEmployeeById = async (req: Request, res: Response, next: NextFun
 
     res.json({ success: true, data: employee });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const createEmployee = async (req: Request, res: Response, next: NextFunction) => {
+export const createEmployee = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { userId, outletId, employeeCode, pinCode, position, salary, hiredAt } = req.body;
 
@@ -98,8 +98,8 @@ export const createEmployee = async (req: Request, res: Response, next: NextFunc
     // Check if user already has an employee record for this outlet
     const existing = await prisma.employees.findFirst({
       where: {
-        user_id: userId,
-        outlet_id: outletId
+        userId: userId,
+        outletId: outletId
       }
     });
 
@@ -112,73 +112,71 @@ export const createEmployee = async (req: Request, res: Response, next: NextFunc
 
     const employee = await prisma.employees.create({
       data: {
-        user_id: userId,
-        outlet_id: outletId,
-        employee_code: employeeCode,
-        pin_code: pinCode,
+        userId: userId,
+        outletId: outletId,
+        employeeCode: employeeCode,
+        pinCode: pinCode,
         position,
         salary: salary || 0,
-        hired_at: hiredAt ? new Date(hiredAt) : new Date(),
-        is_active: true
+        hiredAt: hiredAt ? new Date(hiredAt) : new Date(),
+        isActive: true
       },
       include: {
-        users: { select: { id: true, name: true, email: true } },
-        outlets: { select: { id: true, name: true } }
+        user: { select: { id: true, name: true, email: true } },
+        outlet: { select: { id: true, name: true } }
       }
     });
 
     res.status(201).json({ success: true, data: employee, message: 'Employee created successfully' });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const updateEmployee = async (req: Request, res: Response, next: NextFunction) => {
+export const updateEmployee = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
     const { employeeCode, pinCode, position, salary, isActive } = req.body;
 
     const data: any = {};
-    if (employeeCode !== undefined) data.employee_code = employeeCode;
-    if (pinCode !== undefined) data.pin_code = pinCode;
+    if (employeeCode !== undefined) data.employeeCode = employeeCode;
+    if (pinCode !== undefined) data.pinCode = pinCode;
     if (position !== undefined) data.position = position;
     if (salary !== undefined) data.salary = salary;
-    if (isActive !== undefined) data.is_active = isActive;
+    if (isActive !== undefined) data.isActive = isActive;
 
     const employee = await prisma.employees.update({
       where: { id: parseInt(id) },
       data,
       include: {
-        users: { select: { id: true, name: true, email: true } },
-        outlets: { select: { id: true, name: true } }
+        user: { select: { id: true, name: true, email: true } },
+        outlet: { select: { id: true, name: true } }
       }
     });
 
     res.json({ success: true, data: employee, message: 'Employee updated successfully' });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const deleteEmployee = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteEmployee = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
 
     await prisma.employees.update({
       where: { id: parseInt(id) },
-      data: { is_active: false }
+      data: { isActive: false }
     });
 
     res.json({ success: true, message: 'Employee deactivated successfully' });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
 
-export const getEmployeeShifts = async (req: Request, res: Response, next: NextFunction) => {
+export const getEmployeeShifts = async (_req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { id } = req.params;
-
     // Note: The 'shifts' model doesn't exist in the current schema
     // This would need to be added to the Prisma schema to properly implement
     // For now, return an empty array as a placeholder
@@ -186,6 +184,6 @@ export const getEmployeeShifts = async (req: Request, res: Response, next: NextF
 
     res.json({ success: true, data: shifts, count: shifts.length });
   } catch (error) {
-    next(error);
+    _next(error);
   }
 };
