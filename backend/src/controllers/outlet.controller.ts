@@ -15,11 +15,11 @@ export const getOutlets = async (
 
     // Tenant isolation
     if (req.tenantId) {
-      where.tenant_id = req.tenantId;
+      where.tenantId = req.tenantId;
     }
 
     if (is_active !== undefined) {
-      where.is_active = is_active === 'true';
+      where.isActive = is_active === 'true';
     }
 
     const outlets = await prisma.outlet.findMany({
@@ -28,7 +28,7 @@ export const getOutlets = async (
         tenants: {
           select: {
             id: true,
-            business_name: true,
+            businessName: true,
             email: true
           }
         },
@@ -40,7 +40,7 @@ export const getOutlets = async (
           }
         }
       },
-      orderBy: { created_at: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
 
     res.json({
