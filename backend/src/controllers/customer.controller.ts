@@ -25,7 +25,7 @@ export const getCustomers = async (req: Request, res: Response, _next: NextFunct
 
     res.json({ success: true, data: customers, count: customers.length });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -95,7 +95,7 @@ export const updateCustomer = async (req: Request, res: Response, _next: NextFun
 
     res.json({ success: true, data: customer, message: 'Customer updated successfully' });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -109,7 +109,7 @@ export const deleteCustomer = async (req: Request, res: Response, _next: NextFun
 
     res.json({ success: true, message: 'Customer deleted successfully' });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -141,6 +141,6 @@ export const getCustomerTransactions = async (req: Request, res: Response, _next
 
     res.json({ success: true, data: transactions, count: transactions.length });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
