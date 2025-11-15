@@ -4,7 +4,7 @@ import prisma from '../utils/prisma';
 export const getCustomers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { search, tier } = req.query;
-    const where: any = { isActive: true };
+    const where: any = { is_active: true };
 
     if (search) {
       where.OR = [
@@ -18,7 +18,7 @@ export const getCustomers = async (req: Request, res: Response, next: NextFuncti
       where.tierId = parseInt(tier as string);
     }
 
-    const customers = await prisma.customer.findMany({
+    const customers = await prisma.customers.findMany({
       where,
       include: {
         tier: true,
@@ -26,7 +26,7 @@ export const getCustomers = async (req: Request, res: Response, next: NextFuncti
           select: { transactions: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
 
     res.json({ success: true, data: customers, count: customers.length });
@@ -39,16 +39,16 @@ export const getCustomerById = async (req: Request, res: Response, next: NextFun
   try {
     const { id } = req.params;
 
-    const customer = await prisma.customer.findUnique({
+    const customer = await prisma.customers.findUnique({
       where: { id: parseInt(id) },
       include: {
         tier: true,
         transactions: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
           take: 10
         },
         loyaltyPoints: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
           take: 10
         }
       }
@@ -78,14 +78,14 @@ export const createCustomer = async (req: Request, res: Response, next: NextFunc
       });
     }
 
-    const customer = await prisma.customer.create({
+    const customer = await prisma.customers.create({
       data: {
         name,
         phone,
         email,
         address,
         birthday: birthday ? new Date(birthday) : null,
-        tierId: tierId || null
+        tier_id: tierId || null
       }
     });
 
@@ -100,7 +100,7 @@ export const updateCustomer = async (req: Request, res: Response, next: NextFunc
     const { id } = req.params;
     const { name, phone, email, address, birthday, tierId } = req.body;
 
-    const customer = await prisma.customer.update({
+    const customer = await prisma.customers.update({
       where: { id: parseInt(id) },
       data: {
         ...(name && { name }),
@@ -108,7 +108,7 @@ export const updateCustomer = async (req: Request, res: Response, next: NextFunc
         ...(email && { email }),
         ...(address && { address }),
         ...(birthday && { birthday: new Date(birthday) }),
-        ...(tierId !== undefined && { tierId })
+        ...(tierId !== undefined && { tier_id: tierId })
       }
     });
 
@@ -122,9 +122,9 @@ export const deleteCustomer = async (req: Request, res: Response, next: NextFunc
   try {
     const { id } = req.params;
 
-    await prisma.customer.update({
+    await prisma.customers.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
 
     res.json({ success: true, message: 'Customer deleted successfully' });
@@ -137,9 +137,9 @@ export const getCustomerTransactions = async (req: Request, res: Response, next:
   try {
     const { id } = req.params;
 
-    const transactions = await prisma.loyaltyTransaction.findMany({
-      where: { customerId: parseInt(id) },
-      orderBy: { createdAt: 'desc' }
+    const transactions = await prisma.transaction.findMany({
+      where: { customer_id: parseInt(id) },
+      orderBy: { created_at: 'desc' }
     });
 
     res.json({ success: true, data: transactions, count: transactions.length });

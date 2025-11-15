@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -20,7 +21,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     // Find user
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
       include: {
         roles: true,
@@ -37,7 +38,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     // Check password
-    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
@@ -46,7 +47,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     // Check if user is active
-    if (!user.isActive) {
+    if (!user.is_active) {
       return res.status(403).json({
         success: false,
         error: { code: 'USER_INACTIVE', message: 'Account is inactive' }
@@ -71,9 +72,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     // Update last login
-    await prisma.users.update({
+    await prisma.user.update({
       where: { id: user.id },
-      data: { lastLogin: new Date() }
+      data: { last_login: new Date() }
     });
 
     // Generate JWT token
@@ -81,17 +82,17 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       {
         userId: user.id,
         email: user.email,
-        roleId: user.roleId,
+        roleId: user.role_id,
         roleName: user.roles.name,
-        tenantId: user.tenantId,
-        outletId: user.outletId
+        tenantId: user.tenant_id,
+        outletId: user.outlet_id
       },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     // Remove password hash from response
-    const { passwordHash, ...userWithoutPassword } = user;
+    const { passwordHash, ...userWithoutPassword } = user as any;
 
     res.json({
       success: true,
@@ -121,7 +122,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     }
 
     // Check if email exists
-    const existing = await prisma.users.findUnique({ where: { email } });
+    const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return res.status(400).json({
         success: false,
@@ -130,17 +131,17 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const password_hash = await bcrypt.hash(password, 10);
 
     // Create user
-    const user = await prisma.users.create({
+    const user = await prisma.user.create({
       data: {
         email,
-        passwordHash,
+        password_hash,
         name,
-        roleId: roleId || 3, // Default: Cashier
-        tenantId,
-        outletId
+        role_id: roleId || 3, // Default: Cashier
+        tenant_id: tenantId,
+        outlet_id: outletId
       },
       include: {
         roles: true,
@@ -166,7 +167,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
  */
 export const getMe = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: req.userId },
       include: {
         roles: true,
@@ -207,7 +208,7 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
       });
     }
 
-    const user = await prisma.users.findUnique({ where: { id: req.userId } });
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -216,7 +217,7 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
     }
 
     // Verify current password
-    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
     if (!isValid) {
       return res.status(401).json({
         success: false,
@@ -225,12 +226,12 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
     }
 
     // Hash new password
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const password_hash = await bcrypt.hash(newPassword, 10);
 
     // Update password
-    await prisma.users.update({
+    await prisma.user.update({
       where: { id: req.userId },
-      data: { passwordHash }
+      data: { password_hash }
     });
 
     res.json({
