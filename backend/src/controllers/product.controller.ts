@@ -9,13 +9,13 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
     const { category, category_id, search, outlet_id } = req.query;
 
     const where: any = {
-      is_active: true
+      isActive: true
     };
 
     if (category_id) {
       where.categoryId = parseInt(category_id as string);
     } else if (category) {
-      where.category = { name: category as string };
+      where.categories = { name: category as string };
     }
 
     if (search) {
@@ -29,7 +29,7 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
     const products = await prisma.items.findMany({
       where,
       include: {
-        category: {
+        categories: {
           select: { id: true, name: true }
         },
         variants: {
@@ -64,7 +64,7 @@ export const getProductById = async (req: Request, res: Response, _next: NextFun
     const product = await prisma.items.findUnique({
       where: { id: parseInt(id) },
       include: {
-        category: true,
+        categories: true,
         variants: {
           where: { is_active: true }
         },
@@ -148,7 +148,7 @@ export const deleteProduct = async (req: Request, res: Response, _next: NextFunc
 
     await prisma.items.update({
       where: { id: parseInt(id) },
-      data: { is_active: false }
+      data: { isActive: false }
     });
 
     res.json({

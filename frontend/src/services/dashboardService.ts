@@ -24,6 +24,7 @@ export interface CategorySales {
   name: string;
   count: number;
   value: number;
+  [key: string]: string | number;
 }
 
 export interface RecentTransaction {

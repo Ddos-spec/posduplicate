@@ -4,18 +4,18 @@ import prisma from '../utils/prisma';
 export const getIngredients = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, category_id } = req.query;
-    const where: any = { isActive: true };
+    const where: any = { is_active: true };
 
     if (req.tenantId) {
-      where.outlet = { tenantId: req.tenantId };
+      where.outlets = { tenantId: req.tenantId };
     }
-    if (outlet_id) where.outletId = parseInt(outlet_id as string);
-    if (category_id) where.categoryId = parseInt(category_id as string);
+    if (outlet_id) where.outlet_id = parseInt(outlet_id as string);
+    if (category_id) where.category_id = parseInt(category_id as string);
 
     const ingredients = await prisma.ingredients.findMany({
       where,
       include: {
-        outlet: { select: { id: true, name: true } }
+        outlets: { select: { id: true, name: true } }
       },
       orderBy: { name: 'asc' }
     });
@@ -40,9 +40,9 @@ export const createIngredient = async (req: Request, res: Response, _next: NextF
         category_id: categoryId,
         unit: unit || 'pcs',
         stock: stock || 0,
-        minStock: minStock || 0,
-        cost: cost || 0,
-        outletId
+        min_stock: minStock || 0,
+        cost_per_unit: cost || 0,
+        outlet_id: outletId
       }
     });
     res.status(201).json({ success: true, data: ingredient, message: 'Ingredient created successfully' });
@@ -61,8 +61,8 @@ export const updateIngredient = async (req: Request, res: Response, _next: NextF
         ...(name && { name }),
         ...(unit && { unit }),
         ...(stock !== undefined && { stock }),
-        ...(minStock !== undefined && { minStock }),
-        ...(cost !== undefined && { cost }),
+        ...(minStock !== undefined && { min_stock: minStock }),
+        ...(cost !== undefined && { cost_per_unit: cost }),
         ...(isActive !== undefined && { is_active: isActive })
       }
     });

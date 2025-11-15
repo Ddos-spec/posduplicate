@@ -70,7 +70,7 @@ export const getPromotionById = async (req: Request, res: Response, next: NextFu
                 id: true,
                 transaction_number: true,
                 total: true,
-                created_at: true
+                createdAt: true
               }
             }
           },

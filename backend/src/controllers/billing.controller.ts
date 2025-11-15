@@ -53,7 +53,7 @@ export const getBillingHistory = async (req: Request, res: Response, next: NextF
 /**
  * Get subscription plans
  */
-export const getSubscriptionPlans = async (req: Request, res: Response, next: NextFunction) => {
+export const getSubscriptionPlans = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     // Hardcoded plans - in production these would be in database
     const plans = [
@@ -163,16 +163,13 @@ export const recordPayment = async (req: Request, res: Response, next: NextFunct
 /**
  * Get billing stats
  */
-export const getBillingStats = async (req: Request, res: Response, next: NextFunction) => {
+export const getBillingStats = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const [
-      totalRevenue,
       activeSubscriptions,
       pendingPayments,
       totalTenants
     ] = await Promise.all([
-      // In production, sum from payments table
-      prisma.tenant.count({ where: { subscriptionStatus: 'active' } }),
       prisma.tenant.count({ where: { subscriptionStatus: 'active' } }),
       prisma.tenant.count({ where: { subscriptionStatus: 'pending' } }),
       prisma.tenant.count()
