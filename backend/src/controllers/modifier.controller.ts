@@ -6,18 +6,17 @@ export const getModifiers = async (_req: Request, res: Response, _next: NextFunc
     const where: any = { isActive: true };
     const modifiers = await prisma.modifiers.findMany({
       where,
-      include: { items: { include: { item: true } } },
       orderBy: { name: 'asc' }
     });
     res.json({ success: true, data: modifiers, count: modifiers.length });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
 export const createModifier = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { name, price, category } = req.body;
+    const { name, price } = req.body;
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -25,30 +24,29 @@ export const createModifier = async (req: Request, res: Response, _next: NextFun
       });
     }
     const modifier = await prisma.modifiers.create({
-      data: { name, price: price || 0, category }
+      data: { name, price: price || 0 }
     });
     res.status(201).json({ success: true, data: modifier, message: 'Modifier created successfully' });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
 export const updateModifier = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, price, category, isActive } = req.body;
+    const { name, price, isActive } = req.body;
     const modifier = await prisma.modifiers.update({
       where: { id: parseInt(id) },
       data: {
         ...(name && { name }),
         ...(price !== undefined && { price }),
-        ...(category && { category }),
-        ...(isActive !== undefined && { isActive })
+        ...(isActive !== undefined && { is_active: isActive })
       }
     });
     res.json({ success: true, data: modifier, message: 'Modifier updated successfully' });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -57,10 +55,10 @@ export const deleteModifier = async (req: Request, res: Response, _next: NextFun
     const { id } = req.params;
     await prisma.modifiers.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
     res.json({ success: true, message: 'Modifier deleted successfully' });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };

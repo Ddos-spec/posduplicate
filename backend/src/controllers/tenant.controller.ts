@@ -63,7 +63,7 @@ export const getAllTenants = async (
       count: tenants.length
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -114,7 +114,7 @@ export const getTenantById = async (
       data: tenant
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -196,7 +196,7 @@ export const createTenant = async (
       message: 'Tenant created successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -226,7 +226,7 @@ export const updateTenant = async (
       message: 'Tenant updated successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -253,7 +253,7 @@ export const toggleTenantStatus = async (
       message: `Tenant ${isActive ? 'activated' : 'deactivated'} successfully`
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -309,7 +309,7 @@ export const updateSubscription = async (
       message: 'Subscription updated successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -350,7 +350,7 @@ export const getMyTenant = async (
       data: tenant
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -378,6 +378,6 @@ export const deleteTenant = async (
       message: 'Tenant deleted successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };

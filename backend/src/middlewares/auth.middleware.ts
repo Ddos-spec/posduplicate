@@ -46,7 +46,7 @@ export const authMiddleware = async (
       req.tenantId = decoded.tenantId;
       req.userRole = decoded.roleName;
 
-      next();
+      return next();
     } catch (jwtError) {
       if (jwtError instanceof jwt.TokenExpiredError) {
         return res.status(401).json({

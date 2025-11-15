@@ -21,7 +21,7 @@ export const getDashboardSummary = async (req: Request, res: Response, _next: Ne
     }
 
     // Get total sales
-    const totalSales = await prisma.Transaction.aggregate({
+    const totalSales = await prisma.transaction.aggregate({
       where: { ...where, status: 'completed' },
       _sum: { total: true },
       _count: { id: true }
@@ -34,7 +34,7 @@ export const getDashboardSummary = async (req: Request, res: Response, _next: Ne
 
     // Get total customers (from transactions)
     const totalCustomers = await prisma.customers.count({
-      where: tenantId ? { outletId: { in: await getOutletIdsByTenant(tenantId) } } : {}
+      where: tenantId ? { outlet_id: { in: await getOutletIdsByTenant(tenantId) } } : {}
     });
 
     res.json({
@@ -71,7 +71,7 @@ export const getSalesTrend = async (req: Request, res: Response, _next: NextFunc
     if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
     if (outletId) where.outletId = Number(outletId);
 
-    const transactions = await prisma.Transaction.findMany({
+    const transactions = await prisma.transaction.findMany({
       where,
       select: {
         createdAt: true,
@@ -82,7 +82,7 @@ export const getSalesTrend = async (req: Request, res: Response, _next: NextFunc
 
     // Group by date
     const grouped: { [key: string]: number } = {};
-    transactions.forEach(t => {
+    transactions.forEach((t: any) => {
       const date = t.createdAt.toISOString().split('T')[0];
       grouped[date] = (grouped[date] || 0) + Number(t.total);
     });
@@ -173,7 +173,7 @@ export const getRecentTransactions = async (req: Request, res: Response, _next: 
     const where: any = {};
     if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
 
-    const transactions = await prisma.Transaction.findMany({
+    const transactions = await prisma.transaction.findMany({
       where,
       take: Number(limit),
       orderBy: { createdAt: 'desc' },
@@ -197,9 +197,9 @@ export const getRecentTransactions = async (req: Request, res: Response, _next: 
 
 // Helper function
 async function getOutletIdsByTenant(tenantId: number): Promise<number[]> {
-  const outlets = await prisma.Outlet.findMany({
+  const outlets = await prisma.outlet.findMany({
     where: { tenantId },
     select: { id: true }
   });
-  return outlets.map(o => o.id);
+  return outlets.map((o: any) => o.id);
 }

@@ -102,7 +102,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       message: 'Login successful'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -157,7 +157,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       message: 'User registered successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -189,7 +189,7 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
       data: userWithoutPassword
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -238,6 +238,6 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
       message: 'Password changed successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };

@@ -21,7 +21,7 @@ export const getEmployees = async (req: Request, res: Response, _next: NextFunct
     const employees = await prisma.employees.findMany({
       where,
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             name: true,
@@ -38,7 +38,7 @@ export const getEmployees = async (req: Request, res: Response, _next: NextFunct
           select: { id: true, name: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { id: 'desc' }
     });
 
     res.json({ success: true, data: employees, count: employees.length });
@@ -54,7 +54,7 @@ export const getEmployeeById = async (req: Request, res: Response, _next: NextFu
     const employee = await prisma.employees.findUnique({
       where: { id: parseInt(id) },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             name: true,
@@ -80,7 +80,7 @@ export const getEmployeeById = async (req: Request, res: Response, _next: NextFu
 
     res.json({ success: true, data: employee });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -98,7 +98,7 @@ export const createEmployee = async (req: Request, res: Response, _next: NextFun
     // Check if user already has an employee record for this outlet
     const existing = await prisma.employees.findFirst({
       where: {
-        userId: userId,
+        user_id: userId,
         outletId: outletId
       }
     });
@@ -112,7 +112,7 @@ export const createEmployee = async (req: Request, res: Response, _next: NextFun
 
     const employee = await prisma.employees.create({
       data: {
-        userId: userId,
+        user_id: userId,
         outletId: outletId,
         employeeCode: employeeCode,
         pinCode: pinCode,
@@ -122,14 +122,14 @@ export const createEmployee = async (req: Request, res: Response, _next: NextFun
         isActive: true
       },
       include: {
-        user: { select: { id: true, name: true, email: true } },
+        users: { select: { id: true, name: true, email: true } },
         outlet: { select: { id: true, name: true } }
       }
     });
 
     res.status(201).json({ success: true, data: employee, message: 'Employee created successfully' });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -149,7 +149,7 @@ export const updateEmployee = async (req: Request, res: Response, _next: NextFun
       where: { id: parseInt(id) },
       data,
       include: {
-        user: { select: { id: true, name: true, email: true } },
+        users: { select: { id: true, name: true, email: true } },
         outlet: { select: { id: true, name: true } }
       }
     });
@@ -166,7 +166,7 @@ export const deleteEmployee = async (req: Request, res: Response, _next: NextFun
 
     await prisma.employees.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
 
     res.json({ success: true, message: 'Employee deactivated successfully' });
@@ -180,7 +180,7 @@ export const getEmployeeShifts = async (_req: Request, res: Response, _next: Nex
     // Note: The 'shifts' model doesn't exist in the current schema
     // This would need to be added to the Prisma schema to properly implement
     // For now, return an empty array as a placeholder
-    const shifts = [];
+    const shifts: any[] = [];
 
     res.json({ success: true, data: shifts, count: shifts.length });
   } catch (error) {

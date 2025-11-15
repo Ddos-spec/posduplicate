@@ -9,7 +9,7 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
     const { category, category_id, search, outlet_id } = req.query;
 
     const where: any = {
-      isActive: true
+      is_active: true
     };
 
     if (category_id) {
@@ -33,11 +33,11 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
           select: { id: true, name: true }
         },
         variants: {
-          where: { isActive: true }
+          where: { is_active: true }
         },
         item_modifiers: {
           include: {
-            modifier: true
+            modifiers: true
           }
         }
       },
@@ -50,7 +50,7 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
       count: products.length
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -66,13 +66,11 @@ export const getProductById = async (req: Request, res: Response, _next: NextFun
       include: {
         category: true,
         variants: {
-          where: { isActive: true }
+          where: { is_active: true }
         },
         item_modifiers: {
           include: {
-            modifier: {
-              where: { isActive: true }
-            }
+            modifiers: true
           }
         }
       }
@@ -93,7 +91,7 @@ export const getProductById = async (req: Request, res: Response, _next: NextFun
       data: product
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -114,7 +112,7 @@ export const createProduct = async (req: Request, res: Response, _next: NextFunc
       data: product
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -137,7 +135,7 @@ export const updateProduct = async (req: Request, res: Response, _next: NextFunc
       data: product
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -150,7 +148,7 @@ export const deleteProduct = async (req: Request, res: Response, _next: NextFunc
 
     await prisma.items.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
 
     res.json({
@@ -158,6 +156,6 @@ export const deleteProduct = async (req: Request, res: Response, _next: NextFunc
       message: 'Product deleted successfully'
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };

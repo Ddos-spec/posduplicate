@@ -4,17 +4,17 @@ import prisma from '../utils/prisma';
 export const getVariants = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { item_id } = req.query;
-    const where: any = { isActive: true };
-    if (item_id) where.itemId = parseInt(item_id as string);
+    const where: any = { is_active: true };
+    if (item_id) where.item_id = parseInt(item_id as string);
 
     const variants = await prisma.variants.findMany({
       where,
-      include: { item: { select: { id: true, name: true } } },
+      include: { items: { select: { id: true, name: true } } },
       orderBy: { name: 'asc' }
     });
     res.json({ success: true, data: variants, count: variants.length });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -28,11 +28,11 @@ export const createVariant = async (req: Request, res: Response, next: NextFunct
       });
     }
     const variant = await prisma.variants.create({
-      data: { name, itemId, priceAdjust: priceAdjust || 0, sku }
+      data: { name, item_id: itemId, priceAdjust: priceAdjust || 0, sku }
     });
     res.status(201).json({ success: true, data: variant, message: 'Variant created successfully' });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -46,12 +46,12 @@ export const updateVariant = async (req: Request, res: Response, next: NextFunct
         ...(name && { name }),
         ...(priceAdjust !== undefined && { priceAdjust }),
         ...(sku && { sku }),
-        ...(isActive !== undefined && { isActive })
+        ...(isActive !== undefined && { is_active: isActive })
       }
     });
     res.json({ success: true, data: variant, message: 'Variant updated successfully' });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -60,10 +60,10 @@ export const deleteVariant = async (req: Request, res: Response, next: NextFunct
     const { id } = req.params;
     await prisma.variants.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
     res.json({ success: true, message: 'Variant deleted successfully' });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };

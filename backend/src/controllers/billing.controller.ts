@@ -46,7 +46,7 @@ export const getBillingHistory = async (req: Request, res: Response, next: NextF
 
     res.json({ success: true, data: result, count: result.length });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -113,7 +113,7 @@ export const getSubscriptionPlans = async (req: Request, res: Response, next: Ne
 
     res.json({ success: true, data: plans });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -156,7 +156,7 @@ export const recordPayment = async (req: Request, res: Response, next: NextFunct
       }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -191,6 +191,6 @@ export const getBillingStats = async (req: Request, res: Response, next: NextFun
       }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
