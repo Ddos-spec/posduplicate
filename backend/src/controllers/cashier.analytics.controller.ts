@@ -8,19 +8,20 @@ interface AuthRequest extends Request {
 }
 
 // Get cashier performance data
-export const getCashierPerformance = async (req: AuthRequest, res: Response, _next: NextFunction) => {
+export const getCashierPerformance = async (req: AuthRequest, res: Response, _next: NextFunction): Promise<void> => {
   try {
     const tenantId = req.tenantId;
     const { days = 30 } = req.query;
 
     if (!tenantId) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: {
           code: 'TENANT_ID_REQUIRED',
           message: 'Tenant ID is required'
         }
       });
+      return;
     }
 
     const daysInt = parseInt(days as string);
@@ -28,7 +29,7 @@ export const getCashierPerformance = async (req: AuthRequest, res: Response, _ne
     startDate.setDate(startDate.getDate() - daysInt);
 
     // Get transactions with cashier info
-    const transactions = await prisma.Transaction.findMany({
+    const transactions = await prisma.transaction.findMany({
       where: {
         tenantId: tenantId,
         createdAt: {
@@ -55,7 +56,7 @@ export const getCashierPerformance = async (req: AuthRequest, res: Response, _ne
     // Group by cashier
     const cashierMap = new Map();
 
-    transactions.forEach(txn => {
+    transactions.forEach((txn: any) => {
       if (!txn.cashierId || !txn.users) return;
 
       const cashierId = txn.cashierId;

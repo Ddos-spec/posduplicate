@@ -22,7 +22,7 @@ export const getOutlets = async (
       where.isActive = is_active === 'true';
     }
 
-    const outlets = await prisma.Outlet.findMany({
+    const outlets = await prisma.outlet.findMany({
       where,
       include: {
         tenant: {
@@ -49,7 +49,7 @@ export const getOutlets = async (
       count: outlets.length
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -64,7 +64,7 @@ export const getOutletById = async (
   try {
     const { id } = req.params;
 
-    const outlet = await prisma.Outlet.findUnique({
+    const outlet = await prisma.outlet.findUnique({
       where: { id: parseInt(id) },
       include: {
         tenant: {
@@ -112,7 +112,7 @@ export const getOutletById = async (
       data: outlet
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -139,7 +139,7 @@ export const createOutlet = async (
 
     // Check tenant limits
     if (req.tenantId) {
-      const tenant = await prisma.Tenant.findUnique({
+      const tenant = await prisma.tenant.findUnique({
         where: { id: req.tenantId },
         select: {
           maxOutlets: true,
@@ -160,7 +160,7 @@ export const createOutlet = async (
       }
     }
 
-    const outlet = await prisma.Outlet.create({
+    const outlet = await prisma.outlet.create({
       data: {
         tenantId: req.tenantId,
         name,
@@ -193,7 +193,7 @@ export const createOutlet = async (
       message: 'Outlet created successfully'
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -210,7 +210,7 @@ export const updateOutlet = async (
     const { name, address, phone, email, npwp, settings, isActive } = req.body;
 
     // Check if outlet exists and belongs to tenant
-    const existing = await prisma.Outlet.findUnique({
+    const existing = await prisma.outlet.findUnique({
       where: { id: parseInt(id) }
     });
 
@@ -243,7 +243,7 @@ export const updateOutlet = async (
     if (settings !== undefined) data.settings = settings;
     if (isActive !== undefined) data.isActive = isActive;
 
-    const outlet = await prisma.Outlet.update({
+    const outlet = await prisma.outlet.update({
       where: { id: parseInt(id) },
       data,
       include: {
@@ -262,7 +262,7 @@ export const updateOutlet = async (
       message: 'Outlet updated successfully'
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -278,7 +278,7 @@ export const deleteOutlet = async (
     const { id } = req.params;
 
     // Check if outlet exists and belongs to tenant
-    const existing = await prisma.Outlet.findUnique({
+    const existing = await prisma.outlet.findUnique({
       where: { id: parseInt(id) }
     });
 
@@ -302,7 +302,7 @@ export const deleteOutlet = async (
       });
     }
 
-    await prisma.Outlet.update({
+    await prisma.outlet.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });
@@ -312,7 +312,7 @@ export const deleteOutlet = async (
       message: 'Outlet deactivated successfully'
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -327,7 +327,7 @@ export const getOutletSettings = async (
   try {
     const { id } = req.params;
 
-    const outlet = await prisma.Outlet.findUnique({
+    const outlet = await prisma.outlet.findUnique({
       where: { id: parseInt(id) },
       select: {
         id: true,
@@ -351,7 +351,7 @@ export const getOutletSettings = async (
       data: outlet
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -367,7 +367,7 @@ export const updateOutletSettings = async (
     const { id } = req.params;
     const settings = req.body;
 
-    const outlet = await prisma.Outlet.update({
+    const outlet = await prisma.outlet.update({
       where: { id: parseInt(id) },
       data: { settings }
     });
@@ -378,6 +378,6 @@ export const updateOutletSettings = async (
       message: 'Outlet settings updated successfully'
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };

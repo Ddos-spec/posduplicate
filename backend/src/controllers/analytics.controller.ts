@@ -113,7 +113,7 @@ export const getSalesChart = async (req: Request, res: Response) => {
     // Group by date
     const salesByDate: any = {};
     transactions.forEach(t => {
-      const date = new Date(t.createdAt);
+      const date = new Date(t.createdAt!);
       let key: string;
 
       if (groupBy === 'day') {
@@ -200,7 +200,7 @@ export const getTopProducts = async (req: Request, res: Response) => {
   }
 };
 
-export const getSalesByCategory = async (req: Request, res: Response) => {
+export const getSalesByCategory = async (_req: Request, res: Response) => {
   try {
     // Get all items with their categories
     const items = await prisma.items.findMany({
