@@ -34,7 +34,7 @@ async function createAdminUser() {
             manage_billing: true
           }
         },
-        updated_at: new Date()
+        updatedAt: new Date()
       },
       create: {
         name: 'Super Admin',
@@ -60,23 +60,23 @@ async function createAdminUser() {
 
     // Step 3: Create or update admin user
     console.log('👤 Step 3: Creating/Updating admin user...');
-    const _admin = await prisma.user.upsert({
+    await prisma.user.upsert({
       where: { email: ADMIN_EMAIL },
       update: {
-        password_hash: passwordHash,
+        passwordHash: passwordHash,
         name: ADMIN_NAME,
-        role_id: role.id,
-        is_active: true,
-        updated_at: new Date()
+        roleId: role.id,
+        isActive: true,
+        updatedAt: new Date()
       },
       create: {
         email: ADMIN_EMAIL,
-        password_hash: passwordHash,
+        passwordHash: passwordHash,
         name: ADMIN_NAME,
-        role_id: role.id,
-        tenant_id: null,
-        outlet_id: null,
-        is_active: true
+        roleId: role.id,
+        tenantId: null,
+        outletId: null,
+        isActive: true
       }
     });
 
@@ -100,7 +100,7 @@ async function createAdminUser() {
       console.log(`Email:    ${verifiedAdmin.email}`);
       console.log(`Name:     ${verifiedAdmin.name}`);
       console.log(`Role:     ${verifiedAdmin.roles.name}`);
-      console.log(`Active:   ${verifiedAdmin.is_active}`);
+      console.log(`Active:   ${verifiedAdmin.isActive}`);
       console.log('==========================================');
       console.log('\n📧 Login Credentials:');
       console.log('==========================================');

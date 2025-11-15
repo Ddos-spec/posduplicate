@@ -15,13 +15,13 @@ export const getPromotions = async (req: Request, res: Response, next: NextFunct
     }
 
     if (status === 'active') {
-      where.isActive = true;
+      where.is_active = true;
       where.OR = [
         { end_date: null },
         { end_date: { gte: new Date() } }
       ];
     } else if (status === 'inactive') {
-      where.isActive = false;
+      where.is_active = false;
     } else if (status === 'expired') {
       where.end_date = { lt: new Date() };
     }
@@ -45,7 +45,7 @@ export const getPromotions = async (req: Request, res: Response, next: NextFunct
 
     res.json({ success: true, data: promotions });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -68,7 +68,7 @@ export const getPromotionById = async (req: Request, res: Response, next: NextFu
             transactions: {
               select: {
                 id: true,
-                transactionNumber: true,
+                transaction_number: true,
                 total: true,
                 created_at: true
               }
@@ -89,7 +89,7 @@ export const getPromotionById = async (req: Request, res: Response, next: NextFu
 
     res.json({ success: true, data: promotion });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -140,7 +140,7 @@ export const createPromotion = async (req: Request, res: Response, next: NextFun
         end_date: endDate ? new Date(endDate) : null,
         usage_limit: usageLimit || null,
         usage_count: 0,
-        isActive: true
+        is_active: true
       },
       include: {
         outlets: {
@@ -158,7 +158,7 @@ export const createPromotion = async (req: Request, res: Response, next: NextFun
       message: 'Promotion created successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -194,7 +194,7 @@ export const updatePromotion = async (req: Request, res: Response, next: NextFun
     if (startDate !== undefined) data.start_date = startDate ? new Date(startDate) : null;
     if (endDate !== undefined) data.end_date = endDate ? new Date(endDate) : null;
     if (usageLimit !== undefined) data.usage_limit = usageLimit;
-    if (isActive !== undefined) data.isActive = isActive;
+    if (isActive !== undefined) data.is_active = isActive;
 
     const promotion = await prisma.promotions.update({
       where: { id: parseInt(id) },
@@ -215,7 +215,7 @@ export const updatePromotion = async (req: Request, res: Response, next: NextFun
       message: 'Promotion updated successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -233,7 +233,7 @@ export const deletePromotion = async (req: Request, res: Response, next: NextFun
       message: 'Promotion deleted successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -246,7 +246,7 @@ export const getApplicablePromotions = async (req: Request, res: Response, next:
 
     const promotions = await prisma.promotions.findMany({
       where: {
-        isActive: true,
+        is_active: true,
         OR: [
           { start_date: null },
           { start_date: { lte: now } }
@@ -294,12 +294,12 @@ export const getApplicablePromotions = async (req: Request, res: Response, next:
       let discountAmount = 0;
 
       if (promo.discount_type === 'percentage') {
-        discountAmount = (subtotal * promo.discount_value) / 100;
-        if (promo.max_discount && discountAmount > promo.max_discount) {
-          discountAmount = promo.max_discount;
+        discountAmount = (subtotal * Number(promo.discount_value)) / 100;
+        if (promo.max_discount && discountAmount > Number(promo.max_discount)) {
+          discountAmount = Number(promo.max_discount);
         }
       } else {
-        discountAmount = promo.discount_value;
+        discountAmount = Number(promo.discount_value);
       }
 
       return {
@@ -313,7 +313,7 @@ export const getApplicablePromotions = async (req: Request, res: Response, next:
       data: promotionsWithDiscount
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -332,9 +332,9 @@ export const applyPromotion = async (req: Request, res: Response, next: NextFunc
     // Record discount usage
     const usage = await prisma.discount_usage.create({
       data: {
-        promotionId,
-        transactionId,
-        discountAmount
+        promotion_id: promotionId,
+        transaction_id: transactionId,
+        discount_amount: discountAmount
       }
     });
 
@@ -352,6 +352,6 @@ export const applyPromotion = async (req: Request, res: Response, next: NextFunc
       message: 'Promotion applied successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
