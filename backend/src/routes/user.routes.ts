@@ -4,7 +4,8 @@ import {
   getUserById,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  resetUserPassword
 } from '../controllers/user.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { tenantMiddleware, ownerOnly } from '../middlewares/tenant.middleware';
@@ -19,5 +20,6 @@ router.get('/:id', getUserById);
 router.post('/', createUser);
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);
+router.post('/:id/reset-password', resetUserPassword);
 
 export default router;

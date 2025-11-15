@@ -1,83 +1,135 @@
-import { useState } from 'react';
-import { Plus, Search, Edit, Trash2, Eye, User, CheckCircle, XCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Search, Edit, Trash2, Eye, User, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-interface Employee {
-  id: number;
-  name: string;
-  code: string;
-  pin: string;
-  position: string;
-  outlet: string;
-  phone: string;
-  email: string;
-  salary: number;
-  hiredAt: string;
-  status: 'Active' | 'Inactive';
-  photo?: string;
-}
-
-const mockEmployees: Employee[] = [
-  { id: 1, name: 'Budi Santoso', code: 'EMP001', pin: '123456', position: 'Cashier', outlet: 'Main Store', phone: '0812-1111-1111', email: 'budi@example.com', salary: 4000000, hiredAt: '2024-01-15', status: 'Active' },
-  { id: 2, name: 'Siti Rahayu', code: 'EMP002', pin: '234567', position: 'Manager', outlet: 'Main Store', phone: '0812-2222-2222', email: 'siti@example.com', salary: 6000000, hiredAt: '2024-01-10', status: 'Active' },
-  { id: 3, name: 'Ahmad Hidayat', code: 'EMP003', pin: '345678', position: 'Cashier', outlet: 'Branch Kemang', phone: '0812-3333-3333', email: 'ahmad@example.com', salary: 4000000, hiredAt: '2024-02-01', status: 'Active' },
-  { id: 4, name: 'Dewi Lestari', code: 'EMP004', pin: '456789', position: 'Kitchen', outlet: 'Main Store', phone: '0812-4444-4444', email: 'dewi@example.com', salary: 4500000, hiredAt: '2024-02-15', status: 'Active' },
-  { id: 5, name: 'Rizki Pratama', code: 'EMP005', pin: '567890', position: 'Waiter', outlet: 'Main Store', phone: '0812-5555-5555', email: 'rizki@example.com', salary: 3500000, hiredAt: '2024-03-01', status: 'Active' },
-  { id: 6, name: 'Ani Kusuma', code: 'EMP006', pin: '678901', position: 'Cashier', outlet: 'Branch Kemang', phone: '0812-6666-6666', email: 'ani@example.com', salary: 4000000, hiredAt: '2024-03-10', status: 'Active' },
-  { id: 7, name: 'Hendra Wijaya', code: 'EMP007', pin: '789012', position: 'Manager', outlet: 'Branch Kemang', phone: '0812-7777-7777', email: 'hendra@example.com', salary: 6000000, hiredAt: '2024-03-15', status: 'Active' },
-  { id: 8, name: 'Maya Sari', code: 'EMP008', pin: '890123', position: 'Kitchen', outlet: 'Branch Kemang', phone: '0812-8888-8888', email: 'maya@example.com', salary: 4500000, hiredAt: '2024-04-01', status: 'Active' },
-  { id: 9, name: 'Eko Prasetyo', code: 'EMP009', pin: '901234', position: 'Waiter', outlet: 'Main Store', phone: '0812-9999-9999', email: 'eko@example.com', salary: 3500000, hiredAt: '2024-04-10', status: 'Active' },
-  { id: 10, name: 'Rina Handayani', code: 'EMP010', pin: '012345', position: 'Cashier', outlet: 'Main Store', phone: '0813-1111-1111', email: 'rina@example.com', salary: 4000000, hiredAt: '2024-05-01', status: 'Active' },
-  { id: 11, name: 'Faisal Rahman', code: 'EMP011', pin: '112233', position: 'Kitchen', outlet: 'Main Store', phone: '0813-2222-2222', email: 'faisal@example.com', salary: 4500000, hiredAt: '2024-05-15', status: 'Inactive' },
-  { id: 12, name: 'Linda Marlina', code: 'EMP012', pin: '223344', position: 'Waiter', outlet: 'Branch Kemang', phone: '0813-3333-3333', email: 'linda@example.com', salary: 3500000, hiredAt: '2024-06-01', status: 'Active' },
-  { id: 13, name: 'Tono Susanto', code: 'EMP013', pin: '334455', position: 'Cashier', outlet: 'Main Store', phone: '0813-4444-4444', email: 'tono@example.com', salary: 4000000, hiredAt: '2024-06-10', status: 'Active' },
-  { id: 14, name: 'Wati Utami', code: 'EMP014', pin: '445566', position: 'Kitchen', outlet: 'Branch Kemang', phone: '0813-5555-5555', email: 'wati@example.com', salary: 4500000, hiredAt: '2024-07-01', status: 'Active' },
-  { id: 15, name: 'Joko Widodo', code: 'EMP015', pin: '556677', position: 'Waiter', outlet: 'Main Store', phone: '0813-6666-6666', email: 'joko@example.com', salary: 3500000, hiredAt: '2024-07-15', status: 'Active' },
-  { id: 16, name: 'Sri Mulyani', code: 'EMP016', pin: '667788', position: 'Cashier', outlet: 'Branch Kemang', phone: '0813-7777-7777', email: 'sri@example.com', salary: 4000000, hiredAt: '2024-08-01', status: 'Active' },
-  { id: 17, name: 'Bayu Setiawan', code: 'EMP017', pin: '778899', position: 'Kitchen', outlet: 'Main Store', phone: '0813-8888-8888', email: 'bayu@example.com', salary: 4500000, hiredAt: '2024-08-15', status: 'Active' },
-  { id: 18, name: 'Diah Permata', code: 'EMP018', pin: '889900', position: 'Manager', outlet: 'Main Store', phone: '0813-9999-9999', email: 'diah@example.com', salary: 6000000, hiredAt: '2024-09-01', status: 'Active' },
-  { id: 19, name: 'Yudi Hartono', code: 'EMP019', pin: '990011', position: 'Waiter', outlet: 'Branch Kemang', phone: '0814-1111-1111', email: 'yudi@example.com', salary: 3500000, hiredAt: '2024-09-15', status: 'Inactive' },
-  { id: 20, name: 'Nina Agustina', code: 'EMP020', pin: '001122', position: 'Cashier', outlet: 'Main Store', phone: '0814-2222-2222', email: 'nina@example.com', salary: 4000000, hiredAt: '2024-10-01', status: 'Active' }
-];
+import { employeeService, Employee as ApiEmployee } from '../../services/employeeService';
+import { outletService, Outlet } from '../../services/outletService';
 
 export default function EmployeeManagementPage() {
-  const [employees] = useState<Employee[]>(mockEmployees);
+  const [employees, setEmployees] = useState<ApiEmployee[]>([]);
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterPosition, setFilterPosition] = useState<string>('All');
   const [filterOutlet, setFilterOutlet] = useState<string>('All');
   const [showModal, setShowModal] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<ApiEmployee | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    employeeCode: '',
+    pin: '',
+    position: 'Cashier',
+    outletId: 0,
+    phone: '',
+    email: '',
+    salary: 0,
+    hiredAt: '',
+    isActive: true
+  });
+
+  // Fetch employees and outlets
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [employeesRes, outletsRes] = await Promise.all([
+        employeeService.getAll(),
+        outletService.getAll()
+      ]);
+
+      setEmployees(employeesRes.data);
+      setOutlets(outletsRes.data);
+
+      // Set default outlet if available
+      if (outletsRes.data.length > 0 && formData.outletId === 0) {
+        setFormData(prev => ({ ...prev, outletId: outletsRes.data[0].id }));
+      }
+    } catch (error: any) {
+      console.error('Error fetching data:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch =
       emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'All' || emp.status === filterStatus;
+      (emp.employeeCode && emp.employeeCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (emp.email && emp.email.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus = filterStatus === 'All' || (emp.isActive ? 'Active' : 'Inactive') === filterStatus;
     const matchesPosition = filterPosition === 'All' || emp.position === filterPosition;
-    const matchesOutlet = filterOutlet === 'All' || emp.outlet === filterOutlet;
+    const matchesOutlet = filterOutlet === 'All' || emp.outletId === Number(filterOutlet);
     return matchesSearch && matchesStatus && matchesPosition && matchesOutlet;
   });
 
   const handleAddEmployee = () => {
     setSelectedEmployee(null);
+    setFormData({
+      name: '',
+      employeeCode: '',
+      pin: '',
+      position: 'Cashier',
+      outletId: outlets.length > 0 ? outlets[0].id : 0,
+      phone: '',
+      email: '',
+      salary: 0,
+      hiredAt: '',
+      isActive: true
+    });
     setShowModal(true);
   };
 
-  const handleEditEmployee = (employee: Employee) => {
+  const handleEditEmployee = (employee: ApiEmployee) => {
     setSelectedEmployee(employee);
+    setFormData({
+      name: employee.name,
+      employeeCode: employee.employeeCode || '',
+      pin: employee.pin || '',
+      position: employee.position,
+      outletId: employee.outletId,
+      phone: employee.phone || '',
+      email: employee.email || '',
+      salary: employee.salary || 0,
+      hiredAt: employee.hiredAt ? employee.hiredAt.split('T')[0] : '',
+      isActive: employee.isActive
+    });
     setShowModal(true);
   };
 
-  const handleSaveEmployee = () => {
-    toast.success('Employee saved successfully! (Mock)');
-    setShowModal(false);
+  const handleSaveEmployee = async () => {
+    try {
+      if (selectedEmployee) {
+        await employeeService.update(selectedEmployee.id, formData);
+        toast.success('Employee updated successfully!');
+      } else {
+        await employeeService.create(formData);
+        toast.success('Employee created successfully!');
+      }
+
+      setShowModal(false);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error saving employee:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to save employee');
+    }
   };
 
-  const handleDeleteEmployee = (employee: Employee) => {
+  const handleDeleteEmployee = async (employee: ApiEmployee) => {
     if (confirm(`Delete employee "${employee.name}"?`)) {
-      toast.success('Employee deleted! (Mock)');
+      try {
+        await employeeService.delete(employee.id);
+        toast.success('Employee deleted successfully!');
+        fetchData();
+      } catch (error: any) {
+        console.error('Error deleting employee:', error);
+        toast.error(error.response?.data?.error?.message || 'Failed to delete employee');
+      }
     }
   };
 
@@ -98,6 +150,15 @@ export default function EmployeeManagementPage() {
     };
     return colors[position] || 'bg-gray-100 text-gray-800';
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <span className="ml-3 text-gray-600">Loading employees...</span>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -122,7 +183,7 @@ export default function EmployeeManagementPage() {
             <div>
               <p className="text-sm text-gray-600">Active</p>
               <p className="text-2xl font-bold text-green-600">
-                {employees.filter(e => e.status === 'Active').length}
+                {employees.filter(e => e.isActive).length}
               </p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-500" />
@@ -133,7 +194,7 @@ export default function EmployeeManagementPage() {
             <div>
               <p className="text-sm text-gray-600">Inactive</p>
               <p className="text-2xl font-bold text-red-600">
-                {employees.filter(e => e.status === 'Inactive').length}
+                {employees.filter(e => !e.isActive).length}
               </p>
             </div>
             <XCircle className="w-8 h-8 text-red-500" />
@@ -185,6 +246,16 @@ export default function EmployeeManagementPage() {
             <option value="Kitchen">Kitchen</option>
             <option value="Waiter">Waiter</option>
           </select>
+          <select
+            value={filterOutlet}
+            onChange={(e) => setFilterOutlet(e.target.value)}
+            className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="All">All Outlets</option>
+            {outlets.map(outlet => (
+              <option key={outlet.id} value={outlet.id}>{outlet.name}</option>
+            ))}
+          </select>
           <button
             onClick={handleAddEmployee}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
@@ -226,26 +297,28 @@ export default function EmployeeManagementPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
-                    <div>{emp.code}</div>
-                    <div className="text-xs text-gray-500">PIN: {emp.pin}</div>
+                    <div>{emp.employeeCode || 'N/A'}</div>
+                    <div className="text-xs text-gray-500">PIN: {emp.pin || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPositionBadge(emp.position)}`}>
                       {emp.position}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{emp.outlet}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {outlets.find(o => o.id === emp.outletId)?.name || 'N/A'}
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    <div>{emp.phone}</div>
+                    <div>{emp.phone || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {formatCurrency(emp.salary)}
+                    {emp.salary ? formatCurrency(emp.salary) : 'N/A'}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      emp.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      emp.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
-                      {emp.status}
+                      {emp.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -291,19 +364,22 @@ export default function EmployeeManagementPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
                   <input
                     type="text"
-                    defaultValue={selectedEmployee?.name}
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Employee Code</label>
                   <input
                     type="text"
-                    defaultValue={selectedEmployee?.code}
-                    placeholder="Auto-generated"
+                    value={formData.employeeCode}
+                    onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value })}
+                    placeholder="Optional"
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -311,17 +387,20 @@ export default function EmployeeManagementPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">PIN (6 digits)</label>
                   <input
                     type="text"
-                    defaultValue={selectedEmployee?.pin}
+                    value={formData.pin}
+                    onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
                     maxLength={6}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="123456"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Position</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Position *</label>
                   <select
-                    defaultValue={selectedEmployee?.position}
+                    value={formData.position}
+                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   >
                     <option value="Manager">Manager</option>
                     <option value="Cashier">Cashier</option>
@@ -330,20 +409,24 @@ export default function EmployeeManagementPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Outlet</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Outlet *</label>
                   <select
-                    defaultValue={selectedEmployee?.outlet}
+                    value={formData.outletId}
+                    onChange={(e) => setFormData({ ...formData, outletId: Number(e.target.value) })}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   >
-                    <option value="Main Store">Main Store</option>
-                    <option value="Branch Kemang">Branch Kemang</option>
+                    {outlets.map(outlet => (
+                      <option key={outlet.id} value={outlet.id}>{outlet.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
                   <input
                     type="tel"
-                    defaultValue={selectedEmployee?.phone}
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="0812-xxxx-xxxx"
                   />
@@ -352,7 +435,8 @@ export default function EmployeeManagementPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                   <input
                     type="email"
-                    defaultValue={selectedEmployee?.email}
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -360,7 +444,8 @@ export default function EmployeeManagementPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Salary</label>
                   <input
                     type="number"
-                    defaultValue={selectedEmployee?.salary}
+                    value={formData.salary}
+                    onChange={(e) => setFormData({ ...formData, salary: Number(e.target.value) })}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -368,14 +453,16 @@ export default function EmployeeManagementPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Hire Date</label>
                   <input
                     type="date"
-                    defaultValue={selectedEmployee?.hiredAt}
+                    value={formData.hiredAt}
+                    onChange={(e) => setFormData({ ...formData, hiredAt: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                   <select
-                    defaultValue={selectedEmployee?.status}
+                    value={formData.isActive ? 'Active' : 'Inactive'}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'Active' })}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="Active">Active</option>
