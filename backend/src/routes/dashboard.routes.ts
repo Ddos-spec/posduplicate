@@ -6,6 +6,7 @@ import {
   getSalesByCategory,
   getRecentTransactions
 } from '../controllers/dashboard.controller';
+import { getCashierPerformance } from '../controllers/cashier.analytics.controller';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -46,5 +47,12 @@ router.get('/sales-by-category', getSalesByCategory);
  * Query params: limit (default: 10)
  */
 router.get('/recent-transactions', getRecentTransactions);
+
+/**
+ * GET /api/dashboard/cashier-performance
+ * Get cashier performance metrics
+ * Query params: days (default: 30)
+ */
+router.get('/cashier-performance', getCashierPerformance);
 
 export default router;

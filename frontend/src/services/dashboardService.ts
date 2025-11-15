@@ -34,6 +34,14 @@ export interface RecentTransaction {
   createdAt: string;
 }
 
+export interface CashierPerformance {
+  cashierId: number;
+  cashierName: string;
+  totalTransactions: number;
+  totalSales: number;
+  avgTransactionValue: number;
+}
+
 export const dashboardService = {
   async getSummary(params?: { outletId?: number; startDate?: string; endDate?: string }) {
     const response = await api.get<{ success: boolean; data: DashboardSummary }>('/dashboard/summary', { params });
@@ -57,6 +65,11 @@ export const dashboardService = {
 
   async getRecentTransactions(params?: { limit?: number }) {
     const response = await api.get<{ success: boolean; data: RecentTransaction[] }>('/dashboard/recent-transactions', { params });
+    return response.data.data;
+  },
+
+  async getCashierPerformance(params?: { days?: number }) {
+    const response = await api.get<{ success: boolean; data: CashierPerformance[] }>('/dashboard/cashier-performance', { params });
     return response.data.data;
   },
 };

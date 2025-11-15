@@ -1,134 +1,55 @@
-import { useState } from 'react';
-import { CreditCard, Check, AlertTriangle, Plus, Edit, FileDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CreditCard, Check, AlertTriangle, Plus, Edit, FileDown, Loader2, DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-interface SubscriptionPlan {
-  id: number;
-  name: string;
-  price: number;
-  maxOutlets: number;
-  maxUsers: number;
-  features: string[];
-  color: string;
-}
-
-interface BillingRecord {
-  id: number;
-  tenant: string;
-  plan: string;
-  amount: number;
-  paidDate: string;
-  nextBilling: string;
-  status: 'Paid' | 'Pending' | 'Overdue';
-}
-
-const subscriptionPlans: SubscriptionPlan[] = [
-  {
-    id: 1,
-    name: 'Basic',
-    price: 99000,
-    maxOutlets: 1,
-    maxUsers: 5,
-    features: [
-      '1 Outlet',
-      'Up to 5 Users',
-      'Basic POS Features',
-      'Transaction History',
-      'Basic Reports',
-      'Email Support'
-    ],
-    color: 'blue'
-  },
-  {
-    id: 2,
-    name: 'Pro',
-    price: 299000,
-    maxOutlets: 5,
-    maxUsers: 20,
-    features: [
-      'Up to 5 Outlets',
-      'Up to 20 Users',
-      'Advanced POS Features',
-      'Transaction History',
-      'Advanced Reports & Analytics',
-      'Inventory Management',
-      'Priority Email Support',
-      'WhatsApp Notifications'
-    ],
-    color: 'purple'
-  },
-  {
-    id: 3,
-    name: 'Enterprise',
-    price: 999000,
-    maxOutlets: 999,
-    maxUsers: 999,
-    features: [
-      'Unlimited Outlets',
-      'Unlimited Users',
-      'All Premium Features',
-      'Custom Integrations',
-      'Advanced Analytics',
-      'Dedicated Account Manager',
-      '24/7 Phone Support',
-      'Custom Development'
-    ],
-    color: 'orange'
-  }
-];
-
-const billingHistory: BillingRecord[] = [
-  {
-    id: 1,
-    tenant: 'Kebuli Utsman',
-    plan: 'Pro',
-    amount: 299000,
-    paidDate: '2025-11-01',
-    nextBilling: '2025-12-01',
-    status: 'Paid'
-  },
-  {
-    id: 2,
-    tenant: 'Toko Elektronik Jaya',
-    plan: 'Enterprise',
-    amount: 999000,
-    paidDate: '2025-11-05',
-    nextBilling: '2025-12-05',
-    status: 'Paid'
-  },
-  {
-    id: 3,
-    tenant: 'Cafe Kopi Nikmat',
-    plan: 'Pro',
-    amount: 299000,
-    paidDate: '2025-10-15',
-    nextBilling: '2025-11-15',
-    status: 'Overdue'
-  },
-  {
-    id: 4,
-    tenant: 'Warung Sate Pak Eko',
-    plan: 'Basic',
-    amount: 99000,
-    paidDate: '2025-11-10',
-    nextBilling: '2025-12-10',
-    status: 'Paid'
-  },
-  {
-    id: 5,
-    tenant: 'Bakery Roti Enak',
-    plan: 'Basic',
-    amount: 99000,
-    paidDate: '2025-10-20',
-    nextBilling: '2025-11-20',
-    status: 'Pending'
-  }
-];
+import { billingService, BillingRecord, SubscriptionPlan, BillingStats } from '../../services/billingService';
 
 export default function BillingManagementPage() {
   const [activeTab, setActiveTab] = useState<'history' | 'overdue'>('history');
-  const [showPlanModal, setShowPlanModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<BillingRecord | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // API State
+  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [stats, setStats] = useState<BillingStats>({
+    totalRevenue: 0,
+    activeSubscriptions: 0,
+    expiringSoon: 0,
+    overduePayments: 0
+  });
+
+  // Payment Form State
+  const [paymentForm, setPaymentForm] = useState({
+    amount: 0,
+    method: 'bank_transfer',
+    referenceNumber: ''
+  });
+
+  // Fetch all billing data
+  useEffect(() => {
+    fetchBillingData();
+  }, []);
+
+  const fetchBillingData = async () => {
+    try {
+      setLoading(true);
+      const [historyRes, plansRes, statsRes] = await Promise.all([
+        billingService.getHistory(),
+        billingService.getPlans(),
+        billingService.getStats()
+      ]);
+
+      setBillingRecords(historyRes.data);
+      setPlans(plansRes.data);
+      setStats(statsRes.data);
+    } catch (error: any) {
+      console.error('Error fetching billing data:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to load billing data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -140,29 +61,63 @@ export default function BillingManagementPage() {
 
   const getStatusBadge = (status: string) => {
     const colors = {
-      Paid: 'bg-green-100 text-green-800',
-      Pending: 'bg-yellow-100 text-yellow-800',
-      Overdue: 'bg-red-100 text-red-800'
+      active: 'bg-green-100 text-green-800',
+      suspended: 'bg-red-100 text-red-800',
+      trial: 'bg-blue-100 text-blue-800',
+      cancelled: 'bg-gray-100 text-gray-800'
     };
     return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
-  const handleEditPlan = (plan: SubscriptionPlan) => {
-    setSelectedPlan(plan);
-    setShowPlanModal(true);
+  const handleRecordPayment = async () => {
+    if (!selectedRecord) return;
+
+    try {
+      await billingService.recordPayment({
+        tenantId: selectedRecord.id,
+        amount: paymentForm.amount,
+        method: paymentForm.method,
+        referenceNumber: paymentForm.referenceNumber || undefined
+      });
+
+      toast.success('Payment recorded successfully!');
+      setShowPaymentModal(false);
+      setSelectedRecord(null);
+      setPaymentForm({ amount: 0, method: 'bank_transfer', referenceNumber: '' });
+      fetchBillingData();
+    } catch (error: any) {
+      console.error('Error recording payment:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to record payment');
+    }
   };
 
-  const handleAddPlan = () => {
-    setSelectedPlan(null);
-    setShowPlanModal(true);
+  const openPaymentModal = (record: BillingRecord) => {
+    setSelectedRecord(record);
+    setShowPaymentModal(true);
   };
 
-  const handleSavePlan = () => {
-    toast.success('Plan saved successfully! (Mock)');
-    setShowPlanModal(false);
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('id-ID');
   };
 
-  const overdueRecords = billingHistory.filter(r => r.status === 'Overdue');
+  const isOverdue = (record: BillingRecord) => {
+    if (!record.subscriptionExpiresAt) return false;
+    const expiryDate = new Date(record.subscriptionExpiresAt);
+    const today = new Date();
+    return expiryDate < today && record.subscriptionStatus !== 'active';
+  };
+
+  const overdueRecords = billingRecords.filter(r => isOverdue(r));
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <span className="ml-3 text-gray-600">Loading billing data...</span>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -171,14 +126,38 @@ export default function BillingManagementPage() {
         <p className="text-gray-600">Manage subscription plans and billing</p>
       </div>
 
-      {/* Info Box */}
-      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center gap-3">
-          <CreditCard className="w-5 h-5 text-blue-600" />
-          <div>
-            <p className="text-sm font-medium text-blue-800">Subscription Plan: Pro (Rp 500,000/month)</p>
-            <p className="text-xs text-blue-700">All tenants have the same subscription price</p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Total Revenue</p>
+            <DollarSign className="w-5 h-5 text-green-600" />
           </div>
+          <p className="text-2xl font-bold text-gray-800">{formatCurrency(stats.totalRevenue)}</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Active Subscriptions</p>
+            <Check className="w-5 h-5 text-blue-600" />
+          </div>
+          <p className="text-2xl font-bold text-gray-800">{stats.activeSubscriptions}</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Expiring Soon</p>
+            <AlertTriangle className="w-5 h-5 text-yellow-600" />
+          </div>
+          <p className="text-2xl font-bold text-gray-800">{stats.expiringSoon}</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Overdue Payments</p>
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+          </div>
+          <p className="text-2xl font-bold text-gray-800">{stats.overduePayments}</p>
         </div>
       </div>
 
@@ -233,31 +212,43 @@ export default function BillingManagementPage() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tenant</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paid Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Starts At</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expires At</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Billing</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {billingHistory.map((record) => (
+                {billingRecords.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{record.tenant}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{record.plan}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900 font-semibold">
-                      {formatCurrency(record.amount)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{record.paidDate}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{record.nextBilling}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{record.businessName}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{record.subscriptionPlan}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{formatDate(record.subscriptionStartsAt)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{formatDate(record.subscriptionExpiresAt)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{formatDate(record.nextBillingDate)}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(record.status)}`}>
-                        {record.status}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(record.subscriptionStatus)}`}>
+                        {record.subscriptionStatus}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => openPaymentModal(record)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Record Payment
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {billingRecords.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No billing records found
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -286,118 +277,102 @@ export default function BillingManagementPage() {
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                          {record.tenant}
+                          {record.businessName}
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
-                          Plan: <span className="font-medium">{record.plan}</span> ({formatCurrency(record.amount)}/month)
+                          Plan: <span className="font-medium">{record.subscriptionPlan}</span>
                         </p>
                         <p className="text-sm text-red-600">
-                          Overdue since: <span className="font-medium">{record.nextBilling}</span>
+                          Expired on: <span className="font-medium">{formatDate(record.subscriptionExpiresAt)}</span>
                         </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => toast.info('Send reminder email (Mock)')}
+                        onClick={() => openPaymentModal(record)}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                      >
+                        Record Payment
+                      </button>
+                      <button
+                        onClick={() => toast.info('Send reminder feature coming soon')}
                         className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
                       >
                         Send Reminder
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Suspend tenant "${record.tenant}"?`)) {
-                            toast.success('Tenant suspended (Mock)');
-                          }
-                        }}
-                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                      >
-                        Suspend
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm font-medium text-blue-800">Auto-Suspend Setting</p>
-                    <p className="text-xs text-blue-700">
-                      Tenants will be automatically suspended 7 days after payment is overdue
-                    </p>
-                  </div>
-                  <label className="ml-auto flex items-center gap-2">
-                    <input type="checkbox" defaultChecked className="w-4 h-4" />
-                    <span className="text-sm text-blue-800">Enable</span>
-                  </label>
-                </div>
-              </div>
-            </div>
           )}
         </div>
       )}
 
-      {/* Plan Modal */}
-      {showPlanModal && (
+      {/* Payment Modal */}
+      {showPaymentModal && selectedRecord && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-lg w-full">
             <div className="p-6">
-              <h2 className="text-2xl font-bold mb-4">
-                {selectedPlan ? 'Edit Plan' : 'Add New Plan'}
-              </h2>
+              <h2 className="text-2xl font-bold mb-4">Record Payment</h2>
+
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">Tenant</p>
+                <p className="text-lg font-semibold text-gray-800">{selectedRecord.businessName}</p>
+                <p className="text-sm text-gray-600 mt-2">Plan: {selectedRecord.subscriptionPlan}</p>
+              </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Plan Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
                   <input
-                    type="text"
-                    defaultValue={selectedPlan?.name}
+                    type="number"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) })}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., Pro"
+                    placeholder="500000"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Monthly Price</label>
-                  <input
-                    type="number"
-                    defaultValue={selectedPlan?.price}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                  <select
+                    value={paymentForm.method}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="299000"
-                  />
+                  >
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="credit_card">Credit Card</option>
+                    <option value="cash">Cash</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Max Outlets</label>
-                    <input
-                      type="number"
-                      defaultValue={selectedPlan?.maxOutlets}
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Max Users</label>
-                    <input
-                      type="number"
-                      defaultValue={selectedPlan?.maxUsers}
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Reference Number (Optional)</label>
+                  <input
+                    type="text"
+                    value={paymentForm.referenceNumber}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="TRX123456"
+                  />
                 </div>
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
                 <button
-                  onClick={() => setShowPlanModal(false)}
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setSelectedRecord(null);
+                    setPaymentForm({ amount: 0, method: 'bank_transfer', referenceNumber: '' });
+                  }}
                   className="px-4 py-2 border rounded-lg hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleSavePlan}
+                  onClick={handleRecordPayment}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Save Plan
+                  Record Payment
                 </button>
               </div>
             </div>

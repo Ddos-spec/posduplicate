@@ -235,7 +235,7 @@ CREATE TABLE "public"."users" (
   CONSTRAINT "users_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "users_email_key" UNIQUE ("email")
 );
-CREATE TABLE "public"."variants" ( 
+CREATE TABLE "public"."variants" (
   "id" SERIAL,
   "item_id" INTEGER NOT NULL,
   "name" VARCHAR(255) NOT NULL,
@@ -245,6 +245,14 @@ CREATE TABLE "public"."variants" (
   "is_active" BOOLEAN NULL DEFAULT true ,
   "created_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
   CONSTRAINT "variants_pkey" PRIMARY KEY ("id")
+);
+CREATE TABLE "public"."discount_usage" (
+  "id" SERIAL,
+  "promotion_id" INTEGER NULL,
+  "transaction_id" INTEGER NULL,
+  "discount_amount" NUMERIC NOT NULL,
+  "created_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
+  CONSTRAINT "discount_usage_pkey" PRIMARY KEY ("id")
 );
 CREATE INDEX "idx_customers_phone" 
 ON "public"."customers" (
@@ -335,9 +343,17 @@ CREATE INDEX "idx_users_outlet"
 ON "public"."users" (
   "outlet_id" ASC
 );
-CREATE INDEX "idx_users_tenant" 
+CREATE INDEX "idx_users_tenant"
 ON "public"."users" (
   "tenant_id" ASC
+);
+CREATE INDEX "idx_discount_usage_promotion"
+ON "public"."discount_usage" (
+  "promotion_id" ASC
+);
+CREATE INDEX "idx_discount_usage_transaction"
+ON "public"."discount_usage" (
+  "transaction_id" ASC
 );
 ALTER TABLE "public"."categories" ADD CONSTRAINT "categories_outlet_id_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE "public"."customers" ADD CONSTRAINT "customers_outlet_id_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
@@ -359,6 +375,9 @@ ALTER TABLE "public"."transaction_items" ADD CONSTRAINT "transaction_items_varia
 ALTER TABLE "public"."transaction_modifiers" ADD CONSTRAINT "transaction_modifiers_transaction_item_id_fkey" FOREIGN KEY ("transaction_item_id") REFERENCES "public"."transaction_items" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "public"."transaction_modifiers" ADD CONSTRAINT "transaction_modifiers_modifier_id_fkey" FOREIGN KEY ("modifier_id") REFERENCES "public"."modifiers" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE "public"."transactions" ADD CONSTRAINT "transactions_promotion_id_fkey" FOREIGN KEY ("promotion_id") REFERENCES "public"."promotions" ("id") ON DELETE SET NULL ON UPDATE NO ACTION;
+ALTER TABLE "public"."transactions" ADD CONSTRAINT "transactions_table_id_fkey" FOREIGN KEY ("table_id") REFERENCES "public"."tables" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE "public"."transactions" ADD CONSTRAINT "transactions_cashier_id_fkey" FOREIGN KEY ("cashier_id") REFERENCES "public"."users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE "public"."promotions" ADD CONSTRAINT "promotions_outlet_id_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "public"."users" ADD CONSTRAINT "users_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "public"."users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "public"."roles" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE "public"."users" ADD CONSTRAINT "users_outlet_id_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;

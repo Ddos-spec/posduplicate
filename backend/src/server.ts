@@ -25,6 +25,9 @@ import userRoutes from './routes/user.routes';
 import promotionRoutes from './routes/promotion.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import outletRoutes from './routes/outlet.routes';
+import adminAnalyticsRoutes from './routes/admin.analytics.routes';
+import billingRoutes from './routes/billing.routes';
+import settingsRoutes from './routes/settings.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -84,6 +87,9 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/promotions', promotionRoutes);
+app.use('/api/admin/analytics', adminAnalyticsRoutes);
+app.use('/api/admin/billing', billingRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

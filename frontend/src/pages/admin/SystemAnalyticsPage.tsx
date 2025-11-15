@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -14,61 +14,56 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Users, Building2, DollarSign, ArrowUp, ArrowDown } from 'lucide-react';
-
-// Mock data for tenant growth
-const tenantGrowthData = [
-  { month: 'Jan', tenants: 5 },
-  { month: 'Feb', tenants: 8 },
-  { month: 'Mar', tenants: 12 },
-  { month: 'Apr', tenants: 15 },
-  { month: 'May', tenants: 18 },
-  { month: 'Jun', tenants: 22 },
-  { month: 'Jul', tenants: 28 },
-  { month: 'Aug', tenants: 32 },
-  { month: 'Sep', tenants: 35 },
-  { month: 'Oct', tenants: 38 },
-  { month: 'Nov', tenants: 42 },
-];
-
-// Mock data for revenue
-const revenueData = [
-  { month: 'Jan', revenue: 15000000 },
-  { month: 'Feb', revenue: 18000000 },
-  { month: 'Mar', revenue: 22000000 },
-  { month: 'Apr', revenue: 25000000 },
-  { month: 'May', revenue: 28000000 },
-  { month: 'Jun', revenue: 32000000 },
-  { month: 'Jul', revenue: 35000000 },
-  { month: 'Aug', revenue: 38000000 },
-  { month: 'Sep', revenue: 42000000 },
-  { month: 'Oct', revenue: 45000000 },
-  { month: 'Nov', revenue: 48000000 },
-];
-
-// Mock data for tenant status
-const tenantStatusData = [
-  { name: 'Active', value: 35, color: '#10b981' },
-  { name: 'Trial', value: 5, color: '#f59e0b' },
-  { name: 'Inactive', value: 2, color: '#ef4444' }
-];
-
-// Mock data for top tenants
-const topTenants = [
-  { rank: 1, name: 'Kebuli Utsman', transactions: 2450, revenue: 12500000 },
-  { rank: 2, name: 'Toko Elektronik Jaya', transactions: 1820, revenue: 9800000 },
-  { rank: 3, name: 'Cafe Kopi Nikmat', transactions: 1650, revenue: 8200000 },
-  { rank: 4, name: 'Minimarket Sinar Jaya', transactions: 1430, revenue: 7100000 },
-  { rank: 5, name: 'Barbershop Maju Jaya', transactions: 980, revenue: 4900000 },
-  { rank: 6, name: 'Warung Sate Pak Eko', transactions: 850, revenue: 4200000 },
-  { rank: 7, name: 'Bakery Roti Enak', transactions: 720, revenue: 3600000 },
-  { rank: 8, name: 'Pet Shop Hewan Lucu', transactions: 650, revenue: 3200000 },
-  { rank: 9, name: 'Warung Makan Sederhana', transactions: 580, revenue: 2900000 },
-  { rank: 10, name: 'Laundry Express', transactions: 420, revenue: 2100000 },
-];
+import { TrendingUp, Users, Building2, DollarSign, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { adminAnalyticsService, TenantGrowthData, RevenueData, TenantStatusData, TopTenant } from '../../services/adminAnalyticsService';
 
 export default function SystemAnalyticsPage() {
   const [dateRange, setDateRange] = useState('month');
+  const [loading, setLoading] = useState(true);
+
+  // State for API data
+  const [tenantGrowthData, setTenantGrowthData] = useState<TenantGrowthData[]>([]);
+  const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
+  const [tenantStatusData, setTenantStatusData] = useState<TenantStatusData[]>([]);
+  const [topTenants, setTopTenants] = useState<TopTenant[]>([]);
+  const [summary, setSummary] = useState({
+    totalTenants: 0,
+    activeTenants: 0,
+    totalTransactions: 0,
+    totalRevenue: 0
+  });
+
+  // Fetch all analytics data
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        const months = dateRange === 'month' ? 11 : dateRange === 'quarter' ? 3 : 12;
+
+        const [growth, revenue, status, tenants, summaryData] = await Promise.all([
+          adminAnalyticsService.getTenantGrowth(months),
+          adminAnalyticsService.getRevenue(months),
+          adminAnalyticsService.getTenantStatus(),
+          adminAnalyticsService.getTopTenants(10),
+          adminAnalyticsService.getSummary()
+        ]);
+
+        setTenantGrowthData(growth.data);
+        setRevenueData(revenue.data);
+        setTenantStatusData(status.data);
+        setTopTenants(tenants.data);
+        setSummary(summaryData.data);
+      } catch (error: any) {
+        console.error('Error fetching analytics:', error);
+        toast.error(error.response?.data?.error?.message || 'Failed to load analytics data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, [dateRange]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -78,100 +73,98 @@ export default function SystemAnalyticsPage() {
     }).format(value);
   };
 
-  const formatNumber = (value: number) => {
-    return new Intl.NumberFormat('id-ID').format(value);
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <span className="ml-3 text-gray-600">Loading analytics...</span>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="mb-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">System Analytics</h1>
-            <p className="text-gray-600">System-wide performance and metrics</p>
-          </div>
-          <div className="mt-4 md:mt-0">
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-              <option value="year">Last 12 Months</option>
-            </select>
-          </div>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">System Analytics</h1>
+          <p className="text-gray-600">Monitor overall system performance</p>
         </div>
+        <select
+          value={dateRange}
+          onChange={(e) => setDateRange(e.target.value)}
+          className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="month">Last 12 Months</option>
+          <option value="quarter">Last Quarter</option>
+          <option value="year">This Year</option>
+        </select>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-blue-100 rounded-lg">
               <Building2 className="w-6 h-6 text-blue-600" />
             </div>
-            <div className="flex items-center gap-1 text-green-600 text-sm">
-              <ArrowUp className="w-4 h-4" />
-              <span>12%</span>
-            </div>
+            <TrendingUp className="w-5 h-5 text-green-500" />
           </div>
-          <p className="text-gray-600 text-sm mb-1">Total Tenants</p>
-          <p className="text-3xl font-bold text-gray-800">42</p>
-          <p className="text-xs text-gray-500 mt-2">+5 from last month</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Users className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="flex items-center gap-1 text-green-600 text-sm">
-              <ArrowUp className="w-4 h-4" />
-              <span>8%</span>
-            </div>
-          </div>
-          <p className="text-gray-600 text-sm mb-1">Total Users</p>
-          <p className="text-3xl font-bold text-gray-800">348</p>
-          <p className="text-xs text-gray-500 mt-2">Across all tenants</p>
+          <p className="text-sm text-gray-600 mb-1">Total Tenants</p>
+          <p className="text-2xl font-bold text-gray-800">{summary.totalTenants}</p>
+          <p className="text-xs text-green-600 mt-2">
+            {summary.activeTenants} active
+          </p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-green-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-green-600" />
+              <Users className="w-6 h-6 text-green-600" />
             </div>
-            <div className="flex items-center gap-1 text-green-600 text-sm">
-              <ArrowUp className="w-4 h-4" />
-              <span>15%</span>
-            </div>
+            <TrendingUp className="w-5 h-5 text-green-500" />
           </div>
-          <p className="text-gray-600 text-sm mb-1">Total Transactions</p>
-          <p className="text-3xl font-bold text-gray-800">12,550</p>
-          <p className="text-xs text-gray-500 mt-2">This month</p>
+          <p className="text-sm text-gray-600 mb-1">Active Subscriptions</p>
+          <p className="text-2xl font-bold text-gray-800">{summary.activeTenants}</p>
+          <p className="text-xs text-gray-500 mt-2">
+            {Math.round((summary.activeTenants / summary.totalTenants) * 100)}% of total
+          </p>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-purple-100 rounded-lg">
+              <DollarSign className="w-6 h-6 text-purple-600" />
+            </div>
+            <TrendingUp className="w-5 h-5 text-green-500" />
+          </div>
+          <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
+          <p className="text-2xl font-bold text-gray-800">{formatNumber(summary.totalRevenue)}</p>
+          <p className="text-xs text-gray-500 mt-2">All time</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-orange-100 rounded-lg">
-              <DollarSign className="w-6 h-6 text-orange-600" />
+              <TrendingUp className="w-6 h-6 text-orange-600" />
             </div>
-            <div className="flex items-center gap-1 text-green-600 text-sm">
-              <ArrowUp className="w-4 h-4" />
-              <span>18%</span>
-            </div>
+            <TrendingUp className="w-5 h-5 text-green-500" />
           </div>
-          <p className="text-gray-600 text-sm mb-1">Total Revenue</p>
-          <p className="text-3xl font-bold text-gray-800">Rp 48M</p>
-          <p className="text-xs text-gray-500 mt-2">Subscription revenue</p>
+          <p className="text-sm text-gray-600 mb-1">Total Transactions</p>
+          <p className="text-2xl font-bold text-gray-800">{formatNumber(summary.totalTransactions)}</p>
+          <p className="text-xs text-gray-500 mt-2">Across all tenants</p>
         </div>
       </div>
 
-      {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Tenant Growth Chart */}
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Tenant Growth</h3>
+          <h3 className="text-lg font-semibold mb-4">Tenant Growth</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={tenantGrowthData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -179,51 +172,40 @@ export default function SystemAnalyticsPage() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="tenants"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                name="Total Tenants"
-              />
+              <Line type="monotone" dataKey="tenants" stroke="#3b82f6" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* Revenue Chart */}
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Revenue</h3>
+          <h3 className="text-lg font-semibold mb-4">System Revenue</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={revenueData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => `Rp ${value / 1000000}M`} />
-              <Tooltip
-                formatter={(value: number) => formatCurrency(value)}
-              />
+              <YAxis />
+              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
               <Legend />
-              <Bar dataKey="revenue" fill="#10b981" name="Revenue" />
+              <Bar dataKey="revenue" fill="#10b981" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tenant Status Pie Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Tenant Status Distribution */}
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Tenant Status Distribution</h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <h3 className="text-lg font-semibold mb-4">Tenant Status</h3>
+          <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
                 data={tenantStatusData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, value, percent }) =>
-                  `${name}: ${value} (${(percent * 100).toFixed(0)}%)`
-                }
-                outerRadius={100}
+                label={(entry) => `${entry.name}: ${entry.value}`}
+                outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -236,34 +218,39 @@ export default function SystemAnalyticsPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Top Performing Tenants */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Top 10 Performing Tenants</h3>
-          <div className="overflow-y-auto max-h-[300px]">
+        {/* Top Tenants */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-4">Top Performing Tenants</h3>
+          <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 sticky top-0">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">#</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Tenant</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Transactions</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Revenue</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tenant</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Transactions</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {topTenants.map((tenant) => (
                   <tr key={tenant.rank} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{tenant.rank}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{tenant.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 text-right">
-                      {formatNumber(tenant.transactions)}
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      #{tenant.rank}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium text-right">
+                    <td className="px-4 py-3 text-sm text-gray-900">{tenant.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatNumber(tenant.transactions)}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-green-600">
                       {formatCurrency(tenant.revenue)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {topTenants.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No data available
+              </div>
+            )}
           </div>
         </div>
       </div>

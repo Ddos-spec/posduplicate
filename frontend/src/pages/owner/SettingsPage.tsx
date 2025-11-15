@@ -1,11 +1,97 @@
-import { useState } from 'react';
-import { Save, Upload } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save, Upload, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { settingsService, TenantSettings } from '../../services/settingsService';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'business' | 'tax' | 'receipt' | 'notifications' | 'system' | 'password'>('business');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState<TenantSettings | null>(null);
 
-  const handleSave = () => toast.success('Settings saved! (Mock)');
+  // Password form state
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  // Fetch settings on mount
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      const result = await settingsService.getSettings();
+      setSettings(result.data);
+    } catch (error: any) {
+      console.error('Error fetching settings:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to load settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async (updateData: any) => {
+    try {
+      setSaving(true);
+      await settingsService.updateSettings(updateData);
+      toast.success('Settings saved successfully!');
+      fetchSettings(); // Refresh settings
+    } catch (error: any) {
+      console.error('Error saving settings:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword) {
+      toast.error('Please fill in all password fields');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await settingsService.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+      toast.success('Password changed successfully!');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to change password');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <span className="ml-3 text-gray-600">Loading settings...</span>
+      </div>
+    );
+  }
+
+  if (!settings) {
+    return <div className="text-center py-8 text-gray-500">Failed to load settings</div>;
+  }
 
   return (
     <div>
@@ -42,39 +128,77 @@ export default function SettingsPage() {
         {activeTab === 'business' && (
           <div className="space-y-4">
             <h3 className="font-semibold text-lg mb-4">Business Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Business Name</label>
-                <input type="text" defaultValue="Kebuli Utsman" className="w-full px-3 py-2 border rounded-lg" />
+            <form id="business-form" onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              handleSave({
+                businessName: formData.get('businessName'),
+                ownerName: formData.get('ownerName'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                address: formData.get('address')
+              });
+            }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Business Name</label>
+                  <input
+                    type="text"
+                    name="businessName"
+                    defaultValue={settings.businessName}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Owner Name</label>
+                  <input
+                    type="text"
+                    name="ownerName"
+                    defaultValue={settings.ownerName || ''}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    defaultValue={settings.email}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    defaultValue={settings.phone || ''}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Owner Name</label>
-                <input type="text" defaultValue="Ahmad Utsman" className="w-full px-3 py-2 border rounded-lg" />
+                <label className="block text-sm font-medium mb-2">Address</label>
+                <textarea
+                  name="address"
+                  defaultValue={settings.address || ''}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
-                <input type="email" defaultValue="owner@kebuliutsman.com" className="w-full px-3 py-2 border rounded-lg" />
+                <label className="block text-sm font-medium mb-2">Logo</label>
+                <p className="text-sm text-gray-500 mb-2">Image upload coming soon</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Phone</label>
-                <input type="tel" defaultValue="0812-3456-7890" className="w-full px-3 py-2 border rounded-lg" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Address</label>
-              <textarea defaultValue="Jl. Sudirman No. 123, Jakarta" className="w-full px-3 py-2 border rounded-lg" rows={3} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Logo</label>
-              <button className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                Upload Logo
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
-            </div>
-            <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
-              <Save className="w-4 h-4" />
-              Save Changes
-            </button>
+            </form>
           </div>
         )}
 
@@ -188,18 +312,38 @@ export default function SettingsPage() {
             <h3 className="font-semibold text-lg mb-4">Change Password</h3>
             <div>
               <label className="block text-sm font-medium mb-2">Current Password</label>
-              <input type="password" className="w-full px-3 py-2 border rounded-lg" />
+              <input
+                type="password"
+                value={passwordForm.currentPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">New Password</label>
-              <input type="password" className="w-full px-3 py-2 border rounded-lg" />
+              <input
+                type="password"
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Confirm New Password</label>
-              <input type="password" className="w-full px-3 py-2 border rounded-lg" />
+              <input
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
-            <button onClick={() => toast.success('Password changed!')} className="px-4 py-2 bg-orange-600 text-white rounded-lg">
-              Change Password
+            <button
+              onClick={handleChangePassword}
+              disabled={saving}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center gap-2 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {saving ? 'Changing...' : 'Change Password'}
             </button>
           </div>
         )}
