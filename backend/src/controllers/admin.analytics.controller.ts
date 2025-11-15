@@ -13,7 +13,7 @@ export const getTenantGrowth = async (req: Request, res: Response, next: NextFun
     startDate.setMonth(startDate.getMonth() - monthsInt);
 
     // Get tenants grouped by month
-    const tenants = await prisma.tenant.findMany({
+    const tenants = await prisma.tenants.findMany({
       where: {
         createdAt: { gte: startDate }
       },
@@ -25,12 +25,12 @@ export const getTenantGrowth = async (req: Request, res: Response, next: NextFun
 
     // Group by month
     const monthlyData: { [key: string]: number } = {};
-    let cumulativeCount = await prisma.tenant.count({
-      where: { created_at: { lt: startDate } }
+    let cumulativeCount = await prisma.tenants.count({
+      where: { createdAt: { lt: startDate } }
     });
 
     tenants.forEach((tenant: any) => {
-      const monthKey = tenant.created_at.toISOString().substring(0, 7); // YYYY-MM
+      const monthKey = tenant.createdAt.toISOString().substring(0, 7); // YYYY-MM
       monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
     });
 
@@ -123,7 +123,7 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
 
     // Get transaction counts and totals per tenant
     const tenantStats = await prisma.transaction.groupBy({
-      by: ['outlet_id'],
+      by: ['outletId'],
       where: { status: 'completed' },
       _count: { id: true },
       _sum: { total: true },
@@ -135,17 +135,17 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
     const result = await Promise.all(
       tenantStats.map(async (stat: any, index: number) => {
         const outlet = await prisma.outlet.findUnique({
-          where: { id: stat.outlet_id || 0 },
+          where: { id: stat.outletId || 0 },
           include: {
-            tenant: {
-              select: { business_name: true }
+            tenants: {
+              select: { businessName: true }
             }
           }
         });
 
         return {
           rank: index + 1,
-          name: outlet?.tenant?.business_name || 'Unknown',
+          name: outlet?.tenants?.businessName || 'Unknown',
           transactions: stat._count.id,
           revenue: Number((stat._sum.total ?? 0) || 0)
         };

@@ -23,7 +23,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
       },
       include: {
-        transactionItems: true,
+        transaction_items: true,
         payments: true
       }
     });
@@ -35,7 +35,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
     // Calculate total items sold
     const totalItemsSold = transactions.reduce((sum, t) => {
-      return sum + t.transactionItems.reduce((itemSum, item) => itemSum + item.quantity, 0);
+      return sum + t.transaction_items.reduce((itemSum, item) => itemSum + item.quantity, 0);
     }, 0);
 
     // Get today's stats
@@ -167,7 +167,7 @@ export const getTopProducts = async (req: Request, res: Response) => {
         }
       },
       select: {
-        itemName: true,
+        item_name: true,
         quantity: true,
         subtotal: true
       }
@@ -176,15 +176,15 @@ export const getTopProducts = async (req: Request, res: Response) => {
     // Aggregate by product name
     const productStats: any = {};
     transactionItems.forEach(item => {
-      if (!productStats[item.itemName]) {
-        productStats[item.itemName] = {
-          name: item.itemName,
+      if (!productStats[item.item_name]) {
+        productStats[item.item_name] = {
+          name: item.item_name,
           quantity: 0,
           revenue: 0
         };
       }
-      productStats[item.itemName].quantity += item.quantity;
-      productStats[item.itemName].revenue += parseFloat(item.subtotal.toString());
+      productStats[item.item_name].quantity += item.quantity;
+      productStats[item.item_name].revenue += parseFloat(item.subtotal.toString());
     });
 
     // Sort by quantity and limit
@@ -228,7 +228,7 @@ export const getSalesByCategory = async (req: Request, res: Response) => {
         }
       },
       select: {
-        itemName: true,
+        item_name: true,
         quantity: true,
         subtotal: true
       }
@@ -237,7 +237,7 @@ export const getSalesByCategory = async (req: Request, res: Response) => {
     // Aggregate by category using the map
     const categoryStats: any = {};
     transactionItems.forEach(item => {
-      const categoryName = itemCategoryMap[item.itemName] || 'Uncategorized';
+      const categoryName = itemCategoryMap[item.item_name] || 'Uncategorized';
 
       if (!categoryStats[categoryName]) {
         categoryStats[categoryName] = {
@@ -271,15 +271,15 @@ export const getRecentTransactions = async (req: Request, res: Response) => {
 
     const transactions = await prisma.transaction.findMany({
       include: {
-        cashier: {
+        cashiers: {
           select: {
             name: true,
             email: true
           }
         },
-        transactionItems: {
+        transaction_items: {
           select: {
-            itemName: true,
+            item_name: true,
             quantity: true
           }
         }
