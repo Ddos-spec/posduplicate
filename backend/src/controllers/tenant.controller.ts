@@ -365,7 +365,7 @@ export const deleteTenant = async (
   try {
     const { id } = req.params;
 
-    const tenant = await prisma.tenant.update({
+    await prisma.tenant.update({
       where: { id: parseInt(id) },
       data: {
         deletedAt: new Date(),

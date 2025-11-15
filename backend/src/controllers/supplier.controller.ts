@@ -1,6 +1,3 @@
-import { Request, Response, NextFunction } from 'express';
-import prisma from '../utils/prisma';
-
 /**
  * IMPORTANT: The 'supplier' model does not exist in the Prisma schema.
  * This file has been commented out until the supplier model is added to the schema.

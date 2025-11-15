@@ -94,7 +94,7 @@ export const getSystemRevenue = async (req: Request, res: Response, next: NextFu
 /**
  * Get tenant status distribution
  */
-export const getTenantStatusDistribution = async (req: Request, res: Response, next: NextFunction) => {
+export const getTenantStatusDistribution = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const statusCounts = await prisma.tenant.groupBy({
       by: ['subscriptionStatus'],
@@ -161,7 +161,7 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
 /**
  * Get system summary stats
  */
-export const getSystemSummary = async (req: Request, res: Response, next: NextFunction) => {
+export const getSystemSummary = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const [
       totalTenants,

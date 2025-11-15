@@ -25,7 +25,7 @@ export const getOutlets = async (
     const outlets = await prisma.outlet.findMany({
       where,
       include: {
-        tenant: {
+        tenants: {
           select: {
             id: true,
             businessName: true,
@@ -67,7 +67,7 @@ export const getOutletById = async (
     const outlet = await prisma.outlet.findUnique({
       where: { id: parseInt(id) },
       include: {
-        tenant: {
+        tenants: {
           select: {
             id: true,
             businessName: true,
@@ -178,7 +178,7 @@ export const createOutlet = async (
         isActive: true
       },
       include: {
-        tenant: {
+        tenants: {
           select: {
             id: true,
             businessName: true
@@ -247,7 +247,7 @@ export const updateOutlet = async (
       where: { id: parseInt(id) },
       data,
       include: {
-        tenant: {
+        tenants: {
           select: {
             id: true,
             businessName: true
