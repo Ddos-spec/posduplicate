@@ -31,7 +31,6 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
         email: true,
         phone: true,
         address: true,
-        logo: true,
         taxRate: true,
         taxName: true,
         serviceCharge: true,
@@ -67,7 +66,7 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
       data: tenant
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -145,7 +144,7 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
       data: updatedTenant
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -180,7 +179,7 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
     // Get user with password
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, password: true }
+      select: { id: true, passwordHash: true }
     });
 
     if (!user) {
@@ -194,7 +193,7 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
     }
 
     // Verify current password
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
 
     if (!isPasswordValid) {
       return res.status(400).json({
@@ -212,7 +211,7 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
     // Update password
     await prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword }
+      data: { passwordHash: hashedPassword }
     });
 
     res.json({
@@ -220,6 +219,6 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
       message: 'Password changed successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };

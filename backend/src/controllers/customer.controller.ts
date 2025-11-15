@@ -21,12 +21,11 @@ export const getCustomers = async (req: Request, res: Response, _next: NextFunct
     const customers = await prisma.customers.findMany({
       where,
       include: {
-        tier: true,
         _count: {
           select: { transactions: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { id: 'desc' }
     });
 
     res.json({ success: true, data: customers, count: customers.length });
@@ -42,7 +41,6 @@ export const getCustomerById = async (req: Request, res: Response, _next: NextFu
     const customer = await prisma.customers.findUnique({
       where: { id: parseInt(id) },
       include: {
-        tier: true,
         transactions: {
           orderBy: { createdAt: 'desc' },
           take: 10
@@ -63,7 +61,7 @@ export const getCustomerById = async (req: Request, res: Response, _next: NextFu
 
     res.json({ success: true, data: customer });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -84,14 +82,13 @@ export const createCustomer = async (req: Request, res: Response, _next: NextFun
         phone,
         email,
         address,
-        birthday: birthday ? new Date(birthday) : null,
         tierId: tierId || null
       }
     });
 
     res.status(201).json({ success: true, data: customer, message: 'Customer created successfully' });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -122,9 +119,8 @@ export const deleteCustomer = async (req: Request, res: Response, _next: NextFun
   try {
     const { id } = req.params;
 
-    await prisma.customers.update({
-      where: { id: parseInt(id) },
-      data: { isActive: false }
+    await prisma.customers.delete({
+      where: { id: parseInt(id) }
     });
 
     res.json({ success: true, message: 'Customer deleted successfully' });
@@ -137,7 +133,7 @@ export const getCustomerTransactions = async (req: Request, res: Response, _next
   try {
     const { id } = req.params;
 
-    const transactions = await prisma.Transaction.findMany({
+    const transactions = await prisma.transaction.findMany({
       where: { customerId: parseInt(id) },
       orderBy: { createdAt: 'desc' }
     });

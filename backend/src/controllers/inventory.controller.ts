@@ -22,7 +22,6 @@ export const getInventory = async (req: Request, res: Response, _next: NextFunct
     const items = await prisma.items.findMany({
       where,
       include: {
-        category: true,
         outlet: { select: { id: true, name: true } }
       },
       orderBy: { stock: 'asc' }
@@ -30,7 +29,7 @@ export const getInventory = async (req: Request, res: Response, _next: NextFunct
 
     res.json({ success: true, data: items, count: items.length });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -54,7 +53,7 @@ export const adjustStock = async (req: Request, res: Response, _next: NextFuncti
       });
     }
 
-    const currentStock = parseFloat(item.stock.toString());
+    const currentStock = parseFloat((item.stock || 0).toString());
     const adjustment = parseFloat(quantity);
     const newStock = type === 'in' ? currentStock + adjustment : currentStock - adjustment;
 
@@ -85,7 +84,7 @@ export const adjustStock = async (req: Request, res: Response, _next: NextFuncti
       data: { itemId, stockBefore: currentStock, stockAfter: newStock }
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -113,7 +112,7 @@ export const getMovements = async (req: Request, res: Response, _next: NextFunct
     }
 
     // Since inventoryMovement doesn't exist, returning a placeholder
-    const movements = []; // Placeholder - would use actual model if it existed
+    const movements: any[] = []; // Placeholder - would use actual model if it existed
 
     // const movements = await prisma.inventoryMovement.findMany({
     //   where,
@@ -128,7 +127,7 @@ export const getMovements = async (req: Request, res: Response, _next: NextFunct
 
     res.json({ success: true, data: movements, count: movements.length });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -167,19 +166,16 @@ export const getLowStock = async (req: Request, res: Response, _next: NextFuncti
           trackStock: true,
           ...(outlet_id && { outletId: parseInt(outlet_id as string) })
         },
-        include: {
-          category: true
-        },
         orderBy: { stock: 'asc' }
       });
 
       const lowStock = items.filter(item =>
-        parseFloat(item.stock.toString()) <= parseFloat(item.minStock.toString())
+        parseFloat((item.stock || 0).toString()) <= parseFloat((item.minStock || 0).toString())
       );
 
       res.json({ success: true, data: lowStock, count: lowStock.length });
     }
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };

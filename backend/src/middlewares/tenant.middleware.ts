@@ -145,7 +145,7 @@ export const superAdminOnly = (
       }
     });
   }
-  next();
+  return next();
 };
 
 /**
@@ -167,5 +167,5 @@ export const ownerOnly = (
       }
     });
   }
-  next();
+  return next();
 };

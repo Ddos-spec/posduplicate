@@ -68,7 +68,7 @@ export const getTransactions = async (
       count: transactions.length
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -130,7 +130,7 @@ export const getTransactionById = async (
       data: transaction
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -330,7 +330,7 @@ export const createTransaction = async (
       message: 'Transaction created successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -373,7 +373,7 @@ export const holdOrder = async (
       message: 'Order held successfully'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -400,7 +400,7 @@ export const getHeldOrders = async (
       count: heldOrders.length
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -430,6 +430,6 @@ export const updateTransactionStatus = async (
       message: 'Transaction status updated'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };

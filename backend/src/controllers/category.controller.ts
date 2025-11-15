@@ -30,7 +30,7 @@ export const getCategories = async (
     const categories = await prisma.categories.findMany({
       where,
       include: {
-        outlet: {
+        outlets: {
           select: {
             id: true,
             name: true
@@ -70,7 +70,7 @@ export const getCategoryById = async (
     const category = await prisma.categories.findUnique({
       where: { id: parseInt(id) },
       include: {
-        outlet: true,
+        outlets: true,
         items: true,
         ingredients: true
       }
@@ -87,7 +87,7 @@ export const getCategoryById = async (
     }
 
     // Tenant isolation check
-    if (req.tenantId && category.outlet?.tenantId !== req.tenantId) {
+    if (req.tenantId && category.outletId !== req.tenantId) {
       return res.status(403).json({
         success: false,
         error: {
@@ -102,7 +102,7 @@ export const getCategoryById = async (
       data: category
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
@@ -141,7 +141,7 @@ export const createCategory = async (
       message: 'Category created successfully'
     });
   } catch (error) {
-    _next(error);
+    return _next(error);
   }
 };
 
