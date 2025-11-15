@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import prisma from '../config/database';
+import prisma from '../utils/prisma';
 
 interface AuthRequest extends Request {
   userId?: number;

@@ -304,6 +304,7 @@ export default function BillingManagementPage() {
                   </div>
                 </div>
               ))}
+            </div>
           )}
         </div>
       )}

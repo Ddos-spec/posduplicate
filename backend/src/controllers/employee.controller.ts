@@ -174,3 +174,34 @@ export const deleteEmployee = async (req: Request, res: Response, next: NextFunc
     next(error);
   }
 };
+
+export const getEmployeeShifts = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    // Assuming there's a shifts table that links to employees
+    // This is a basic implementation - adjust based on your actual database schema
+    const shifts = await prisma.shifts.findMany({
+      where: { employee_id: parseInt(id) },
+      include: {
+        employees: {
+          select: {
+            id: true,
+            employee_code: true,
+            users: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { start_time: 'desc' }
+    });
+
+    res.json({ success: true, data: shifts, count: shifts.length });
+  } catch (error) {
+    next(error);
+  }
+};

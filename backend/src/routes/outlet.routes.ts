@@ -8,12 +8,12 @@ import {
   getOutletSettings,
   updateOutletSettings
 } from '../controllers/outlet.controller';
-import { authenticate } from '../middleware/auth';
+import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
 
 // All routes require authentication
-router.use(authenticate);
+router.use(authMiddleware);
 
 /**
  * GET /api/outlets
