@@ -64,46 +64,43 @@ export default function ReportsPage() {
   const fetchReportData = async () => {
     try {
       setLoading(true);
-      const [statisticsRes, salesRes, productsRes, categoryRes, cashierRes] = await Promise.all([
-        dashboardService.getStatistics(),
-        dashboardService.getSalesData(7),
-        dashboardService.getTopProducts(10),
-        dashboardService.getCategoryDistribution(),
-        dashboardService.getCashierPerformance(30)
+      const [summary, salesTrend, products, categories, cashiers] = await Promise.all([
+        dashboardService.getSummary(),
+        dashboardService.getSalesTrend({ days: 7 }),
+        dashboardService.getTopProducts({ limit: 10 }),
+        dashboardService.getSalesByCategory(),
+        dashboardService.getCashierPerformance({ days: 30 })
       ]);
 
       // Set statistics
-      const statistics = statisticsRes.data;
       setStats({
-        totalSales: statistics.totalSales,
-        totalTransactions: statistics.totalTransactions,
-        avgPerTransaction: statistics.totalTransactions > 0
-          ? statistics.totalSales / statistics.totalTransactions
-          : 0
+        totalSales: summary.totalSales,
+        totalTransactions: summary.totalTransactions,
+        avgPerTransaction: summary.averageTransaction
       });
 
       // Set sales data
-      setSalesData(salesRes.data.map(item => ({
+      setSalesData(salesTrend.map((item: any) => ({
         date: new Date(item.date).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit' }),
-        sales: item.total
+        sales: item.sales
       })));
 
       // Set top products
-      setTopProducts(productsRes.data.map(item => ({
+      setTopProducts(products.map((item: any) => ({
         name: item.name,
-        qty: item.totalSold,
-        revenue: item.totalRevenue
+        qty: item.stock || 0,
+        revenue: item.price * (item.stock || 0)
       })));
 
       // Set category data with colors
-      setCategoryData(categoryRes.data.map((item, index) => ({
-        name: item.category,
+      setCategoryData(categories.map((item: any, index: number) => ({
+        name: item.name,
         value: item.totalSales,
         color: COLORS[index % COLORS.length]
       })));
 
       // Set cashier performance
-      setCashierPerformance(cashierRes.data);
+      setCashierPerformance(cashiers);
     } catch (error: any) {
       console.error('Error fetching report data:', error);
       toast.error(error.response?.data?.error?.message || 'Failed to load report data');
@@ -294,7 +291,7 @@ export default function ReportsPage() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
                 outerRadius={100}
                 dataKey="value"
               >
@@ -324,7 +321,7 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {cashierPerformance.map((cashier, index) => (
+                {cashierPerformance.map((cashier) => (
                   <tr key={cashier.cashierId} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{cashier.cashierName}</td>
                     <td className="px-4 py-3 text-sm text-right text-gray-700">{cashier.totalTransactions}</td>
