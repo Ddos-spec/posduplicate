@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { upload } from '../middleware/upload';
 import { uploadImage, uploadMultipleImages } from '../controllers/upload.controller';
-import { authenticateToken } from '../middleware/auth';
+import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
 
 // All upload routes require authentication
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 // Upload single image
 router.post('/image', upload.single('image'), uploadImage);

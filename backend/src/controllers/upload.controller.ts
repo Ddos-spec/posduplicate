@@ -7,16 +7,17 @@ export const uploadImage = async (
   req: Request,
   res: Response,
   _next: NextFunction
-) => {
+): Promise<void> => {
   try {
     if (!req.file) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: {
           code: 'NO_FILE',
           message: 'No file uploaded'
         }
       });
+      return;
     }
 
     // Return the file URL
@@ -45,18 +46,19 @@ export const uploadMultipleImages = async (
   req: Request,
   res: Response,
   _next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const files = req.files as Express.Multer.File[];
 
     if (!files || files.length === 0) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: {
           code: 'NO_FILES',
           message: 'No files uploaded'
         }
       });
+      return;
     }
 
     const uploadedFiles = files.map(file => ({
