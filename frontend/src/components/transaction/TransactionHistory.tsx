@@ -80,6 +80,12 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
             border-bottom: 2px dashed #000;
             padding-bottom: 10px;
           }
+          .header img {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 5px;
+            display: block;
+          }
           .header h2 {
             margin: 0;
             font-size: 18px;
@@ -129,6 +135,7 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       </head>
       <body>
         <div class="header">
+          <img src="${window.location.origin}/logo.webp" alt="POS E2NK" />
           <h2>MyPOS</h2>
           <p>Receipt</p>
         </div>
