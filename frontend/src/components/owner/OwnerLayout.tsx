@@ -47,7 +47,15 @@ export default function OwnerLayout() {
       {/* Desktop Sidebar */}
       <aside className={`hidden md:block bg-gray-900 text-white transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
         <div className="p-4 flex items-center justify-between border-b border-gray-800">
-          {sidebarOpen && <h1 className="text-xl font-bold">MyPOS Owner</h1>}
+          {sidebarOpen && (
+            <div className="flex items-center gap-2">
+              <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain" />
+              <h1 className="text-xl font-bold">MyPOS</h1>
+            </div>
+          )}
+          {!sidebarOpen && (
+            <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain mx-auto" />
+          )}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded hover:bg-gray-800">
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -81,7 +89,10 @@ export default function OwnerLayout() {
         <div className="md:hidden fixed inset-0 z-50 bg-black bg-opacity-50" onClick={() => setMobileMenuOpen(false)}>
           <aside className="bg-gray-900 text-white w-64 h-full" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 flex items-center justify-between border-b border-gray-800">
-              <h1 className="text-xl font-bold">MyPOS Owner</h1>
+              <div className="flex items-center gap-2">
+                <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain" />
+                <h1 className="text-xl font-bold">MyPOS</h1>
+              </div>
               <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded hover:bg-gray-800">
                 <X className="w-5 h-5" />
               </button>

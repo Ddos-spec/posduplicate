@@ -49,11 +49,15 @@ export default function AdminLoginPage() {
       <Toaster position="top-right" />
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-900 rounded-full mb-4">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <img src="/logo.webp" alt="POS E2NK Logo" className="w-12 h-12 object-contain" />
+            <h1 className="text-3xl font-bold text-gray-900">MyPOS</h1>
+          </div>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-slate-900 to-blue-900 rounded-full mb-2">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Portal</h1>
-          <p className="text-gray-600">MyPOS System Administration</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Admin Portal</h2>
+          <p className="text-gray-600">System Administration</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -65,7 +69,7 @@ export default function AdminLoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900"
               placeholder="admin@mypos.com"
               required
             />
@@ -79,7 +83,7 @@ export default function AdminLoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900"
               placeholder="••••••••"
               required
             />
@@ -89,7 +93,7 @@ export default function AdminLoginPage() {
             <input
               type="checkbox"
               id="remember"
-              className="w-4 h-4 text-gray-800 border-gray-300 rounded focus:ring-gray-800"
+              className="w-4 h-4 text-blue-900 border-gray-300 rounded focus:ring-blue-900"
             />
             <label htmlFor="remember" className="ml-2 text-sm text-gray-600">
               Remember me
@@ -99,27 +103,12 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gray-900 text-white py-3 rounded-lg font-semibold hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition"
+            className="w-full bg-gradient-to-r from-slate-900 to-blue-900 text-white py-3 rounded-lg font-semibold hover:from-slate-800 hover:to-blue-800 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
           >
             <LogIn className="w-5 h-5" />
             {isLoading ? 'Logging in...' : 'Login as Admin'}
           </button>
         </form>
-
-        <div className="mt-6 text-center">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Demo Credentials</span>
-            </div>
-          </div>
-          <div className="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-            <p className="font-medium">Email: admin@mypos.com</p>
-            <p className="font-medium">Password: admin123</p>
-          </div>
-        </div>
 
         <div className="mt-6 text-center">
           <a href="/login" className="text-sm text-gray-600 hover:text-gray-900">
