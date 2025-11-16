@@ -9,6 +9,7 @@ import ModifierManagement from '../components/modifiers/ModifierManagement';
 import { printReceipt } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
 import type { TenantSettings } from '../services/settingsService';
+import useConfirmationStore from '../store/confirmationStore';
 
 interface Product {
   id: number;
@@ -74,6 +75,7 @@ export default function CashierPage() {
   const [showMobileCart, setShowMobileCart] = useState(false);
 
   const { items, addItem, updateQuantity, removeItem, clearCart, getTotal, getSubtotal } = useCartStore();
+  const { showConfirmation } = useConfirmationStore();
 
   useEffect(() => {
     loadProducts();
@@ -366,16 +368,20 @@ export default function CashierPage() {
     }
   };
 
-  const handleDeleteProduct = async (productId: number) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
-
-    try {
-      await api.delete(`/products/${productId}`);
-      toast.success('Product deleted successfully');
-      loadProducts();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to delete product');
-    }
+  const handleDeleteProduct = (productId: number) => {
+    showConfirmation(
+      'Delete Product',
+      'Are you sure you want to delete this product?',
+      async () => {
+        try {
+          await api.delete(`/products/${productId}`);
+          toast.success('Product deleted successfully');
+          loadProducts();
+        } catch (error: any) {
+          toast.error(error.response?.data?.error?.message || 'Failed to delete product');
+        }
+      }
+    );
   };
 
   // Category management handlers
@@ -426,19 +432,23 @@ export default function CashierPage() {
     }
   };
 
-  const handleDeleteCategory = async (categoryId: number) => {
-    if (!confirm('Are you sure you want to delete this category?')) return;
-
-    try {
-      await api.delete(`/categories/${categoryId}`);
-      toast.success('Category deleted successfully');
-      loadCategories();
-      if (selectedCategory === categoryId) {
-        setSelectedCategory(null);
+  const handleDeleteCategory = (categoryId: number) => {
+    showConfirmation(
+      'Delete Category',
+      'Are you sure you want to delete this category?',
+      async () => {
+        try {
+          await api.delete(`/categories/${categoryId}`);
+          toast.success('Category deleted successfully');
+          loadCategories();
+          if (selectedCategory === categoryId) {
+            setSelectedCategory(null);
+          }
+        } catch (error: any) {
+          toast.error(error.response?.data?.error?.message || 'Failed to delete category');
+        }
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to delete category');
-    }
+    );
   };
 
   return (

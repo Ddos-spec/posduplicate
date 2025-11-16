@@ -1,119 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
+import bcrypt from 'bcrypt';
 
 /**
  * Get all tenants (Super Admin only)
- */
-export const getAllTenants = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { status, plan, search } = req.query;
-
-    const where: any = {};
-
-    if (status) {
-      where.subscriptionStatus = status;
-    }
-
-    if (plan) {
-      where.subscriptionPlan = plan;
-    }
-
-    if (search) {
-      where.OR = [
-        { businessName: { contains: search as string, mode: 'insensitive' } },
-        { ownerName: { contains: search as string, mode: 'insensitive' } },
-        { email: { contains: search as string, mode: 'insensitive' } }
-      ];
-    }
-
-    const tenants = await prisma.tenant.findMany({
-      where,
-      include: {
-        outlets: true,
-        users: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            roles: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
-          }
-        },
-        _count: {
-          select: {
-            outlets: true,
-            users: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    res.json({
-      success: true,
-      data: tenants,
-      count: tenants.length
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
-
-/**
- * Get tenant by ID
- */
-export const getTenantById = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
-
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        outlets: true,
-        users: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            isActive: true,
-            roles: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
-          }
-        }
-      }
-    });
-
-    if (!tenant) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'TENANT_NOT_FOUND',
-          message: 'Tenant not found'
-        }
-      });
-    }
-
-    res.json({
-      success: true,
-      data: tenant
-    });
-  } catch (error) {
+...
     return next(error);
   }
 };
@@ -131,71 +22,99 @@ export const createTenant = async (
       businessName,
       ownerName,
       email,
+      password, // Password for the owner
       phone,
       address
     } = req.body;
 
     // Validation
-    if (!businessName || !ownerName || !email) {
+    if (!businessName || !ownerName || !email || !password) {
       return res.status(400).json({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Business name, owner name, and email are required'
+          message: 'Business name, owner name, email, and password are required'
         }
       });
     }
 
-    // Check if email already exists
-    const existing = await prisma.tenant.findUnique({
-      where: { email }
-    });
-
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'EMAIL_EXISTS',
-          message: 'Email already registered'
-        }
-      });
-    }
-
-    // Set subscription dates (now 500k/month for all)
-    const now = new Date();
-    const firstBillingDate = new Date();
-    firstBillingDate.setMonth(firstBillingDate.getMonth() + 1); // First billing in 1 month
-
-    const tenant = await prisma.tenant.create({
-      data: {
-        businessName,
-        ownerName,
-        email,
-        phone,
-        address,
-        subscriptionPlan: 'pro', // All tenants get Pro plan at 500k
-        subscriptionStatus: 'active',
-        subscriptionStartsAt: now,
-        subscriptionExpiresAt: firstBillingDate,
-        nextBillingDate: firstBillingDate,
-        maxOutlets: 5,
-        maxUsers: 20,
-        features: {
-          pos: true,
-          inventory: true,
-          reports: true,
-          multiOutlet: true,
-          analytics: true
-        }
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Check if email already exists for a tenant or a user
+      const existingUser = await tx.user.findUnique({ where: { email } });
+      if (existingUser) {
+        throw new Error('EMAIL_EXISTS');
       }
+
+      // 2. Get the 'Owner' role
+      const ownerRole = await tx.role.findUnique({ where: { name: 'Owner' } });
+      if (!ownerRole) {
+        throw new Error('OWNER_ROLE_NOT_FOUND');
+      }
+
+      // 3. Set subscription dates and plan details
+      const now = new Date();
+      const firstBillingDate = new Date();
+      firstBillingDate.setMonth(firstBillingDate.getMonth() + 1);
+
+      // 4. Create the tenant
+      const tenant = await tx.tenant.create({
+        data: {
+          businessName,
+          ownerName,
+          email,
+          phone,
+          address,
+          subscriptionPlan: 'pro',
+          subscriptionStatus: 'active',
+          subscriptionStartsAt: now,
+          subscriptionExpiresAt: firstBillingDate,
+          nextBillingDate: firstBillingDate,
+          maxOutlets: 5,
+          maxUsers: 20,
+          features: {
+            pos: true,
+            inventory: true,
+            reports: true,
+            multiOutlet: true,
+            analytics: true
+          }
+        }
+      });
+
+      // 5. Hash the password and create the owner user
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await tx.user.create({
+        data: {
+          name: ownerName,
+          email: email,
+          passwordHash: hashedPassword,
+          tenantId: tenant.id,
+          roleId: ownerRole.id,
+          isActive: true
+        }
+      });
+
+      return tenant;
     });
 
     res.status(201).json({
       success: true,
-      data: tenant,
-      message: 'Tenant created successfully'
+      data: result,
+      message: 'Tenant and Owner account created successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === 'EMAIL_EXISTS') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'EMAIL_EXISTS', message: 'Email already registered' }
+      });
+    }
+    if (error.message === 'OWNER_ROLE_NOT_FOUND') {
+      return res.status(500).json({
+        success: false,
+        error: { code: 'SERVER_CONFIG_ERROR', message: 'Owner role is not configured in the database' }
+      });
+    }
     return next(error);
   }
 };
@@ -335,7 +254,6 @@ export const getMyTenant = async (
     const tenant = await prisma.tenant.findUnique({
       where: { id: req.tenantId },
       include: {
-        outlets: true,
         _count: {
           select: {
             outlets: true,

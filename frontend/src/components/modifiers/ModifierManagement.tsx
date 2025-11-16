@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { X, Plus, Edit, Trash2, Tag, DollarSign } from 'lucide-react';
+import useConfirmationStore from '../../store/confirmationStore';
 
 interface Modifier {
   id: number;
@@ -22,6 +23,7 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
   const [editingModifier, setEditingModifier] = useState<Modifier | null>(null);
   const [form, setForm] = useState({ name: '', price: '0', category: 'addon' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const { showConfirmation } = useConfirmationStore();
 
   useEffect(() => {
     loadModifiers();
@@ -85,16 +87,20 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
     }
   };
 
-  const handleDelete = async (modifierId: number) => {
-    if (!confirm('Are you sure you want to delete this modifier?')) return;
-
-    try {
-      await api.delete(`/modifiers/${modifierId}`);
-      toast.success('Modifier deleted successfully');
-      loadModifiers();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to delete modifier');
-    }
+  const handleDelete = (modifierId: number) => {
+    showConfirmation(
+      'Delete Modifier',
+      'Are you sure you want to delete this modifier?',
+      async () => {
+        try {
+          await api.delete(`/modifiers/${modifierId}`);
+          toast.success('Modifier deleted successfully');
+          loadModifiers();
+        } catch (error: any) {
+          toast.error(error.response?.data?.error?.message || 'Failed to delete modifier');
+        }
+      }
+    );
   };
 
   const getCategoryBadge = (category?: string) => {

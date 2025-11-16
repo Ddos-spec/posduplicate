@@ -27,6 +27,7 @@ export interface CreateTenantData {
   businessName: string;
   ownerName: string;
   email: string;
+  password?: string;
   phone?: string;
   address?: string;
 }
