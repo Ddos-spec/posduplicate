@@ -1,0 +1,50 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# Uploads (will be created in container)
+uploads/*
+!uploads/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Testing
+coverage/
+.nyc_output/
+*.test.ts
+*.spec.ts
+
+# Misc
+.cache/
+.temp/
+tmp/
