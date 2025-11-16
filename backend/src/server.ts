@@ -30,6 +30,7 @@ import adminAnalyticsRoutes from './routes/admin.analytics.routes';
 import billingRoutes from './routes/billing.routes';
 import settingsRoutes from './routes/settings.routes';
 import uploadRoutes from './routes/upload.routes';
+import notificationRoutes from './routes/notification.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -109,6 +110,7 @@ app.use('/api/admin/analytics', adminAnalyticsRoutes);
 app.use('/api/admin/billing', billingRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

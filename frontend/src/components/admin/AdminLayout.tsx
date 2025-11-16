@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,12 +13,20 @@ import {
   User
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNotificationStore } from '../../store/notificationStore';
+import NotificationPanel from './NotificationPanel';
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount, fetchNotifications, togglePanel } = useNotificationStore();
+
+  // Fetch notifications on initial load
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   // Get admin user from localStorage (mock)
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -159,11 +167,17 @@ export default function AdminLayout() {
                 MyPOS System Administration
               </h2>
             </div>
-            <div className="flex items-center gap-4">
-              <button className="p-2 rounded-full hover:bg-gray-100 relative">
+            <div className="flex items-center gap-4 relative">
+              <button
+                onClick={togglePanel}
+                className="p-2 rounded-full hover:bg-gray-100 relative"
+              >
                 <Bell className="w-5 h-5 text-gray-600" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
               </button>
+              <NotificationPanel />
               <div className="flex items-center gap-3">
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-medium text-gray-700">{user.name || 'Admin'}</p>

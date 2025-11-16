@@ -56,181 +56,337 @@ export const createTenant = async (
       const firstBillingDate = new Date();
       firstBillingDate.setMonth(firstBillingDate.getMonth() + 1);
 
-      // 4. Create the tenant
-      const tenant = await tx.tenant.create({
-        data: {
-          businessName,
-          ownerName,
-          email,
-          phone,
-          address,
-          subscriptionPlan: 'pro',
-          subscriptionStatus: 'active',
-          subscriptionStartsAt: now,
-          subscriptionExpiresAt: firstBillingDate,
-          nextBillingDate: firstBillingDate,
-          maxOutlets: 5,
-          maxUsers: 20,
-          features: {
-            pos: true,
-            inventory: true,
-            reports: true,
-            multiOutlet: true,
-            analytics: true
+            // 4. Create the tenant
+
+            const tenant = await tx.tenant.create({
+
+              data: {
+
+                businessName,
+
+                ownerName,
+
+                email,
+
+                phone,
+
+                address,
+
+                subscriptionPlan: 'standard', // All tenants get the same plan
+
+                subscriptionStatus: 'active',
+
+                subscriptionStartsAt: now,
+
+                subscriptionExpiresAt: firstBillingDate,
+
+                nextBillingDate: firstBillingDate,
+
+                maxOutlets: 999, // Effectively unlimited
+
+                maxUsers: 999, // Effectively unlimited
+
+                features: {
+
+                  pos: true,
+
+                  inventory: true,
+
+                  reports: true,
+
+                  multiOutlet: true,
+
+                  analytics: true
+
+                }
+
+              }
+
+            });
+
+      
+
+            // 5. Hash the password and create the owner user
+
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            await tx.user.create({
+
+              data: {
+
+                name: ownerName,
+
+                email: email,
+
+                passwordHash: hashedPassword,
+
+                tenantId: tenant.id,
+
+                roleId: ownerRole.id,
+
+                isActive: true
+
+              }
+
+            });
+
+      
+
+            return tenant;
+
+          });
+
+      
+
+          res.status(201).json({
+
+            success: true,
+
+            data: result,
+
+            message: 'Tenant and Owner account created successfully'
+
+          });
+
+        } catch (error: any) {
+
+          if (error.message === 'EMAIL_EXISTS') {
+
+            return res.status(400).json({
+
+              success: false,
+
+              error: {
+
+                code: 'EMAIL_EXISTS',
+
+                message: 'Email already registered'
+
+              }
+
+            });
+
           }
+
+          if (error.message === 'OWNER_ROLE_NOT_FOUND') {
+
+            return res.status(500).json({
+
+              success: false,
+
+              error: {
+
+                code: 'SERVER_CONFIG_ERROR',
+
+                message: 'Owner role is not configured in the database'
+
+              }
+
+            });
+
+          }
+
+          return next(error);
+
         }
-      });
 
-      // 5. Hash the password and create the owner user
-      const hashedPassword = await bcrypt.hash(password, 10);
-      await tx.user.create({
-        data: {
-          name: ownerName,
-          email: email,
-          passwordHash: hashedPassword,
-          tenantId: tenant.id,
-          roleId: ownerRole.id,
-          isActive: true
+      };
+
+      
+
+      /**
+
+       * Update tenant
+
+       */
+
+      export const updateTenant = async (
+
+        req: Request,
+
+        res: Response,
+
+        next: NextFunction
+
+      ) => {
+
+        try {
+
+          const { id } = req.params;
+
+          const updateData = req.body;
+
+      
+
+          // Don't allow email update through this endpoint
+
+          delete updateData.email;
+
+      
+
+          const tenant = await prisma.tenant.update({
+
+            where: { id: parseInt(id) },
+
+            data: updateData
+
+          });
+
+      
+
+          res.json({
+
+            success: true,
+
+            data: tenant,
+
+            message: 'Tenant updated successfully'
+
+          });
+
+        } catch (error) {
+
+          return next(error);
+
         }
-      });
 
-      return tenant;
-    });
+      };
 
-    res.status(201).json({
-      success: true,
-      data: result,
-      message: 'Tenant and Owner account created successfully'
-    });
-  } catch (error: any) {
-    if (error.message === 'EMAIL_EXISTS') {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'EMAIL_EXISTS', message: 'Email already registered' }
-      });
-    }
-    if (error.message === 'OWNER_ROLE_NOT_FOUND') {
-      return res.status(500).json({
-        success: false,
-        error: { code: 'SERVER_CONFIG_ERROR', message: 'Owner role is not configured in the database' }
-      });
-    }
-    return next(error);
-  }
-};
+      
 
-/**
- * Update tenant
- */
-export const updateTenant = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
+      /**
 
-    // Don't allow email update through this endpoint
-    delete updateData.email;
+       * Activate/Deactivate tenant
 
-    const tenant = await prisma.tenant.update({
-      where: { id: parseInt(id) },
-      data: updateData
-    });
+       */
 
-    res.json({
-      success: true,
-      data: tenant,
-      message: 'Tenant updated successfully'
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
+      export const toggleTenantStatus = async (
 
-/**
- * Activate/Deactivate tenant
- */
-export const toggleTenantStatus = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
-    const { isActive } = req.body;
+        req: Request,
 
-    const tenant = await prisma.tenant.update({
-      where: { id: parseInt(id) },
-      data: { isActive }
-    });
+        res: Response,
 
-    res.json({
-      success: true,
-      data: tenant,
-      message: `Tenant ${isActive ? 'activated' : 'deactivated'} successfully`
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
+        next: NextFunction
 
-/**
- * Update subscription
- */
-export const updateSubscription = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
-    const { plan, status, expiresAt } = req.body;
+      ) => {
 
-    const updateData: any = {};
+        try {
 
-    if (plan) {
-      updateData.subscriptionPlan = plan;
-      // Update limits based on plan
-      switch (plan) {
-        case 'basic':
-          updateData.maxOutlets = 1;
-          updateData.maxUsers = 5;
-          break;
-        case 'pro':
-          updateData.maxOutlets = 5;
-          updateData.maxUsers = 20;
-          break;
-        case 'enterprise':
-          updateData.maxOutlets = 999;
-          updateData.maxUsers = 999;
-          break;
-      }
-    }
+          const { id } = req.params;
 
-    if (status) {
-      updateData.subscriptionStatus = status;
-    }
+          const { isActive } = req.body;
 
-    if (expiresAt) {
-      updateData.subscriptionExpiresAt = new Date(expiresAt);
-    }
+      
 
-    const tenant = await prisma.tenant.update({
-      where: { id: parseInt(id) },
-      data: updateData
-    });
+          const tenant = await prisma.tenant.update({
 
-    res.json({
-      success: true,
-      data: tenant,
-      message: 'Subscription updated successfully'
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
+            where: { id: parseInt(id) },
+
+            data: { isActive }
+
+          });
+
+      
+
+          res.json({
+
+            success: true,
+
+            data: tenant,
+
+            message: `Tenant ${isActive ? 'activated' : 'deactivated'} successfully`
+
+          });
+
+        } catch (error) {
+
+          return next(error);
+
+        }
+
+      };
+
+      
+
+      /**
+
+       * Update subscription
+
+       */
+
+      export const updateSubscription = async (
+
+        req: Request,
+
+        res: Response,
+
+        next: NextFunction
+
+      ) => {
+
+        try {
+
+          const { id } = req.params;
+
+          const { plan, status, expiresAt } = req.body;
+
+      
+
+          const updateData: any = {};
+
+      
+
+          if (plan) {
+
+            updateData.subscriptionPlan = plan;
+
+          }
+
+      
+
+          if (status) {
+
+            updateData.subscriptionStatus = status;
+
+          }
+
+      
+
+          if (expiresAt) {
+
+            updateData.subscriptionExpiresAt = new Date(expiresAt);
+
+          }
+
+      
+
+          const tenant = await prisma.tenant.update({
+
+            where: { id: parseInt(id) },
+
+            data: updateData
+
+          });
+
+      
+
+          res.json({
+
+            success: true,
+
+            data: tenant,
+
+            message: 'Subscription updated successfully'
+
+          });
+
+        } catch (error) {
+
+          return next(error);
+
+        }
+
+      };
 
 /**
  * Get current tenant info (for logged-in tenant admin)
