@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { Toaster } from 'react-hot-toast';
+import ConfirmationModal from './components/common/ConfirmationModal';
 
 // Auth
 import LoginPage from './pages/LoginPage';
@@ -40,6 +41,7 @@ function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
+      <ConfirmationModal />
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />

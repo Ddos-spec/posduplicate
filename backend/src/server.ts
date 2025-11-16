@@ -57,20 +57,7 @@ app.use(morgan('dev'));
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Serve frontend build in production
-/*
-if (process.env.NODE_ENV === 'production') {
-  const frontendBuildPath = path.join(__dirname, '../../frontend/dist');
-  app.use(express.static(frontendBuildPath));
 
-  // Handle client-side routing - serve index.html for all non-API routes
-  app.get('*', (req: Request, res: Response) => {
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
-      res.sendFile(path.join(frontendBuildPath, 'index.html'));
-    }
-  });
-}
-*/
 
 // Root route
 app.get('/', (_req: Request, res: Response) => {

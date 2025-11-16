@@ -3,6 +3,7 @@ import { Plus, Search, Edit, Trash2, Key, User as UserIcon, Mail, Loader2, X } f
 import toast from 'react-hot-toast';
 import { userService } from '../../services/userService';
 import type { User } from '../../services/userService';
+import useConfirmationStore from '../../store/confirmationStore';
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -22,6 +23,7 @@ export default function UserManagementPage() {
     outletId: undefined as number | undefined
   });
   const [resetPassword, setResetPassword] = useState('');
+  const { showConfirmation } = useConfirmationStore();
 
   // Fetch users
   const fetchUsers = async () => {
@@ -124,17 +126,21 @@ export default function UserManagementPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: number, userName: string) => {
-    if (!confirm(`Are you sure you want to delete user "${userName}"?`)) return;
-
-    try {
-      await userService.delete(userId);
-      toast.success('User deleted successfully');
-      fetchUsers();
-    } catch (error: any) {
-      console.error('Error deleting user:', error);
-      toast.error(error.response?.data?.error?.message || 'Failed to delete user');
-    }
+  const handleDeleteUser = (userId: number, userName: string) => {
+    showConfirmation(
+      'Delete User',
+      `Are you sure you want to delete user "${userName}"?`,
+      async () => {
+        try {
+          await userService.delete(userId);
+          toast.success('User deleted successfully');
+          fetchUsers();
+        } catch (error: any) {
+          console.error('Error deleting user:', error);
+          toast.error(error.response?.data?.error?.message || 'Failed to delete user');
+        }
+      }
+    );
   };
 
   const handleResetPassword = async () => {

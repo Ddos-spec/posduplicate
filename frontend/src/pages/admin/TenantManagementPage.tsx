@@ -1,21 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Building2, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { tenantService } from '../../services/tenantService';
-import type { Tenant, CreateTenantData, UpdateTenantData } from '../../services/tenantService';
-
-export default function TenantManagementPage() {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [_planFilter, _setPlanFilter] = useState<string>('all');
-  const [showModal, setShowModal] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [formData, setFormData] = useState<CreateTenantData>({
     businessName: '',
     ownerName: '',
     email: '',
+    password: '',
     phone: '',
     address: ''
   });
@@ -53,6 +41,7 @@ export default function TenantManagementPage() {
       businessName: '',
       ownerName: '',
       email: '',
+      password: '',
       phone: '',
       address: ''
     });
@@ -71,10 +60,17 @@ export default function TenantManagementPage() {
     setShowModal(true);
   };
 
+  const { showConfirmation } = useConfirmationStore();
+
   const handleSaveTenant = async () => {
     try {
       if (!formData.businessName || !formData.ownerName || !formData.email) {
         toast.error('Business name, owner name, and email are required');
+        return;
+      }
+
+      if (!editingTenant && (!formData.password || formData.password.length < 6)) {
+        toast.error('Password is required for new tenants and must be at least 6 characters long.');
         return;
       }
 
@@ -91,7 +87,7 @@ export default function TenantManagementPage() {
       } else {
         // Create new tenant
         await tenantService.create(formData);
-        toast.success('Tenant created successfully');
+        toast.success('Tenant and Owner account created successfully');
       }
 
       setShowModal(false);
@@ -114,19 +110,21 @@ export default function TenantManagementPage() {
     }
   };
 
-  const handleDeleteTenant = async (tenant: Tenant) => {
-    if (!confirm(`Delete tenant "${tenant.businessName}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await tenantService.delete(tenant.id);
-      toast.success('Tenant deleted successfully');
-      fetchTenants();
-    } catch (error: any) {
-      console.error('Error deleting tenant:', error);
-      toast.error(error.response?.data?.error?.message || 'Failed to delete tenant');
-    }
+  const handleDeleteTenant = (tenant: Tenant) => {
+    showConfirmation(
+      'Delete Tenant',
+      `Are you sure you want to delete "${tenant.businessName}"? This action cannot be undone.`,
+      async () => {
+        try {
+          await tenantService.delete(tenant.id);
+          toast.success('Tenant deleted successfully');
+          fetchTenants();
+        } catch (error: any) {
+          console.error('Error deleting tenant:', error);
+          toast.error(error.response?.data?.error?.message || 'Failed to delete tenant');
+        }
+      }
+    );
   };
 
   const getStatusBadge = (status: string, isActive: boolean) => {
@@ -336,6 +334,21 @@ export default function TenantManagementPage() {
                     <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
                   )}
                 </div>
+
+                {!editingTenant && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Owner Password *
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Set an initial password for the owner"
+                    />
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>

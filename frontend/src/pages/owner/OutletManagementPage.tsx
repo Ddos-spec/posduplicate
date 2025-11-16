@@ -3,12 +3,14 @@ import { Plus, Edit, Store, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { outletService } from '../../services/outletService';
 import type { Outlet } from '../../services/outletService';
+import useConfirmationStore from '../../store/confirmationStore';
 
 export default function OutletManagementPage() {
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedOutlet, setSelectedOutlet] = useState<Outlet | null>(null);
+  const { showConfirmation } = useConfirmationStore();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -80,17 +82,21 @@ export default function OutletManagementPage() {
     }
   };
 
-  const handleDeleteOutlet = async (outlet: Outlet) => {
-    if (confirm(`Delete outlet "${outlet.name}"?`)) {
-      try {
-        await outletService.delete(outlet.id);
-        toast.success('Outlet deleted successfully!');
-        fetchOutlets();
-      } catch (error: any) {
-        console.error('Error deleting outlet:', error);
-        toast.error(error.response?.data?.error?.message || 'Failed to delete outlet');
+  const handleDeleteOutlet = (outlet: Outlet) => {
+    showConfirmation(
+      'Delete Outlet',
+      `Are you sure you want to delete outlet "${outlet.name}"?`,
+      async () => {
+        try {
+          await outletService.delete(outlet.id);
+          toast.success('Outlet deleted successfully!');
+          fetchOutlets();
+        } catch (error: any) {
+          console.error('Error deleting outlet:', error);
+          toast.error(error.response?.data?.error?.message || 'Failed to delete outlet');
+        }
       }
-    }
+    );
   };
 
   if (loading) {

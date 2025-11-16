@@ -103,9 +103,7 @@ export const getTenantStatusDistribution = async (_req: Request, res: Response, 
 
     const result = statusCounts.map(item => ({
       name: item.subscriptionStatus || 'Unknown',
-      value: item._count.id,
-      color: item.subscriptionStatus === 'active' ? '#10b981' :
-             item.subscriptionStatus === 'trial' ? '#f59e0b' : '#ef4444'
+      value: item._count.id
     }));
 
     res.json({ success: true, data: result });
@@ -120,37 +118,44 @@ export const getTenantStatusDistribution = async (_req: Request, res: Response, 
 export const getTopTenants = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { limit = 10 } = req.query;
+    const parsedLimit = parseInt(limit as string);
 
-    // Get transaction counts and totals per tenant
-    const tenantStats = await prisma.transaction.groupBy({
+    // Get transaction counts and totals per outlet
+    const outletStats = await prisma.transaction.groupBy({
       by: ['outletId'],
-      where: { status: 'completed' },
+      where: { status: 'completed', outletId: { not: null } }, // Ensure outletId is not null
       _count: { id: true },
       _sum: { total: true },
       orderBy: { _sum: { total: 'desc' } },
-      take: parseInt(limit as string)
+      take: parsedLimit
     });
 
-    // Get tenant details
-    const result = await Promise.all(
-      tenantStats.map(async (stat: any, index: number) => {
-        const outlet = await prisma.outlet.findUnique({
-          where: { id: stat.outletId || 0 },
-          include: {
-            tenants: {
-              select: { businessName: true }
-            }
-          }
-        });
+    // Extract unique outlet IDs
+    const outletIds = outletStats.map(stat => stat.outletId as number);
 
-        return {
-          rank: index + 1,
-          name: outlet?.tenants?.businessName || 'Unknown',
-          transactions: stat._count.id,
-          revenue: Number((stat._sum.total ?? 0) || 0)
-        };
-      })
+    // Fetch all necessary outlet and tenant data in a single query
+    const outletsWithTenants = await prisma.outlet.findMany({
+      where: { id: { in: outletIds } },
+      select: {
+        id: true,
+        tenants: {
+          select: { businessName: true }
+        }
+      }
+    });
+
+    // Create a map for quick lookup
+    const outletTenantMap = new Map(
+      outletsWithTenants.map(outlet => [outlet.id, outlet.tenants?.businessName || 'Unknown'])
     );
+
+    // Combine stats with tenant names
+    const result = outletStats.map((stat, index) => ({
+      rank: index + 1,
+      name: outletTenantMap.get(stat.outletId as number) || 'Unknown',
+      transactions: stat._count.id,
+      revenue: Number((stat._sum.total ?? 0) || 0)
+    }));
 
     res.json({ success: true, data: result });
   } catch (error) {

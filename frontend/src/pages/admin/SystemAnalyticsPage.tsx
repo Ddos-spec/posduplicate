@@ -80,6 +80,16 @@ export default function SystemAnalyticsPage() {
     return num.toString();
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return '#10b981'; // green
+      case 'trial': return '#f59e0b'; // yellow
+      case 'expired': return '#ef4444'; // red
+      case 'pending': return '#3b82f6'; // blue
+      default: return '#6b7280'; // gray
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -207,11 +217,10 @@ export default function SystemAnalyticsPage() {
                 labelLine={false}
                 label={(entry) => `${entry.name}: ${entry.value}`}
                 outerRadius={80}
-                fill="#8884d8"
                 dataKey="value"
               >
                 {tenantStatusData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell key={`cell-${index}`} fill={getStatusColor(entry.name)} />
                 ))}
               </Pie>
               <Tooltip />

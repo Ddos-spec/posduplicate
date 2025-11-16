@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { X, Plus, Edit, Trash2, Users } from 'lucide-react';
+import useConfirmationStore from '../../store/confirmationStore';
 
 interface Table {
   id: number;
@@ -23,74 +24,32 @@ export default function TableManagement({ onClose, onSelectTable }: TableManagem
   const [editingTable, setEditingTable] = useState<Table | null>(null);
   const [form, setForm] = useState({ name: '', capacity: '4' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const { showConfirmation } = useConfirmationStore();
 
   useEffect(() => {
     loadTables();
   }, []);
-
-  const loadTables = async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get('/tables');
-      setTables(data.data);
-    } catch (error: any) {
-      toast.error('Failed to load tables');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenForm = (table?: Table) => {
-    if (table) {
-      setEditingTable(table);
-      setForm({ name: table.name, capacity: table.capacity.toString() });
-    } else {
-      setEditingTable(null);
-      setForm({ name: '', capacity: '4' });
-    }
-    setShowForm(true);
-  };
-
-  const handleSave = async () => {
-    if (!form.name) {
-      toast.error('Table name is required');
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      const data = {
-        name: form.name,
-        capacity: parseInt(form.capacity)
-      };
-
-      if (editingTable) {
-        await api.put(`/tables/${editingTable.id}`, data);
-        toast.success('Table updated successfully');
-      } else {
-        await api.post('/tables', data);
-        toast.success('Table created successfully');
-      }
-
-      setShowForm(false);
-      loadTables();
-    } catch (error: any) {
+...
       toast.error(error.response?.data?.error?.message || 'Failed to save table');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleDelete = async (tableId: number) => {
-    if (!confirm('Are you sure you want to delete this table?')) return;
-
-    try {
-      await api.delete(`/tables/${tableId}`);
-      toast.success('Table deleted successfully');
-      loadTables();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || 'Failed to delete table');
-    }
+  const handleDelete = (tableId: number) => {
+    showConfirmation(
+      'Delete Table',
+      'Are you sure you want to delete this table?',
+      async () => {
+        try {
+          await api.delete(`/tables/${tableId}`);
+          toast.success('Table deleted successfully');
+          loadTables();
+        } catch (error: any) {
+          toast.error(error.response?.data?.error?.message || 'Failed to delete table');
+        }
+      }
+    );
   };
 
   const handleStatusChange = async (tableId: number, newStatus: string) => {
