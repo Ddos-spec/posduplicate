@@ -373,20 +373,6 @@
                   </div>
                 </div>
 
-                {!editingTenant && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-                    <p className="text-sm text-blue-800">
-                      <strong>Note:</strong> New tenants will automatically get:
-                    </p>
-                    <ul className="text-sm text-blue-700 mt-2 ml-4 list-disc">
-                      <li>Pro Plan (Rp 500,000/month)</li>
-                      <li>Active status</li>
-                      <li>5 outlets max</li>
-                      <li>20 users max</li>
-                      <li>First billing in 1 month</li>
-                    </ul>
-                  </div>
-                )}
               </div>
 
               <div className="flex justify-end gap-3 mt-6">

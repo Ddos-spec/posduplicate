@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
-import { subscriptionPlans } from '../config/subscriptionPlans';
 
 /**
  * Get billing history for all tenants (Super Admin)
@@ -56,7 +55,18 @@ export const getBillingHistory = async (req: Request, res: Response, next: NextF
  */
 export const getSubscriptionPlans = async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    res.json({ success: true, data: subscriptionPlans });
+    // Return a single default plan as tiered plans are removed
+    const defaultPlan = [
+      {
+        id: 1,
+        name: 'Standard',
+        price: 0, // Price is handled manually
+        features: [
+          'All Features Included'
+        ]
+      }
+    ];
+    res.json({ success: true, data: defaultPlan });
   } catch (error) {
     return next(error);
   }
