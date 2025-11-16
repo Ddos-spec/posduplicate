@@ -58,6 +58,7 @@ app.use(morgan('dev'));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Serve frontend build in production
+/*
 if (process.env.NODE_ENV === 'production') {
   const frontendBuildPath = path.join(__dirname, '../../frontend/dist');
   app.use(express.static(frontendBuildPath));
@@ -69,6 +70,7 @@ if (process.env.NODE_ENV === 'production') {
     }
   });
 }
+*/
 
 // Root route
 app.get('/', (_req: Request, res: Response) => {
