@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Settings as SettingsIcon, Store, Users as UsersIcon, Package, Loader2 } from 'lucide-react';
+import { Plus, Edit, Store, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { outletService } from '../../services/outletService';
 import type { Outlet } from '../../services/outletService';
@@ -8,7 +8,6 @@ export default function OutletManagementPage() {
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [selectedOutlet, setSelectedOutlet] = useState<Outlet | null>(null);
 
   // Form state

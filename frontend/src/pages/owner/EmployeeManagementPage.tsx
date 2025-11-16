@@ -19,16 +19,14 @@ export default function EmployeeManagementPage() {
 
   // Form state
   const [formData, setFormData] = useState({
-    name: '',
-    employeeCode: '',
-    pin: '',
+    user_id: 0,
+    employee_code: '',
+    pin_code: '',
     position: 'Cashier',
-    outletId: 0,
-    phone: '',
-    email: '',
+    outlet_id: 0,
     salary: 0,
-    hiredAt: '',
-    isActive: true
+    hired_at: '',
+    is_active: true
   });
 
   // Fetch employees and outlets
@@ -48,8 +46,8 @@ export default function EmployeeManagementPage() {
       setOutlets(outletsRes.data);
 
       // Set default outlet if available
-      if (outletsRes.data.length > 0 && formData.outletId === 0) {
-        setFormData(prev => ({ ...prev, outletId: outletsRes.data[0].id }));
+      if (outletsRes.data.length > 0 && formData.outlet_id === 0) {
+        setFormData(prev => ({ ...prev, outlet_id: outletsRes.data[0].id }));
       }
     } catch (error: any) {
       console.error('Error fetching data:', error);
@@ -61,28 +59,26 @@ export default function EmployeeManagementPage() {
 
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch =
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (emp.employeeCode && emp.employeeCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (emp.email && emp.email.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = filterStatus === 'All' || (emp.isActive ? 'Active' : 'Inactive') === filterStatus;
+      (emp.users?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (emp.employee_code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (emp.users?.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'All' || (emp.is_active ? 'Active' : 'Inactive') === filterStatus;
     const matchesPosition = filterPosition === 'All' || emp.position === filterPosition;
-    const matchesOutlet = filterOutlet === 'All' || emp.outletId === Number(filterOutlet);
+    const matchesOutlet = filterOutlet === 'All' || emp.outlet_id === Number(filterOutlet);
     return matchesSearch && matchesStatus && matchesPosition && matchesOutlet;
   });
 
   const handleAddEmployee = () => {
     setSelectedEmployee(null);
     setFormData({
-      name: '',
-      employeeCode: '',
-      pin: '',
+      user_id: 0,
+      employee_code: '',
+      pin_code: '',
       position: 'Cashier',
-      outletId: outlets.length > 0 ? outlets[0].id : 0,
-      phone: '',
-      email: '',
+      outlet_id: outlets.length > 0 ? outlets[0].id : 0,
       salary: 0,
-      hiredAt: '',
-      isActive: true
+      hired_at: '',
+      is_active: true
     });
     setShowModal(true);
   };
@@ -90,16 +86,14 @@ export default function EmployeeManagementPage() {
   const handleEditEmployee = (employee: ApiEmployee) => {
     setSelectedEmployee(employee);
     setFormData({
-      name: employee.name,
-      employeeCode: employee.employeeCode || '',
-      pin: employee.pin || '',
-      position: employee.position,
-      outletId: employee.outletId,
-      phone: employee.phone || '',
-      email: employee.email || '',
+      user_id: employee.user_id,
+      employee_code: employee.employee_code || '',
+      pin_code: employee.pin_code || '',
+      position: employee.position || 'Cashier',
+      outlet_id: employee.outlet_id,
       salary: employee.salary || 0,
-      hiredAt: employee.hiredAt ? employee.hiredAt.split('T')[0] : '',
-      isActive: employee.isActive
+      hired_at: employee.hired_at ? employee.hired_at.split('T')[0] : '',
+      is_active: employee.is_active
     });
     setShowModal(true);
   };
@@ -123,7 +117,7 @@ export default function EmployeeManagementPage() {
   };
 
   const handleDeleteEmployee = async (employee: ApiEmployee) => {
-    if (confirm(`Delete employee "${employee.name}"?`)) {
+    if (confirm(`Delete employee "${employee.users?.name || 'this employee'}"?`)) {
       try {
         await employeeService.delete(employee.id);
         toast.success('Employee deleted successfully!');
@@ -293,40 +287,43 @@ export default function EmployeeManagementPage() {
                         <User className="w-5 h-5 text-gray-600" />
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{emp.name}</div>
-                        <div className="text-xs text-gray-500">{emp.email}</div>
+                        <div className="font-medium text-gray-900">{emp.users?.name || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">{emp.users?.email || 'N/A'}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
-                    <div>{emp.employeeCode || 'N/A'}</div>
-                    <div className="text-xs text-gray-500">PIN: {emp.pin || 'N/A'}</div>
+                    <div>{emp.employee_code || 'N/A'}</div>
+                    <div className="text-xs text-gray-500">PIN: {emp.pin_code || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPositionBadge(emp.position)}`}>
-                      {emp.position}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPositionBadge(emp.position || 'N/A')}`}>
+                      {emp.position || 'N/A'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-700">
-                    {outlets.find(o => o.id === emp.outletId)?.name || 'N/A'}
+                    {outlets.find(o => o.id === emp.outlet_id)?.name || 'N/A'}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    <div>{emp.phone || 'N/A'}</div>
+                    <div>N/A</div>
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
                     {emp.salary ? formatCurrency(emp.salary) : 'N/A'}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      emp.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      emp.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
-                      {emp.isActive ? 'Active' : 'Inactive'}
+                      {emp.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => toast.info('View performance (Mock)')}
+                        onClick={() => {
+                          const msg = `Performance data for ${emp.users?.name || 'employee'} (Mock)`;
+                          toast.success(msg);
+                        }}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded"
                         title="View Performance"
                       >
