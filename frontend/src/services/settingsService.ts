@@ -33,6 +33,7 @@ export interface UpdateSettingsData {
   email?: string;
   phone?: string;
   address?: string;
+  logo?: string | null;
   taxRate?: number;
   taxName?: string;
   serviceCharge?: number;

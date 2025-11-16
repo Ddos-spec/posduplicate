@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Eye, User, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { employeeService, Employee as ApiEmployee } from '../../services/employeeService';
-import { outletService, Outlet } from '../../services/outletService';
+import { employeeService } from '../../services/employeeService';
+import type { Employee as ApiEmployee } from '../../services/employeeService';
+import { outletService } from '../../services/outletService';
+import type { Outlet } from '../../services/outletService';
 
 export default function EmployeeManagementPage() {
   const [employees, setEmployees] = useState<ApiEmployee[]>([]);

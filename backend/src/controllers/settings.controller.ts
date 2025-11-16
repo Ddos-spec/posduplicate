@@ -46,9 +46,20 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
       });
     }
 
+    // Merge tenant data with settings JSON
+    const settingsData = typeof tenant.settings === 'object' ? tenant.settings : {};
+
     res.json({
       success: true,
-      data: tenant
+      data: {
+        id: tenant.id,
+        businessName: tenant.businessName,
+        ownerName: tenant.ownerName,
+        email: tenant.email,
+        phone: tenant.phone,
+        address: tenant.address,
+        ...settingsData
+      }
     });
   } catch (error) {
     return next(error);
@@ -59,15 +70,7 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
 export const updateSettings = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.tenantId;
-    const {
-      businessName,
-      ownerName,
-      email,
-      phone,
-      address,
-      settings,
-      features
-    } = req.body;
+    const updateData = req.body;
 
     if (!tenantId) {
       return res.status(400).json({
@@ -79,16 +82,32 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
       });
     }
 
+    // Get current tenant data
+    const currentTenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings: true }
+    });
+
+    // Fields that go directly to tenant table
+    const tenantFields = ['businessName', 'ownerName', 'email', 'phone', 'address'];
+    const tenantData: any = {};
+    const settingsData: any = typeof currentTenant?.settings === 'object' ? { ...currentTenant.settings } : {};
+
+    // Separate tenant fields from settings fields
+    Object.keys(updateData).forEach(key => {
+      if (tenantFields.includes(key)) {
+        tenantData[key] = updateData[key];
+      } else {
+        settingsData[key] = updateData[key];
+      }
+    });
+
+    // Update tenant with both direct fields and merged settings
     const updatedTenant = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
-        ...(businessName && { businessName }),
-        ...(ownerName && { ownerName }),
-        ...(email && { email }),
-        ...(phone && { phone }),
-        ...(address && { address }),
-        ...(settings && { settings }),
-        ...(features && { features }),
+        ...tenantData,
+        settings: settingsData,
         updatedAt: new Date()
       }
     });
@@ -96,7 +115,15 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
     res.json({
       success: true,
       message: 'Settings updated successfully',
-      data: updatedTenant
+      data: {
+        id: updatedTenant.id,
+        businessName: updatedTenant.businessName,
+        ownerName: updatedTenant.ownerName,
+        email: updatedTenant.email,
+        phone: updatedTenant.phone,
+        address: updatedTenant.address,
+        ...settingsData
+      }
     });
   } catch (error) {
     return next(error);

@@ -1,0 +1,31 @@
+{
+  "name": "mypos-fullstack",
+  "version": "1.0.0",
+  "description": "MyPOS - Full Stack POS System",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "start": "cd backend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "prisma:generate": "cd backend && npm run prisma:generate",
+    "prisma:migrate": "cd backend && npx prisma migrate deploy",
+    "postinstall": "npm run prisma:generate"
+  },
+  "keywords": [
+    "pos",
+    "fullstack",
+    "react",
+    "express",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT"
+}

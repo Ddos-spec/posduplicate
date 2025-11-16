@@ -24,7 +24,8 @@ import {
   BarChart3,
   Loader2
 } from 'lucide-react';
-import { dashboardService, DashboardSummary, SalesTrendData, TopProduct, CategorySales, RecentTransaction } from '../../services/dashboardService';
+import { dashboardService } from '../../services/dashboardService';
+import type { DashboardSummary, SalesTrendData, TopProduct, CategorySales, RecentTransaction } from '../../services/dashboardService';
 import toast from 'react-hot-toast';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6b7280', '#8b5cf6'];

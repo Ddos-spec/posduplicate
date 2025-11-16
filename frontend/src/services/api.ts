@@ -2,6 +2,16 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+// Extract base URL (without /api) for full URL construction
+export const BASE_URL = API_URL.replace(/\/api\/?$/, '');
+
+// Helper function to get full URL from relative path
+export const getFullUrl = (relativePath: string): string => {
+  if (!relativePath) return '';
+  if (relativePath.startsWith('http')) return relativePath;
+  return `${BASE_URL}${relativePath}`;
+};
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
