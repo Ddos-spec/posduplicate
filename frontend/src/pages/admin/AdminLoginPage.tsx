@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { Shield, LogIn } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const init = useAuthStore((state) => state.init);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,11 +23,14 @@ export default function AdminLoginPage() {
           id: 0,
           email: 'admin@mypos.com',
           name: 'Super Admin',
-          role: { id: 0, name: 'Super Admin' },
+          role: { name: 'Super Admin' },
           tenant: null
         };
         localStorage.setItem('user', JSON.stringify(mockAdminUser));
         localStorage.setItem('token', 'mock-admin-token');
+
+        // Re-initialize auth store to load from localStorage
+        init();
 
         toast.success('Admin login successful!');
         navigate('/admin/dashboard');

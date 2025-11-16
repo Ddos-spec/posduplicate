@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Save, Upload, Loader2 } from 'lucide-react';
+import { Save, Upload, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { settingsService, TenantSettings } from '../../services/settingsService';
+import { settingsService } from '../../services/settingsService';
+import type { TenantSettings } from '../../services/settingsService';
+import api, { getFullUrl } from '../../services/api';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'business' | 'tax' | 'receipt' | 'notifications' | 'system' | 'password'>('business');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<TenantSettings | null>(null);
+
+  // Logo upload state
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string>('');
 
   // Password form state
   const [passwordForm, setPasswordForm] = useState({
@@ -26,11 +32,52 @@ export default function SettingsPage() {
       setLoading(true);
       const result = await settingsService.getSettings();
       setSettings(result.data);
+      setLogoPreview(result.data.logo || '');
     } catch (error: any) {
       console.error('Error fetching settings:', error);
       toast.error(error.response?.data?.error?.message || 'Failed to load settings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await api.post('/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const logoUrl = getFullUrl(response.data.data.url);
+      setLogoPreview(logoUrl);
+      if (settings) {
+        setSettings({ ...settings, logo: logoUrl });
+      }
+      toast.success('Logo uploaded successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error?.message || 'Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -136,7 +183,8 @@ export default function SettingsPage() {
                 ownerName: formData.get('ownerName'),
                 email: formData.get('email'),
                 phone: formData.get('phone'),
-                address: formData.get('address')
+                address: formData.get('address'),
+                logo: logoPreview || null
               });
             }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -187,8 +235,46 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Logo</label>
-                <p className="text-sm text-gray-500 mb-2">Image upload coming soon</p>
+                <label className="block text-sm font-medium mb-2">Business Logo</label>
+                <div className="space-y-3">
+                  {logoPreview && (
+                    <div className="relative w-32 h-32">
+                      <img
+                        src={logoPreview}
+                        alt="Logo Preview"
+                        className="w-full h-full object-contain rounded-lg border-2 border-gray-300 bg-white p-2"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLogoPreview('');
+                          if (settings) {
+                            setSettings({ ...settings, logo: '' });
+                          }
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                  <label className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-lg cursor-pointer transition ${
+                    uploadingLogo ? 'bg-gray-100 cursor-wait' : 'hover:border-blue-500 hover:bg-blue-50'
+                  }`}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      disabled={uploadingLogo}
+                      className="hidden"
+                    />
+                    <Upload className="w-4 h-4" />
+                    <span className="text-sm">
+                      {uploadingLogo ? 'Uploading...' : logoPreview ? 'Change Logo' : 'Upload Logo'}
+                    </span>
+                  </label>
+                  <p className="text-xs text-gray-500">Recommended: Square image, max 5MB</p>
+                </div>
               </div>
               <button
                 type="submit"
@@ -231,29 +317,161 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {activeTab === 'receipt' && (
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg mb-4">Receipt Settings</h3>
+        {activeTab === 'receipt' && settings && (
+          <div className="space-y-6">
+            <h3 className="font-semibold text-lg mb-4">Receipt / Struk Settings</h3>
+
+            {/* Business Info for Receipt */}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+              <h4 className="font-medium">Informasi Toko (akan tampil di struk)</h4>
+              <div>
+                <label className="block text-sm font-medium mb-2">Nama Toko</label>
+                <input
+                  type="text"
+                  value={settings.businessName || ''}
+                  onChange={(e) => setSettings({ ...settings, businessName: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="Contoh: Toko Saya"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Alamat</label>
+                <input
+                  type="text"
+                  value={settings.address || ''}
+                  onChange={(e) => setSettings({ ...settings, address: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="Jl. Contoh No. 123, Jakarta"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Nomor Telepon</label>
+                <input
+                  type="text"
+                  value={settings.phone || ''}
+                  onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="021-12345678"
+                />
+              </div>
+            </div>
+
+            {/* Custom Messages */}
             <div>
-              <label className="block text-sm font-medium mb-2">Receipt Header</label>
-              <textarea defaultValue="Thank you for visiting Kebuli Utsman!" className="w-full px-3 py-2 border rounded-lg" rows={3} />
+              <label className="block text-sm font-medium mb-2">Header Custom (opsional)</label>
+              <textarea
+                value={settings.receiptHeader || ''}
+                onChange={(e) => setSettings({ ...settings, receiptHeader: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg"
+                rows={2}
+                placeholder="Pesan tambahan di atas struk (opsional)"
+              />
+              <p className="text-xs text-gray-500 mt-1">Contoh: "Promo 10% setiap Jumat!"</p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Receipt Footer</label>
-              <textarea defaultValue="Visit us again!" className="w-full px-3 py-2 border rounded-lg" rows={2} />
+              <label className="block text-sm font-medium mb-2">Footer Custom (opsional)</label>
+              <textarea
+                value={settings.receiptFooter || ''}
+                onChange={(e) => setSettings({ ...settings, receiptFooter: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg"
+                rows={2}
+                placeholder="Pesan tambahan di bawah struk (opsional)"
+              />
+              <p className="text-xs text-gray-500 mt-1">Sudah ada default: "Terima kasih, Barang tidak dapat dikembalikan"</p>
             </div>
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <input type="checkbox" id="show-logo" defaultChecked className="w-4 h-4" />
-              <label htmlFor="show-logo">Show Logo on Receipt</label>
-            </div>
+
+            {/* Printer Settings */}
             <div>
-              <label className="block text-sm font-medium mb-2">Printer Width</label>
-              <select className="w-full px-3 py-2 border rounded-lg">
-                <option>58mm</option>
-                <option selected>80mm</option>
+              <label className="block text-sm font-medium mb-2">Lebar Printer</label>
+              <select
+                value={settings.printerWidth || '80mm'}
+                onChange={(e) => setSettings({ ...settings, printerWidth: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg"
+              >
+                <option value="58mm">58mm (kecil)</option>
+                <option value="80mm">80mm (standard)</option>
               </select>
             </div>
-            <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save Changes</button>
+
+            {/* Logo Upload Section */}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+              <h4 className="font-medium">Logo Toko</h4>
+              {logoPreview && (
+                <div className="relative w-32 h-32">
+                  <img
+                    src={logoPreview}
+                    alt="Logo Preview"
+                    className="w-full h-full object-contain rounded-lg border-2 border-gray-300 bg-white p-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLogoPreview('');
+                      if (settings) {
+                        setSettings({ ...settings, logo: '' });
+                      }
+                    }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              <label className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-lg cursor-pointer transition ${
+                uploadingLogo ? 'bg-gray-100 cursor-wait' : 'hover:border-blue-500 hover:bg-blue-50'
+              }`}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  disabled={uploadingLogo}
+                  className="hidden"
+                />
+                <Upload className="w-4 h-4" />
+                <span className="text-sm">
+                  {uploadingLogo ? 'Uploading...' : logoPreview ? 'Ganti Logo' : 'Upload Logo'}
+                </span>
+              </label>
+              <p className="text-xs text-gray-500">Logo persegi, maksimal 5MB</p>
+
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="show-logo"
+                  checked={settings.showLogoOnReceipt || false}
+                  onChange={(e) => setSettings({ ...settings, showLogoOnReceipt: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="show-logo" className="cursor-pointer text-sm">Tampilkan Logo di Struk</label>
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleSave({
+                businessName: settings.businessName,
+                address: settings.address,
+                phone: settings.phone,
+                receiptHeader: settings.receiptHeader,
+                receiptFooter: settings.receiptFooter,
+                printerWidth: settings.printerWidth,
+                logo: logoPreview || null,
+                showLogoOnReceipt: settings.showLogoOnReceipt
+              })}
+              disabled={saving}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Menyimpan...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Simpan Pengaturan Struk
+                </>
+              )}
+            </button>
           </div>
         )}
 

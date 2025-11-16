@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useCartStore } from '../store/cartStore';
-import api from '../services/api';
+import api, { getFullUrl } from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
 import { ShoppingCart, Search, X, Plus, Minus, Trash2, CreditCard, Edit, Settings, Receipt, UtensilsCrossed, Tag, Menu } from 'lucide-react';
 import TransactionHistory from '../components/transaction/TransactionHistory';
 import TableManagement from '../components/table/TableManagement';
 import ModifierManagement from '../components/modifiers/ModifierManagement';
+import { printReceipt } from '../utils/exportUtils';
+import { settingsService } from '../services/settingsService';
+import type { TenantSettings } from '../services/settingsService';
 
 interface Product {
   id: number;
@@ -30,6 +33,7 @@ export default function CashierPage() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [cashReceived, setCashReceived] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [settings, setSettings] = useState<TenantSettings | null>(null);
 
   // Split bill states
   const [splitBillMode, setSplitBillMode] = useState(false);
@@ -47,6 +51,8 @@ export default function CashierPage() {
     image: '',
     description: ''
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   // Category management states
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -72,7 +78,17 @@ export default function CashierPage() {
   useEffect(() => {
     loadProducts();
     loadCategories();
+    loadSettings();
   }, [selectedCategory]);
+
+  const loadSettings = async () => {
+    try {
+      const result = await settingsService.getSettings();
+      setSettings(result.data);
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+  };
 
   const loadProducts = async () => {
     try {
@@ -179,8 +195,13 @@ export default function CashierPage() {
         }];
       }
 
+      // Get user's outlet ID from localStorage
+      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+      const outletId = user?.outletId || user?.outlet?.id || null;
+
       const orderData = {
         orderType: 'dine_in',
+        outletId: outletId,
         items: items.map(item => ({
           itemId: item.itemId,
           name: item.name,
@@ -198,8 +219,40 @@ export default function CashierPage() {
         payments: finalPayments,
       };
 
-      await api.post('/transactions', orderData);
+      const response = await api.post('/transactions', orderData);
+      const transactionData = response.data.data;
+
       toast.success('Payment successful!');
+
+      // Generate and print receipt
+      printReceipt(
+        {
+          transactionNumber: transactionData?.transactionNumber,
+          items: items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            notes: item.notes
+          })),
+          subtotal: getSubtotal(),
+          discountAmount: 0,
+          taxAmount: 0,
+          serviceCharge: 0,
+          total: getTotal(),
+          payments: finalPayments,
+          cashierName: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').name : undefined,
+          outletName: undefined
+        },
+        settings ? {
+          businessName: settings.businessName,
+          address: settings.address || undefined,
+          phone: settings.phone || undefined,
+          receiptHeader: settings.receiptHeader || undefined,
+          receiptFooter: settings.receiptFooter || undefined,
+          printerWidth: settings.printerWidth || undefined
+        } : undefined
+      );
+
       clearCart();
       setShowPayment(false);
       setCashReceived('');
@@ -214,6 +267,45 @@ export default function CashierPage() {
 
   const changeAmount = cashReceived ? parseFloat(cashReceived) - getTotal() : 0;
 
+  // Image upload handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await api.post('/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const imageUrl = getFullUrl(response.data.data.url);
+      setProductForm({ ...productForm, image: imageUrl });
+      setImagePreview(imageUrl);
+      toast.success('Image uploaded successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error?.message || 'Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   // Product management handlers
   const handleOpenProductForm = (product?: Product) => {
     if (product) {
@@ -225,6 +317,7 @@ export default function CashierPage() {
         image: product.image || '',
         description: product.description || ''
       });
+      setImagePreview(product.image || '');
     } else {
       setEditingProduct(null);
       setProductForm({
@@ -234,6 +327,7 @@ export default function CashierPage() {
         image: '',
         description: ''
       });
+      setImagePreview('');
     }
     setShowProductForm(true);
   };
@@ -898,14 +992,54 @@ export default function CashierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Image URL</label>
-                <input
-                  type="text"
-                  value={productForm.image}
-                  onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="https://example.com/image.jpg"
-                />
+                <label className="block text-sm font-medium mb-2">Product Image</label>
+                <div className="space-y-3">
+                  {imagePreview && (
+                    <div className="relative w-32 h-32 mx-auto">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover rounded-lg border-2 border-gray-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImagePreview('');
+                          setProductForm({ ...productForm, image: '' });
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <label className={`flex-1 px-4 py-2 border-2 border-dashed rounded-lg text-center cursor-pointer transition ${
+                      uploadingImage ? 'bg-gray-100 cursor-wait' : 'hover:border-blue-500 hover:bg-blue-50'
+                    }`}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                      <span className="text-sm text-gray-600">
+                        {uploadingImage ? 'Uploading...' : imagePreview ? 'Change Image' : '📷 Upload Image'}
+                      </span>
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    value={productForm.image}
+                    onChange={(e) => {
+                      setProductForm({ ...productForm, image: e.target.value });
+                      setImagePreview(e.target.value);
+                    }}
+                    className="w-full px-4 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Or paste image URL"
+                  />
+                </div>
               </div>
 
               <div>

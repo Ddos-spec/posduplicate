@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Settings as SettingsIcon, Store, Users as UsersIcon, Package, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { outletService, Outlet } from '../../services/outletService';
+import { outletService } from '../../services/outletService';
+import type { Outlet } from '../../services/outletService';
 
 export default function OutletManagementPage() {
   const [outlets, setOutlets] = useState<Outlet[]>([]);

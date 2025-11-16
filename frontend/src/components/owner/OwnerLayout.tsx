@@ -69,7 +69,7 @@ export default function OwnerLayout() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-          <button onClick={handleLogout} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 w-full">
+          <button onClick={handleLogout} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 text-left transition-colors">
             <LogOut className="w-5 h-5" />
             {sidebarOpen && <span>Logout</span>}
           </button>

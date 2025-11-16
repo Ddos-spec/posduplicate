@@ -16,7 +16,7 @@ export const getCategories = async (
 
     // Tenant isolation (except Super Admin)
     if (req.tenantId) {
-      where.outlet = { tenantId: req.tenantId };
+      where.outlets = { tenantId: req.tenantId };
     }
 
     if (type) {
