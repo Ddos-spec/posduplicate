@@ -52,9 +52,12 @@ export default function AdminLayout() {
         <div className="p-4 flex items-center justify-between border-b border-gray-800">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
-              <Shield className="w-6 h-6 text-blue-400" />
-              <h1 className="text-xl font-bold">Admin Portal</h1>
+              <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain" />
+              <h1 className="text-xl font-bold">MyPOS Admin</h1>
             </div>
+          )}
+          {!sidebarOpen && (
+            <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain mx-auto" />
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -98,8 +101,8 @@ export default function AdminLayout() {
           <aside className="bg-gray-900 text-white w-64 h-full" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 flex items-center justify-between border-b border-gray-800">
               <div className="flex items-center gap-2">
-                <Shield className="w-6 h-6 text-blue-400" />
-                <h1 className="text-xl font-bold">Admin Portal</h1>
+                <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain" />
+                <h1 className="text-xl font-bold">MyPOS Admin</h1>
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}

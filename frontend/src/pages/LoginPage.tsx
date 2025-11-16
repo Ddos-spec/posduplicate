@@ -51,12 +51,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-4">
       <Toaster position="top-right" />
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">MyPOS</h1>
-          <p className="text-gray-600">Multi-Tenant POS System</p>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <img src="/logo.webp" alt="POS E2NK Logo" className="w-12 h-12 object-contain" />
+            <h1 className="text-3xl font-bold text-gray-800">MyPOS</h1>
+          </div>
+          <p className="text-gray-600">Point of Sale System</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -66,7 +69,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900"
               placeholder="your@email.com"
               required
             />
@@ -78,7 +81,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900"
               placeholder="••••••••"
               required
             />
@@ -87,21 +90,12 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-slate-900 to-blue-900 text-white py-3 rounded-lg font-semibold hover:from-slate-800 hover:to-blue-800 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
           >
             <LogIn className="w-5 h-5" />
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p className="font-medium mb-2">Demo Accounts:</p>
-          <div className="space-y-1">
-            <p><strong>Admin:</strong> admin@mypos.com / admin123 (→ /admin/login)</p>
-            <p><strong>Owner:</strong> owner@kebuliutsman.com / password123</p>
-            <p><strong>Cashier:</strong> kasir@kebuliutsman.com / password123</p>
-          </div>
-        </div>
       </div>
     </div>
   );
