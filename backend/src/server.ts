@@ -150,7 +150,12 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 app.listen(PORT, () => {
   console.log(`🚀 MyPOS API Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔗 Internal health check: http://localhost:${PORT}/health`);
+
+  if (process.env.NODE_ENV === 'production') {
+    console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'Not set'}`);
+    console.log(`ℹ️  External access via reverse proxy (EasyPanel/Nginx)`);
+  }
 });
 
 export default app;
