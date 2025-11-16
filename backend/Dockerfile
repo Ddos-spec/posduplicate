@@ -56,11 +56,13 @@ RUN mkdir -p uploads && \
 USER nodejs
 
 # Expose port (EasyPanel will handle this)
-EXPOSE 3000
+# Port is dynamic via ENV variable, default 3000
+EXPOSE 3500
 
 # Health check
+# Use PORT env variable or default to 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "const port = process.env.PORT || 3000; require('http').get('http://localhost:' + port + '/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
