@@ -8,8 +8,8 @@ COPY package*.json ./
 COPY backend/package*.json ./backend/
 COPY frontend/package*.json ./frontend/
 
-# Install dependencies
-RUN npm install
+# Install dependencies (skip postinstall to avoid prisma error)
+RUN npm install --ignore-scripts
 RUN cd backend && npm install
 RUN cd frontend && npm install
 
@@ -53,4 +53,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Run migrations and start
-CMD npx prisma migrate deploy && node dist/server.js
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
