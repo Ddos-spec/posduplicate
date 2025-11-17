@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   LineChart,
   Line,
@@ -32,6 +33,7 @@ import axios from 'axios';
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6b7280', '#8b5cf6'];
 
 export default function OwnerDashboardPage() {
+  const navigate = useNavigate();
   const [dateRange, setDateRange] = useState('week');
   const [selectedOutlet, setSelectedOutlet] = useState<string>('all');
   const [loading, setLoading] = useState(true);
@@ -312,19 +314,31 @@ export default function OwnerDashboardPage() {
       <div className="bg-white p-6 rounded-lg shadow">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition flex flex-col items-center gap-2">
+          <button
+            onClick={() => navigate('/cashier')}
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition flex flex-col items-center gap-2"
+          >
             <Store className="w-8 h-8 text-blue-600" />
             <span className="text-sm font-medium text-gray-700">Go to POS</span>
           </button>
-          <button className="p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition flex flex-col items-center gap-2">
+          <button
+            onClick={() => navigate('/cashier')}
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition flex flex-col items-center gap-2"
+          >
             <Package className="w-8 h-8 text-green-600" />
-            <span className="text-sm font-medium text-gray-700">Add Product</span>
+            <span className="text-sm font-medium text-gray-700">Manage Products</span>
           </button>
-          <button className="p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition flex flex-col items-center gap-2">
+          <button
+            onClick={() => navigate('/owner/reports')}
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition flex flex-col items-center gap-2"
+          >
             <BarChart3 className="w-8 h-8 text-purple-600" />
             <span className="text-sm font-medium text-gray-700">View Reports</span>
           </button>
-          <button className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition flex flex-col items-center gap-2">
+          <button
+            onClick={() => navigate('/owner/settings')}
+            className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition flex flex-col items-center gap-2"
+          >
             <Settings className="w-8 h-8 text-orange-600" />
             <span className="text-sm font-medium text-gray-700">Settings</span>
           </button>

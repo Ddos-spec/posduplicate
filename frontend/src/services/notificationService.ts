@@ -14,4 +14,9 @@ export const notificationService = {
     const response = await api.get<{ success: boolean; data: AdminNotification[]; count: number }>('/notifications/admin');
     return response.data;
   },
+
+  async getTenantNotifications() {
+    const response = await api.get<{ success: boolean; data: AdminNotification[]; count: number }>('/notifications/tenant');
+    return response.data;
+  },
 };

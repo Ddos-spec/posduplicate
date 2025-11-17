@@ -78,10 +78,15 @@ export default function SettingsPage() {
       const logoUrl = getFullUrl(response.data.data.url);
       setLogoPreview(logoUrl);
       if (settings) {
-        const updatedSettings = { ...settings, logo: response.data.data.url }; // Store relative URL, not full URL
-        setSettings(updatedSettings);
-        // Save the updated settings to the database
-        await handleSave(updatedSettings);
+        // Create a clean settings object with only the fields that go to tenant table and settings object
+        const cleanSettings = {
+          ...settings,
+          logo: response.data.data.url
+        };
+
+        setSettings(cleanSettings);
+        // Save only the logo field to the settings in the database
+        await handleSave({ logo: response.data.data.url });
       }
       toast.success('Logo uploaded successfully');
     } catch (error: unknown) {
@@ -96,10 +101,15 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSave = async (updateData: TenantSettings) => {
+  const handleSave = async (updateData: Partial<TenantSettings>) => {
     try {
       setSaving(true);
-      await settingsService.updateSettings(updateData);
+
+      // Clean the updateData to avoid circular references
+      const cleanUpdateData = { ...updateData };
+      delete (cleanUpdateData as any).id; // Remove id if it's not supposed to be updated
+
+      await settingsService.updateSettings(cleanUpdateData);
       toast.success('Settings saved successfully!');
       fetchSettings(); // Refresh settings
     } catch (error: unknown) {

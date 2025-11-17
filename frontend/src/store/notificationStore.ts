@@ -18,7 +18,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   fetchNotifications: async () => {
     try {
-      const response = await notificationService.getAdminNotifications();
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      let response;
+
+      if (user.role?.name === 'Super Admin') {
+        // Super admins get all system notifications
+        response = await notificationService.getAdminNotifications();
+      } else {
+        // Regular users (owner, cashier) get tenant-specific notifications
+        response = await notificationService.getTenantNotifications();
+      }
+
       set({
         notifications: response.data,
         unreadCount: response.count,
