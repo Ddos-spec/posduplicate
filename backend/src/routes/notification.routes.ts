@@ -1,13 +1,14 @@
 import { Router } from 'express';
-import { getAdminNotifications } from '../controllers/notification.controller';
+import { getAdminNotifications, getTenantNotifications } from '../controllers/notification.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { superAdminOnly } from '../middlewares/tenant.middleware';
 
 const router = Router();
 
-// All routes require Super Admin access
-router.use(authMiddleware, superAdminOnly);
+// Admin notifications route - requires super admin access
+router.get('/admin', authMiddleware, superAdminOnly, getAdminNotifications);
 
-router.get('/admin', getAdminNotifications);
+// Tenant notifications route - any authenticated user can access their own tenant notifications
+router.get('/tenant', authMiddleware, getTenantNotifications);
 
 export default router;

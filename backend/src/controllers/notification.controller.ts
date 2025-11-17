@@ -69,3 +69,101 @@ export const getAdminNotifications = async (_req: Request, res: Response, next: 
     next(error);
   }
 };
+
+export const getTenantNotifications = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = (req as any).tenantId;
+
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'TENANT_ID_REQUIRED',
+          message: 'Tenant ID is required'
+        }
+      });
+    }
+
+    const now = new Date();
+
+    // Get subscription-related notifications for this tenant
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        id: true,
+        businessName: true,
+        subscriptionExpiresAt: true,
+        subscriptionStatus: true,
+        nextBillingDate: true,
+      },
+    });
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'TENANT_NOT_FOUND',
+          message: 'Tenant not found'
+        }
+      });
+    }
+
+    const notifications = [];
+
+    // Check subscription expiration
+    if (tenant.subscriptionExpiresAt) {
+      const daysUntilExpiry = Math.ceil(
+        (new Date(tenant.subscriptionExpiresAt).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (tenant.subscriptionStatus === 'active' && daysUntilExpiry <= 7 && daysUntilExpiry >= 0) {
+        notifications.push({
+          id: `subscription-expiring-${tenant.id}`,
+          type: 'expiring',
+          message: `Your subscription is expiring in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}.`,
+          details: `Current subscription expires on ${new Date(tenant.subscriptionExpiresAt).toLocaleDateString('id-ID')}`,
+          tenantId: tenant.id,
+          createdAt: tenant.subscriptionExpiresAt,
+        });
+      } else if (tenant.subscriptionStatus !== 'active' && new Date(tenant.subscriptionExpiresAt) < now) {
+        notifications.push({
+          id: `subscription-overdue-${tenant.id}`,
+          type: 'overdue',
+          message: `Your subscription has expired.`,
+          details: `Expired on ${new Date(tenant.subscriptionExpiresAt).toLocaleDateString('id-ID')}`,
+          tenantId: tenant.id,
+          createdAt: tenant.subscriptionExpiresAt,
+        });
+      }
+    }
+
+    // Check for next billing date (if within 7 days)
+    if (tenant.nextBillingDate) {
+      const daysUntilBilling = Math.ceil(
+        (new Date(tenant.nextBillingDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (daysUntilBilling <= 7 && daysUntilBilling >= 0) {
+        notifications.push({
+          id: `billing-reminder-${tenant.id}`,
+          type: 'billing',
+          message: `Next billing is due in ${daysUntilBilling} day${daysUntilBilling !== 1 ? 's' : ''}.`,
+          details: `Billing date: ${new Date(tenant.nextBillingDate).toLocaleDateString('id-ID')}`,
+          tenantId: tenant.id,
+          createdAt: tenant.nextBillingDate,
+        });
+      }
+    }
+
+    // Sort notifications by date
+    notifications.sort((a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
+
+    res.json({
+      success: true,
+      data: notifications,
+      count: notifications.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
