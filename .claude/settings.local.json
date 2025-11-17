@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(README.md)",
+      "Bash(dir /s /b)",
+      "Bash(findstr:*)",
+      "Bash(dir:*)",
+      "Bash(npm create vite:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(echo:*)",
+      "Bash(.env)",
+      "Bash(npm run build:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(node generate-password.js:*)",
+      "Bash(node:*)",
+      "Bash(npx prisma generate)",
+      "Bash(timeout 3 echo:*)",
+      "Bash(exit 0)",
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 5 echo:*)",
+      "Bash(taskkill:*)",
+      "Bash(nul)",
+      "Bash(timeout 8 echo:*)",
+      "Bash(npx prisma:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
