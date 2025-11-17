@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -14,12 +14,20 @@ import {
   Bell
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNotificationStore } from '../../store/notificationStore';
+import NotificationPanel from '../admin/NotificationPanel';
 
 export default function OwnerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount, fetchNotifications, togglePanel } = useNotificationStore();
+
+  // Fetch notifications on initial load
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -76,12 +84,12 @@ export default function OwnerLayout() {
           ))}
           <button
             onClick={handleLogout}
-            className={`flex items-center gap-3 p-3 rounded-lg transition hover:bg-gray-800 w-full text-left ${
-              location.pathname === '/logout' ? 'bg-blue-600' : ''
+            className={`flex items-center gap-3 p-3 rounded-lg transition hover:bg-red-700 w-full text-left ${
+              location.pathname === '/logout' ? 'bg-red-600' : 'text-red-400 hover:text-white'
             }`}
           >
             <LogOut className="w-5 h-5" />
-            {sidebarOpen && <span>Logout</span>}
+            {sidebarOpen && <span className="text-red-400">Logout</span>}
           </button>
         </nav>
       </aside>
@@ -117,10 +125,10 @@ export default function OwnerLayout() {
                   handleLogout();
                   setMobileMenuOpen(false);
                 }}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 w-full"
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-700 w-full text-red-400"
               >
                 <LogOut className="w-5 h-5" />
-                <span>Logout</span>
+                <span className="text-red-400">Logout</span>
               </button>
             </nav>
           </aside>
@@ -140,16 +148,22 @@ export default function OwnerLayout() {
                 <p className="text-sm text-gray-500">Welcome back, {user.name}!</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 relative">
               <select className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option>Main Store</option>
                 <option>Branch Kemang</option>
                 <option>All Outlets</option>
               </select>
-              <button className="p-2 rounded-full hover:bg-gray-100 relative">
+              <button
+                onClick={togglePanel}
+                className="p-2 rounded-full hover:bg-gray-100 relative"
+              >
                 <Bell className="w-5 h-5 text-gray-600" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
               </button>
+              <NotificationPanel />
               <div className="hidden sm:flex items-center gap-2">
                 <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
                   {user.name?.[0] || 'O'}
