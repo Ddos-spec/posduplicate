@@ -74,14 +74,16 @@ export default function OwnerLayout() {
               {sidebarOpen && <span>{item.label}</span>}
             </Link>
           ))}
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-          <button onClick={handleLogout} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 text-left transition-colors">
+          <button
+            onClick={handleLogout}
+            className={`flex items-center gap-3 p-3 rounded-lg transition hover:bg-gray-800 w-full text-left ${
+              location.pathname === '/logout' ? 'bg-blue-600' : ''
+            }`}
+          >
             <LogOut className="w-5 h-5" />
             {sidebarOpen && <span>Logout</span>}
           </button>
-        </div>
+        </nav>
       </aside>
 
       {/* Mobile Sidebar */}
@@ -110,14 +112,17 @@ export default function OwnerLayout() {
                   <span>{item.label}</span>
                 </Link>
               ))}
-            </nav>
-
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-              <button onClick={handleLogout} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 w-full">
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 w-full"
+              >
                 <LogOut className="w-5 h-5" />
                 <span>Logout</span>
               </button>
-            </div>
+            </nav>
           </aside>
         </div>
       )}
