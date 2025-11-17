@@ -25,6 +25,7 @@ import UserManagementPage from './pages/owner/UserManagementPage';
 import OutletManagementPage from './pages/owner/OutletManagementPage';
 import ReportsPage from './pages/owner/ReportsPage';
 import SettingsPage from './pages/owner/SettingsPage';
+import ProductManagementPage from './pages/owner/ProductManagementPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
@@ -78,6 +79,7 @@ function App() {
           <Route path="outlets" element={<OutletManagementPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="products" element={<ProductManagementPage />} />
           <Route index element={<Navigate to="/owner/dashboard" />} />
         </Route>
 

@@ -98,13 +98,13 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
       },
     });
 
+    // If tenant not found, return empty notifications instead of error
+    // This could happen if tenant was deleted but user still has old token
     if (!tenant) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: 'TENANT_NOT_FOUND',
-          message: 'Tenant not found'
-        }
+      return res.json({
+        success: true,
+        data: [],
+        count: 0,
       });
     }
 
