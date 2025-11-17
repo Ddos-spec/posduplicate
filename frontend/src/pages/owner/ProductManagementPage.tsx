@@ -8,10 +8,9 @@ import {
   Image as ImageIcon,
   AlertCircle
 } from 'lucide-react';
-import { api } from '../../services/api';
+import api, { getFullUrl } from '../../services/api';
 import toast from 'react-hot-toast';
-import ConfirmationModal from '../../components/common/ConfirmationModal';
-import { useModalStore } from '../../store/modalStore';
+import useConfirmationStore from '../../store/confirmationStore';
 
 interface Category {
   id: number;
@@ -48,7 +47,7 @@ export default function ProductManagementPage() {
     description: ''
   });
 
-  const { isModalOpen, modalConfig, openModal, closeModal } = useModalStore();
+  const { showConfirmation } = useConfirmationStore();
 
   // Load products
   const loadProducts = useCallback(async () => {
@@ -162,11 +161,11 @@ export default function ProductManagementPage() {
   };
 
   // Delete product
-  const handleDeleteProduct = async (productId: number) => {
-    openModal({
-      title: 'Delete Product',
-      message: 'Are you sure you want to delete this product? This action cannot be undone.',
-      onConfirm: async () => {
+  const handleDeleteProduct = (productId: number) => {
+    showConfirmation(
+      'Delete Product',
+      'Are you sure you want to delete this product? This action cannot be undone.',
+      async () => {
         try {
           await api.delete(`/products/${productId}`);
           toast.success('Product deleted successfully');
@@ -176,7 +175,7 @@ export default function ProductManagementPage() {
           toast.error('Failed to delete product');
         }
       }
-    });
+    );
   };
 
   // Handle image upload
@@ -454,8 +453,6 @@ export default function ProductManagementPage() {
         </div>
       )}
 
-      {/* Confirmation Modal */}
-      <ConfirmationModal />
     </div>
   );
 }
