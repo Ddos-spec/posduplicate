@@ -1,3 +1,17 @@
+import { useState, useEffect } from 'react';
+import { Plus, Search, Edit, Trash2, Building2, Loader2, XCircle, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { tenantService } from '../../services/tenantService';
+import type { Tenant, CreateTenantData, UpdateTenantData } from '../../services/tenantService';
+import useConfirmationStore from '../../store/confirmationStore';
+
+export default function TenantManagementPage() {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [_planFilter, _setPlanFilter] = useState<string>('all'); // _planFilter is no longer used but kept for consistency
+  const [showModal, setShowModal] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [formData, setFormData] = useState<CreateTenantData>({
     businessName: '',
@@ -29,7 +43,7 @@
 
   useEffect(() => {
     fetchTenants();
-  }, [statusFilter, _planFilter]);
+  }, [statusFilter, _planFilter, searchTerm]); // Added searchTerm to dependency array
 
   const handleSearch = () => {
     fetchTenants();

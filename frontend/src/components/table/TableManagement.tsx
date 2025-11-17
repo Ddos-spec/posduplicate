@@ -29,7 +29,49 @@ export default function TableManagement({ onClose, onSelectTable }: TableManagem
   useEffect(() => {
     loadTables();
   }, []);
-...
+
+  const loadTables = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/tables');
+      setTables(response.data.data);
+    } catch (error) {
+      console.error('Error loading tables:', error);
+      toast.error('Failed to load tables');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenForm = (table?: Table) => {
+    if (table) {
+      setEditingTable(table);
+      setForm({ name: table.name, capacity: String(table.capacity) });
+    } else {
+      setEditingTable(null);
+      setForm({ name: '', capacity: '4' });
+    }
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name || !form.capacity) {
+      toast.error('Table name and capacity are required');
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      if (editingTable) {
+        await api.put(`/tables/${editingTable.id}`, form);
+        toast.success('Table updated successfully');
+      } else {
+        await api.post('/tables', form);
+        toast.success('Table added successfully');
+      }
+      setShowForm(false);
+      loadTables();
+    } catch (error: any) {
+      console.error('Error saving table:', error);
       toast.error(error.response?.data?.error?.message || 'Failed to save table');
     } finally {
       setIsProcessing(false);
