@@ -7,7 +7,7 @@ export const getEmployees = async (req: Request, res: Response, _next: NextFunct
     const where: any = {};
 
     if (req.tenantId) {
-      where.user = { tenantId: req.tenantId };
+      where.users = { tenantId: req.tenantId };
     }
 
     if (outlet_id) {
