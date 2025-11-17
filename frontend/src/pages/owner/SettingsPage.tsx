@@ -28,7 +28,9 @@ export default function SettingsPage() {
       setLoading(true);
       const result = await settingsService.getSettings();
       setSettings(result.data);
-      setLogoPreview(result.data.logo || '');
+      // Convert relative logo path to full URL if it exists
+      const logoUrl = result.data.logo ? getFullUrl(result.data.logo) : '';
+      setLogoPreview(logoUrl);
     } catch (error: unknown) {
       console.error('Error fetching settings:', error);
       let errorMessage = 'Failed to load settings';
@@ -76,7 +78,10 @@ export default function SettingsPage() {
       const logoUrl = getFullUrl(response.data.data.url);
       setLogoPreview(logoUrl);
       if (settings) {
-        setSettings({ ...settings, logo: logoUrl });
+        const updatedSettings = { ...settings, logo: response.data.data.url }; // Store relative URL, not full URL
+        setSettings(updatedSettings);
+        // Save the updated settings to the database
+        await handleSave(updatedSettings);
       }
       toast.success('Logo uploaded successfully');
     } catch (error: unknown) {

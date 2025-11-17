@@ -91,10 +91,10 @@ export default function AdminLayout() {
           ))}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 w-full transition text-gray-300"
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-700 w-full transition text-red-400 hover:text-white"
           >
             <LogOut className="w-5 h-5" />
-            {sidebarOpen && <span>Logout</span>}
+            {sidebarOpen && <span className="text-red-400">Logout</span>}
           </button>
         </nav>
       </aside>
@@ -137,10 +137,10 @@ export default function AdminLayout() {
                   handleLogout();
                   setMobileMenuOpen(false);
                 }}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 w-full transition text-gray-300"
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-700 w-full transition text-red-400 hover:text-white"
               >
                 <LogOut className="w-5 h-5" />
-                <span>Logout</span>
+                <span className="text-red-400">Logout</span>
               </button>
             </nav>
           </aside>
