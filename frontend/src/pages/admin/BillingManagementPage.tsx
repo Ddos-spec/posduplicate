@@ -100,7 +100,7 @@ export default function BillingManagementPage() {
 
   const openPaymentModal = (record: BillingRecord) => {
     setSelectedRecord(record);
-    setShowModal(true);
+    setShowPaymentModal(true);
   };
 
   const formatDate = (dateString: string) => {
