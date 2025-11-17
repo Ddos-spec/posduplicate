@@ -322,7 +322,7 @@ export default function OwnerDashboardPage() {
             <span className="text-sm font-medium text-gray-700">Go to POS</span>
           </button>
           <button
-            onClick={() => navigate('/cashier')}
+            onClick={() => navigate('/owner/products')}
             className="p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition flex flex-col items-center gap-2"
           >
             <Package className="w-8 h-8 text-green-600" />

@@ -86,6 +86,17 @@ export const tenantMiddleware = async (
       });
     }
 
+    // Check if tenant exists and get tenant data
+    if (!user.tenants) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'TENANT_NOT_FOUND',
+          message: 'Associated tenant not found'
+        }
+      });
+    }
+
     // Check tenant status
     if (user.tenants && !user.tenants.isActive) {
       return res.status(403).json({
