@@ -76,13 +76,14 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
     const tenantId = (req as any).tenantId;
 
     if (!tenantId) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: {
           code: 'TENANT_ID_REQUIRED',
           message: 'Tenant ID is required'
         }
       });
+      return;
     }
 
     const now = new Date();
@@ -102,11 +103,12 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
     // If tenant not found, return empty notifications instead of error
     // This could happen if tenant was deleted but user still has old token
     if (!tenant) {
-      return res.json({
+      res.json({
         success: true,
         data: [],
         count: 0,
       });
+      return;
     }
 
     const notifications = [];
