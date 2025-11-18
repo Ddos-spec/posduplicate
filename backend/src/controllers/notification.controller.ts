@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 
-export const getAdminNotifications = async (_req: Request, res: Response, next: NextFunction) => {
+export const getAdminNotifications = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const now = new Date();
     const thirtyDaysFromNow = new Date();
@@ -45,7 +45,7 @@ export const getAdminNotifications = async (_req: Request, res: Response, next: 
         message: `Tenant "${tenant.businessName}" subscription is expiring soon.`,
         details: `Expires on ${new Date(tenant.subscriptionExpiresAt!).toLocaleDateString('id-ID')}`,
         tenantId: tenant.id,
-        createdAt: tenant.subscriptionExpiresAt,
+        createdAt: tenant.subscriptionExpiresAt?.toISOString(),
       })),
       ...overdueTenants.map(tenant => ({
         id: `overdue-${tenant.id}`,
@@ -53,7 +53,7 @@ export const getAdminNotifications = async (_req: Request, res: Response, next: 
         message: `Tenant "${tenant.businessName}" subscription is overdue.`,
         details: `Expired on ${new Date(tenant.subscriptionExpiresAt!).toLocaleDateString('id-ID')}`,
         tenantId: tenant.id,
-        createdAt: tenant.subscriptionExpiresAt,
+        createdAt: tenant.subscriptionExpiresAt?.toISOString(),
       })),
     ];
 
@@ -65,12 +65,13 @@ export const getAdminNotifications = async (_req: Request, res: Response, next: 
       data: notifications,
       count: notifications.length,
     });
+    return; // Explicitly return to avoid TypeScript error
   } catch (error) {
     next(error);
   }
 };
 
-export const getTenantNotifications = async (req: Request, res: Response, next: NextFunction) => {
+export const getTenantNotifications = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const tenantId = (req as any).tenantId;
 
@@ -123,7 +124,7 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
           message: `Your subscription is expiring in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}.`,
           details: `Current subscription expires on ${new Date(tenant.subscriptionExpiresAt).toLocaleDateString('id-ID')}`,
           tenantId: tenant.id,
-          createdAt: tenant.subscriptionExpiresAt,
+          createdAt: tenant.subscriptionExpiresAt?.toISOString(),
         });
       } else if (tenant.subscriptionStatus !== 'active' && new Date(tenant.subscriptionExpiresAt) < now) {
         notifications.push({
@@ -132,7 +133,7 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
           message: `Your subscription has expired.`,
           details: `Expired on ${new Date(tenant.subscriptionExpiresAt).toLocaleDateString('id-ID')}`,
           tenantId: tenant.id,
-          createdAt: tenant.subscriptionExpiresAt,
+          createdAt: tenant.subscriptionExpiresAt?.toISOString(),
         });
       }
     }
@@ -150,7 +151,7 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
           message: `Next billing is due in ${daysUntilBilling} day${daysUntilBilling !== 1 ? 's' : ''}.`,
           details: `Billing date: ${new Date(tenant.nextBillingDate).toLocaleDateString('id-ID')}`,
           tenantId: tenant.id,
-          createdAt: tenant.nextBillingDate,
+          createdAt: tenant.nextBillingDate?.toISOString(),
         });
       }
     }
@@ -163,6 +164,7 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
       data: notifications,
       count: notifications.length,
     });
+    return; // Explicitly return to avoid TypeScript error
   } catch (error) {
     next(error);
   }

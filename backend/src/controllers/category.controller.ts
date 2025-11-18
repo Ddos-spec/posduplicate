@@ -240,6 +240,7 @@ export const updateCategory = async (
       data: updatedCategory,
       message: 'Category updated successfully'
     });
+    return; // Explicitly return to avoid TypeScript error
   } catch (error) {
     _next(error);
   }
@@ -252,7 +253,7 @@ export const deleteCategory = async (
   req: Request,
   res: Response,
   _next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const { id } = req.params;
     const tenantId = req.tenantId; // Get tenantId from middleware
@@ -298,6 +299,7 @@ export const deleteCategory = async (
       success: true,
       message: 'Category deleted successfully'
     });
+    return; // Explicitly return to avoid TypeScript error
   } catch (error) {
     _next(error);
   }

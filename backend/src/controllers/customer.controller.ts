@@ -244,9 +244,8 @@ export const deleteCustomer = async (req: Request, res: Response, _next: NextFun
       }
     }
 
-    await prisma.customers.update({
-      where: { id: parseInt(id) },
-      data: { isActive: false } // Use soft delete instead of hard delete
+    await prisma.customers.delete({
+      where: { id: parseInt(id) } // Hard delete since there's no isActive field in customers table
     });
 
     res.json({ success: true, message: 'Customer deleted successfully' });

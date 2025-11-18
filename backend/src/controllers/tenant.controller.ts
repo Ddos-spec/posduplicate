@@ -341,7 +341,7 @@ export const getMyTenant = async (req: Request, res: Response, next: NextFunctio
 /**
  * Check Google API health
  */
-export const checkGoogleApiHealth = async (req: Request, res: Response, next: NextFunction) => {
+export const checkGoogleApiHealth = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const validator = new GoogleSheetValidator(SERVICE_ACCOUNT_CREDENTIALS);
     const result = await validator.validateCredentials();

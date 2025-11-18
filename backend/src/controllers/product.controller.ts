@@ -204,6 +204,16 @@ export const updateProduct = async (req: Request, res: Response, _next: NextFunc
     }
 
     // Check if the product's outlet belongs to the current tenant
+    if (!product.outletId) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'PRODUCT_OUTLET_MISSING',
+          message: 'Product outlet information is missing'
+        }
+      });
+    }
+
     const outlet = await prisma.outlet.findUnique({
       where: { id: product.outletId }
     });
@@ -274,6 +284,16 @@ export const deleteProduct = async (req: Request, res: Response, _next: NextFunc
     }
 
     // Check if the product's outlet belongs to the current tenant
+    if (!product.outletId) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'PRODUCT_OUTLET_MISSING',
+          message: 'Product outlet information is missing'
+        }
+      });
+    }
+
     const outlet = await prisma.outlet.findUnique({
       where: { id: product.outletId }
     });

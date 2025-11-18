@@ -1,4 +1,4 @@
-import { GoogleSheetValidator } from './src/utils/googleSheetValidator';
+import { GoogleSheetValidator } from '../utils/googleSheetValidator';
 
 // Service Account Credentials from environment variables
 const SERVICE_ACCOUNT_CREDENTIALS = {
