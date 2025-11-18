@@ -267,7 +267,9 @@ export default function CashierPage() {
           phone: settings.phone || undefined,
           receiptHeader: settings.receiptHeader || undefined,
           receiptFooter: settings.receiptFooter || undefined,
-          printerWidth: settings.printerWidth || undefined
+          printerWidth: settings.printerWidth || undefined,
+          logo: settings.logo ? getFullUrl(settings.logo) : undefined,
+          showLogoOnReceipt: settings.showLogoOnReceipt || false
         } : undefined
       );
 

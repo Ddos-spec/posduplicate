@@ -45,13 +45,29 @@ const allowedOrigins = process.env.CORS_ORIGIN
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) {
       callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+      return;
     }
+
+    // Allow all Vercel deployments
+    if (origin.includes('.vercel.app')) {
+      callback(null, true);
+      return;
+    }
+
+    // Allow configured origins
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    // Reject other origins
+    callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
