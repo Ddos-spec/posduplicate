@@ -7,7 +7,8 @@ import {
   toggleTenantStatus,
   updateSubscription,
   getMyTenant,
-  deleteTenant
+  deleteTenant,
+  checkGoogleApiHealth
 } from '../controllers/tenant.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { superAdminOnly, tenantMiddleware } from '../middlewares/tenant.middleware';
@@ -25,5 +26,8 @@ router.put('/:id', authMiddleware, superAdminOnly, updateTenant);
 router.patch('/:id/status', authMiddleware, superAdminOnly, toggleTenantStatus);
 router.patch('/:id/subscription', authMiddleware, superAdminOnly, updateSubscription);
 router.delete('/:id', authMiddleware, superAdminOnly, deleteTenant);
+
+// Google API health check route
+router.get('/google-api-health', authMiddleware, superAdminOnly, checkGoogleApiHealth);
 
 export default router;

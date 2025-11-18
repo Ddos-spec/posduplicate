@@ -116,6 +116,7 @@ export const createCategory = async (
 ) => {
   try {
     const { name, type, outletId } = req.body;
+    const tenantId = req.tenantId; // Get tenantId from middleware
 
     if (!name) {
       return res.status(400).json({
@@ -125,6 +126,23 @@ export const createCategory = async (
           message: 'Category name is required'
         }
       });
+    }
+
+    // Validate that the outlet belongs to the current tenant
+    if (outletId) {
+      const outlet = await prisma.outlet.findUnique({
+        where: { id: outletId }
+      });
+
+      if (!outlet || outlet.tenantId !== tenantId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access to outlet denied'
+          }
+        });
+      }
     }
 
     const category = await prisma.categories.create({
@@ -155,20 +173,71 @@ export const updateCategory = async (
 ) => {
   try {
     const { id } = req.params;
-    const { name, type, isActive } = req.body;
+    const { name, type, isActive, outletId } = req.body;
+    const tenantId = req.tenantId; // Get tenantId from middleware
 
-    const category = await prisma.categories.update({
+    // Verify the category belongs to tenant's outlet
+    const category = await prisma.categories.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'CATEGORY_NOT_FOUND',
+          message: 'Category not found'
+        }
+      });
+    }
+
+    // Check if the category's outlet belongs to the current tenant
+    if (category.outletId) {
+      const outlet = await prisma.outlet.findUnique({
+        where: { id: category.outletId }
+      });
+
+      if (!outlet || outlet.tenantId !== tenantId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access denied'
+          }
+        });
+      }
+    }
+
+    // If updating outletId, validate the new outlet
+    if (outletId !== undefined) {
+      const newOutlet = await prisma.outlet.findUnique({
+        where: { id: outletId }
+      });
+
+      if (!newOutlet || newOutlet.tenantId !== tenantId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access to outlet denied'
+          }
+        });
+      }
+    }
+
+    const updatedCategory = await prisma.categories.update({
       where: { id: parseInt(id) },
       data: {
         ...(name && { name }),
         ...(type && { type }),
-        ...(isActive !== undefined && { isActive })
+        ...(isActive !== undefined && { isActive }),
+        ...(outletId !== undefined && { outletId })
       }
     });
 
     res.json({
       success: true,
-      data: category,
+      data: updatedCategory,
       message: 'Category updated successfully'
     });
   } catch (error) {
@@ -186,6 +255,39 @@ export const deleteCategory = async (
 ) => {
   try {
     const { id } = req.params;
+    const tenantId = req.tenantId; // Get tenantId from middleware
+
+    // Verify the category belongs to tenant's outlet
+    const category = await prisma.categories.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'CATEGORY_NOT_FOUND',
+          message: 'Category not found'
+        }
+      });
+    }
+
+    // Check if the category's outlet belongs to the current tenant
+    if (category.outletId) {
+      const outlet = await prisma.outlet.findUnique({
+        where: { id: category.outletId }
+      });
+
+      if (!outlet || outlet.tenantId !== tenantId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access denied'
+          }
+        });
+      }
+    }
 
     await prisma.categories.update({
       where: { id: parseInt(id) },

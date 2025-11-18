@@ -14,9 +14,45 @@ export const getTransactions = async (
 
     const where: any = {};
 
-    // Tenant isolation
-    if (req.tenantId) {
-      where.outlets = { tenantId: req.tenantId };
+    const tenantId = req.tenantId; // Get tenantId from middleware
+    let outletIds: number[] = [];
+
+    // Tenant isolation - get outlets belonging to this tenant
+    if (tenantId) {
+      // Get all outlets for this tenant to establish data isolation
+      const tenantOutlets = await prisma.outlet.findMany({
+        where: { tenantId: tenantId },
+        select: { id: true }
+      });
+
+      outletIds = tenantOutlets.map(outlet => outlet.id);
+
+      // If user has no outlets, return empty result
+      if (outletIds.length === 0) {
+        return res.json({ success: true, data: [], count: 0 });
+      }
+
+      // Filter by tenant's outlets - only if no specific outlet is requested
+      if (!outlet_id) {
+        where.outletId = {
+          in: outletIds
+        };
+      }
+    }
+
+    if (outlet_id) {
+      const requestedOutletId = parseInt(outlet_id as string);
+      // If specific outlet is requested, ensure it belongs to the tenant
+      if (tenantId && !outletIds.includes(requestedOutletId)) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access to outlet denied'
+          }
+        });
+      }
+      where.outletId = requestedOutletId;
     }
 
     if (status) {
@@ -83,6 +119,9 @@ export const getTransactionById = async (
   try {
     const { id } = req.params;
 
+    const tenantId = req.tenantId; // Get tenantId from middleware
+
+    // Verify transaction belongs to tenant's outlet
     const transaction = await prisma.transaction.findUnique({
       where: { id: parseInt(id) },
       include: {
@@ -104,6 +143,7 @@ export const getTransactionById = async (
       }
     });
 
+    // Check if transaction exists and belongs to tenant
     if (!transaction) {
       return res.status(404).json({
         success: false,
@@ -114,15 +154,21 @@ export const getTransactionById = async (
       });
     }
 
-    // Tenant isolation
-    if (req.tenantId && transaction.outlets?.tenantId !== req.tenantId) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'FORBIDDEN',
-          message: 'Access denied'
-        }
+    if (tenantId) {
+      // Check if the transaction's outlet belongs to the current tenant
+      const outlet = await prisma.outlet.findUnique({
+        where: { id: transaction.outletId }
       });
+
+      if (!outlet || outlet.tenantId !== tenantId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access denied'
+          }
+        });
+      }
     }
 
     res.json({

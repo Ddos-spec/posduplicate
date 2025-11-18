@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "create:admin": "ts-node src/scripts/create-admin-prisma.ts",
+    "validate-google-api": "ts-node src/scripts/validate-google-api.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts",

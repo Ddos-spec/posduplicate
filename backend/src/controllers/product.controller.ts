@@ -7,9 +7,30 @@ import prisma from '../utils/prisma';
 export const getProducts = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { category, category_id, search, outlet_id } = req.query;
+    const tenantId = (req as any).tenantId; // Get tenantId from middleware
+
+    // First, get all outlets for this tenant
+    const tenantOutlets = await prisma.outlet.findMany({
+      where: { tenantId: tenantId },
+      select: { id: true }
+    });
+
+    const outletIds = tenantOutlets.map(outlet => outlet.id);
+
+    // If user has no outlets, return empty result
+    if (outletIds.length === 0) {
+      return res.json({
+        success: true,
+        data: [],
+        count: 0
+      });
+    }
 
     const where: any = {
-      isActive: true
+      isActive: true,
+      outletId: {
+        in: outletIds
+      }
     };
 
     if (category_id) {
@@ -23,7 +44,19 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
     }
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      // Ensure the requested outlet belongs to the current tenant
+      const requestedOutletId = parseInt(outlet_id as string);
+      if (!outletIds.includes(requestedOutletId)) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access to outlet denied'
+          }
+        });
+      }
+
+      where.outletId = requestedOutletId;
     }
 
     const products = await prisma.items.findMany({
@@ -60,9 +93,23 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
 export const getProductById = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
+    const tenantId = (req as any).tenantId; // Get tenantId from middleware
+
+    // First get the tenant's outlets to ensure proper isolation
+    const tenantOutlets = await prisma.outlet.findMany({
+      where: { tenantId: tenantId },
+      select: { id: true }
+    });
+
+    const outletIds = tenantOutlets.map(outlet => outlet.id);
 
     const product = await prisma.items.findUnique({
-      where: { id: parseInt(id) },
+      where: {
+        id: parseInt(id),
+        outletId: {
+          in: outletIds
+        }
+      },
       include: {
         categories: true,
         variants: {
@@ -81,7 +128,7 @@ export const getProductById = async (req: Request, res: Response, _next: NextFun
         success: false,
         error: {
           code: 'PRODUCT_NOT_FOUND',
-          message: `Product with ID ${id} not found`
+          message: `Product with ID ${id} not found or access denied`
         }
       });
     }
@@ -101,6 +148,22 @@ export const getProductById = async (req: Request, res: Response, _next: NextFun
 export const createProduct = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const productData = req.body;
+    const tenantId = (req as any).tenantId; // Get tenantId from middleware
+
+    // Validate that the product's outlet belongs to the current tenant
+    const outlet = await prisma.outlet.findUnique({
+      where: { id: productData.outletId }
+    });
+
+    if (!outlet || outlet.tenantId !== tenantId) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'ACCESS_DENIED',
+          message: 'Access to outlet denied'
+        }
+      });
+    }
 
     const product = await prisma.items.create({
       data: productData
@@ -123,8 +186,56 @@ export const updateProduct = async (req: Request, res: Response, _next: NextFunc
   try {
     const { id } = req.params;
     const updateData = req.body;
+    const tenantId = (req as any).tenantId; // Get tenantId from middleware
 
-    const product = await prisma.items.update({
+    // First verify that the product belongs to a tenant's outlet
+    const product = await prisma.items.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'PRODUCT_NOT_FOUND',
+          message: `Product with ID ${id} not found`
+        }
+      });
+    }
+
+    // Check if the product's outlet belongs to the current tenant
+    const outlet = await prisma.outlet.findUnique({
+      where: { id: product.outletId }
+    });
+
+    if (!outlet || outlet.tenantId !== tenantId) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'ACCESS_DENIED',
+          message: 'Access to product denied'
+        }
+      });
+    }
+
+    // If updating the outletId, also validate the new outlet
+    if (updateData.outletId) {
+      const newOutlet = await prisma.outlet.findUnique({
+        where: { id: updateData.outletId }
+      });
+
+      if (!newOutlet || newOutlet.tenantId !== tenantId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access to outlet denied'
+          }
+        });
+      }
+    }
+
+    const updatedProduct = await prisma.items.update({
       where: { id: parseInt(id) },
       data: updateData
     });
@@ -132,7 +243,7 @@ export const updateProduct = async (req: Request, res: Response, _next: NextFunc
     res.json({
       success: true,
       message: 'Product updated successfully',
-      data: product
+      data: updatedProduct
     });
   } catch (error) {
     return _next(error);
@@ -145,6 +256,37 @@ export const updateProduct = async (req: Request, res: Response, _next: NextFunc
 export const deleteProduct = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
+    const tenantId = (req as any).tenantId; // Get tenantId from middleware
+
+    // First verify that the product belongs to a tenant's outlet
+    const product = await prisma.items.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'PRODUCT_NOT_FOUND',
+          message: `Product with ID ${id} not found`
+        }
+      });
+    }
+
+    // Check if the product's outlet belongs to the current tenant
+    const outlet = await prisma.outlet.findUnique({
+      where: { id: product.outletId }
+    });
+
+    if (!outlet || outlet.tenantId !== tenantId) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'ACCESS_DENIED',
+          message: 'Access to product denied'
+        }
+      });
+    }
 
     await prisma.items.update({
       where: { id: parseInt(id) },
