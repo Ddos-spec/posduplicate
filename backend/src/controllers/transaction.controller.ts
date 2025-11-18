@@ -156,6 +156,16 @@ export const getTransactionById = async (
 
     if (tenantId) {
       // Check if the transaction's outlet belongs to the current tenant
+      if (!transaction.outletId) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'TRANSACTION_OUTLET_MISSING',
+            message: 'Transaction outlet information is missing'
+          }
+        });
+      }
+
       const outlet = await prisma.outlet.findUnique({
         where: { id: transaction.outletId }
       });
