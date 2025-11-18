@@ -170,7 +170,7 @@ export const updateCategory = async (
   req: Request,
   res: Response,
   _next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const { id } = req.params;
     const { name, type, isActive, outletId } = req.body;
@@ -182,13 +182,14 @@ export const updateCategory = async (
     });
 
     if (!category) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: {
           code: 'CATEGORY_NOT_FOUND',
           message: 'Category not found'
         }
       });
+      return;
     }
 
     // Check if the category's outlet belongs to the current tenant
@@ -198,13 +199,14 @@ export const updateCategory = async (
       });
 
       if (!outlet || outlet.tenantId !== tenantId) {
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           error: {
             code: 'ACCESS_DENIED',
             message: 'Access denied'
           }
         });
+        return;
       }
     }
 
@@ -215,13 +217,14 @@ export const updateCategory = async (
       });
 
       if (!newOutlet || newOutlet.tenantId !== tenantId) {
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           error: {
             code: 'ACCESS_DENIED',
             message: 'Access to outlet denied'
           }
         });
+        return;
       }
     }
 
@@ -264,13 +267,14 @@ export const deleteCategory = async (
     });
 
     if (!category) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: {
           code: 'CATEGORY_NOT_FOUND',
           message: 'Category not found'
         }
       });
+      return;
     }
 
     // Check if the category's outlet belongs to the current tenant
@@ -280,13 +284,14 @@ export const deleteCategory = async (
       });
 
       if (!outlet || outlet.tenantId !== tenantId) {
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           error: {
             code: 'ACCESS_DENIED',
             message: 'Access denied'
           }
         });
+        return;
       }
     }
 
