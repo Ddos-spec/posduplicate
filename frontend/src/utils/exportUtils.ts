@@ -58,6 +58,8 @@ interface TenantPrintSettings {
   receiptHeader?: string;
   receiptFooter?: string;
   printerWidth?: string;
+  logo?: string;
+  showLogoOnReceipt?: boolean;
 }
 
 // Format currency for export
@@ -190,6 +192,7 @@ export const printReceipt = (
 ) => {
   // Get printer width from settings or default to 80mm
   const printerWidth = settings?.printerWidth === '58mm' ? 58 : 80;
+  const is58mm = printerWidth === 58;
 
   const doc = new jsPDF({
     format: [printerWidth, 200],
@@ -199,6 +202,20 @@ export const printReceipt = (
   let yPos = 10;
   const pageWidth = printerWidth;
   const margin = 5;
+
+  // Logo (if enabled and available)
+  if (settings?.logo && settings?.showLogoOnReceipt) {
+    try {
+      // Add logo image
+      const logoSize = is58mm ? 15 : 20;
+      const logoX = (pageWidth - logoSize) / 2;
+      doc.addImage(settings.logo, 'PNG', logoX, yPos, logoSize, logoSize);
+      yPos += logoSize + 3;
+    } catch (error) {
+      console.error('Failed to add logo to receipt:', error);
+      // Continue without logo if error
+    }
+  }
 
   // Header - Store Name
   doc.setFontSize(14);
@@ -258,12 +275,17 @@ export const printReceipt = (
   doc.text('-'.repeat(40), margin, yPos);
   yPos += 5;
 
+  // Define responsive column positions based on printer width
+  const colQty = is58mm ? 28 : 35;
+  const colPrice = is58mm ? 35 : 45;
+  const colTotal = pageWidth - margin;
+
   // Items Header
   doc.setFont('helvetica', 'bold');
   doc.text('Item', margin, yPos);
-  doc.text('Qty', 45, yPos);
-  doc.text('Harga', 55, yPos);
-  doc.text('Total', 68, yPos, { align: 'right' });
+  doc.text('Qty', colQty, yPos);
+  doc.text('Harga', colPrice, yPos);
+  doc.text('Total', colTotal, yPos, { align: 'right' });
   yPos += 4;
   doc.setFont('helvetica', 'normal');
 
@@ -271,23 +293,23 @@ export const printReceipt = (
   transactionData.items.forEach(item => {
     const itemTotal = item.quantity * item.price;
 
-    // Item name (may wrap to multiple lines)
-    const itemName = item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name;
+    // Item name - truncate if too long based on printer width
+    const maxNameLength = is58mm ? 12 : 18;
+    const itemName = item.name.length > maxNameLength ? item.name.substring(0, maxNameLength) + '...' : item.name;
+
+    // All in one line: Name, Qty, Price, Total
     doc.text(itemName, margin, yPos);
+    doc.text(item.quantity.toString(), colQty, yPos);
+    doc.text(item.price.toLocaleString(), colPrice, yPos);
+    doc.text(itemTotal.toLocaleString(), colTotal, yPos, { align: 'right' });
     yPos += 4;
 
-    // Quantity, Price, Total on same line
-    doc.text(item.quantity.toString(), 45, yPos);
-    doc.text(formatCurrency(item.price), 55, yPos);
-    doc.text(formatCurrency(itemTotal), 75, yPos, { align: 'right' });
-    yPos += 4;
-
-    // Notes if any
+    // Notes if any (in separate line with smaller font)
     if (item.notes) {
       doc.setFontSize(7);
       doc.text(`  * ${item.notes}`, margin, yPos);
       doc.setFontSize(8);
-      yPos += 4;
+      yPos += 3.5;
     }
   });
 
@@ -298,24 +320,24 @@ export const printReceipt = (
 
   // Totals
   doc.text('Subtotal:', margin, yPos);
-  doc.text(formatCurrency(transactionData.subtotal), 75, yPos, { align: 'right' });
+  doc.text(formatCurrency(transactionData.subtotal), colTotal, yPos, { align: 'right' });
   yPos += 4;
 
   if (transactionData.discountAmount && transactionData.discountAmount > 0) {
     doc.text('Diskon:', margin, yPos);
-    doc.text(`-${formatCurrency(transactionData.discountAmount)}`, 75, yPos, { align: 'right' });
+    doc.text(`-${formatCurrency(transactionData.discountAmount)}`, colTotal, yPos, { align: 'right' });
     yPos += 4;
   }
 
   if (transactionData.taxAmount && transactionData.taxAmount > 0) {
     doc.text('Pajak:', margin, yPos);
-    doc.text(formatCurrency(transactionData.taxAmount), 75, yPos, { align: 'right' });
+    doc.text(formatCurrency(transactionData.taxAmount), colTotal, yPos, { align: 'right' });
     yPos += 4;
   }
 
   if (transactionData.serviceCharge && transactionData.serviceCharge > 0) {
     doc.text('Service:', margin, yPos);
-    doc.text(formatCurrency(transactionData.serviceCharge), 75, yPos, { align: 'right' });
+    doc.text(formatCurrency(transactionData.serviceCharge), colTotal, yPos, { align: 'right' });
     yPos += 4;
   }
 
@@ -323,7 +345,7 @@ export const printReceipt = (
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('TOTAL:', margin, yPos);
-  doc.text(formatCurrency(transactionData.total), 75, yPos, { align: 'right' });
+  doc.text(formatCurrency(transactionData.total), colTotal, yPos, { align: 'right' });
   yPos += 6;
 
   // Payment Details
@@ -335,12 +357,12 @@ export const printReceipt = (
   transactionData.payments.forEach(payment => {
     const methodName = payment.method.charAt(0).toUpperCase() + payment.method.slice(1);
     doc.text(`Bayar (${methodName}):`, margin, yPos);
-    doc.text(formatCurrency(payment.amount), 75, yPos, { align: 'right' });
+    doc.text(formatCurrency(payment.amount), colTotal, yPos, { align: 'right' });
     yPos += 4;
 
     if (payment.method === 'cash' && payment.changeAmount && payment.changeAmount > 0) {
       doc.text('Kembali:', margin, yPos);
-      doc.text(formatCurrency(payment.changeAmount), 75, yPos, { align: 'right' });
+      doc.text(formatCurrency(payment.changeAmount), colTotal, yPos, { align: 'right' });
       yPos += 4;
     }
   });
