@@ -2,20 +2,21 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 import bcrypt from 'bcrypt';
 import { GoogleSheetService, SheetStructure } from '../services/googleSheet.service';
+import { GoogleSheetValidator } from '../utils/googleSheetValidator';
 
-// Service Account Credentials from user input
+// Service Account Credentials from environment variables
 const SERVICE_ACCOUNT_CREDENTIALS = {
-  "type": "service_account",
-  "project_id": "peroject-whatsapp",
-  "private_key_id": "ee4e8f569dbd1345b6581b5edab5e2a2692ce941",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDbM4mFXYwb7fq1\n531CmR4SuvTbKHsCYVvcEjhQtv7NTXy1qz5SLWqSuI8rT3Yw7RfkraI5bfnkRsvx\nWoDjJxkBwJINCc/GyZo5KnTUzVg9WuLP0ve2oZ4lPIRyQJ7egEGKxDTnodgCzTUk\n5qnNIGbNTLg4VQ9+Qxb1O0FUn02flTDCVbeVepWvhRlvNe3+pl9QB/p8Tnxi5f/Z\nequ7sqtn0qxhZwol/TeIkUz82+FuRjvFEqCGB9qO/3699WZijXav3jSmXGyphFfBE\nLIqTYzDfFAKx/CfH7GmcA/dVkEVpwg9xCnzbEu4UGX1wlKCATivZIp2xdULSqrIM\n0vS+sGlTAgMBAAECggEAQyE05/1+p50Jj0TOFSO8VIMh8q4igdecILkJuxpXzTsC\nSsafRt52yWkxG1Px/8jUbOmKCWl3QqQ11/veBfLW0zUM5WZQVfIuw3wPnI4ojF21\noWzcBPfY7VFrxGuq27xOljdBdoCXnUAIGv1zGglmwk/RCRtvq7zTHpYfi1FgHdMr\nKxqM3YNorx9ssRjLNoByOZO4B0Qbd/zx4Yzo0qtXa1PHJFTeS7KHeZdZaby7tldz\nqMg+e08uv+1Jxq0gZqadr2hip3SXFF9M8R6v9EeFIerfQtfCeA3oy/T7HgCE42hG\nCTuuPcr/N4i8PXDVjD9LXm4rgeRbl8lTxlWEgfjagOQKBgQDugsFzrgu6xMURujHZ\nWvCzrqJkmXIJUczv9sGF/CEUFrPyxSEIgTU4X2KAg/Ix3y1EnzcS30lTQ7O+aCX4\nM2ZPZrdPq/bLVRyutHI3BPDtUZGboxlPb925u+OZJG0zsbxZWT5c0gFf38+OBOBq\npyv/A5x8BESR/uRfeA1aoLALuQKBgQDrRk+f2RE+T2r5ujAzPfhU7YNi5EgWFNLP\nGLLnz25sn6TWmeuG5Qy7PsD6UBUD6dj3jZU0t1YiVitJgeCfT7cFWLS2flHA1XDm\nlk7LSdS4nOk5m/TiFBS42A/MVpppwu0BaU/ikBcivHzbMgMP3JW/2aGbD25fprgL\nXZqJSFcbawKBgGVZGmrVYhaS1kqaG+SISA+R/V9R9KsRH0w4RjNw1315yC04pri+\nbqbtoSWK67dVZh7qqLRUPQwskIwwJTI6ZRcIRoyMPepY2D9EXeQTLW0qY/0GaRLg\nLg9mT2gbmmuE8svkqCM4+WyL5d4rJFEth/xsxGnORnTjIpeOo94GucfBAoGAVCCOmCw03vPoCQmCPHP4\nUDp1zlfeNHY4yj0N2cWQO5A8XlefIptEyxesJXREVG2XTpBjsNTT21D53o93fgDl\nl/Ub9f6CrBnuDPJe671FDv1ADRq5LwqQeCd4mi7gZKfVECPv2V1RO6TOuP0RJ8CU\n2hijIYVEBYseuHHT90GYNgY=\n-----END PRIVATE KEY-----\n",
-  "client_email": "n8n-refresh-token@peroject-whatsapp.iam.gserviceaccount.com",
-  "client_id": "118421492513506607479",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/n8n-refresh-token%40peroject-whatsapp.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
+  type: "service_account",
+  project_id: process.env.GOOGLE_PROJECT_ID || "peroject-whatsapp",
+  private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID || "ee4e8f569dbd1345b6581b5edab5e2a2692ce941",
+  private_key: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, '\n'),
+  client_email: process.env.GOOGLE_CLIENT_EMAIL || "n8n-refresh-token@peroject-whatsapp.iam.gserviceaccount.com",
+  client_id: process.env.GOOGLE_CLIENT_ID || "118421492513506607479",
+  auth_uri: "https://accounts.google.com/o/oauth2/auth",
+  token_uri: "https://oauth2.googleapis.com/token",
+  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+  client_x509_cert_url: process.env.GOOGLE_CERT_URL || "https://www.googleapis.com/robot/v1/metadata/x509/n8n-refresh-token%40peroject-whatsapp.iam.gserviceaccount.com",
+  universe_domain: "googleapis.com"
 };
 
 const googleSheetService = new GoogleSheetService(SERVICE_ACCOUNT_CREDENTIALS);
@@ -178,9 +179,15 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
         googleSheetId = await googleSheetService.createSpreadsheetForOwner(ownerName, SHEETS_STRUCTURE);
         if (!googleSheetId) {
           console.warn(`Failed to create Google Sheet for owner ${ownerName}. Tenant will be created without sheet ID.`);
+        } else {
+          console.log(`Successfully created Google Sheet with ID: ${googleSheetId} for owner ${ownerName}`);
         }
       } catch (sheetError) {
         console.error(`Error creating Google Sheet for owner ${ownerName}:`, sheetError);
+        // Log more specific error for debugging
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Detailed error:', sheetError);
+        }
         // Decide if tenant creation should fail if sheet creation fails.
         // For now, we'll proceed with tenant creation but without a sheet ID.
       }
@@ -210,6 +217,7 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
       success: true,
       data: result,
       message: 'Tenant and Owner account created successfully',
+      sheetCreationStatus: result.googleSheetId ? 'success' : 'failed - check server logs for details'
     });
   } catch (error: any) {
     if (error.message === 'EMAIL_EXISTS') {
@@ -325,6 +333,35 @@ export const getMyTenant = async (req: Request, res: Response, next: NextFunctio
     });
 
     res.json({ success: true, data: tenant });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Check Google API health
+ */
+export const checkGoogleApiHealth = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validator = new GoogleSheetValidator(SERVICE_ACCOUNT_CREDENTIALS);
+    const result = await validator.validateCredentials();
+
+    if (result.isValid) {
+      res.json({
+        success: true,
+        message: 'Google API credentials are valid and working',
+        data: { isValid: true }
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'GOOGLE_API_INVALID',
+          message: 'Google API credentials are invalid or not working properly',
+          details: result.error
+        }
+      });
+    }
   } catch (error) {
     return next(error);
   }
