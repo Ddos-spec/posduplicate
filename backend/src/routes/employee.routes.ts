@@ -15,9 +15,11 @@ const router = Router();
 // All routes require auth + tenant isolation
 router.use(authMiddleware, tenantMiddleware);
 
-router.get('/', getEmployees);
-router.get('/:id', getEmployeeById);
-router.get('/:id/shifts', getEmployeeShifts);
+// SECURITY: Employee data (including salary) should only be accessible by owners/admins
+// All GET routes now require ownerOnly middleware to prevent cashiers from viewing sensitive data
+router.get('/', ownerOnly, getEmployees);
+router.get('/:id', ownerOnly, getEmployeeById);
+router.get('/:id/shifts', ownerOnly, getEmployeeShifts);
 router.post('/', ownerOnly, createEmployee);
 router.put('/:id', ownerOnly, updateEmployee);
 router.delete('/:id', ownerOnly, deleteEmployee);

@@ -27,7 +27,51 @@ import ReportsPage from './pages/owner/ReportsPage';
 import SettingsPage from './pages/owner/SettingsPage';
 import ProductManagementPage from './pages/owner/ProductManagementPage';
 
+// SECURITY: Base protected route - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
+  return token ? <>{children}</> : <Navigate to="/login" />;
+}
+
+// SECURITY: Admin-only route guard
+// Allows: super admin, admin
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
+  const user = useAuthStore((state) => state.user);
+
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+
+  const allowedRoles = ['super admin', 'admin'];
+  if (user && allowedRoles.includes(user.role.toLowerCase())) {
+    return <>{children}</>;
+  }
+
+  return <Navigate to="/login" />;
+}
+
+// SECURITY: Owner-level route guard
+// Allows: super admin, admin, owner, manager
+function OwnerRoute({ children }: { children: React.ReactNode }) {
+  const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
+  const user = useAuthStore((state) => state.user);
+
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+
+  const allowedRoles = ['super admin', 'admin', 'owner', 'manager'];
+  if (user && allowedRoles.includes(user.role.toLowerCase())) {
+    return <>{children}</>;
+  }
+
+  return <Navigate to="/login" />;
+}
+
+// SECURITY: Cashier-level route guard
+// Allows: any authenticated user (cashier, owner, admin, etc.)
+function CashierRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
   return token ? <>{children}</> : <Navigate to="/login" />;
 }
@@ -52,9 +96,9 @@ function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute>
+            <AdminRoute>
               <AdminLayout />
-            </ProtectedRoute>
+            </AdminRoute>
           }
         >
           <Route path="dashboard" element={<SystemAnalyticsPage />} />
@@ -68,9 +112,9 @@ function App() {
         <Route
           path="/owner"
           element={
-            <ProtectedRoute>
+            <OwnerRoute>
               <OwnerLayout />
-            </ProtectedRoute>
+            </OwnerRoute>
           }
         >
           <Route path="dashboard" element={<OwnerDashboardPage />} />
@@ -87,9 +131,9 @@ function App() {
         <Route
           path="/cashier"
           element={
-            <ProtectedRoute>
+            <CashierRoute>
               <CashierPage />
-            </ProtectedRoute>
+            </CashierRoute>
           }
         />
 
