@@ -38,6 +38,20 @@ export default function CashierPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [settings, setSettings] = useState<TenantSettings | null>(null);
 
+  // Helper function to format number with thousand separator
+  const formatPriceInput = (value: string): string => {
+    // Remove all non-digit characters
+    const numbers = value.replace(/\D/g, '');
+    if (!numbers) return '';
+    // Format with thousand separator
+    return parseInt(numbers).toLocaleString('id-ID');
+  };
+
+  // Helper function to parse formatted price back to number
+  const parsePriceInput = (value: string): string => {
+    return value.replace(/\D/g, '');
+  };
+
   // Split bill states
   const [splitBillMode, setSplitBillMode] = useState(false);
   const [payments, setPayments] = useState<Array<{ method: string; amount: string; cashReceived?: string }>>([]);
@@ -218,6 +232,11 @@ export default function CashierPage() {
       const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
       const outletId = user?.outletId || user?.outlet?.id || null;
 
+      // Calculate tax and service charge based on settings
+      const subtotal = getSubtotal();
+      const taxAmount = settings?.enableTax && settings?.taxRate ? (subtotal * settings.taxRate) / 100 : 0;
+      const serviceChargeAmount = settings?.enableServiceCharge && settings?.serviceCharge ? (subtotal * settings.serviceCharge) / 100 : 0;
+
       const orderData = {
         orderType: 'dine_in',
         outletId: outletId,
@@ -230,11 +249,11 @@ export default function CashierPage() {
           modifiers: item.modifiers?.map(m => m.id) || [],
           notes: item.notes,
         })),
-        subtotal: getSubtotal(),
+        subtotal: subtotal,
         discountAmount: 0,
-        taxAmount: 0,
-        serviceCharge: 0,
-        total: getTotal(),
+        taxAmount: taxAmount,
+        serviceCharge: serviceChargeAmount,
+        total: subtotal + taxAmount + serviceChargeAmount,
         payments: finalPayments,
       };
 
@@ -253,11 +272,11 @@ export default function CashierPage() {
             price: item.price,
             notes: item.notes
           })),
-          subtotal: getSubtotal(),
+          subtotal: subtotal,
           discountAmount: 0,
-          taxAmount: 0,
-          serviceCharge: 0,
-          total: getTotal(),
+          taxAmount: taxAmount,
+          serviceCharge: serviceChargeAmount,
+          total: subtotal + taxAmount + serviceChargeAmount,
           payments: finalPayments,
           cashierName: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').name : undefined,
           outletName: undefined
@@ -270,7 +289,8 @@ export default function CashierPage() {
           receiptFooter: settings.receiptFooter || undefined,
           printerWidth: settings.printerWidth || undefined,
           logo: settings.logo ? getFullUrl(settings.logo) : undefined,
-          showLogoOnReceipt: settings.showLogoOnReceipt || false
+          showLogoOnReceipt: settings.showLogoOnReceipt || false,
+          taxName: settings.taxName || undefined
         } : undefined
       );
 
@@ -341,9 +361,11 @@ export default function CashierPage() {
   const handleOpenProductForm = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
+      // Ensure categoryId is preserved when editing
+      const catId = product.category?.id?.toString() || '';
       setProductForm({
         name: product.name,
-        categoryId: product.category?.id?.toString() || '',
+        categoryId: catId,
         price: product.price.toString(),
         image: product.image || '',
         description: product.description || ''
@@ -1049,15 +1071,16 @@ export default function CashierPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Price *</label>
+                <label className="block text-sm font-medium mb-2">Price * (Rp)</label>
                 <input
-                  type="number"
-                  value={productForm.price}
-                  onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                  type="text"
+                  value={productForm.price ? formatPriceInput(productForm.price) : ''}
+                  onChange={(e) => {
+                    const rawValue = parsePriceInput(e.target.value);
+                    setProductForm({ ...productForm, price: rawValue });
+                  }}
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="0"
-                  min="0"
-                  step="0.01"
                 />
               </div>
 
