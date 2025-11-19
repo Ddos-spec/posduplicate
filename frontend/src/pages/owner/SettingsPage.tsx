@@ -321,32 +321,88 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {activeTab === 'tax' && (
+        {activeTab === 'tax' && settings && (
           <div className="space-y-4">
             <h3 className="font-semibold text-lg mb-4">Tax & Service Charges</h3>
             <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <input type="checkbox" id="enable-tax" defaultChecked className="w-4 h-4" />
-              <label htmlFor="enable-tax">Enable Tax</label>
+              <input
+                type="checkbox"
+                id="enable-tax"
+                checked={settings.enableTax || false}
+                onChange={(e) => setSettings({ ...settings, enableTax: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <label htmlFor="enable-tax" className="cursor-pointer">Enable Tax</label>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Tax Rate (%)</label>
-                <input type="number" defaultValue="10" className="w-full px-3 py-2 border rounded-lg" />
+                <input
+                  type="number"
+                  value={settings.taxRate || 0}
+                  onChange={(e) => setSettings({ ...settings, taxRate: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Tax Name</label>
-                <input type="text" defaultValue="PB1" className="w-full px-3 py-2 border rounded-lg" />
+                <input
+                  type="text"
+                  value={settings.taxName || ''}
+                  onChange={(e) => setSettings({ ...settings, taxName: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., PB1, VAT, Sales Tax"
+                />
               </div>
             </div>
             <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <input type="checkbox" id="enable-service" defaultChecked className="w-4 h-4" />
-              <label htmlFor="enable-service">Enable Service Charge</label>
+              <input
+                type="checkbox"
+                id="enable-service"
+                checked={settings.enableServiceCharge || false}
+                onChange={(e) => setSettings({ ...settings, enableServiceCharge: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <label htmlFor="enable-service" className="cursor-pointer">Enable Service Charge</label>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Service Charge (%)</label>
-              <input type="number" defaultValue="5" className="w-full px-3 py-2 border rounded-lg" />
+              <input
+                type="number"
+                value={settings.serviceCharge || 0}
+                onChange={(e) => setSettings({ ...settings, serviceCharge: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min="0"
+                max="100"
+                step="0.1"
+              />
             </div>
-            <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save Changes</button>
+            <button
+              onClick={() => handleSave({
+                enableTax: settings.enableTax,
+                taxRate: settings.taxRate,
+                taxName: settings.taxName,
+                enableServiceCharge: settings.enableServiceCharge,
+                serviceCharge: settings.serviceCharge
+              })}
+              disabled={saving}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </>
+              )}
+            </button>
           </div>
         )}
 
