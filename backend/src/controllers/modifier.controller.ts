@@ -3,7 +3,7 @@ import prisma from '../utils/prisma';
 
 export const getModifiers = async (_req: Request, res: Response, _next: NextFunction) => {
   try {
-    const where: any = { isActive: true };
+    const where: any = { is_active: true };
     const modifiers = await prisma.modifiers.findMany({
       where,
       orderBy: { name: 'asc' }
