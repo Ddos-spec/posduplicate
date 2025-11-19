@@ -60,6 +60,7 @@ interface TenantPrintSettings {
   printerWidth?: string;
   logo?: string;
   showLogoOnReceipt?: boolean;
+  taxName?: string;
 }
 
 // Format currency for export
@@ -211,6 +212,8 @@ export const printReceipt = (
       const logoX = (pageWidth - logoSize) / 2;
       doc.addImage(settings.logo, 'PNG', logoX, yPos, logoSize, logoSize);
       yPos += logoSize + 3;
+      // Add spacing between logo and header
+      yPos += 4;
     } catch (error) {
       console.error('Failed to add logo to receipt:', error);
       // Continue without logo if error
@@ -330,7 +333,8 @@ export const printReceipt = (
   }
 
   if (transactionData.taxAmount && transactionData.taxAmount > 0) {
-    doc.text('Pajak:', margin, yPos);
+    const taxLabel = settings?.taxName || 'Pajak';
+    doc.text(`${taxLabel}:`, margin, yPos);
     doc.text(formatCurrency(transactionData.taxAmount), colTotal, yPos, { align: 'right' });
     yPos += 4;
   }

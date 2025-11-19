@@ -38,6 +38,18 @@ export default function ProductManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
+  // Helper function to format number with thousand separator
+  const formatPriceInput = (value: string): string => {
+    const numbers = value.replace(/\D/g, '');
+    if (!numbers) return '';
+    return parseInt(numbers).toLocaleString('id-ID');
+  };
+
+  // Helper function to parse formatted price back to number
+  const parsePriceInput = (value: string): string => {
+    return value.replace(/\D/g, '');
+  };
+
   // State for product form
   const [productForm, setProductForm] = useState({
     name: '',
@@ -106,9 +118,11 @@ export default function ProductManagementPage() {
   const handleOpenProductForm = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
+      // Get categoryId from either categoryId field or category.id
+      const catId = product.categoryId || product.category?.id || '';
       setProductForm({
         name: product.name,
-        categoryId: product.categoryId.toString(),
+        categoryId: catId.toString(),
         price: product.price.toString(),
         image: product.image || '',
         description: product.description || ''
@@ -380,12 +394,14 @@ export default function ProductManagementPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Price (Rp) *</label>
                   <input
-                    type="number"
-                    value={productForm.price}
-                    onChange={(e) => handleFormChange('price', e.target.value)}
+                    type="text"
+                    value={productForm.price ? formatPriceInput(productForm.price) : ''}
+                    onChange={(e) => {
+                      const rawValue = parsePriceInput(e.target.value);
+                      handleFormChange('price', rawValue);
+                    }}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter price"
-                    min="0"
                   />
                 </div>
                 
