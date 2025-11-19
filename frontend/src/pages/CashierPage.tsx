@@ -699,7 +699,7 @@ export default function CashierPage() {
                   )}
                 </div>
                 <h3 className="font-semibold text-sm mb-1 truncate">{product.name}</h3>
-                <p className="text-blue-600 font-bold">Rp {product.price.toLocaleString()}</p>
+                <p className="text-blue-600 font-bold">Rp {product.price.toLocaleString('id-ID')}</p>
                 {product.category && (
                   <span className="text-xs text-gray-500">{product.category.name}</span>
                 )}
