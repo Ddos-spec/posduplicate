@@ -44,7 +44,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   const allowedRoles = ['super admin', 'admin'];
-  if (user && allowedRoles.includes(user.role.toLowerCase())) {
+  const userRole = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+  if (user && allowedRoles.includes(userRole)) {
     return <>{children}</>;
   }
 
@@ -62,7 +63,8 @@ function OwnerRoute({ children }: { children: React.ReactNode }) {
   }
 
   const allowedRoles = ['super admin', 'admin', 'owner', 'manager'];
-  if (user && allowedRoles.includes(user.role.toLowerCase())) {
+  const userRole = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+  if (user && allowedRoles.includes(userRole)) {
     return <>{children}</>;
   }
 
