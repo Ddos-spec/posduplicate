@@ -7,6 +7,7 @@ import { ShoppingCart, Search, X, Plus, Minus, Trash2, CreditCard, Edit, Setting
 import TransactionHistory from '../components/transaction/TransactionHistory';
 import TableManagement from '../components/table/TableManagement';
 import ModifierManagement from '../components/modifiers/ModifierManagement';
+import RunningLogo from '../components/RunningLogo';
 import { printReceipt } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
 import type { TenantSettings } from '../services/settingsService';
@@ -694,6 +695,7 @@ export default function CashierPage() {
             Cart ({items.length})
           </h2>
         </div>
+        <RunningLogo />
 
         <div className="flex-1 overflow-y-auto p-4">
           {items.length === 0 ? (
@@ -1154,6 +1156,7 @@ export default function CashierPage() {
                 <X className="w-6 h-6" />
               </button>
             </div>
+            <RunningLogo />
 
             <div className="flex-1 overflow-y-auto p-4">
               {items.length === 0 ? (
