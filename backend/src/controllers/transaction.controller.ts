@@ -225,6 +225,16 @@ export const createTransaction = async (
       });
     }
 
+    if (!outletId) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'OUTLET_ID_REQUIRED',
+          message: 'Outlet ID is required'
+        }
+      });
+    }
+
     const transactionResult = await prisma.$transaction(async (tx) => {
       // Generate transaction number
       const transactionNumber = `TRX-${Date.now()}`;
@@ -396,6 +406,16 @@ export const holdOrder = async (
 ) => {
   try {
     const { orderData } = req.body;
+
+    if (!orderData || !orderData.outletId) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'OUTLET_ID_REQUIRED',
+          message: 'Outlet ID is required'
+        }
+      });
+    }
 
     // Store as pending transaction instead of separate table
     const transactionNumber = `HOLD-${Date.now()}`;
