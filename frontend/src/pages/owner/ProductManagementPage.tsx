@@ -118,8 +118,8 @@ export default function ProductManagementPage() {
   const handleOpenProductForm = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
-      // Get categoryId from either categoryId field or category.id
-      const catId = product.categoryId || product.category?.id || '';
+      // Get categoryId from either categoryId field or category.id (use nullish coalescing to handle 0 as valid id)
+      const catId = product.categoryId ?? product.category?.id ?? '';
       setProductForm({
         name: product.name,
         categoryId: catId.toString(),
@@ -225,7 +225,7 @@ export default function ProductManagementPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Package className="w-6 h-6" />
-            Product Management
+            Manage Stok
           </h1>
           <p className="text-gray-600 mt-1">Manage your products and inventory</p>
         </div>
