@@ -11,7 +11,8 @@ import {
   LogOut,
   Menu,
   X,
-  Bell
+  Bell,
+  Package
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -40,6 +41,7 @@ export default function OwnerLayout() {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/owner/dashboard' },
+    { icon: Package, label: 'Manage Stok', path: '/owner/products' },
     { icon: Users, label: 'Employees', path: '/owner/employees' },
     { icon: UserCircle, label: 'Users', path: '/owner/users' },
     { icon: Store, label: 'Outlets', path: '/owner/outlets' },
