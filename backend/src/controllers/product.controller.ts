@@ -150,6 +150,17 @@ export const createProduct = async (req: Request, res: Response, _next: NextFunc
     const productData = req.body;
     const tenantId = (req as any).tenantId; // Get tenantId from middleware
 
+    // Validate that outletId is provided
+    if (!productData.outletId) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'OUTLET_ID_REQUIRED',
+          message: 'Outlet ID is required'
+        }
+      });
+    }
+
     // Validate that the product's outlet belongs to the current tenant
     const outlet = await prisma.outlet.findUnique({
       where: { id: productData.outletId }
