@@ -184,7 +184,7 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
                         </span>
                       </td>
                       <td className="px-4 py-3 text-blue-600 font-semibold">
-                        {modifier.price > 0 ? `+Rp ${modifier.price.toLocaleString()}` : 'Free'}
+                        {modifier.price > 0 ? `+Rp ${modifier.price.toLocaleString('id-ID')}` : 'Free'}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-semibold ${
