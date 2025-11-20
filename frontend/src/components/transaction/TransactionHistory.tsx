@@ -158,7 +158,7 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
           ${transaction.transactionItems.map(item => `
             <div class="item">
               <span>${item.quantity}x ${item.itemName}</span>
-              <span>Rp ${item.subtotal.toLocaleString()}</span>
+              <span>Rp ${Number(item.subtotal).toLocaleString('id-ID')}</span>
             </div>
           `).join('')}
         </div>
@@ -166,17 +166,17 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
         <div class="totals">
           <div class="total-row grand">
             <span>TOTAL:</span>
-            <span>Rp ${transaction.total.toLocaleString()}</span>
+            <span>Rp ${Number(transaction.total).toLocaleString('id-ID')}</span>
           </div>
           ${transaction.payments.map(payment => `
             <div class="total-row">
               <span>${payment.method.toUpperCase()}:</span>
-              <span>Rp ${payment.amount.toLocaleString()}</span>
+              <span>Rp ${Number(payment.amount).toLocaleString('id-ID')}</span>
             </div>
             ${payment.changeAmount ? `
               <div class="total-row">
                 <span>Change:</span>
-                <span>Rp ${payment.changeAmount.toLocaleString()}</span>
+                <span>Rp ${Number(payment.changeAmount).toLocaleString('id-ID')}</span>
               </div>
             ` : ''}
           `).join('')}
@@ -283,7 +283,7 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-blue-600">Rp {transaction.total.toLocaleString()}</p>
+                        <p className="font-bold text-blue-600">Rp {Number(transaction.total).toLocaleString('id-ID')}</p>
                         <span className={`text-xs px-2 py-1 rounded ${
                           transaction.status === 'completed' ? 'bg-green-100 text-green-700' :
                           transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
@@ -349,7 +349,7 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                     {selectedTransaction.transactionItems.map((item, idx) => (
                       <div key={idx} className="flex justify-between text-sm">
                         <span>{item.quantity}x {item.itemName}</span>
-                        <span className="font-semibold">Rp {item.subtotal.toLocaleString()}</span>
+                        <span className="font-semibold">Rp {Number(item.subtotal).toLocaleString('id-ID')}</span>
                       </div>
                     ))}
                   </div>
@@ -362,19 +362,19 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                       <div key={idx}>
                         <div className="flex justify-between">
                           <span className="text-gray-600 capitalize">{payment.method}:</span>
-                          <span>Rp {payment.amount.toLocaleString()}</span>
+                          <span>Rp {Number(payment.amount).toLocaleString('id-ID')}</span>
                         </div>
                         {payment.changeAmount !== undefined && payment.changeAmount > 0 && (
                           <div className="flex justify-between text-gray-600">
                             <span>Change:</span>
-                            <span>Rp {payment.changeAmount.toLocaleString()}</span>
+                            <span>Rp {Number(payment.changeAmount).toLocaleString('id-ID')}</span>
                           </div>
                         )}
                       </div>
                     ))}
                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
                       <span>Total:</span>
-                      <span className="text-blue-600">Rp {selectedTransaction.total.toLocaleString()}</span>
+                      <span className="text-blue-600">Rp {Number(selectedTransaction.total).toLocaleString('id-ID')}</span>
                     </div>
                   </div>
                 </div>
@@ -404,7 +404,7 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
             </div>
             <div className="text-sm text-gray-600">
               Total Revenue: <span className="font-semibold text-blue-600">
-                Rp {transactions.reduce((sum, t) => sum + parseFloat(t.total.toString()), 0).toLocaleString()}
+                Rp {transactions.reduce((sum, t) => sum + parseFloat(t.total.toString()), 0).toLocaleString('id-ID')}
               </span>
             </div>
           </div>

@@ -304,7 +304,7 @@ export default function ProductManagementPage() {
                     {product.category?.name || 'Uncategorized'}
                   </p>
                   <p className="text-blue-600 font-bold mt-2">
-                    Rp {product.price.toLocaleString()}
+                    Rp {product.price.toLocaleString('id-ID')}
                   </p>
                   <div className="flex gap-2 mt-4">
                     <button
