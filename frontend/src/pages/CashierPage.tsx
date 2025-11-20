@@ -175,7 +175,7 @@ export default function CashierPage() {
     const amount = parseFloat(currentPaymentAmount);
 
     if (amount > remaining) {
-      toast.error(`Amount exceeds remaining balance (Rp ${remaining.toLocaleString()})`);
+      toast.error(`Amount exceeds remaining balance (Rp ${remaining.toLocaleString('id-ID')})`);
       return;
     }
 
@@ -752,7 +752,7 @@ export default function CashierPage() {
                       </button>
                     </div>
                     <span className="font-semibold text-blue-600">
-                      Rp {(item.price * item.quantity).toLocaleString()}
+                      Rp {(item.price * item.quantity).toLocaleString('id-ID')}
                     </span>
                   </div>
                 </div>
@@ -765,11 +765,11 @@ export default function CashierPage() {
           <div className="space-y-2 mb-4">
             <div className="flex justify-between text-sm">
               <span>Subtotal:</span>
-              <span>Rp {getSubtotal().toLocaleString()}</span>
+              <span>Rp {getSubtotal().toLocaleString('id-ID')}</span>
             </div>
             <div className="flex justify-between font-bold text-lg">
               <span>Total:</span>
-              <span className="text-blue-600">Rp {getTotal().toLocaleString()}</span>
+              <span className="text-blue-600">Rp {getTotal().toLocaleString('id-ID')}</span>
             </div>
           </div>
           <button
@@ -796,7 +796,7 @@ export default function CashierPage() {
 
             <div className="mb-4 pb-4 border-b">
               <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-              <p className="text-3xl font-bold text-blue-600">Rp {getTotal().toLocaleString()}</p>
+              <p className="text-3xl font-bold text-blue-600">Rp {getTotal().toLocaleString('id-ID')}</p>
             </div>
 
             {/* Split Bill Toggle */}
@@ -825,11 +825,11 @@ export default function CashierPage() {
                 <div className="mb-4 p-3 bg-blue-50 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium">Total Paid:</span>
-                    <span className="text-lg font-bold text-green-600">Rp {getTotalPaid().toLocaleString()}</span>
+                    <span className="text-lg font-bold text-green-600">Rp {getTotalPaid().toLocaleString('id-ID')}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Remaining:</span>
-                    <span className="text-lg font-bold text-red-600">Rp {getRemainingAmount().toLocaleString()}</span>
+                    <span className="text-lg font-bold text-red-600">Rp {getRemainingAmount().toLocaleString('id-ID')}</span>
                   </div>
                 </div>
 
@@ -840,7 +840,7 @@ export default function CashierPage() {
                       <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                         <div>
                           <span className="font-semibold capitalize">{payment.method}</span>
-                          <p className="text-sm text-gray-600">Rp {parseFloat(payment.amount).toLocaleString()}</p>
+                          <p className="text-sm text-gray-600">Rp {parseFloat(payment.amount).toLocaleString('id-ID')}</p>
                         </div>
                         <button
                           onClick={() => handleRemovePayment(index)}
@@ -888,7 +888,7 @@ export default function CashierPage() {
                         onClick={() => setCurrentPaymentAmount(getRemainingAmount().toString())}
                         className="text-xs text-blue-600 hover:underline mt-1"
                       >
-                        Pay Remaining (Rp {getRemainingAmount().toLocaleString()})
+                        Pay Remaining (Rp {getRemainingAmount().toLocaleString('id-ID')})
                       </button>
                     </div>
 
@@ -957,7 +957,7 @@ export default function CashierPage() {
                     />
                     {changeAmount >= 0 && cashReceived && (
                       <p className="text-sm text-gray-600 mt-2">
-                        Change: <span className="font-semibold">Rp {changeAmount.toLocaleString()}</span>
+                        Change: <span className="font-semibold">Rp {changeAmount.toLocaleString('id-ID')}</span>
                       </p>
                     )}
                   </div>
@@ -1214,7 +1214,7 @@ export default function CashierPage() {
                           </button>
                         </div>
                         <span className="font-semibold text-blue-600">
-                          Rp {(item.price * item.quantity).toLocaleString()}
+                          Rp {(item.price * item.quantity).toLocaleString('id-ID')}
                         </span>
                       </div>
                     </div>
@@ -1227,7 +1227,7 @@ export default function CashierPage() {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total:</span>
-                  <span className="text-blue-600">Rp {getTotal().toLocaleString()}</span>
+                  <span className="text-blue-600">Rp {getTotal().toLocaleString('id-ID')}</span>
                 </div>
               </div>
               <button
