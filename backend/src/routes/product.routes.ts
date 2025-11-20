@@ -47,4 +47,5 @@ router.put('/:id', authMiddleware, tenantMiddleware, updateProduct);
  */
 router.delete('/:id', authMiddleware, tenantMiddleware, deleteProduct);
 
+
 export default router;

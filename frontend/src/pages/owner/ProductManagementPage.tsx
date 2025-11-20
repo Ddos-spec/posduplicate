@@ -6,11 +6,13 @@ import {
   Edit2,
   Trash2,
   Image as ImageIcon,
-  AlertCircle
+  AlertCircle,
+  ChefHat
 } from 'lucide-react';
 import api, { getFullUrl } from '../../services/api';
 import toast from 'react-hot-toast';
 import useConfirmationStore from '../../store/confirmationStore';
+import RecipeModal from '../../components/owner/RecipeModal';
 
 interface Category {
   id: number;
@@ -24,7 +26,7 @@ interface Product {
   image?: string;
   description?: string;
   categoryId: number;
-  category?: Category;
+  categories?: Category;
 }
 
 export default function ProductManagementPage() {
@@ -37,6 +39,8 @@ export default function ProductManagementPage() {
   const [imagePreview, setImagePreview] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+
+  const [recipeModalProduct, setRecipeModalProduct] = useState<{ id: number; name: string } | null>(null);
 
   // Helper function to format number with thousand separator
   const formatPriceInput = (value: string): string => {
@@ -95,7 +99,7 @@ export default function ProductManagementPage() {
   // Filter products based on search term
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    (product.categories?.name.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
   );
 
   // Paginate products
@@ -118,8 +122,8 @@ export default function ProductManagementPage() {
   const handleOpenProductForm = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
-      // Get categoryId from either categoryId field or category.id (use nullish coalescing to handle 0 as valid id)
-      const catId = product.categoryId ?? product.category?.id ?? '';
+      // Get categoryId from either categoryId field or categories.id (use nullish coalescing to handle 0 as valid id)
+      const catId = product.categoryId ?? product.categories?.id ?? '';
       setProductForm({
         name: product.name,
         categoryId: catId.toString(),
@@ -301,22 +305,29 @@ export default function ProductManagementPage() {
                 <div className="p-4">
                   <h3 className="font-semibold text-gray-800 truncate">{product.name}</h3>
                   <p className="text-sm text-gray-500 mt-1">
-                    {product.category?.name || 'Uncategorized'}
+                    {product.categories?.name || 'Uncategorized'}
                   </p>
                   <p className="text-blue-600 font-bold mt-2">
-                    Rp {product.price.toLocaleString('id-ID')}
+                    Rp {parseFloat(product.price.toString()).toLocaleString('id-ID')}
                   </p>
-                  <div className="flex gap-2 mt-4">
+                  <div className="grid grid-cols-3 gap-2 mt-4">
+                    <button
+                      onClick={() => setRecipeModalProduct({ id: product.id, name: product.name })}
+                      className="flex items-center justify-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 text-sm"
+                      title="Manage Recipe"
+                    >
+                      <ChefHat className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => handleOpenProductForm(product)}
-                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm"
+                      className="flex items-center justify-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm"
                     >
                       <Edit2 className="w-4 h-4" />
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeleteProduct(product.id)}
-                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
+                      className="flex items-center justify-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
                     >
                       <Trash2 className="w-4 h-4" />
                       Delete
@@ -352,6 +363,14 @@ export default function ProductManagementPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Recipe Modal */}
+      {recipeModalProduct && (
+        <RecipeModal
+          product={recipeModalProduct}
+          onClose={() => setRecipeModalProduct(null)}
+        />
       )}
 
       {/* Product Form Modal */}

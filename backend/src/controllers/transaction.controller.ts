@@ -375,6 +375,22 @@ export const createTransaction = async (
             }
           });
         }
+
+        // Deduct ingredients based on recipe
+        const recipes = await tx.recipes.findMany({
+          where: { item_id: item.itemId }
+        });
+
+        for (const recipe of recipes) {
+          await tx.ingredients.update({
+            where: { id: recipe.ingredient_id },
+            data: {
+              stock: {
+                decrement: parseFloat(recipe.quantity.toString()) * item.quantity
+              }
+            }
+          });
+        }
       }
 
       return transaction;

@@ -72,6 +72,11 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
           include: {
             modifiers: true
           }
+        },
+        recipes: {
+          include: {
+            ingredients: true
+          }
         }
       },
       orderBy: { name: 'asc' }
@@ -118,6 +123,11 @@ export const getProductById = async (req: Request, res: Response, _next: NextFun
         item_modifiers: {
           include: {
             modifiers: true
+          }
+        },
+        recipes: {
+          include: {
+            ingredients: true
           }
         }
       }
