@@ -303,8 +303,8 @@ export const printReceipt = (
     // All in one line: Name, Qty, Price, Total
     doc.text(itemName, margin, yPos);
     doc.text(item.quantity.toString(), colQty, yPos);
-    doc.text(item.price.toLocaleString(), colPrice, yPos);
-    doc.text(itemTotal.toLocaleString(), colTotal, yPos, { align: 'right' });
+    doc.text(item.price.toLocaleString('id-ID'), colPrice, yPos);
+    doc.text(itemTotal.toLocaleString('id-ID'), colTotal, yPos, { align: 'right' });
     yPos += 4;
 
     // Notes if any (in separate line with smaller font)

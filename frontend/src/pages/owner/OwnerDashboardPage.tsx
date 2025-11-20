@@ -83,11 +83,8 @@ export default function OwnerDashboardPage() {
   }, [dateRange, selectedOutlet]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(value);
+    // Use a consistent format that ensures dots are used as thousand separators
+    return `Rp ${value.toLocaleString('id-ID')}`;
   };
 
   const formatNumber = (num: number) => {
