@@ -125,6 +125,7 @@ function App() {
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="products" element={<ProductManagementPage />} />
+          <Route path="ingredients" element={<IngredientsManagementPage />} />
           <Route index element={<Navigate to="/owner/dashboard" />} />
         </Route>
 
