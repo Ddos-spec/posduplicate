@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
+import { createActivityLog } from './activity-log.controller';
 
 export const getIngredients = async (req: Request, res: Response, _next: NextFunction) => {
   try {
@@ -80,6 +81,74 @@ export const deleteIngredient = async (req: Request, res: Response, _next: NextF
       data: { is_active: false }
     });
     res.json({ success: true, message: 'Ingredient deleted successfully' });
+  } catch (error) {
+    return _next(error);
+  }
+};
+
+export const adjustIngredientStock = async (req: Request, res: Response, _next: NextFunction) => {
+  try {
+    const { ingredientId, quantity, type, reason, notes } = req.body;
+
+    if (!ingredientId || !quantity || !type) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Ingredient ID, quantity, and type are required' }
+      });
+    }
+
+    // Require reason for stock adjustments
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Reason is required for stock adjustments' }
+      });
+    }
+
+    const ingredient = await prisma.ingredients.findUnique({
+      where: { id: parseInt(ingredientId) }
+    });
+
+    if (!ingredient) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Ingredient not found' }
+      });
+    }
+
+    const oldStock = Number(ingredient.stock);
+    const adjustmentQty = parseFloat(quantity);
+    const newStock = type === 'in' ? oldStock + adjustmentQty : oldStock - adjustmentQty;
+
+    if (newStock < 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_STOCK', message: 'Stock cannot be negative' }
+      });
+    }
+
+    await prisma.ingredients.update({
+      where: { id: parseInt(ingredientId) },
+      data: { stock: newStock }
+    });
+
+    // Log the activity
+    await createActivityLog(
+      req.userId!,
+      type === 'in' ? 'stock_in' : 'stock_out',
+      'ingredient',
+      ingredient.id,
+      { stock: oldStock },
+      { stock: newStock },
+      `${reason}${notes ? ` - ${notes}` : ''}`,
+      req.outletId || ingredient.outlet_id || null
+    );
+
+    res.json({
+      success: true,
+      data: { oldStock, newStock, adjustment: adjustmentQty, type },
+      message: `Stock ${type === 'in' ? 'added' : 'removed'} successfully`
+    });
   } catch (error) {
     return _next(error);
   }
