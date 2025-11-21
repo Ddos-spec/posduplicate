@@ -83,18 +83,16 @@ export default function OwnerDashboardPage() {
   }, [dateRange, selectedOutlet]);
 
   const formatCurrency = (value: number) => {
-    // Use a consistent format that ensures dots are used as thousand separators
-    return `Rp ${value.toLocaleString('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    })}`;
+    // Format number with dot as thousand separator (Indonesian format)
+    const formatted = Math.floor(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return `Rp ${formatted}`;
   };
 
   const formatNumber = (num: number) => {
-    if (num >= 1000000000) return `${(num / 1000000000).toFixed(1)}m`; // miliar
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}jt`; // juta
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}rb`; // ribu
-    return num.toString();
+    if (num >= 1000000000) return `${(num / 1000000000).toFixed(1).replace('.', ',')}m`; // miliar
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1).replace('.', ',')}jt`; // juta
+    if (num >= 1000) return `${(num / 1000).toFixed(1).replace('.', ',')}rb`; // ribu
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
   if (loading) {

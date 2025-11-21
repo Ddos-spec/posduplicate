@@ -44,19 +44,17 @@ export default function ProductManagementPage() {
 
   const [recipeModalProduct, setRecipeModalProduct] = useState<{ id: number; name: string } | null>(null);
 
-  // Helper function to format currency
+  // Helper function to format currency with dot as thousand separator
   const formatCurrency = (value: number): string => {
-    return `Rp ${value.toLocaleString('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    })}`;
+    const formatted = Math.floor(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return `Rp ${formatted}`;
   };
 
-  // Helper function to format number with thousand separator
+  // Helper function to format number with thousand separator (dot)
   const formatPriceInput = (value: string): string => {
     const numbers = value.replace(/\D/g, '');
     if (!numbers) return '';
-    return parseInt(numbers).toLocaleString('id-ID');
+    return parseInt(numbers).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
   // Helper function to parse formatted price back to number
