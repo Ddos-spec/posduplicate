@@ -11,17 +11,9 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import useConfirmationStore from '../../store/confirmationStore';
 
-interface Category {
-  id: number;
-  name: string;
-  type: string;
-}
-
 interface Ingredient {
   id: number;
   name: string;
-  category_id?: number;
-  categories?: Category;
   unit: string;
   stock: number;
   min_stock: number;
@@ -32,7 +24,6 @@ interface Ingredient {
 
 export default function IngredientsManagementPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -43,7 +34,6 @@ export default function IngredientsManagementPage() {
   // State for form
   const [form, setForm] = useState({
     name: '',
-    categoryId: '',
     unit: 'kg',
     stock: '',
     minStock: '',
@@ -77,28 +67,13 @@ export default function IngredientsManagementPage() {
     }
   }, []);
 
-  // Load categories
-  const loadCategories = useCallback(async () => {
-    try {
-      const response = await api.get('/categories');
-      // Filter for ingredient categories if you have a type field, or just show all
-      // Assuming categories have a 'type' field based on user request
-      const ingredientCategories = response.data.data.filter((c: Category) => c.type === 'ingredient');
-      setCategories(ingredientCategories);
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-    }
-  }, []);
-
   useEffect(() => {
     loadIngredients();
-    loadCategories();
-  }, [loadIngredients, loadCategories]);
+  }, [loadIngredients]);
 
   // Filter ingredients
   const filteredIngredients = ingredients.filter(ing =>
-    ing.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (ing.categories?.name.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    ing.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Paginate
@@ -116,7 +91,6 @@ export default function IngredientsManagementPage() {
       setEditingIngredient(ingredient);
       setForm({
         name: ingredient.name,
-        categoryId: ingredient.category_id?.toString() || '',
         unit: ingredient.unit,
         stock: ingredient.stock.toString(),
         minStock: ingredient.min_stock.toString(),
@@ -126,7 +100,6 @@ export default function IngredientsManagementPage() {
       setEditingIngredient(null);
       setForm({
         name: '',
-        categoryId: '',
         unit: 'kg',
         stock: '0',
         minStock: '0',
@@ -153,7 +126,6 @@ export default function IngredientsManagementPage() {
     try {
       const data = {
         name: form.name,
-        categoryId: form.categoryId ? parseInt(form.categoryId) : null,
         unit: form.unit,
         stock: parseFloat(form.stock || '0'),
         minStock: parseFloat(form.minStock || '0'),
@@ -234,7 +206,6 @@ export default function IngredientsManagementPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost/Unit</th>
@@ -244,17 +215,16 @@ export default function IngredientsManagementPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center">Loading...</td>
+                  <td colSpan={5} className="px-6 py-4 text-center">Loading...</td>
                 </tr>
               ) : paginatedIngredients.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No ingredients found</td>
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No ingredients found</td>
                 </tr>
               ) : (
                 paginatedIngredients.map((ing) => (
                   <tr key={ing.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{ing.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-500">{ing.categories?.name || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         ing.stock <= ing.min_stock ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
@@ -301,19 +271,6 @@ export default function IngredientsManagementPage() {
                   onChange={(e) => handleFormChange('name', e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Category</label>
-                <select
-                  value={form.categoryId}
-                  onChange={(e) => handleFormChange('categoryId', e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="">Select category</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
