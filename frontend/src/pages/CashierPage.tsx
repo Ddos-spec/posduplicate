@@ -41,13 +41,19 @@ export default function CashierPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [settings, setSettings] = useState<TenantSettings | null>(null);
 
-  // Helper function to format number with thousand separator
+  // Helper function to format currency with dot as thousand separator
+  const formatCurrencyDisplay = (value: number): string => {
+    const formatted = Math.floor(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return `Rp ${formatted}`;
+  };
+
+  // Helper function to format number with thousand separator (dot)
   const formatPriceInput = (value: string): string => {
     // Remove all non-digit characters
     const numbers = value.replace(/\D/g, '');
     if (!numbers) return '';
-    // Format with thousand separator
-    return parseInt(numbers).toLocaleString('id-ID');
+    // Format with dot as thousand separator
+    return parseInt(numbers).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
   // Helper function to parse formatted price back to number
@@ -181,7 +187,7 @@ export default function CashierPage() {
     const amount = parseFloat(currentPaymentAmount);
 
     if (amount > remaining) {
-      toast.error(`Amount exceeds remaining balance (Rp ${remaining.toLocaleString('id-ID')})`);
+      toast.error(`Amount exceeds remaining balance (${formatCurrencyDisplay(remaining)})`);
       return;
     }
 
@@ -774,7 +780,7 @@ export default function CashierPage() {
                       </button>
                     </div>
                     <span className="font-semibold text-blue-600">
-                      Rp {(item.price * item.quantity).toLocaleString('id-ID')}
+                      {formatCurrencyDisplay(item.price * item.quantity)}
                     </span>
                   </div>
                 </div>
@@ -787,11 +793,11 @@ export default function CashierPage() {
           <div className="space-y-2 mb-4">
             <div className="flex justify-between text-sm">
               <span>Subtotal:</span>
-              <span>Rp {getSubtotal().toLocaleString('id-ID')}</span>
+              <span>{formatCurrencyDisplay(getSubtotal())}</span>
             </div>
             <div className="flex justify-between font-bold text-lg">
               <span>Total:</span>
-              <span className="text-blue-600">Rp {getTotal().toLocaleString('id-ID')}</span>
+              <span className="text-blue-600">{formatCurrencyDisplay(getTotal())}</span>
             </div>
           </div>
           <button
@@ -818,7 +824,7 @@ export default function CashierPage() {
 
             <div className="mb-4 pb-4 border-b">
               <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-              <p className="text-3xl font-bold text-blue-600">Rp {getTotal().toLocaleString('id-ID')}</p>
+              <p className="text-3xl font-bold text-blue-600">{formatCurrencyDisplay(getTotal())}</p>
             </div>
 
             {/* Split Bill Toggle */}
@@ -847,11 +853,11 @@ export default function CashierPage() {
                 <div className="mb-4 p-3 bg-blue-50 rounded-lg">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium">Total Paid:</span>
-                    <span className="text-lg font-bold text-green-600">Rp {getTotalPaid().toLocaleString('id-ID')}</span>
+                    <span className="text-lg font-bold text-green-600">{formatCurrencyDisplay(getTotalPaid())}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Remaining:</span>
-                    <span className="text-lg font-bold text-red-600">Rp {getRemainingAmount().toLocaleString('id-ID')}</span>
+                    <span className="text-lg font-bold text-red-600">{formatCurrencyDisplay(getRemainingAmount())}</span>
                   </div>
                 </div>
 
@@ -862,7 +868,7 @@ export default function CashierPage() {
                       <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                         <div>
                           <span className="font-semibold capitalize">{payment.method}</span>
-                          <p className="text-sm text-gray-600">Rp {parseFloat(payment.amount).toLocaleString('id-ID')}</p>
+                          <p className="text-sm text-gray-600">{formatCurrencyDisplay(parseFloat(payment.amount))}</p>
                         </div>
                         <button
                           onClick={() => handleRemovePayment(index)}
@@ -910,7 +916,7 @@ export default function CashierPage() {
                         onClick={() => setCurrentPaymentAmount(getRemainingAmount().toString())}
                         className="text-xs text-blue-600 hover:underline mt-1"
                       >
-                        Pay Remaining (Rp {getRemainingAmount().toLocaleString('id-ID')})
+                        Pay Remaining ({formatCurrencyDisplay(getRemainingAmount())})
                       </button>
                     </div>
 
@@ -979,7 +985,7 @@ export default function CashierPage() {
                     />
                     {changeAmount >= 0 && cashReceived && (
                       <p className="text-sm text-gray-600 mt-2">
-                        Change: <span className="font-semibold">Rp {changeAmount.toLocaleString('id-ID')}</span>
+                        Change: <span className="font-semibold">{formatCurrencyDisplay(changeAmount)}</span>
                       </p>
                     )}
                   </div>
@@ -1236,7 +1242,7 @@ export default function CashierPage() {
                           </button>
                         </div>
                         <span className="font-semibold text-blue-600">
-                          Rp {(item.price * item.quantity).toLocaleString('id-ID')}
+                          {formatCurrencyDisplay(item.price * item.quantity)}
                         </span>
                       </div>
                     </div>
@@ -1249,7 +1255,7 @@ export default function CashierPage() {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total:</span>
-                  <span className="text-blue-600">Rp {getTotal().toLocaleString('id-ID')}</span>
+                  <span className="text-blue-600">{formatCurrencyDisplay(getTotal())}</span>
                 </div>
               </div>
               <button
