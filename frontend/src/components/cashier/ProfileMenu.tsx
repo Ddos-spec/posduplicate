@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, User, Package, Clock, LogOut, Save } from 'lucide-react';
+import { X, User, Package, LogOut, Save } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import useConfirmationStore from '../../store/confirmationStore';
 import api from '../../services/api';
@@ -15,32 +15,14 @@ interface Ingredient {
   cost_per_unit: number;
 }
 
-interface ShiftData {
-  id: number;
-  shift_number: string;
-  started_at: string;
-  ended_at?: string;
-  opening_cash: number;
-  closing_cash?: number;
-  total_sales?: number;
-  transaction_count?: number;
-  status: string;
-  users: {
-    id: number;
-    name: string;
-    email: string;
-  };
-}
-
 interface ProfileMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  onShiftChange?: () => void;
 }
 
-type TabType = 'profile' | 'inventory' | 'shift';
+type TabType = 'profile' | 'inventory';
 
-const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onShiftChange }) => {
+const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const { user, logout } = useAuthStore();
   const { showConfirmation } = useConfirmationStore();
@@ -52,12 +34,6 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onShiftChang
   // Inventory states
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
-
-  // Shift states
-  const [currentShift, setCurrentShift] = useState<ShiftData | null>(null);
-  const [loadingShift, setLoadingShift] = useState(false);
-  const [closingCash, setClosingCash] = useState<string>('0');
-  const [shiftNotes, setShiftNotes] = useState<string>('');
 
   // Load ingredients when inventory tab is active
   const loadIngredients = useCallback(async () => {
@@ -83,38 +59,11 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onShiftChang
     }
   }, []);
 
-  // Load current shift
-  const loadCurrentShift = useCallback(async () => {
-    try {
-      setLoadingShift(true);
-      const response = await fetch('http://localhost:3000/api/shifts/current', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentShift(data.data);
-      } else if (response.status === 404) {
-        setCurrentShift(null);
-      }
-    } catch (error) {
-      console.error('Error fetching current shift:', error);
-    } finally {
-      setLoadingShift(false);
-    }
-  }, []);
-
   useEffect(() => {
-    if (isOpen) {
-      if (activeTab === 'inventory') {
-        loadIngredients();
-      } else if (activeTab === 'shift') {
-        loadCurrentShift();
-      }
+    if (isOpen && activeTab === 'inventory') {
+      loadIngredients();
     }
-  }, [isOpen, activeTab, loadIngredients, loadCurrentShift]);
+  }, [isOpen, activeTab, loadIngredients]);
 
   const handleUpdateName = async () => {
     if (!cashierName.trim()) {
@@ -158,123 +107,6 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onShiftChang
     });
   };
 
-  const handleStartShift = () => {
-    showConfirmation({
-      title: 'Mulai Shift Baru',
-      message: 'Apakah Anda siap untuk memulai shift sekarang?',
-      type: 'success',
-      confirmText: 'Ya, Mulai Shift',
-      cancelText: 'Batal',
-      onConfirm: async () => {
-        setLoadingShift(true);
-        try {
-          const response = await fetch('http://localhost:3000/api/shifts/start', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            },
-            body: JSON.stringify({
-              opening_cash: 0,
-              notes: shiftNotes || undefined,
-            }),
-          });
-
-          const data = await response.json();
-
-          if (response.ok) {
-            setCurrentShift(data.data);
-            setShiftNotes('');
-            if (onShiftChange) onShiftChange();
-            toast.success('Shift berhasil dimulai!');
-          } else {
-            toast.error(data.message || 'Gagal memulai shift');
-          }
-        } catch (error) {
-          console.error('Error starting shift:', error);
-          toast.error('Terjadi kesalahan saat memulai shift');
-        } finally {
-          setLoadingShift(false);
-        }
-      },
-    });
-  };
-
-  const handleEndShift = () => {
-    if (!closingCash) {
-      toast.error('Mohon masukkan uang penutup');
-      return;
-    }
-
-    showConfirmation({
-      title: 'Akhiri Shift',
-      message: 'Apakah Anda yakin ingin mengakhiri shift ini? Pastikan semua transaksi sudah tercatat dengan benar.',
-      type: 'danger',
-      confirmText: 'Ya, Akhiri Shift',
-      cancelText: 'Batal',
-      onConfirm: async () => {
-        setLoadingShift(true);
-        try {
-          const response = await fetch('http://localhost:3000/api/shifts/end', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            },
-            body: JSON.stringify({
-              closing_cash: parseFloat(closingCash),
-              actual_cash: parseFloat(closingCash),
-              notes: shiftNotes || undefined,
-            }),
-          });
-
-          const data = await response.json();
-
-          if (response.ok) {
-            toast.success('Shift berhasil diakhiri!');
-            setCurrentShift(null);
-            setClosingCash('0');
-            setShiftNotes('');
-            if (onShiftChange) onShiftChange();
-          } else {
-            toast.error(data.message || 'Gagal mengakhiri shift');
-          }
-        } catch (error) {
-          console.error('Error ending shift:', error);
-          toast.error('Terjadi kesalahan saat mengakhiri shift');
-        } finally {
-          setLoadingShift(false);
-        }
-      },
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('id-ID', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const calculateDuration = (startDate: string) => {
-    const start = new Date(startDate);
-    const now = new Date();
-    const diff = now.getTime() - start.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours} jam ${minutes} menit`;
-  };
 
   if (!isOpen) return null;
 
@@ -315,17 +147,6 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onShiftChang
           >
             <Package size={18} />
             Inventori
-          </button>
-          <button
-            onClick={() => setActiveTab('shift')}
-            className={`flex-1 px-4 py-3 font-medium transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'shift'
-                ? 'bg-white text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <Clock size={18} />
-            Shift
           </button>
         </div>
 
@@ -451,156 +272,6 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onShiftChang
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Shift Tab */}
-          {activeTab === 'shift' && (
-            <div className="space-y-6">
-              {loadingShift ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Memuat data shift...</p>
-                </div>
-              ) : !currentShift ? (
-                // Start Shift
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
-                    <Clock className="mr-2" size={20} />
-                    Mulai Shift Baru
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Kasir
-                      </label>
-                      <input
-                        type="text"
-                        value={user?.name || ''}
-                        disabled
-                        className="w-full px-4 py-2 border rounded-lg bg-gray-100"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Catatan (opsional)
-                      </label>
-                      <textarea
-                        value={shiftNotes}
-                        onChange={(e) => setShiftNotes(e.target.value)}
-                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                        rows={3}
-                        placeholder="Tambahkan catatan jika diperlukan"
-                      />
-                    </div>
-                    <button
-                      onClick={handleStartShift}
-                      className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-                    >
-                      Mulai Shift
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                // Active Shift
-                <div className="space-y-6">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center">
-                      <Clock className="mr-2" size={20} />
-                      Shift Aktif
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-600">No. Shift</p>
-                        <p className="font-semibold text-gray-900">{currentShift.shift_number}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Kasir</p>
-                        <p className="font-semibold text-gray-900">{currentShift.users.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Mulai Shift</p>
-                        <p className="font-semibold text-gray-900">
-                          {formatDateTime(currentShift.started_at)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Durasi</p>
-                        <p className="font-semibold text-gray-900">
-                          {calculateDuration(currentShift.started_at)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Total Penjualan</p>
-                        <p className="font-semibold text-gray-900">
-                          {formatCurrency(currentShift.total_sales || 0)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Jumlah Transaksi</p>
-                        <p className="font-semibold text-gray-900">
-                          {currentShift.transaction_count || 0} transaksi
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* End Shift */}
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-red-900 mb-4">Akhiri Shift</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Uang Penutup (Rp) *
-                        </label>
-                        <input
-                          type="number"
-                          value={closingCash}
-                          onChange={(e) => setClosingCash(e.target.value)}
-                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500"
-                          placeholder="0"
-                        />
-                      </div>
-                      {parseFloat(closingCash) > 0 && (
-                        <div className="bg-white rounded-lg p-4 border">
-                          <p className="text-sm text-gray-600 mb-1">Selisih Kas</p>
-                          <p
-                            className={`text-xl font-bold ${
-                              parseFloat(closingCash) -
-                                ((currentShift.opening_cash || 0) + (currentShift.total_sales || 0)) ===
-                              0
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                            }`}
-                          >
-                            {formatCurrency(
-                              parseFloat(closingCash) -
-                                ((currentShift.opening_cash || 0) + (currentShift.total_sales || 0))
-                            )}
-                          </p>
-                        </div>
-                      )}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Catatan Penutupan (opsional)
-                        </label>
-                        <textarea
-                          value={shiftNotes}
-                          onChange={(e) => setShiftNotes(e.target.value)}
-                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500"
-                          rows={3}
-                          placeholder="Tambahkan catatan penutupan jika diperlukan"
-                        />
-                      </div>
-                      <button
-                        onClick={handleEndShift}
-                        className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors font-semibold"
-                      >
-                        Akhiri Shift
-                      </button>
-                    </div>
                   </div>
                 </div>
               )}
