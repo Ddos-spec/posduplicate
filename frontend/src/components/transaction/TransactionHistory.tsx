@@ -128,6 +128,66 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
     }
   };
 
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      `⚠️ PERINGATAN: Hapus transaksi secara permanen?\n\n` +
+      `No. Transaksi: ${transaction.transactionNumber}\n` +
+      `Total: Rp ${Number(transaction.total).toLocaleString('id-ID')}\n\n` +
+      `Transaksi akan dihapus PERMANEN dari database dan tidak dapat dikembalikan!\n` +
+      `Stok produk akan dikembalikan jika transaksi sudah selesai.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/transactions/${transaction.id}`);
+
+      toast.success('Transaksi berhasil dihapus');
+      loadTransactions(); // Reload transactions
+      setSelectedTransaction(null); // Clear selection
+    } catch (error: unknown) {
+      console.error('Error deleting transaction:', error);
+      let errorMessage = 'Gagal menghapus transaksi';
+      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      }
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleUpdateStatus = async (transaction: Transaction, newStatus: string) => {
+    const statusLabels: { [key: string]: string } = {
+      'failed': 'gagal',
+      'refund': 'refund'
+    };
+
+    const confirmed = window.confirm(
+      `Apakah Anda yakin ingin mengubah status transaksi menjadi ${statusLabels[newStatus]}?\n\n` +
+      `No. Transaksi: ${transaction.transactionNumber}\n` +
+      `Total: Rp ${Number(transaction.total).toLocaleString('id-ID')}`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await api.put(`/transactions/${transaction.id}/status`, {
+        status: newStatus
+      });
+
+      toast.success(`Status transaksi berhasil diubah menjadi ${statusLabels[newStatus]}`);
+      loadTransactions();
+      setSelectedTransaction(null);
+    } catch (error: unknown) {
+      console.error('Error updating transaction status:', error);
+      let errorMessage = 'Gagal mengubah status transaksi';
+      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      }
+      toast.error(errorMessage);
+    }
+  };
+
   const handlePrintReceipt = (transaction: Transaction) => {
     const receiptWindow = window.open('', '_blank');
     if (!receiptWindow) return;
@@ -572,6 +632,8 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                 <option value="completed">Selesai</option>
                 <option value="pending">Pending</option>
                 <option value="cancelled">Dibatalkan</option>
+                <option value="failed">Gagal</option>
+                <option value="refund">Refund</option>
               </select>
             </div>
           </div>
@@ -613,11 +675,17 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                         <span className={`text-xs px-2 py-1 rounded font-semibold ${
                           transaction.status === 'completed' ? 'bg-green-100 text-green-700' :
                           transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
+                          transaction.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                          transaction.status === 'failed' ? 'bg-orange-100 text-orange-700' :
+                          transaction.status === 'refund' ? 'bg-purple-100 text-purple-700' :
+                          'bg-gray-100 text-gray-700'
                         }`}>
                           {transaction.status === 'completed' ? 'Selesai' :
                            transaction.status === 'pending' ? 'Pending' :
-                           'Dibatalkan'}
+                           transaction.status === 'cancelled' ? 'Dibatalkan' :
+                           transaction.status === 'failed' ? 'Gagal' :
+                           transaction.status === 'refund' ? 'Refund' :
+                           transaction.status}
                         </span>
                       </div>
                     </div>
@@ -716,28 +784,71 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                     Cetak Struk
                   </button>
 
-                  {selectedTransaction.status !== 'cancelled' && (
+                  {selectedTransaction.status === 'completed' && (
                     <>
                       <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
                         <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
                         <p className="text-yellow-800">
-                          Membatalkan transaksi akan mengembalikan stok produk yang terjual.
+                          Membatalkan atau menghapus transaksi akan mengembalikan stok produk yang terjual.
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleVoidTransaction(selectedTransaction)}
-                        className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 flex items-center justify-center gap-2"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                        Batalkan Transaksi
-                      </button>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleVoidTransaction(selectedTransaction)}
+                          className="bg-yellow-500 text-white py-2 rounded-lg font-semibold hover:bg-yellow-600 flex items-center justify-center gap-2 text-sm"
+                        >
+                          <X className="w-4 h-4" />
+                          Batalkan
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStatus(selectedTransaction, 'failed')}
+                          className="bg-orange-500 text-white py-2 rounded-lg font-semibold hover:bg-orange-600 flex items-center justify-center gap-2 text-sm"
+                        >
+                          <AlertCircle className="w-4 h-4" />
+                          Tandai Gagal
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleUpdateStatus(selectedTransaction, 'refund')}
+                          className="bg-purple-500 text-white py-2 rounded-lg font-semibold hover:bg-purple-600 flex items-center justify-center gap-2 text-sm"
+                        >
+                          <DollarSign className="w-4 h-4" />
+                          Refund
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTransaction(selectedTransaction)}
+                          className="bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 flex items-center justify-center gap-2 text-sm"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Hapus
+                        </button>
+                      </div>
                     </>
                   )}
 
-                  {selectedTransaction.status === 'cancelled' && (
-                    <div className="p-3 bg-gray-100 border border-gray-300 rounded-lg text-center">
-                      <p className="text-gray-600 font-medium">Transaksi ini sudah dibatalkan</p>
-                    </div>
+                  {selectedTransaction.status !== 'completed' && (
+                    <>
+                      <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                        <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-blue-800">
+                          Status: <strong>{selectedTransaction.status === 'pending' ? 'Pending' :
+                           selectedTransaction.status === 'cancelled' ? 'Dibatalkan' :
+                           selectedTransaction.status === 'failed' ? 'Gagal' :
+                           selectedTransaction.status === 'refund' ? 'Refund' :
+                           selectedTransaction.status}</strong>
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteTransaction(selectedTransaction)}
+                        className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 flex items-center justify-center gap-2"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                        Hapus Transaksi
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
