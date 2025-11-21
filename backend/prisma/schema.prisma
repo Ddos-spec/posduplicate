@@ -80,22 +80,24 @@ model Outlet {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  tenantId     Int?          @map("tenant_id")
-  email        String        @unique @db.VarChar(255)
-  passwordHash String        @map("password_hash") @db.VarChar(255)
-  name         String        @db.VarChar(255)
-  roleId       Int           @map("role_id")
-  outletId     Int?          @map("outlet_id")
-  isActive     Boolean?      @default(true) @map("is_active")
-  lastLogin    DateTime?     @map("last_login") @db.Timestamp(6)
-  createdAt    DateTime?     @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt    DateTime?     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  employees    employees[]
-  transactions Transaction[]
-  outlets      Outlet?       @relation(fields: [outletId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  roles        Role          @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tenants      Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id            Int            @id @default(autoincrement())
+  tenantId      Int?           @map("tenant_id")
+  email         String         @unique @db.VarChar(255)
+  passwordHash  String         @map("password_hash") @db.VarChar(255)
+  name          String         @db.VarChar(255)
+  roleId        Int            @map("role_id")
+  outletId      Int?           @map("outlet_id")
+  isActive      Boolean?       @default(true) @map("is_active")
+  lastLogin     DateTime?      @map("last_login") @db.Timestamp(6)
+  createdAt     DateTime?      @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  employees     employees[]
+  transactions  Transaction[]
+  cashierShifts CashierShift[]
+  activityLogs  ActivityLog[]
+  outlets       Outlet?        @relation(fields: [outletId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roles         Role           @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenants       Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([tenantId], map: "idx_users_tenant")
   @@index([email], map: "idx_users_email")
@@ -107,6 +109,7 @@ model Transaction {
   id                 Int               @id @default(autoincrement())
   transaction_number String            @unique @db.VarChar(100)
   order_type         String            @db.VarChar(50)
+  payment_channel    String?           @default("cash") @map("payment_channel") @db.VarChar(50)
   table_id           Int?
   customer_name      String?           @db.VarChar(255)
   customer_phone     String?           @db.VarChar(50)
@@ -119,6 +122,7 @@ model Transaction {
   notes              String?
   outletId           Int?              @map("outlet_id")
   cashier_id         Int?
+  shift_id           Int?
   createdAt          DateTime?         @default(now()) @map("created_at") @db.Timestamp(6)
   updated_at         DateTime?         @default(now()) @db.Timestamp(6)
   completed_at       DateTime?         @db.Timestamp(6)
@@ -130,12 +134,14 @@ model Transaction {
   outlets            Outlet?           @relation(fields: [outletId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   promotions         promotions?       @relation(fields: [promotion_id], references: [id], onUpdate: NoAction)
   tables             tables?           @relation(fields: [table_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cashierShifts      CashierShift?     @relation(fields: [shift_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([outletId], map: "idx_transactions_outlet")
   @@index([cashier_id], map: "idx_transactions_cashier")
   @@index([createdAt], map: "idx_transactions_created")
   @@index([transaction_number], map: "idx_transactions_number")
   @@index([status], map: "idx_transactions_status")
+  @@index([shift_id], map: "idx_transactions_shift")
   @@map("transactions")
 }
 
@@ -254,6 +260,8 @@ model items {
   name              String            @db.VarChar(255)
   categoryId        Int?              @map("category_id")
   price             Decimal           @default(0) @db.Decimal(12, 2)
+  price_gofood      Decimal?          @map("price_gofood") @db.Decimal(12, 2)
+  price_grabfood    Decimal?          @map("price_grabfood") @db.Decimal(12, 2)
   cost              Decimal?          @default(0) @db.Decimal(12, 2)
   image             String?           @db.VarChar(500)
   description       String?
@@ -376,4 +384,52 @@ model promotions {
   @@index([is_active], map: "idx_promotions_active")
   @@index([start_date, end_date], map: "idx_promotions_dates")
   @@index([outlet_id], map: "idx_promotions_outlet")
+}
+
+model CashierShift {
+  id               Int           @id @default(autoincrement())
+  shift_number     String        @unique @map("shift_number") @db.VarChar(100)
+  user_id          Int           @map("user_id")
+  outlet_id        Int           @map("outlet_id")
+  started_at       DateTime      @map("started_at") @db.Timestamp(6)
+  ended_at         DateTime?     @map("ended_at") @db.Timestamp(6)
+  opening_cash     Decimal?      @default(0) @map("opening_cash") @db.Decimal(12, 2)
+  closing_cash     Decimal?      @map("closing_cash") @db.Decimal(12, 2)
+  expected_cash    Decimal?      @default(0) @map("expected_cash") @db.Decimal(12, 2)
+  actual_cash      Decimal?      @map("actual_cash") @db.Decimal(12, 2)
+  difference       Decimal?      @default(0) @map("difference") @db.Decimal(12, 2)
+  total_sales      Decimal?      @default(0) @map("total_sales") @db.Decimal(12, 2)
+  transaction_count Int?         @default(0) @map("transaction_count")
+  status           String        @default("open") @db.VarChar(50)
+  notes            String?
+  created_at       DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?     @default(now()) @db.Timestamp(6)
+  users            User          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transactions     Transaction[]
+
+  @@index([user_id], map: "idx_cashier_shifts_user")
+  @@index([outlet_id], map: "idx_cashier_shifts_outlet")
+  @@index([started_at], map: "idx_cashier_shifts_started")
+  @@index([status], map: "idx_cashier_shifts_status")
+  @@map("cashier_shifts")
+}
+
+model ActivityLog {
+  id          Int       @id @default(autoincrement())
+  user_id     Int       @map("user_id")
+  outlet_id   Int?      @map("outlet_id")
+  action_type String    @map("action_type") @db.VarChar(100)
+  entity_type String    @map("entity_type") @db.VarChar(100)
+  entity_id   Int?      @map("entity_id")
+  old_value   Json?     @map("old_value") @db.Json
+  new_value   Json?     @map("new_value") @db.Json
+  reason      String?
+  created_at  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  users       User      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_activity_logs_user")
+  @@index([outlet_id], map: "idx_activity_logs_outlet")
+  @@index([action_type], map: "idx_activity_logs_action")
+  @@index([created_at], map: "idx_activity_logs_created")
+  @@map("activity_logs")
 }
