@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import { X, Calendar, DollarSign, User, Clock, Receipt } from 'lucide-react';
+import { X, Calendar, DollarSign, User, Clock, Receipt, Trash2, AlertCircle } from 'lucide-react';
 
 interface Transaction {
   id: number;
@@ -63,6 +63,35 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
   useEffect(() => {
     loadTransactions();
   }, [loadTransactions]);
+
+  const handleVoidTransaction = async (transaction: Transaction) => {
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      `Apakah Anda yakin ingin membatalkan transaksi ini?\n\n` +
+      `No. Transaksi: ${transaction.transactionNumber}\n` +
+      `Total: Rp ${Number(transaction.total).toLocaleString('id-ID')}\n\n` +
+      `Transaksi akan dibatalkan dan stok akan dikembalikan.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await api.put(`/transactions/${transaction.id}/status`, {
+        status: 'cancelled'
+      });
+
+      toast.success('Transaksi berhasil dibatalkan');
+      loadTransactions(); // Reload transactions
+      setSelectedTransaction(null); // Clear selection
+    } catch (error: unknown) {
+      console.error('Error voiding transaction:', error);
+      let errorMessage = 'Gagal membatalkan transaksi';
+      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      }
+      toast.error(errorMessage);
+    }
+  };
 
   const handlePrintReceipt = (transaction: Transaction) => {
     const receiptWindow = window.open('', '_blank');
@@ -379,13 +408,39 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handlePrintReceipt(selectedTransaction)}
-                  className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-2"
-                >
-                  <Receipt className="w-5 h-5" />
-                  Print Receipt
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handlePrintReceipt(selectedTransaction)}
+                    className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-2"
+                  >
+                    <Receipt className="w-5 h-5" />
+                    Print Receipt
+                  </button>
+
+                  {selectedTransaction.status !== 'cancelled' && (
+                    <>
+                      <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+                        <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-yellow-800">
+                          Membatalkan transaksi akan mengembalikan stok produk yang terjual.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleVoidTransaction(selectedTransaction)}
+                        className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 flex items-center justify-center gap-2"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                        Batalkan Transaksi
+                      </button>
+                    </>
+                  )}
+
+                  {selectedTransaction.status === 'cancelled' && (
+                    <div className="p-3 bg-gray-100 border border-gray-300 rounded-lg text-center">
+                      <p className="text-gray-600 font-medium">Transaksi ini sudah dibatalkan</p>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">

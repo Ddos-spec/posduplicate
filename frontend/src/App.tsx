@@ -86,7 +86,15 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 2000, // 2 seconds instead of default 4 seconds
+          success: {
+            duration: 1500, // Even shorter for success messages
+          },
+        }}
+      />
       <ConfirmationModal />
       <Routes>
         {/* Public Routes */}
