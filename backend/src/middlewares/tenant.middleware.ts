@@ -9,6 +9,7 @@ declare global {
       tenant?: any;
       userId?: number;
       userRole?: string;
+      outletId?: number;
     }
   }
 }

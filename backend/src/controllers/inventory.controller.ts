@@ -75,7 +75,7 @@ export const adjustStock = async (req: Request, res: Response, _next: NextFuncti
     }
 
     // Update stock
-    const updatedItem = await prisma.items.update({
+    await prisma.items.update({
       where: { id: itemId },
       data: { stock: newStock }
     });
