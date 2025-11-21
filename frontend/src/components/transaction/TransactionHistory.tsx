@@ -3,6 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { X, Calendar, DollarSign, User, Clock, Receipt, Trash2, AlertCircle, Printer, FileText } from 'lucide-react';
+import ConfirmDialog, { ConfirmDialogType } from '../common/ConfirmDialog';
 
 interface Transaction {
   id: number;
@@ -72,6 +73,24 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
   const [dateTo, setDateTo] = useState(getTodayDate());
   const [statusFilter, setStatusFilter] = useState('');
 
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: ConfirmDialogType;
+    title: string;
+    message: string;
+    details?: Array<{ label: string; value: string }>;
+    confirmText?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const loadTransactions = useCallback(async () => {
     setLoading(true);
     try {
@@ -99,93 +118,122 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
     loadTransactions();
   }, [loadTransactions]);
 
-  const handleVoidTransaction = async (transaction: Transaction) => {
-    // Confirmation dialog
-    const confirmed = window.confirm(
-      `Apakah Anda yakin ingin membatalkan transaksi ini?\n\n` +
-      `No. Transaksi: ${transaction.transactionNumber}\n` +
-      `Total: Rp ${Number(transaction.total).toLocaleString('id-ID')}\n\n` +
-      `Transaksi akan dibatalkan dan stok akan dikembalikan.`
-    );
+  const handleVoidTransaction = (transaction: Transaction) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'warning',
+      title: 'Batalkan Transaksi',
+      message: 'Apakah Anda yakin ingin membatalkan transaksi ini? Transaksi akan dibatalkan dan stok akan dikembalikan.',
+      details: [
+        { label: 'No. Transaksi', value: transaction.transactionNumber },
+        { label: 'Total', value: `Rp ${Number(transaction.total).toLocaleString('id-ID')}` }
+      ],
+      confirmText: 'Ya, Batalkan',
+      onConfirm: async () => {
+        setIsProcessing(true);
+        try {
+          await api.put(`/transactions/${transaction.id}/status`, {
+            status: 'cancelled'
+          });
 
-    if (!confirmed) return;
-
-    try {
-      await api.put(`/transactions/${transaction.id}/status`, {
-        status: 'cancelled'
-      });
-
-      toast.success('Transaksi berhasil dibatalkan');
-      loadTransactions(); // Reload transactions
-      setSelectedTransaction(null); // Clear selection
-    } catch (error: unknown) {
-      console.error('Error voiding transaction:', error);
-      let errorMessage = 'Gagal membatalkan transaksi';
-      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-        errorMessage = error.response.data.error.message;
+          toast.success('Transaksi berhasil dibatalkan');
+          loadTransactions(); // Reload transactions
+          setSelectedTransaction(null); // Clear selection
+          setConfirmDialog({ ...confirmDialog, isOpen: false });
+        } catch (error: unknown) {
+          console.error('Error voiding transaction:', error);
+          let errorMessage = 'Gagal membatalkan transaksi';
+          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+            errorMessage = error.response.data.error.message;
+          }
+          toast.error(errorMessage);
+        } finally {
+          setIsProcessing(false);
+        }
       }
-      toast.error(errorMessage);
-    }
+    });
   };
 
-  const handleDeleteTransaction = async (transaction: Transaction) => {
-    // Confirmation dialog
-    const confirmed = window.confirm(
-      `⚠️ PERINGATAN: Hapus transaksi secara permanen?\n\n` +
-      `No. Transaksi: ${transaction.transactionNumber}\n` +
-      `Total: Rp ${Number(transaction.total).toLocaleString('id-ID')}\n\n` +
-      `Transaksi akan dihapus PERMANEN dari database dan tidak dapat dikembalikan!\n` +
-      `Stok produk akan dikembalikan jika transaksi sudah selesai.`
-    );
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    setConfirmDialog({
+      isOpen: true,
+      type: 'danger',
+      title: '⚠️ Hapus Transaksi Permanen',
+      message: 'Transaksi akan dihapus PERMANEN dari database dan tidak dapat dikembalikan! Stok produk akan dikembalikan jika transaksi sudah selesai.',
+      details: [
+        { label: 'No. Transaksi', value: transaction.transactionNumber },
+        { label: 'Total', value: `Rp ${Number(transaction.total).toLocaleString('id-ID')}` }
+      ],
+      confirmText: 'Ya, Hapus Permanen',
+      onConfirm: async () => {
+        setIsProcessing(true);
+        try {
+          await api.delete(`/transactions/${transaction.id}`);
 
-    if (!confirmed) return;
-
-    try {
-      await api.delete(`/transactions/${transaction.id}`);
-
-      toast.success('Transaksi berhasil dihapus');
-      loadTransactions(); // Reload transactions
-      setSelectedTransaction(null); // Clear selection
-    } catch (error: unknown) {
-      console.error('Error deleting transaction:', error);
-      let errorMessage = 'Gagal menghapus transaksi';
-      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-        errorMessage = error.response.data.error.message;
+          toast.success('Transaksi berhasil dihapus');
+          loadTransactions(); // Reload transactions
+          setSelectedTransaction(null); // Clear selection
+          setConfirmDialog({ ...confirmDialog, isOpen: false });
+        } catch (error: unknown) {
+          console.error('Error deleting transaction:', error);
+          let errorMessage = 'Gagal menghapus transaksi';
+          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+            errorMessage = error.response.data.error.message;
+          }
+          toast.error(errorMessage);
+        } finally {
+          setIsProcessing(false);
+        }
       }
-      toast.error(errorMessage);
-    }
+    });
   };
 
-  const handleUpdateStatus = async (transaction: Transaction, newStatus: string) => {
+  const handleUpdateStatus = (transaction: Transaction, newStatus: string) => {
     const statusLabels: { [key: string]: string } = {
       'failed': 'gagal',
       'refund': 'refund'
     };
 
-    const confirmed = window.confirm(
-      `Apakah Anda yakin ingin mengubah status transaksi menjadi ${statusLabels[newStatus]}?\n\n` +
-      `No. Transaksi: ${transaction.transactionNumber}\n` +
-      `Total: Rp ${Number(transaction.total).toLocaleString('id-ID')}`
-    );
+    const statusConfig: { [key: string]: { type: ConfirmDialogType; title: string } } = {
+      'failed': { type: 'warning', title: 'Tandai Gagal' },
+      'refund': { type: 'info', title: 'Refund Transaksi' }
+    };
 
-    if (!confirmed) return;
+    const config = statusConfig[newStatus] || { type: 'info', title: 'Ubah Status' };
 
-    try {
-      await api.put(`/transactions/${transaction.id}/status`, {
-        status: newStatus
-      });
+    setConfirmDialog({
+      isOpen: true,
+      type: config.type,
+      title: config.title,
+      message: `Apakah Anda yakin ingin mengubah status transaksi menjadi ${statusLabels[newStatus]}?`,
+      details: [
+        { label: 'No. Transaksi', value: transaction.transactionNumber },
+        { label: 'Total', value: `Rp ${Number(transaction.total).toLocaleString('id-ID')}` }
+      ],
+      confirmText: 'Ya, Ubah Status',
+      onConfirm: async () => {
+        setIsProcessing(true);
+        try {
+          await api.put(`/transactions/${transaction.id}/status`, {
+            status: newStatus
+          });
 
-      toast.success(`Status transaksi berhasil diubah menjadi ${statusLabels[newStatus]}`);
-      loadTransactions();
-      setSelectedTransaction(null);
-    } catch (error: unknown) {
-      console.error('Error updating transaction status:', error);
-      let errorMessage = 'Gagal mengubah status transaksi';
-      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-        errorMessage = error.response.data.error.message;
+          toast.success(`Status transaksi berhasil diubah menjadi ${statusLabels[newStatus]}`);
+          loadTransactions();
+          setSelectedTransaction(null);
+          setConfirmDialog({ ...confirmDialog, isOpen: false });
+        } catch (error: unknown) {
+          console.error('Error updating transaction status:', error);
+          let errorMessage = 'Gagal mengubah status transaksi';
+          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+            errorMessage = error.response.data.error.message;
+          }
+          toast.error(errorMessage);
+        } finally {
+          setIsProcessing(false);
+        }
       }
-      toast.error(errorMessage);
-    }
+    });
   };
 
   const handlePrintReceipt = (transaction: Transaction) => {
@@ -875,6 +923,19 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
           </div>
         </div>
       </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        details={confirmDialog.details}
+        confirmText={confirmDialog.confirmText}
+        type={confirmDialog.type}
+        isLoading={isProcessing}
+      />
     </div>
   );
 }
