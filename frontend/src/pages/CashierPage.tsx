@@ -481,11 +481,21 @@ export default function CashierPage() {
       return;
     }
 
+    // Get user's outlet ID from localStorage
+    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+    const outletId = user?.outletId || user?.outlet?.id || null;
+
+    if (!outletId) {
+      toast.error('Outlet ID is required. Please ensure you are logged in properly.');
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const data = {
         name: categoryForm.name,
-        type: categoryForm.type
+        type: categoryForm.type,
+        outletId: outletId
       };
 
       if (editingCategory) {
