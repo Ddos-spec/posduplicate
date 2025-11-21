@@ -26,8 +26,6 @@ import OutletManagementPage from './pages/owner/OutletManagementPage';
 import ReportsPage from './pages/owner/ReportsPage';
 import SettingsPage from './pages/owner/SettingsPage';
 import ProductManagementPage from './pages/owner/ProductManagementPage';
-import IngredientsManagementPage from './pages/owner/IngredientsManagementPage';
-
 // SECURITY: Base protected route - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token) || localStorage.getItem('token');

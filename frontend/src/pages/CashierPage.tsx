@@ -12,6 +12,7 @@ import { printReceipt } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
 import type { TenantSettings } from '../services/settingsService';
 import useConfirmationStore from '../store/confirmationStore';
+import { formatCurrency } from '../utils/format';
 
 interface Product {
   id: number;
@@ -700,10 +701,10 @@ export default function CashierPage() {
                   )}
                 </div>
                 <h3 className="font-semibold text-sm mb-1 truncate">{product.name}</h3>
-                <p className="text-blue-600 font-bold">Rp {parseFloat(product.price.toString()).toLocaleString('id-ID')}</p>
-                {(product.categories || product.category) && (
-                  <span className="text-xs text-gray-500">{product.categories?.name || product.category?.name}</span>
-                )}
+                <p className="text-blue-600 font-bold">{formatCurrency(product.price)}</p>
+                <span className="text-xs text-gray-500">
+                  {product.categories?.name || product.category?.name || categories.find(c => c.id === (product as any).categoryId)?.name || ''}
+                </span>
               </div>
             ))}
           </div>
