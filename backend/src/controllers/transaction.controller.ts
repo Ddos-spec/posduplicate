@@ -515,15 +515,7 @@ export const updateTransactionStatus = async (
       include: {
         transaction_items: {
           include: {
-            items: {
-              include: {
-                recipes: {
-                  include: {
-                    ingredients: true
-                  }
-                }
-              }
-            }
+            items: true
           }
         }
       }
@@ -552,27 +544,6 @@ export const updateTransactionStatus = async (
               }
             }
           });
-        }
-
-        // Restore ingredient stock from recipes
-        if (item.recipes && item.recipes.length > 0) {
-          for (const recipe of item.recipes) {
-            const recipeQty = parseFloat(recipe.quantity.toString());
-            const totalIngredientQty = recipeQty * quantity;
-
-            try {
-              await prisma.ingredients.update({
-                where: { id: recipe.ingredient_id },
-                data: {
-                  stock: {
-                    increment: totalIngredientQty
-                  }
-                }
-              });
-            } catch (error) {
-              console.error(`Failed to restore ingredient stock for ingredient ${recipe.ingredient_id}:`, error);
-            }
-          }
         }
       }
     }
@@ -614,15 +585,7 @@ export const deleteTransaction = async (
         outlets: true,
         transaction_items: {
           include: {
-            items: {
-              include: {
-                recipes: {
-                  include: {
-                    ingredients: true
-                  }
-                }
-              }
-            }
+            items: true
           }
         }
       }
@@ -667,27 +630,6 @@ export const deleteTransaction = async (
               }
             }
           });
-        }
-
-        // Restore ingredient stock from recipes
-        if (item.recipes && item.recipes.length > 0) {
-          for (const recipe of item.recipes) {
-            const recipeQty = parseFloat(recipe.quantity.toString());
-            const totalIngredientQty = recipeQty * quantity;
-
-            try {
-              await prisma.ingredients.update({
-                where: { id: recipe.ingredient_id },
-                data: {
-                  stock: {
-                    increment: totalIngredientQty
-                  }
-                }
-              });
-            } catch (error) {
-              console.error(`Failed to restore ingredient stock for ingredient ${recipe.ingredient_id}:`, error);
-            }
-          }
         }
       }
     }
