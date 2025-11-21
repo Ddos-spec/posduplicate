@@ -109,7 +109,6 @@ model Transaction {
   id                 Int               @id @default(autoincrement())
   transaction_number String            @unique @db.VarChar(100)
   order_type         String            @db.VarChar(50)
-  payment_channel    String?           @default("cash") @map("payment_channel") @db.VarChar(50)
   table_id           Int?
   customer_name      String?           @db.VarChar(255)
   customer_phone     String?           @db.VarChar(50)
