@@ -30,14 +30,37 @@ export const getRecipes = async (req: Request, res: Response, _next: NextFunctio
 export const getRecipeByItemId = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { itemId } = req.params;
+
+    // Validate itemId
+    const itemIdNum = parseInt(itemId);
+    if (isNaN(itemIdNum)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_ID', message: 'Invalid product ID' }
+      });
+    }
+
+    // Check if item exists first
+    const item = await prisma.items.findUnique({
+      where: { id: itemIdNum }
+    });
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Product not found' }
+      });
+    }
+
     const recipes = await prisma.recipes.findMany({
-      where: { item_id: parseInt(itemId) },
+      where: { item_id: itemIdNum },
       include: {
         ingredients: true
       }
     });
     res.json({ success: true, data: recipes });
   } catch (error) {
+    console.error('Error in getRecipeByItemId:', error);
     return _next(error);
   }
 };
@@ -50,6 +73,15 @@ export const updateProductRecipe = async (req: Request, res: Response, _next: Ne
     const { itemId } = req.params;
     const { ingredients } = req.body; // Array of { ingredientId, quantity, unit }
 
+    // Validate itemId
+    const itemIdNum = parseInt(itemId);
+    if (isNaN(itemIdNum)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_ID', message: 'Invalid product ID' }
+      });
+    }
+
     if (!ingredients || !Array.isArray(ingredients)) {
       return res.status(400).json({
         success: false,
@@ -57,18 +89,30 @@ export const updateProductRecipe = async (req: Request, res: Response, _next: Ne
       });
     }
 
+    // Check if item exists first
+    const item = await prisma.items.findUnique({
+      where: { id: itemIdNum }
+    });
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Product not found' }
+      });
+    }
+
     // Transaction to delete old recipe items and add new ones
     await prisma.$transaction(async (tx) => {
         // Delete existing recipe for this item
         await tx.recipes.deleteMany({
-            where: { item_id: parseInt(itemId) }
+            where: { item_id: itemIdNum }
         });
 
         // Create new recipe items
         if (ingredients.length > 0) {
             await tx.recipes.createMany({
                 data: ingredients.map((ing: any) => ({
-                    item_id: parseInt(itemId),
+                    item_id: itemIdNum,
                     ingredient_id: ing.ingredientId,
                     quantity: ing.quantity,
                     unit: ing.unit
@@ -78,12 +122,13 @@ export const updateProductRecipe = async (req: Request, res: Response, _next: Ne
     });
 
     const updatedRecipe = await prisma.recipes.findMany({
-        where: { item_id: parseInt(itemId) },
+        where: { item_id: itemIdNum },
         include: { ingredients: true }
     });
 
     res.json({ success: true, data: updatedRecipe, message: 'Recipe updated successfully' });
   } catch (error) {
+    console.error('Error in updateProductRecipe:', error);
     return _next(error);
   }
 };

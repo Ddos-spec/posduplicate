@@ -84,7 +84,10 @@ export default function OwnerDashboardPage() {
 
   const formatCurrency = (value: number) => {
     // Use a consistent format that ensures dots are used as thousand separators
-    return `Rp ${value.toLocaleString('id-ID')}`;
+    return `Rp ${value.toLocaleString('id-ID', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    })}`;
   };
 
   const formatNumber = (num: number) => {

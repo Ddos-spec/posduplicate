@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { getIngredients, createIngredient, updateIngredient, deleteIngredient } from '../controllers/ingredient.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
-import { tenantMiddleware } from '../middlewares/tenant.middleware';
+import { tenantMiddleware, ownerOnly } from '../middlewares/tenant.middleware';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
 
 router.get('/', getIngredients);
-router.post('/', createIngredient);
-router.put('/:id', updateIngredient);
-router.delete('/:id', deleteIngredient);
+router.post('/', ownerOnly, createIngredient); // Only Owner/Manager can create new ingredients
+router.put('/:id', updateIngredient); // All roles can update stock
+router.delete('/:id', ownerOnly, deleteIngredient); // Only Owner/Manager can delete
 
 export default router;

@@ -594,3 +594,130 @@ export const updateTransactionStatus = async (
     return next(error);
   }
 };
+
+/**
+ * Get today's report (for cashiers)
+ */
+export const getTodayReport = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.userId;
+    const tenantId = req.tenantId;
+
+    // Get start and end of today
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Get outlet IDs for this tenant
+    let outletIds: number[] = [];
+    if (tenantId) {
+      const tenantOutlets = await prisma.outlet.findMany({
+        where: { tenantId: tenantId },
+        select: { id: true }
+      });
+      outletIds = tenantOutlets.map(outlet => outlet.id);
+    }
+
+    // Get today's transactions for this cashier
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        cashier_id: userId,
+        status: 'completed',
+        createdAt: {
+          gte: startOfDay,
+          lte: endOfDay
+        },
+        ...(outletIds.length > 0 && {
+          outletId: {
+            in: outletIds
+          }
+        })
+      },
+      include: {
+        transaction_items: {
+          include: {
+            items: true,
+            transaction_modifiers: true
+          }
+        },
+        payments: true,
+        users: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+
+    // Calculate statistics
+    const totalTransactions = transactions.length;
+    const totalSales = transactions.reduce((sum, t) => sum + Number(t.total || 0), 0);
+
+    // Payment method breakdown
+    const paymentMethods = transactions.reduce((acc: any, transaction) => {
+      transaction.payments.forEach((payment: any) => {
+        const method = payment.method;
+        if (!acc[method]) {
+          acc[method] = {
+            count: 0,
+            total: 0
+          };
+        }
+        acc[method].count += 1;
+        acc[method].total += Number(payment.amount || 0);
+      });
+      return acc;
+    }, {});
+
+    // Top selling items
+    const itemSales: any = {};
+    transactions.forEach(transaction => {
+      transaction.transaction_items.forEach((item: any) => {
+        const itemId = item.item_id;
+        if (!itemSales[itemId]) {
+          itemSales[itemId] = {
+            id: itemId,
+            name: item.item_name,
+            quantity: 0,
+            total: 0
+          };
+        }
+        itemSales[itemId].quantity += Number(item.quantity || 0);
+        itemSales[itemId].total += Number(item.subtotal || 0);
+      });
+    });
+
+    const topItems = Object.values(itemSales)
+      .sort((a: any, b: any) => b.quantity - a.quantity)
+      .slice(0, 10);
+
+    res.json({
+      success: true,
+      data: {
+        date: startOfDay,
+        cashier: transactions[0]?.users || null,
+        summary: {
+          totalTransactions,
+          totalSales,
+          averageTransaction: totalTransactions > 0 ? totalSales / totalTransactions : 0
+        },
+        paymentMethods,
+        topItems,
+        transactions
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
