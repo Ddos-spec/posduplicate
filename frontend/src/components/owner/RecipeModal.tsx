@@ -126,7 +126,7 @@ export default function RecipeModal({ product, onClose }: RecipeModalProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="p-4 border-b flex justify-between items-center">
-          <h3 className="text-xl font-bold">Recipe for {product.name}</h3>
+          <h3 className="text-xl font-bold">Resep untuk {product.name}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-6 h-6" />
           </button>
@@ -139,16 +139,16 @@ export default function RecipeModal({ product, onClose }: RecipeModalProps) {
             <div className="space-y-6">
               {/* Add Item Form */}
               <div className="bg-gray-50 p-4 rounded-lg border">
-                <h4 className="font-medium mb-3">Add Ingredient</h4>
+                <h4 className="font-medium mb-3">Tambah Bahan Baku</h4>
                 <div className="flex flex-col sm:flex-row gap-3 items-end">
                   <div className="flex-1 w-full">
-                    <label className="block text-sm text-gray-600 mb-1">Ingredient</label>
+                    <label className="block text-sm text-gray-600 mb-1">Bahan Baku</label>
                     <select
                       value={selectedIngredientId}
                       onChange={(e) => setSelectedIngredientId(e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg text-sm"
                     >
-                      <option value="">Select Ingredient</option>
+                      <option value="">Pilih Bahan Baku</option>
                       {ingredients.map(ing => (
                         <option key={ing.id} value={ing.id}>
                           {ing.name} ({ing.unit})
@@ -157,7 +157,7 @@ export default function RecipeModal({ product, onClose }: RecipeModalProps) {
                     </select>
                   </div>
                   <div className="w-full sm:w-32">
-                    <label className="block text-sm text-gray-600 mb-1">Quantity</label>
+                    <label className="block text-sm text-gray-600 mb-1">Jumlah</label>
                     <input
                       type="number"
                       step="0.001"
@@ -171,27 +171,27 @@ export default function RecipeModal({ product, onClose }: RecipeModalProps) {
                     onClick={handleAddItem}
                     className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
                   >
-                    <Plus className="w-4 h-4" /> Add
+                    <Plus className="w-4 h-4" /> Tambah
                   </button>
                 </div>
               </div>
 
               {/* Recipe List */}
               <div>
-                <h4 className="font-medium mb-3">Current Recipe</h4>
+                <h4 className="font-medium mb-3">Resep Saat Ini</h4>
                 {recipeItems.length === 0 ? (
                   <div className="text-center text-gray-500 py-8 bg-gray-50 rounded-lg border border-dashed">
-                    No ingredients added yet.
+                    Belum ada bahan baku ditambahkan.
                   </div>
                 ) : (
                   <div className="border rounded-lg overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingredient</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bahan Baku</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jumlah</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Satuan</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -225,7 +225,7 @@ export default function RecipeModal({ product, onClose }: RecipeModalProps) {
             className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100"
             disabled={saving}
           >
-            Cancel
+            Batal
           </button>
           <button
             onClick={handleSave}
@@ -233,7 +233,7 @@ export default function RecipeModal({ product, onClose }: RecipeModalProps) {
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
-            {saving ? 'Saving...' : 'Save Recipe'}
+            {saving ? 'Menyimpan...' : 'Simpan Resep'}
           </button>
         </div>
       </div>

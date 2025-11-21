@@ -1,0 +1,370 @@
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Package,
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  AlertCircle
+} from 'lucide-react';
+import api from '../../services/api';
+import toast from 'react-hot-toast';
+import useConfirmationStore from '../../store/confirmationStore';
+import { formatCurrency } from '../../utils/format';
+
+interface Category {
+  id: number;
+  name: string;
+  type: string;
+}
+
+interface Ingredient {
+  id: number;
+  name: string;
+  category_id?: number;
+  categories?: Category;
+  unit: string;
+  stock: number;
+  min_stock: number;
+  cost_per_unit: number;
+  outlet_id: number;
+  is_active: boolean;
+}
+
+export default function IngredientManager() {
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // State for form
+  const [form, setForm] = useState({
+    name: '',
+    categoryId: '',
+    unit: 'kg',
+    stock: '',
+    minStock: '',
+    cost: ''
+  });
+
+  const { showConfirmation } = useConfirmationStore();
+
+  // Load ingredients
+  const loadIngredients = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Get user's outlet ID from localStorage
+      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+      const outletId = user?.outletId || user?.outlet?.id;
+
+      if (!outletId) {
+        toast.error('Outlet information missing');
+        return;
+      }
+
+      const response = await api.get('/ingredients', {
+        params: { outlet_id: outletId }
+      });
+      setIngredients(response.data.data);
+    } catch (error) {
+      console.error('Failed to load ingredients:', error);
+      toast.error('Failed to load ingredients');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load categories
+  const loadCategories = useCallback(async () => {
+    try {
+      const response = await api.get('/categories');
+      // Filter for ingredient categories if you have a type field, or just show all
+      const ingredientCategories = response.data.data.filter((c: Category) => c.type === 'ingredient');
+      setCategories(ingredientCategories);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadIngredients();
+    loadCategories();
+  }, [loadIngredients, loadCategories]);
+
+  // Filter ingredients
+  const filteredIngredients = ingredients.filter(ing => {
+    const categoryName = ing.categories?.name || categories.find(c => c.id === ing.category_id)?.name || '';
+    return ing.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    categoryName.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  // Paginate
+  const paginatedIngredients = filteredIngredients.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleFormChange = (field: string, value: string) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleOpenForm = (ingredient?: Ingredient) => {
+    if (ingredient) {
+      setEditingIngredient(ingredient);
+      setForm({
+        name: ingredient.name,
+        categoryId: ingredient.category_id?.toString() || '',
+        unit: ingredient.unit,
+        stock: ingredient.stock.toString(),
+        minStock: ingredient.min_stock.toString(),
+        cost: ingredient.cost_per_unit.toString()
+      });
+    } else {
+      setEditingIngredient(null);
+      setForm({
+        name: '',
+        categoryId: '',
+        unit: 'kg',
+        stock: '0',
+        minStock: '0',
+        cost: '0'
+      });
+    }
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name || !form.unit) {
+      toast.error('Please fill in required fields');
+      return;
+    }
+
+    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
+    const outletId = user?.outletId || user?.outlet?.id;
+
+    if (!outletId) {
+      toast.error('Outlet ID missing');
+      return;
+    }
+
+    try {
+      const data = {
+        name: form.name,
+        categoryId: form.categoryId ? parseInt(form.categoryId) : null,
+        unit: form.unit,
+        stock: parseFloat(form.stock || '0'),
+        minStock: parseFloat(form.minStock || '0'),
+        cost: parseFloat(form.cost || '0'),
+        outletId: outletId
+      };
+
+      if (editingIngredient) {
+        await api.put(`/ingredients/${editingIngredient.id}`, data);
+        toast.success('Ingredient updated');
+      } else {
+        await api.post('/ingredients', data);
+        toast.success('Ingredient created');
+      }
+
+      setShowForm(false);
+      loadIngredients();
+    } catch (error) {
+      console.error('Error saving ingredient:', error);
+      toast.error('Failed to save ingredient');
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    showConfirmation(
+      'Delete Ingredient',
+      'Are you sure? This might affect recipes.',
+      async () => {
+        try {
+          await api.delete(`/ingredients/${id}`);
+          toast.success('Ingredient deleted');
+          loadIngredients();
+        } catch (error) {
+          console.error('Error deleting ingredient:', error);
+          toast.error('Failed to delete ingredient');
+        }
+      }
+    );
+  };
+
+  return (
+    <div className="mt-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+          <p className="text-gray-600 mt-1">Kelola stok bahan baku dan resep</p>
+        </div>
+        <button
+          onClick={() => handleOpenForm()}
+          className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Tambah Bahan Baku
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Cari bahan baku..."
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satuan</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Biaya/Satuan</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center">Loading...</td>
+                </tr>
+              ) : paginatedIngredients.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">Tidak ada bahan baku ditemukan</td>
+                </tr>
+              ) : (
+                paginatedIngredients.map((ing) => (
+                  <tr key={ing.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{ing.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-500">{ing.categories?.name || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        ing.stock <= ing.min_stock ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {ing.stock}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-500">{ing.unit}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                      Rp {ing.cost_per_unit.toLocaleString('id-ID')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button onClick={() => handleOpenForm(ing)} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(ing.id)} className="text-red-600 hover:text-red-900">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4">
+              {editingIngredient ? 'Edit Bahan Baku' : 'Tambah Bahan Baku'}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nama *</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => handleFormChange('name', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Kategori</label>
+                <select
+                  value={form.categoryId}
+                  onChange={(e) => handleFormChange('categoryId', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Pilih kategori</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Stok</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.stock}
+                    onChange={(e) => handleFormChange('stock', e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Satuan *</label>
+                  <select
+                    value={form.unit}
+                    onChange={(e) => handleFormChange('unit', e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="kg">kg</option>
+                    <option value="gr">gr</option>
+                    <option value="l">liter</option>
+                    <option value="ml">ml</option>
+                    <option value="pcs">pcs</option>
+                    <option value="pack">pack</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Min Stok</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.minStock}
+                    onChange={(e) => handleFormChange('minStock', e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Biaya/Satuan</label>
+                  <input
+                    type="number"
+                    value={form.cost}
+                    onChange={(e) => handleFormChange('cost', e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg">Batal</button>
+              <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Simpan</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
