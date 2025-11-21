@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import { X, Calendar, DollarSign, User, Clock, Receipt, Trash2, AlertCircle } from 'lucide-react';
+import { X, Calendar, DollarSign, User, Clock, Receipt, Trash2, AlertCircle, Printer, FileText } from 'lucide-react';
 
 interface Transaction {
   id: number;
@@ -30,12 +30,46 @@ interface TransactionHistoryProps {
   onClose: () => void;
 }
 
+// Helper function to get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to transform backend data to frontend format
+const transformTransaction = (data: any): Transaction => {
+  return {
+    id: data.id,
+    transactionNumber: data.transaction_number,
+    orderType: data.order_type,
+    total: data.total,
+    status: data.status,
+    createdAt: data.createdAt,
+    cashier: data.users ? { name: data.users.name, email: data.users.email } : undefined,
+    table: data.tables ? { name: data.tables.name } : undefined,
+    transactionItems: (data.transaction_items || []).map((item: any) => ({
+      itemName: item.item_name,
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+      subtotal: item.subtotal,
+    })),
+    payments: (data.payments || []).map((payment: any) => ({
+      method: payment.method,
+      amount: payment.amount,
+      changeAmount: payment.change_amount,
+    })),
+  };
+};
+
 export default function TransactionHistory({ onClose }: TransactionHistoryProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayDate());
+  const [dateTo, setDateTo] = useState(getTodayDate());
   const [statusFilter, setStatusFilter] = useState('');
 
   const loadTransactions = useCallback(async () => {
@@ -47,7 +81,8 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       if (statusFilter) params.status = statusFilter;
 
       const { data } = await api.get('/transactions', { params });
-      setTransactions(data.data);
+      const transformedData = data.data.map(transformTransaction);
+      setTransactions(transformedData);
     } catch (error: unknown) {
       console.error('Error loading transactions:', error);
       let errorMessage = 'Failed to load transactions';
@@ -229,6 +264,253 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
     receiptWindow.document.close();
   };
 
+  const handlePrintTodayReport = async () => {
+    try {
+      const { data } = await api.get('/transactions/today-report');
+      const reportData = data.data;
+
+      const reportWindow = window.open('', '_blank');
+      if (!reportWindow) return;
+
+      const today = new Date();
+      const formattedDate = today.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      const reportHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Laporan Transaksi - ${formattedDate}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              max-width: 800px;
+              margin: 20px auto;
+              padding: 20px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 3px solid #333;
+              padding-bottom: 15px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 24px;
+              color: #333;
+            }
+            .header p {
+              margin: 5px 0;
+              color: #666;
+            }
+            .info-section {
+              background: #f5f5f5;
+              padding: 15px;
+              border-radius: 8px;
+              margin-bottom: 20px;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 8px 0;
+            }
+            .info-label {
+              font-weight: bold;
+              color: #555;
+            }
+            .summary-cards {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 15px;
+              margin-bottom: 30px;
+            }
+            .summary-card {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 20px;
+              border-radius: 10px;
+              text-align: center;
+            }
+            .summary-card h3 {
+              margin: 0 0 10px 0;
+              font-size: 14px;
+              opacity: 0.9;
+            }
+            .summary-card .value {
+              font-size: 24px;
+              font-weight: bold;
+            }
+            .transactions-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            .transactions-table th,
+            .transactions-table td {
+              border: 1px solid #ddd;
+              padding: 10px;
+              text-align: left;
+            }
+            .transactions-table th {
+              background: #333;
+              color: white;
+              font-weight: bold;
+            }
+            .transactions-table tr:nth-child(even) {
+              background: #f9f9f9;
+            }
+            .payment-methods {
+              margin-bottom: 30px;
+            }
+            .payment-method-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 10px;
+              border-bottom: 1px solid #eee;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 2px solid #333;
+              color: #666;
+              font-size: 12px;
+            }
+            @media print {
+              body { margin: 0; padding: 15px; }
+              .summary-cards { page-break-inside: avoid; }
+              .transactions-table { page-break-inside: auto; }
+              .transactions-table tr { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>LAPORAN TRANSAKSI HARIAN</h1>
+            <p>${formattedDate}</p>
+            <p>MyPOS - Point of Sale System</p>
+          </div>
+
+          <div class="info-section">
+            <div class="info-row">
+              <span class="info-label">Kasir:</span>
+              <span>${reportData.cashier?.name || 'N/A'}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Waktu Cetak:</span>
+              <span>${new Date().toLocaleString('id-ID')}</span>
+            </div>
+          </div>
+
+          <div class="summary-cards">
+            <div class="summary-card">
+              <h3>Total Transaksi</h3>
+              <div class="value">${reportData.summary.totalTransactions}</div>
+            </div>
+            <div class="summary-card">
+              <h3>Total Penjualan</h3>
+              <div class="value">Rp ${Number(reportData.summary.totalSales).toLocaleString('id-ID')}</div>
+            </div>
+            <div class="summary-card">
+              <h3>Rata-rata Transaksi</h3>
+              <div class="value">Rp ${Number(reportData.summary.averageTransaction).toLocaleString('id-ID')}</div>
+            </div>
+          </div>
+
+          <h2>Metode Pembayaran</h2>
+          <div class="payment-methods">
+            ${Object.entries(reportData.paymentMethods).map(([method, data]: [string, any]) => `
+              <div class="payment-method-row">
+                <span><strong>${method.toUpperCase()}</strong> (${data.count} transaksi)</span>
+                <span><strong>Rp ${Number(data.total).toLocaleString('id-ID')}</strong></span>
+              </div>
+            `).join('')}
+          </div>
+
+          <h2>Detail Transaksi</h2>
+          <table class="transactions-table">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>Waktu</th>
+                <th>No. Transaksi</th>
+                <th>Tipe Order</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reportData.transactions.map((t: any, idx: number) => `
+                <tr>
+                  <td>${idx + 1}</td>
+                  <td>${new Date(t.createdAt).toLocaleTimeString('id-ID')}</td>
+                  <td>${t.transaction_number}</td>
+                  <td style="text-transform: capitalize">${t.order_type}</td>
+                  <td><strong>Rp ${Number(t.total).toLocaleString('id-ID')}</strong></td>
+                </tr>
+              `).join('')}
+            </tbody>
+            <tfoot>
+              <tr style="background: #f0f0f0; font-weight: bold;">
+                <td colspan="4" style="text-align: right;">TOTAL:</td>
+                <td>Rp ${Number(reportData.summary.totalSales).toLocaleString('id-ID')}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          ${reportData.topItems && reportData.topItems.length > 0 ? `
+            <h2>Top 10 Produk Terlaris</h2>
+            <table class="transactions-table">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Nama Produk</th>
+                  <th>Quantity Terjual</th>
+                  <th>Total Penjualan</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${reportData.topItems.map((item: any, idx: number) => `
+                  <tr>
+                    <td>${idx + 1}</td>
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td>Rp ${Number(item.total).toLocaleString('id-ID')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : ''}
+
+          <div class="footer">
+            <p>Laporan ini dibuat secara otomatis oleh MyPOS</p>
+            <p>Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+        </html>
+      `;
+
+      reportWindow.document.write(reportHTML);
+      reportWindow.document.close();
+    } catch (error: unknown) {
+      console.error('Error printing today report:', error);
+      let errorMessage = 'Gagal mencetak laporan hari ini';
+      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      }
+      toast.error(errorMessage);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-[90vw] max-w-5xl h-[90vh] flex flex-col">
@@ -236,45 +518,60 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
         <div className="p-4 border-b flex justify-between items-center">
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Receipt className="w-6 h-6" />
-            Transaction History
+            Riwayat Transaksi
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrintTodayReport}
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 flex items-center gap-2 shadow-lg transition-all"
+            >
+              <FileText className="w-5 h-5" />
+              Cetak Laporan Hari Ini
+            </button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
-        <div className="p-4 border-b bg-gray-50">
+        <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-blue-50">
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">From Date</label>
+              <label className="block text-sm font-semibold mb-2 text-gray-700 flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                Dari Tanggal
+              </label>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">To Date</label>
+              <label className="block text-sm font-semibold mb-2 text-gray-700 flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                Sampai Tanggal
+              </label>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Status</label>
+              <label className="block text-sm font-semibold mb-2 text-gray-700">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
               >
-                <option value="">All Status</option>
-                <option value="completed">Completed</option>
+                <option value="">Semua Status</option>
+                <option value="completed">Selesai</option>
                 <option value="pending">Pending</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="cancelled">Dibatalkan</option>
               </select>
             </div>
           </div>
@@ -291,7 +588,7 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
             ) : transactions.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <Receipt className="w-16 h-16 mb-2" />
-                <p>No transactions found</p>
+                <p>Tidak ada transaksi ditemukan</p>
               </div>
             ) : (
               <div className="p-4 space-y-2">
@@ -313,12 +610,14 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-blue-600">Rp {Number(transaction.total).toLocaleString('id-ID')}</p>
-                        <span className={`text-xs px-2 py-1 rounded ${
+                        <span className={`text-xs px-2 py-1 rounded font-semibold ${
                           transaction.status === 'completed' ? 'bg-green-100 text-green-700' :
                           transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                           'bg-red-100 text-red-700'
                         }`}>
-                          {transaction.status}
+                          {transaction.status === 'completed' ? 'Selesai' :
+                           transaction.status === 'pending' ? 'Pending' :
+                           'Dibatalkan'}
                         </span>
                       </div>
                     </div>
@@ -344,36 +643,36 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
           <div className="w-1/2 overflow-y-auto bg-gray-50">
             {selectedTransaction ? (
               <div className="p-6">
-                <div className="bg-white rounded-lg p-4 mb-4">
-                  <h3 className="font-bold text-lg mb-3">Transaction Details</h3>
+                <div className="bg-white rounded-lg p-4 mb-4 shadow-sm border border-gray-100">
+                  <h3 className="font-bold text-lg mb-3 text-gray-800">Detail Transaksi</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Transaction Number:</span>
+                      <span className="text-gray-600">No. Transaksi:</span>
                       <span className="font-semibold">{selectedTransaction.transactionNumber}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Date & Time:</span>
-                      <span>{new Date(selectedTransaction.createdAt).toLocaleString()}</span>
+                      <span className="text-gray-600">Tanggal & Waktu:</span>
+                      <span>{new Date(selectedTransaction.createdAt).toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Cashier:</span>
+                      <span className="text-gray-600">Kasir:</span>
                       <span>{selectedTransaction.cashier?.name || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Order Type:</span>
+                      <span className="text-gray-600">Tipe Order:</span>
                       <span className="capitalize">{selectedTransaction.orderType}</span>
                     </div>
                     {selectedTransaction.table && (
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Table:</span>
+                        <span className="text-gray-600">Meja:</span>
                         <span>{selectedTransaction.table.name}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 mb-4">
-                  <h3 className="font-bold mb-3">Items</h3>
+                <div className="bg-white rounded-lg p-4 mb-4 shadow-sm border border-gray-100">
+                  <h3 className="font-bold mb-3 text-gray-800">Item Pesanan</h3>
                   <div className="space-y-2">
                     {selectedTransaction.transactionItems.map((item, idx) => (
                       <div key={idx} className="flex justify-between text-sm">
@@ -384,8 +683,8 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 mb-4">
-                  <h3 className="font-bold mb-3">Payment</h3>
+                <div className="bg-white rounded-lg p-4 mb-4 shadow-sm border border-gray-100">
+                  <h3 className="font-bold mb-3 text-gray-800">Pembayaran</h3>
                   <div className="space-y-2 text-sm">
                     {selectedTransaction.payments.map((payment, idx) => (
                       <div key={idx}>
@@ -395,7 +694,7 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                         </div>
                         {payment.changeAmount !== undefined && payment.changeAmount > 0 && (
                           <div className="flex justify-between text-gray-600">
-                            <span>Change:</span>
+                            <span>Kembalian:</span>
                             <span>Rp {Number(payment.changeAmount).toLocaleString('id-ID')}</span>
                           </div>
                         )}
@@ -411,10 +710,10 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                 <div className="space-y-2">
                   <button
                     onClick={() => handlePrintReceipt(selectedTransaction)}
-                    className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-2"
+                    className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-2 shadow-md transition-all"
                   >
-                    <Receipt className="w-5 h-5" />
-                    Print Receipt
+                    <Printer className="w-5 h-5" />
+                    Cetak Struk
                   </button>
 
                   {selectedTransaction.status !== 'cancelled' && (
@@ -445,20 +744,20 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <DollarSign className="w-16 h-16 mb-2" />
-                <p>Select a transaction to view details</p>
+                <p>Pilih transaksi untuk melihat detail</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Footer Summary */}
-        <div className="p-4 border-t bg-gray-50">
+        <div className="p-4 border-t bg-gradient-to-r from-gray-50 to-blue-50">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              Total Transactions: <span className="font-semibold">{transactions.length}</span>
+            <div className="text-sm text-gray-700">
+              Total Transaksi: <span className="font-bold text-gray-900">{transactions.length}</span>
             </div>
-            <div className="text-sm text-gray-600">
-              Total Revenue: <span className="font-semibold text-blue-600">
+            <div className="text-sm text-gray-700">
+              Total Pendapatan: <span className="font-bold text-blue-600 text-lg">
                 Rp {transactions.reduce((sum, t) => sum + parseFloat(t.total.toString()), 0).toLocaleString('id-ID')}
               </span>
             </div>
