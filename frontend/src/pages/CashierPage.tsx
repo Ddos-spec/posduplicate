@@ -3,11 +3,11 @@ import { useCartStore } from '../store/cartStore';
 import api, { getFullUrl } from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
 import axios from 'axios';
-import { ShoppingCart, Search, X, Plus, Minus, Trash2, CreditCard, Edit, Settings, Receipt, UtensilsCrossed, Tag, Menu, ClipboardList } from 'lucide-react';
+import { ShoppingCart, Search, X, Plus, Minus, Trash2, CreditCard, Edit, Settings, Receipt, UtensilsCrossed, Tag, Menu, UserCircle2 } from 'lucide-react';
 import TransactionHistory from '../components/transaction/TransactionHistory';
 import TableManagement from '../components/table/TableManagement';
 import ModifierManagement from '../components/modifiers/ModifierManagement';
-import ShiftManagement from '../components/cashier/ShiftManagement';
+import ProfileMenu from '../components/cashier/ProfileMenu';
 import RunningLogo from '../components/RunningLogo';
 import { printReceipt } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
@@ -89,8 +89,8 @@ export default function CashierPage() {
   const [showTableManagement, setShowTableManagement] = useState(false);
   const [showModifierManagement, setShowModifierManagement] = useState(false);
 
-  // Shift management state
-  const [showShiftManagement, setShowShiftManagement] = useState(false);
+  // Profile menu state
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   // Mobile menu state
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -571,13 +571,6 @@ export default function CashierPage() {
             {/* Desktop Buttons */}
             <div className="hidden md:flex gap-2">
               <button
-                onClick={() => setShowShiftManagement(true)}
-                className="px-4 py-2 rounded-lg bg-teal-500 text-white flex items-center gap-2 hover:bg-teal-600"
-              >
-                <ClipboardList className="w-5 h-5" />
-                Shift
-              </button>
-              <button
                 onClick={() => setShowTableManagement(true)}
                 className="px-4 py-2 rounded-lg bg-indigo-500 text-white flex items-center gap-2 hover:bg-indigo-600"
               >
@@ -606,6 +599,12 @@ export default function CashierPage() {
               >
                 <Settings className="w-5 h-5" />
                 {managementMode ? 'Exit' : 'Manage'}
+              </button>
+              <button
+                onClick={() => setShowProfileMenu(true)}
+                className="px-4 py-2 rounded-lg bg-blue-500 text-white flex items-center gap-2 hover:bg-blue-600"
+              >
+                <UserCircle2 className="w-5 h-5" />
               </button>
               {managementMode && (
                 <button
@@ -1283,13 +1282,13 @@ export default function CashierPage() {
             <div className="space-y-2">
               <button
                 onClick={() => {
-                  setShowShiftManagement(true);
+                  setShowProfileMenu(true);
                   setShowMobileMenu(false);
                 }}
-                className="w-full px-4 py-3 bg-teal-500 text-white rounded-lg flex items-center gap-2"
+                className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg flex items-center gap-2"
               >
-                <ClipboardList className="w-5 h-5" />
-                Shift
+                <UserCircle2 className="w-5 h-5" />
+                Profil Kasir
               </button>
               <button
                 onClick={() => {
@@ -1351,10 +1350,10 @@ export default function CashierPage() {
         <ModifierManagement onClose={() => setShowModifierManagement(false)} />
       )}
 
-      {/* Shift Management Modal */}
-      <ShiftManagement
-        isOpen={showShiftManagement}
-        onClose={() => setShowShiftManagement(false)}
+      {/* Profile Menu Modal */}
+      <ProfileMenu
+        isOpen={showProfileMenu}
+        onClose={() => setShowProfileMenu(false)}
         onShiftChange={() => {
           // Refresh data if needed when shift changes
           loadProducts();
