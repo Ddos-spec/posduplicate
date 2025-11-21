@@ -260,8 +260,6 @@ model items {
   name              String            @db.VarChar(255)
   categoryId        Int?              @map("category_id")
   price             Decimal           @default(0) @db.Decimal(12, 2)
-  price_gofood      Decimal?          @map("price_gofood") @db.Decimal(12, 2)
-  price_grabfood    Decimal?          @map("price_grabfood") @db.Decimal(12, 2)
   cost              Decimal?          @default(0) @db.Decimal(12, 2)
   image             String?           @db.VarChar(500)
   description       String?
