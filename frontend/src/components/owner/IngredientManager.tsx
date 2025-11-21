@@ -333,6 +333,9 @@ export default function IngredientManager() {
                     <option value="ml">ml</option>
                     <option value="pcs">pcs</option>
                     <option value="pack">pack</option>
+                    <option value="perbungkus">perbungkus</option>
+                    <option value="per roll">per roll</option>
+                    <option value="perlembar">perlembar</option>
                   </select>
                 </div>
               </div>
