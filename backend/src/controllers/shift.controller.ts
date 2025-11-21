@@ -87,16 +87,6 @@ export const getCurrentShift = async (req: AuthRequest, res: Response) => {
             email: true,
           },
         },
-        transactions: {
-          where: {
-            status: 'completed',
-          },
-          select: {
-            id: true,
-            total: true,
-            createdAt: true,
-          },
-        },
       },
     });
 
@@ -108,17 +98,9 @@ export const getCurrentShift = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Calculate shift summary
-    const totalSales = shift.transactions.reduce((sum, t) => sum + Number(t.total || 0), 0);
-    const transactionCount = shift.transactions.length;
-
     return res.json({
       success: true,
-      data: {
-        ...shift,
-        total_sales: totalSales,
-        transaction_count: transactionCount,
-      },
+      data: shift,
     });
   } catch (error: any) {
     console.error('Error getting current shift:', error);
@@ -142,13 +124,6 @@ export const endShift = async (req: AuthRequest, res: Response) => {
         user_id: userId,
         status: 'open',
       },
-      include: {
-        transactions: {
-          where: {
-            status: 'completed',
-          },
-        },
-      },
     });
 
     if (!shift) {
@@ -158,9 +133,19 @@ export const endShift = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Calculate totals
-    const totalSales = shift.transactions.reduce((sum, t) => sum + Number(t.total || 0), 0);
-    const transactionCount = shift.transactions.length;
+    // Calculate totals from transactions since shift started
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        cashier_id: userId,
+        status: 'completed',
+        createdAt: {
+          gte: shift.started_at
+        }
+      },
+    });
+
+    const totalSales = transactions.reduce((sum, t) => sum + Number(t.total || 0), 0);
+    const transactionCount = transactions.length;
     const expectedCash = Number(shift.opening_cash || 0) + totalSales;
     const difference = Number(actual_cash || closing_cash || 0) - expectedCash;
 
@@ -223,20 +208,6 @@ export const getShiftReport = async (req: AuthRequest, res: Response) => {
             email: true,
           },
         },
-        transactions: {
-          where: {
-            status: 'completed',
-          },
-          include: {
-            transaction_items: {
-              include: {
-                items: true,
-                transaction_modifiers: true,
-              },
-            },
-            payments: true,
-          },
-        },
       },
     });
 
@@ -247,8 +218,35 @@ export const getShiftReport = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Get transactions for this shift
+    const whereConditions: any = {
+      cashier_id: userId,
+      status: 'completed',
+      createdAt: {
+        gte: shift.started_at
+      }
+    };
+
+    // If shift has ended, only get transactions until end time
+    if (shift.ended_at) {
+      whereConditions.createdAt.lte = shift.ended_at;
+    }
+
+    const transactions = await prisma.transaction.findMany({
+      where: whereConditions,
+      include: {
+        transaction_items: {
+          include: {
+            items: true,
+            transaction_modifiers: true,
+          },
+        },
+        payments: true,
+      },
+    });
+
     // Calculate detailed statistics
-    const paymentMethods = shift.transactions.reduce((acc: any, transaction) => {
+    const paymentMethods = transactions.reduce((acc: any, transaction) => {
       transaction.payments.forEach((payment: any) => {
         const method = payment.method;
         if (!acc[method]) {
@@ -265,7 +263,7 @@ export const getShiftReport = async (req: AuthRequest, res: Response) => {
 
     // Top selling items
     const itemSales: any = {};
-    shift.transactions.forEach(transaction => {
+    transactions.forEach(transaction => {
       transaction.transaction_items.forEach((item: any) => {
         const itemId = item.item_id;
         if (!itemSales[itemId]) {
@@ -343,22 +341,28 @@ export const getDailyReport = async (req: AuthRequest, res: Response) => {
             email: true,
           },
         },
-        transactions: {
-          where: {
-            status: 'completed',
-          },
-          include: {
-            transaction_items: {
-              include: {
-                items: true,
-              },
-            },
-            payments: true,
-          },
-        },
       },
       orderBy: {
         started_at: 'asc',
+      },
+    });
+
+    // Get all transactions for the day
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        status: 'completed',
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: {
+        transaction_items: {
+          include: {
+            items: true,
+          },
+        },
+        payments: true,
       },
     });
 
@@ -369,19 +373,17 @@ export const getDailyReport = async (req: AuthRequest, res: Response) => {
 
     // Payment method breakdown
     const paymentMethods: any = {};
-    shifts.forEach(shift => {
-      shift.transactions.forEach(transaction => {
-        transaction.payments.forEach((payment: any) => {
-          const method = payment.method;
-          if (!paymentMethods[method]) {
-            paymentMethods[method] = {
-              count: 0,
-              total: 0,
-            };
-          }
-          paymentMethods[method].count += 1;
-          paymentMethods[method].total += Number(payment.amount || 0);
-        });
+    transactions.forEach(transaction => {
+      transaction.payments.forEach((payment: any) => {
+        const method = payment.method;
+        if (!paymentMethods[method]) {
+          paymentMethods[method] = {
+            count: 0,
+            total: 0,
+          };
+        }
+        paymentMethods[method].count += 1;
+        paymentMethods[method].total += Number(payment.amount || 0);
       });
     });
 
