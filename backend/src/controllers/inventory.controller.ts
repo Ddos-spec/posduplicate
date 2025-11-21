@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
+import { createActivityLog } from './activity-log.controller';
 
 export const getInventory = async (req: Request, res: Response, _next: NextFunction) => {
   try {
@@ -35,12 +36,20 @@ export const getInventory = async (req: Request, res: Response, _next: NextFunct
 
 export const adjustStock = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { itemId, quantity, type } = req.body;
+    const { itemId, quantity, type, reason, notes } = req.body;
 
     if (!itemId || !quantity || !type) {
       return res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'Item ID, quantity, and type are required' }
+      });
+    }
+
+    // Require reason for stock adjustments
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Alasan penyesuaian stok wajib diisi' }
       });
     }
 
@@ -57,31 +66,57 @@ export const adjustStock = async (req: Request, res: Response, _next: NextFuncti
     const adjustment = parseFloat(quantity);
     const newStock = type === 'in' ? currentStock + adjustment : currentStock - adjustment;
 
+    // Prevent negative stock
+    if (newStock < 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_STOCK', message: 'Stock tidak boleh negatif' }
+      });
+    }
+
     // Update stock
-    await prisma.items.update({
+    const updatedItem = await prisma.items.update({
       where: { id: itemId },
       data: { stock: newStock }
     });
 
-    // Since inventoryMovement doesn't exist in schema, we'll skip this for now
-    // In a real scenario, you'd need to create this model in your schema
-    // await prisma.inventoryMovement.create({
-    //   data: {
-    //     itemId: itemId,
-    //     type,
-    //     quantity: adjustment,
-    //     stockBefore: currentStock,
-    //     stockAfter: newStock,
-    //     notes,
-    //     outletId: outletId,
-    //     userId: req.userId
-    //   }
-    // });
+    // Create activity log
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        type === 'in' ? 'stock_increase' : 'stock_decrease',
+        'item',
+        itemId,
+        {
+          stock: currentStock,
+          name: item.name,
+        },
+        {
+          stock: newStock,
+          adjustment: adjustment,
+          type: type,
+          notes: notes || null,
+        },
+        reason,
+        req.outletId
+      );
+    } catch (logError) {
+      console.error('Failed to create activity log:', logError);
+      // Continue even if logging fails
+    }
 
     res.json({
       success: true,
-      message: 'Stock adjusted successfully',
-      data: { itemId, stockBefore: currentStock, stockAfter: newStock }
+      message: 'Stock berhasil disesuaikan',
+      data: {
+        itemId,
+        itemName: item.name,
+        stockBefore: currentStock,
+        stockAfter: newStock,
+        adjustment: adjustment,
+        type: type,
+        reason: reason,
+      }
     });
   } catch (error) {
     return _next(error);

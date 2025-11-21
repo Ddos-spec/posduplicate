@@ -32,6 +32,8 @@ import billingRoutes from './routes/billing.routes';
 import settingsRoutes from './routes/settings.routes';
 import uploadRoutes from './routes/upload.routes';
 import notificationRoutes from './routes/notification.routes';
+import shiftRoutes from './routes/shift.routes';
+import activityLogRoutes from './routes/activity-log.routes';
 
 import { startDailyRecapCronJob } from './cron/dailyRecap';
 
@@ -131,6 +133,8 @@ app.use('/api/admin/billing', billingRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/shifts', shiftRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
