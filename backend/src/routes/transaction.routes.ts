@@ -5,7 +5,8 @@ import {
   createTransaction,
   holdOrder,
   getHeldOrders,
-  updateTransactionStatus
+  updateTransactionStatus,
+  getTodayReport
 } from '../controllers/transaction.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { tenantMiddleware } from '../middlewares/tenant.middleware';
@@ -16,6 +17,7 @@ const router = Router();
 router.use(authMiddleware, tenantMiddleware);
 
 router.get('/', getTransactions);
+router.get('/today-report', getTodayReport);
 router.get('/held', getHeldOrders);
 router.get('/:id', getTransactionById);
 router.post('/', createTransaction);

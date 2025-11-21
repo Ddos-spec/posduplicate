@@ -264,7 +264,10 @@ export default function IngredientsManagementPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-500">{ing.unit}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                      Rp {ing.cost_per_unit.toLocaleString('id-ID')}
+                      Rp {ing.cost_per_unit.toLocaleString('id-ID', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2
+                      })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button onClick={() => handleOpenForm(ing)} className="text-indigo-600 hover:text-indigo-900 mr-4">
