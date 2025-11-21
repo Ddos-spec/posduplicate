@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, User, Package, Clock, LogOut, Save } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import useConfirmationStore from '../../store/confirmationStore';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -42,6 +43,7 @@ type TabType = 'profile' | 'inventory' | 'shift';
 const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onShiftChange }) => {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const { user, logout } = useAuthStore();
+  const { showConfirmation } = useConfirmationStore();
 
   // Profile states
   const [cashierName, setCashierName] = useState(user?.name || '');
@@ -143,89 +145,108 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose, onShiftChang
   };
 
   const handleLogout = () => {
-    if (window.confirm('Apakah Anda yakin ingin logout?')) {
-      logout();
-      onClose();
-    }
+    showConfirmation({
+      title: 'Konfirmasi Logout',
+      message: 'Apakah Anda yakin ingin keluar dari akun ini?',
+      type: 'warning',
+      confirmText: 'Ya, Logout',
+      cancelText: 'Batal',
+      onConfirm: () => {
+        logout();
+        onClose();
+      },
+    });
   };
 
-  const handleStartShift = async () => {
-    const confirmed = window.confirm('Mulai shift sekarang?');
-    if (!confirmed) return;
+  const handleStartShift = () => {
+    showConfirmation({
+      title: 'Mulai Shift Baru',
+      message: 'Apakah Anda siap untuk memulai shift sekarang?',
+      type: 'success',
+      confirmText: 'Ya, Mulai Shift',
+      cancelText: 'Batal',
+      onConfirm: async () => {
+        setLoadingShift(true);
+        try {
+          const response = await fetch('http://localhost:3000/api/shifts/start', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({
+              opening_cash: 0,
+              notes: shiftNotes || undefined,
+            }),
+          });
 
-    setLoadingShift(true);
-    try {
-      const response = await fetch('http://localhost:3000/api/shifts/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          opening_cash: 0,
-          notes: shiftNotes || undefined,
-        }),
-      });
+          const data = await response.json();
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setCurrentShift(data.data);
-        setShiftNotes('');
-        if (onShiftChange) onShiftChange();
-        toast.success('Shift berhasil dimulai!');
-      } else {
-        toast.error(data.message || 'Gagal memulai shift');
-      }
-    } catch (error) {
-      console.error('Error starting shift:', error);
-      toast.error('Terjadi kesalahan saat memulai shift');
-    } finally {
-      setLoadingShift(false);
-    }
+          if (response.ok) {
+            setCurrentShift(data.data);
+            setShiftNotes('');
+            if (onShiftChange) onShiftChange();
+            toast.success('Shift berhasil dimulai!');
+          } else {
+            toast.error(data.message || 'Gagal memulai shift');
+          }
+        } catch (error) {
+          console.error('Error starting shift:', error);
+          toast.error('Terjadi kesalahan saat memulai shift');
+        } finally {
+          setLoadingShift(false);
+        }
+      },
+    });
   };
 
-  const handleEndShift = async () => {
+  const handleEndShift = () => {
     if (!closingCash) {
       toast.error('Mohon masukkan uang penutup');
       return;
     }
 
-    const confirmed = window.confirm('Apakah Anda yakin ingin mengakhiri shift?');
-    if (!confirmed) return;
+    showConfirmation({
+      title: 'Akhiri Shift',
+      message: 'Apakah Anda yakin ingin mengakhiri shift ini? Pastikan semua transaksi sudah tercatat dengan benar.',
+      type: 'danger',
+      confirmText: 'Ya, Akhiri Shift',
+      cancelText: 'Batal',
+      onConfirm: async () => {
+        setLoadingShift(true);
+        try {
+          const response = await fetch('http://localhost:3000/api/shifts/end', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({
+              closing_cash: parseFloat(closingCash),
+              actual_cash: parseFloat(closingCash),
+              notes: shiftNotes || undefined,
+            }),
+          });
 
-    setLoadingShift(true);
-    try {
-      const response = await fetch('http://localhost:3000/api/shifts/end', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          closing_cash: parseFloat(closingCash),
-          actual_cash: parseFloat(closingCash),
-          notes: shiftNotes || undefined,
-        }),
-      });
+          const data = await response.json();
 
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('Shift berhasil diakhiri!');
-        setCurrentShift(null);
-        setClosingCash('0');
-        setShiftNotes('');
-        if (onShiftChange) onShiftChange();
-      } else {
-        toast.error(data.message || 'Gagal mengakhiri shift');
-      }
-    } catch (error) {
-      console.error('Error ending shift:', error);
-      toast.error('Terjadi kesalahan saat mengakhiri shift');
-    } finally {
-      setLoadingShift(false);
-    }
+          if (response.ok) {
+            toast.success('Shift berhasil diakhiri!');
+            setCurrentShift(null);
+            setClosingCash('0');
+            setShiftNotes('');
+            if (onShiftChange) onShiftChange();
+          } else {
+            toast.error(data.message || 'Gagal mengakhiri shift');
+          }
+        } catch (error) {
+          console.error('Error ending shift:', error);
+          toast.error('Terjadi kesalahan saat mengakhiri shift');
+        } finally {
+          setLoadingShift(false);
+        }
+      },
+    });
   };
 
   const formatCurrency = (amount: number) => {
