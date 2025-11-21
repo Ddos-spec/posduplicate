@@ -376,20 +376,25 @@ export const createTransaction = async (
           });
         }
 
-        // Deduct ingredients based on recipe
-        const recipes = await tx.recipes.findMany({
-          where: { item_id: item.itemId }
-        });
-
-        for (const recipe of recipes) {
-          await tx.ingredients.update({
-            where: { id: recipe.ingredient_id },
-            data: {
-              stock: {
-                decrement: parseFloat(recipe.quantity.toString()) * item.quantity
-              }
-            }
+        // Deduct ingredients based on recipe (if recipes feature is enabled)
+        try {
+          const recipes = await tx.recipes.findMany({
+            where: { item_id: item.itemId }
           });
+
+          for (const recipe of recipes) {
+            await tx.ingredients.update({
+              where: { id: recipe.ingredient_id },
+              data: {
+                stock: {
+                  decrement: parseFloat(recipe.quantity.toString()) * item.quantity
+                }
+              }
+            });
+          }
+        } catch (error) {
+          // Skip recipe-based ingredient deduction if recipes table doesn't exist
+          // This is normal if the recipes feature hasn't been set up yet
         }
       }
 

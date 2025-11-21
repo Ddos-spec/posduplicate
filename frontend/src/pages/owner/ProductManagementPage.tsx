@@ -44,6 +44,11 @@ export default function ProductManagementPage() {
 
   const [recipeModalProduct, setRecipeModalProduct] = useState<{ id: number; name: string } | null>(null);
 
+  // Helper function to format currency
+  const formatCurrency = (value: number): string => {
+    return `Rp ${value.toLocaleString('id-ID')}`;
+  };
+
   // Helper function to format number with thousand separator
   const formatPriceInput = (value: string): string => {
     const numbers = value.replace(/\D/g, '');
