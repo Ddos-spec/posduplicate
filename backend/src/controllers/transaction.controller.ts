@@ -509,6 +509,74 @@ export const updateTransactionStatus = async (
     const { id } = req.params;
     const { status } = req.body;
 
+    // Get existing transaction with items
+    const existingTransaction = await prisma.transaction.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        transaction_items: {
+          include: {
+            items: {
+              include: {
+                recipes: {
+                  include: {
+                    ingredients: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!existingTransaction) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Transaction not found' }
+      });
+    }
+
+    // If cancelling a completed transaction, restore stock
+    if (status === 'cancelled' && existingTransaction.status === 'completed') {
+      for (const transactionItem of existingTransaction.transaction_items) {
+        const item = transactionItem.items;
+        const quantity = parseFloat(transactionItem.quantity.toString());
+
+        // Restore product stock if tracking
+        if (item.trackStock) {
+          await prisma.items.update({
+            where: { id: item.id },
+            data: {
+              stock: {
+                increment: quantity
+              }
+            }
+          });
+        }
+
+        // Restore ingredient stock from recipes
+        if (item.recipes && item.recipes.length > 0) {
+          for (const recipe of item.recipes) {
+            const recipeQty = parseFloat(recipe.quantity.toString());
+            const totalIngredientQty = recipeQty * quantity;
+
+            try {
+              await prisma.ingredients.update({
+                where: { id: recipe.ingredient_id },
+                data: {
+                  stock: {
+                    increment: totalIngredientQty
+                  }
+                }
+              });
+            } catch (error) {
+              console.error(`Failed to restore ingredient stock for ingredient ${recipe.ingredient_id}:`, error);
+            }
+          }
+        }
+      }
+    }
+
     const transaction = await prisma.transaction.update({
       where: { id: parseInt(id) },
       data: {
@@ -520,7 +588,7 @@ export const updateTransactionStatus = async (
     res.json({
       success: true,
       data: transaction,
-      message: 'Transaction status updated'
+      message: status === 'cancelled' ? 'Transaction cancelled and stock restored' : 'Transaction status updated'
     });
   } catch (error) {
     return next(error);
