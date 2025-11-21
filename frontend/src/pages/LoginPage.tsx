@@ -48,7 +48,9 @@ export default function LoginPage() {
     } catch (error: unknown) {
       console.error('Login failed:', error);
       let errorMessage = 'Login failed';
-      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
         errorMessage = error.response.data.error.message;
       }
       toast.error(errorMessage);
