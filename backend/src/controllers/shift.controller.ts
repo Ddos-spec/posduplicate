@@ -54,14 +54,14 @@ export const startShift = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: 'Shift berhasil dimulai',
       data: shift,
     });
   } catch (error: any) {
     console.error('Error starting shift:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Gagal memulai shift',
       error: error.message,
@@ -113,7 +113,7 @@ export const getCurrentShift = async (req: AuthRequest, res: Response) => {
     const totalSales = shift.transactions.reduce((sum, t) => sum + Number(t.total || 0), 0);
     const transactionCount = shift.transactions.length;
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         ...shift,
@@ -123,7 +123,7 @@ export const getCurrentShift = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error getting current shift:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Gagal mengambil data shift',
       error: error.message,
@@ -190,14 +190,14 @@ export const endShift = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Shift berhasil diakhiri',
       data: updatedShift,
     });
   } catch (error: any) {
     console.error('Error ending shift:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Gagal mengakhiri shift',
       error: error.message,
@@ -299,7 +299,7 @@ export const getShiftReport = async (req: AuthRequest, res: Response) => {
       .sort((a: any, b: any) => b.quantity - a.quantity)
       .slice(0, 10);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         shift,
@@ -321,7 +321,7 @@ export const getShiftReport = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error getting shift report:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Gagal mengambil laporan shift',
       error: error.message,
