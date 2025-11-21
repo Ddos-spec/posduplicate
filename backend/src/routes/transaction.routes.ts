@@ -6,6 +6,7 @@ import {
   holdOrder,
   getHeldOrders,
   updateTransactionStatus,
+  deleteTransaction,
   getTodayReport
 } from '../controllers/transaction.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
@@ -23,5 +24,6 @@ router.get('/:id', getTransactionById);
 router.post('/', createTransaction);
 router.post('/hold', holdOrder);
 router.put('/:id/status', updateTransactionStatus);
+router.delete('/:id', deleteTransaction);
 
 export default router;

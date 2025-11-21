@@ -596,6 +596,117 @@ export const updateTransactionStatus = async (
 };
 
 /**
+ * Delete transaction permanently
+ */
+export const deleteTransaction = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+
+    // Get transaction with outlet info for tenant validation
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        outlets: true,
+        transaction_items: {
+          include: {
+            items: {
+              include: {
+                recipes: {
+                  include: {
+                    ingredients: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'TRANSACTION_NOT_FOUND',
+          message: 'Transaction not found'
+        }
+      });
+    }
+
+    // Verify tenant ownership
+    if (tenantId && transaction.outlets) {
+      if (transaction.outlets.tenantId !== tenantId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Access denied'
+          }
+        });
+      }
+    }
+
+    // If transaction was completed, restore stock before deleting
+    if (transaction.status === 'completed') {
+      for (const transactionItem of transaction.transaction_items) {
+        const item = transactionItem.items;
+        const quantity = parseFloat(transactionItem.quantity.toString());
+
+        // Restore product stock if tracking
+        if (item.trackStock) {
+          await prisma.items.update({
+            where: { id: item.id },
+            data: {
+              stock: {
+                increment: quantity
+              }
+            }
+          });
+        }
+
+        // Restore ingredient stock from recipes
+        if (item.recipes && item.recipes.length > 0) {
+          for (const recipe of item.recipes) {
+            const recipeQty = parseFloat(recipe.quantity.toString());
+            const totalIngredientQty = recipeQty * quantity;
+
+            try {
+              await prisma.ingredients.update({
+                where: { id: recipe.ingredient_id },
+                data: {
+                  stock: {
+                    increment: totalIngredientQty
+                  }
+                }
+              });
+            } catch (error) {
+              console.error(`Failed to restore ingredient stock for ingredient ${recipe.ingredient_id}:`, error);
+            }
+          }
+        }
+      }
+    }
+
+    // Delete transaction (cascade delete will handle related records)
+    await prisma.transaction.delete({
+      where: { id: parseInt(id) }
+    });
+
+    res.json({
+      success: true,
+      message: 'Transaction deleted successfully and stock restored'
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
  * Get today's report (for cashiers)
  */
 export const getTodayReport = async (
