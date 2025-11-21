@@ -3,10 +3,11 @@ import { useCartStore } from '../store/cartStore';
 import api, { getFullUrl } from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
 import axios from 'axios';
-import { ShoppingCart, Search, X, Plus, Minus, Trash2, CreditCard, Edit, Settings, Receipt, UtensilsCrossed, Tag, Menu } from 'lucide-react';
+import { ShoppingCart, Search, X, Plus, Minus, Trash2, CreditCard, Edit, Settings, Receipt, UtensilsCrossed, Tag, Menu, ClipboardList } from 'lucide-react';
 import TransactionHistory from '../components/transaction/TransactionHistory';
 import TableManagement from '../components/table/TableManagement';
 import ModifierManagement from '../components/modifiers/ModifierManagement';
+import ShiftManagement from '../components/cashier/ShiftManagement';
 import RunningLogo from '../components/RunningLogo';
 import { printReceipt } from '../utils/exportUtils';
 import { settingsService } from '../services/settingsService';
@@ -87,6 +88,9 @@ export default function CashierPage() {
   // Table & Modifier states
   const [showTableManagement, setShowTableManagement] = useState(false);
   const [showModifierManagement, setShowModifierManagement] = useState(false);
+
+  // Shift management state
+  const [showShiftManagement, setShowShiftManagement] = useState(false);
 
   // Mobile menu state
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -566,6 +570,13 @@ export default function CashierPage() {
             </div>
             {/* Desktop Buttons */}
             <div className="hidden md:flex gap-2">
+              <button
+                onClick={() => setShowShiftManagement(true)}
+                className="px-4 py-2 rounded-lg bg-teal-500 text-white flex items-center gap-2 hover:bg-teal-600"
+              >
+                <ClipboardList className="w-5 h-5" />
+                Shift
+              </button>
               <button
                 onClick={() => setShowTableManagement(true)}
                 className="px-4 py-2 rounded-lg bg-indigo-500 text-white flex items-center gap-2 hover:bg-indigo-600"
@@ -1272,6 +1283,16 @@ export default function CashierPage() {
             <div className="space-y-2">
               <button
                 onClick={() => {
+                  setShowShiftManagement(true);
+                  setShowMobileMenu(false);
+                }}
+                className="w-full px-4 py-3 bg-teal-500 text-white rounded-lg flex items-center gap-2"
+              >
+                <ClipboardList className="w-5 h-5" />
+                Shift
+              </button>
+              <button
+                onClick={() => {
                   setShowTableManagement(true);
                   setShowMobileMenu(false);
                 }}
@@ -1329,6 +1350,16 @@ export default function CashierPage() {
       {showModifierManagement && (
         <ModifierManagement onClose={() => setShowModifierManagement(false)} />
       )}
+
+      {/* Shift Management Modal */}
+      <ShiftManagement
+        isOpen={showShiftManagement}
+        onClose={() => setShowShiftManagement(false)}
+        onShiftChange={() => {
+          // Refresh data if needed when shift changes
+          loadProducts();
+        }}
+      />
     </div>
   );
 }
