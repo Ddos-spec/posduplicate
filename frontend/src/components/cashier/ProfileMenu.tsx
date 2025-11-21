@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, User, Package, LogOut, Save } from 'lucide-react';
+import { X, User, Package, LogOut, Save, Plus, Minus } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import useConfirmationStore from '../../store/confirmationStore';
 import api from '../../services/api';
@@ -35,6 +35,14 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
 
+  // Stock adjustment states
+  const [selectedIngredient, setSelectedIngredient] = useState<Ingredient | null>(null);
+  const [adjustmentType, setAdjustmentType] = useState<'in' | 'out'>('in');
+  const [quantity, setQuantity] = useState('');
+  const [reason, setReason] = useState('');
+  const [notes, setNotes] = useState('');
+  const [isAdjusting, setIsAdjusting] = useState(false);
+
   // Load ingredients when inventory tab is active
   const loadIngredients = useCallback(async () => {
     try {
@@ -58,6 +66,57 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
       setLoadingIngredients(false);
     }
   }, []);
+
+  const handleAdjustStock = async () => {
+    if (!selectedIngredient) {
+      toast.error('Pilih bahan baku terlebih dahulu');
+      return;
+    }
+
+    if (!quantity || parseFloat(quantity) <= 0) {
+      toast.error('Masukkan jumlah yang valid');
+      return;
+    }
+
+    if (!reason.trim()) {
+      toast.error('Alasan penyesuaian stok wajib diisi');
+      return;
+    }
+
+    // Check if stock will be negative
+    const newStock = adjustmentType === 'in'
+      ? selectedIngredient.stock + parseFloat(quantity)
+      : selectedIngredient.stock - parseFloat(quantity);
+
+    if (newStock < 0) {
+      toast.error('Stok tidak boleh negatif');
+      return;
+    }
+
+    setIsAdjusting(true);
+    try {
+      await api.post('/ingredients/adjust-stock', {
+        ingredientId: selectedIngredient.id,
+        quantity: parseFloat(quantity),
+        type: adjustmentType,
+        reason: reason.trim(),
+        notes: notes.trim() || null,
+      });
+
+      toast.success('Stok berhasil disesuaikan!');
+      setSelectedIngredient(null);
+      setQuantity('');
+      setReason('');
+      setNotes('');
+      setAdjustmentType('in');
+      loadIngredients();
+    } catch (error) {
+      console.error('Error adjusting stock:', error);
+      toast.error('Gagal menyesuaikan stok');
+    } finally {
+      setIsAdjusting(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && activeTab === 'inventory') {
@@ -210,7 +269,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h3 className="text-lg font-semibold text-blue-900 mb-2">Bahan Baku</h3>
-                <p className="text-sm text-gray-600">Daftar stok bahan baku yang tersedia</p>
+                <p className="text-sm text-gray-600">Klik pada bahan baku untuk menyesuaikan stok</p>
               </div>
 
               {loadingIngredients ? (
@@ -244,7 +303,15 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {ingredients.map((ing) => (
-                          <tr key={ing.id} className="hover:bg-gray-50">
+                          <tr
+                            key={ing.id}
+                            onClick={() => setSelectedIngredient(ing)}
+                            className={`cursor-pointer transition-colors ${
+                              selectedIngredient?.id === ing.id
+                                ? 'bg-blue-50 hover:bg-blue-100'
+                                : 'hover:bg-gray-50'
+                            }`}
+                          >
                             <td className="px-4 py-3">
                               <div className="text-sm font-medium text-gray-900">{ing.name}</div>
                               {ing.categories && (
@@ -272,6 +339,131 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Stock Adjustment Form */}
+              {selectedIngredient && (
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6 shadow-md">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-900">{selectedIngredient.name}</h4>
+                      <p className="text-sm text-gray-600">
+                        Stok saat ini: <span className="font-semibold text-blue-600">{selectedIngredient.stock} {selectedIngredient.unit}</span>
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedIngredient(null);
+                        setQuantity('');
+                        setReason('');
+                        setNotes('');
+                        setAdjustmentType('in');
+                      }}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Adjustment Type */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tipe</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => setAdjustmentType('in')}
+                          className={`flex items-center justify-center px-4 py-2 rounded-lg border-2 font-semibold transition-all ${
+                            adjustmentType === 'in'
+                              ? 'border-green-500 bg-green-500 text-white shadow-md'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-green-400'
+                          }`}
+                        >
+                          <Plus className="mr-2" size={18} />
+                          Tambah
+                        </button>
+                        <button
+                          onClick={() => setAdjustmentType('out')}
+                          className={`flex items-center justify-center px-4 py-2 rounded-lg border-2 font-semibold transition-all ${
+                            adjustmentType === 'out'
+                              ? 'border-red-500 bg-red-500 text-white shadow-md'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-red-400'
+                          }`}
+                        >
+                          <Minus className="mr-2" size={18} />
+                          Kurangi
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quantity */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Jumlah <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder={`Masukkan jumlah (${selectedIngredient.unit})`}
+                        min="0"
+                      />
+                      {quantity && (
+                        <p className="mt-2 text-sm">
+                          Stok setelah penyesuaian:{' '}
+                          <span className={`font-semibold ${
+                            (adjustmentType === 'in' ? selectedIngredient.stock + parseFloat(quantity) : selectedIngredient.stock - parseFloat(quantity)) < 0
+                              ? 'text-red-600'
+                              : 'text-green-600'
+                          }`}>
+                            {adjustmentType === 'in'
+                              ? selectedIngredient.stock + parseFloat(quantity)
+                              : selectedIngredient.stock - parseFloat(quantity)
+                            } {selectedIngredient.unit}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Reason */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Alasan <span className="text-red-500">* (Wajib)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Contoh: Stok masuk dari supplier, Bahan rusak, dll"
+                      />
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Catatan Tambahan (opsional)
+                      </label>
+                      <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows={2}
+                        placeholder="Detail tambahan jika diperlukan"
+                      />
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      onClick={handleAdjustStock}
+                      disabled={isAdjusting || !quantity || !reason.trim()}
+                      className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold shadow-md"
+                    >
+                      {isAdjusting ? 'Menyimpan...' : '💾 Simpan Penyesuaian'}
+                    </button>
                   </div>
                 </div>
               )}
