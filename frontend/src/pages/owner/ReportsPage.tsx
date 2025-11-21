@@ -127,8 +127,9 @@ export default function ReportsPage() {
   };
 
   const formatNumber = (num: number) => {
-    if (num >= 1000000) return `Rp ${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `Rp ${(num / 1000).toFixed(1)}K`;
+    if (num >= 1000000000) return `Rp ${(num / 1000000000).toFixed(1)}m`; // miliar
+    if (num >= 1000000) return `Rp ${(num / 1000000).toFixed(1)}jt`; // juta
+    if (num >= 1000) return `Rp ${(num / 1000).toFixed(1)}rb`; // ribu
     return formatCurrency(num);
   };
 
@@ -261,7 +262,7 @@ export default function ReportsPage() {
               <BarChart data={salesData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
-                <YAxis tickFormatter={(v) => `Rp ${v / 1000000}M`} />
+                <YAxis tickFormatter={(v) => `Rp ${v / 1000000}jt`} />
                 <Tooltip formatter={(v: number) => formatCurrency(v)} />
                 <Bar dataKey="sales" fill="#3b82f6" />
               </BarChart>
