@@ -6,11 +6,14 @@ import {
   Edit2,
   Trash2,
   Image as ImageIcon,
-  AlertCircle
+  AlertCircle,
+  ChefHat
 } from 'lucide-react';
 import api, { getFullUrl } from '../../services/api';
 import toast from 'react-hot-toast';
 import useConfirmationStore from '../../store/confirmationStore';
+import RecipeModal from '../../components/owner/RecipeModal';
+import IngredientManager from '../../components/owner/IngredientManager';
 
 interface Category {
   id: number;
@@ -24,10 +27,11 @@ interface Product {
   image?: string;
   description?: string;
   categoryId: number;
-  category?: Category;
+  categories?: Category;
 }
 
 export default function ProductManagementPage() {
+  const [activeTab, setActiveTab] = useState<'products' | 'ingredients'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +41,8 @@ export default function ProductManagementPage() {
   const [imagePreview, setImagePreview] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+
+  const [recipeModalProduct, setRecipeModalProduct] = useState<{ id: number; name: string } | null>(null);
 
   // Helper function to format number with thousand separator
   const formatPriceInput = (value: string): string => {
@@ -93,10 +99,11 @@ export default function ProductManagementPage() {
   }, [loadProducts, loadCategories]);
 
   // Filter products based on search term
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
-  );
+  const filteredProducts = products.filter(product => {
+    const categoryName = product.categories?.name || categories.find(c => c.id === product.categoryId)?.name || '';
+    return product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    categoryName.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   // Paginate products
   const paginatedProducts = filteredProducts.slice(
@@ -118,8 +125,8 @@ export default function ProductManagementPage() {
   const handleOpenProductForm = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
-      // Get categoryId from either categoryId field or category.id (use nullish coalescing to handle 0 as valid id)
-      const catId = product.categoryId ?? product.category?.id ?? '';
+      // Get categoryId from either categoryId field or categories.id (use nullish coalescing to handle 0 as valid id)
+      const catId = product.categoryId ?? product.categories?.id ?? '';
       setProductForm({
         name: product.name,
         categoryId: catId.toString(),
@@ -225,133 +232,178 @@ export default function ProductManagementPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Package className="w-6 h-6" />
-            Manage Stok
+            Manajemen Stok
           </h1>
-          <p className="text-gray-600 mt-1">Manage your products and inventory</p>
+          <p className="text-gray-600 mt-1">Kelola produk dan stok bahan baku</p>
         </div>
-        <button
-          onClick={() => handleOpenProductForm()}
-          className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Product
-        </button>
+
+        {/* Sub Navbar / Tabs */}
+        <div className="mt-4 sm:mt-0 flex gap-2 bg-gray-100 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('products')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'products'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Produk
+          </button>
+          <button
+            onClick={() => setActiveTab('ingredients')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'ingredients'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Bahan Baku
+          </button>
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search products or categories..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Product Grid */}
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="inline-block p-4 bg-gray-100 rounded-full mb-4">
-            <Package className="w-8 h-8 text-gray-500" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No products found</h3>
-          <p className="text-gray-500 mb-4">
-            {products.length === 0 
-              ? "Get started by adding your first product" 
-              : "Try adjusting your search to find what you're looking for"}
-          </p>
-          {products.length === 0 && (
+      {activeTab === 'products' ? (
+        <>
+          {/* Actions and Search */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Cari produk atau kategori..."
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
             <button
               onClick={() => handleOpenProductForm()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
             >
-              Add Product
+              <Plus className="w-4 h-4" />
+              Tambah Produk
             </button>
-          )}
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-            {paginatedProducts.map((product) => (
-              <div 
-                key={product.id} 
-                className="bg-white border rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-              >
-                <div className="h-32 bg-gray-50 flex items-center justify-center">
-                  {product.image ? (
-                    <img 
-                      src={product.image} 
-                      alt={product.name} 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <ImageIcon className="w-8 h-8" />
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-800 truncate">{product.name}</h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {product.category?.name || 'Uncategorized'}
-                  </p>
-                  <p className="text-blue-600 font-bold mt-2">
-                    Rp {product.price.toLocaleString('id-ID')}
-                  </p>
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={() => handleOpenProductForm(product)}
-                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteProduct(product.id)}
-                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
 
-          {/* Pagination */}
-          {filteredProducts.length > itemsPerPage && (
-            <div className="flex justify-center items-center gap-2 mt-6">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className={`px-3 py-1 rounded ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-              >
-                Previous
-              </button>
-              
-              <span className="mx-2">
-                Page {currentPage} of {Math.ceil(filteredProducts.length / itemsPerPage)}
-              </span>
-              
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredProducts.length / itemsPerPage)))}
-                disabled={currentPage === Math.ceil(filteredProducts.length / itemsPerPage)}
-                className={`px-3 py-1 rounded ${currentPage === Math.ceil(filteredProducts.length / itemsPerPage) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-              >
-                Next
-              </button>
+          {/* Product Grid */}
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="inline-block p-4 bg-gray-100 rounded-full mb-4">
+                <Package className="w-8 h-8 text-gray-500" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-1">No products found</h3>
+              <p className="text-gray-500 mb-4">
+                {products.length === 0
+                  ? "Get started by adding your first product"
+                  : "Try adjusting your search to find what you're looking for"}
+              </p>
+              {products.length === 0 && (
+                <button
+                  onClick={() => handleOpenProductForm()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Add Product
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                {paginatedProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="bg-white border rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                  >
+                    <div className="h-32 bg-gray-50 flex items-center justify-center">
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <ImageIcon className="w-8 h-8" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-gray-800 truncate">{product.name}</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {product.categories?.name || categories.find(c => c.id === product.categoryId)?.name || 'Uncategorized'}
+                      </p>
+                      <p className="text-blue-600 font-bold mt-2">
+                        {formatCurrency(product.price)}
+                      </p>
+                      <div className="grid grid-cols-3 gap-2 mt-4">
+                        <button
+                          onClick={() => setRecipeModalProduct({ id: product.id, name: product.name })}
+                          className="flex items-center justify-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 text-sm"
+                          title="Kelola Resep"
+                        >
+                          <ChefHat className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleOpenProductForm(product)}
+                          className="flex items-center justify-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="flex items-center justify-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {filteredProducts.length > itemsPerPage && (
+                <div className="flex justify-center items-center gap-2 mt-6">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                  >
+                    Previous
+                  </button>
+
+                  <span className="mx-2">
+                    Page {currentPage} of {Math.ceil(filteredProducts.length / itemsPerPage)}
+                  </span>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredProducts.length / itemsPerPage)))}
+                    disabled={currentPage === Math.ceil(filteredProducts.length / itemsPerPage)}
+                    className={`px-3 py-1 rounded ${currentPage === Math.ceil(filteredProducts.length / itemsPerPage) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
+      ) : (
+        <IngredientManager />
+      )}
+
+      {/* Recipe Modal */}
+      {recipeModalProduct && (
+        <RecipeModal
+          product={recipeModalProduct}
+          onClose={() => setRecipeModalProduct(null)}
+        />
       )}
 
       {/* Product Form Modal */}
@@ -360,29 +412,29 @@ export default function ProductManagementPage() {
           <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h3 className="text-xl font-bold mb-4">
-                {editingProduct ? 'Edit Product' : 'Add New Product'}
+                {editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}
               </h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Product Name *</label>
+                  <label className="block text-sm font-medium mb-1">Nama Produk *</label>
                   <input
                     type="text"
                     value={productForm.name}
                     onChange={(e) => handleFormChange('name', e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter product name"
+                    placeholder="Masukkan nama produk"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Category *</label>
+                  <label className="block text-sm font-medium mb-1">Kategori *</label>
                   <select
                     value={productForm.categoryId}
                     onChange={(e) => handleFormChange('categoryId', e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Select a category</option>
+                    <option value="">Pilih kategori</option>
                     {categories.map(category => (
                       <option key={category.id} value={category.id}>
                         {category.name}
@@ -392,7 +444,7 @@ export default function ProductManagementPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Price (Rp) *</label>
+                  <label className="block text-sm font-medium mb-1">Harga (Rp) *</label>
                   <input
                     type="text"
                     value={productForm.price ? formatPriceInput(productForm.price) : ''}
@@ -401,12 +453,12 @@ export default function ProductManagementPage() {
                       handleFormChange('price', rawValue);
                     }}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter price"
+                    placeholder="Masukkan harga"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Product Image</label>
+                  <label className="block text-sm font-medium mb-1">Gambar Produk</label>
                   <input
                     type="file"
                     accept="image/*"
@@ -414,14 +466,14 @@ export default function ProductManagementPage() {
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="mt-2 text-xs text-gray-500">
-                    Or enter image URL:
+                    Atau masukkan URL gambar:
                   </div>
                   <input
                     type="text"
                     value={productForm.image}
                     onChange={(e) => handleFormChange('image', e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1"
-                    placeholder="Enter image URL"
+                    placeholder="Masukkan URL gambar"
                   />
                 </div>
                 
@@ -439,12 +491,12 @@ export default function ProductManagementPage() {
                 )}
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <label className="block text-sm font-medium mb-1">Deskripsi</label>
                   <textarea
                     value={productForm.description}
                     onChange={(e) => handleFormChange('description', e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter product description"
+                    placeholder="Masukkan deskripsi produk"
                     rows={3}
                   />
                 </div>
@@ -455,13 +507,13 @@ export default function ProductManagementPage() {
                   onClick={closeForm}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                 >
-                  Cancel
+                  Batal
                 </button>
                 <button
                   onClick={handleSaveProduct}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  {editingProduct ? 'Update' : 'Create'}
+                  {editingProduct ? 'Simpan' : 'Buat'}
                 </button>
               </div>
             </div>
