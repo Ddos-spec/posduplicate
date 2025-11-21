@@ -94,7 +94,6 @@ export const getCurrentShift = async (req: AuthRequest, res: Response) => {
           select: {
             id: true,
             total: true,
-            payment_channel: true,
             createdAt: true,
           },
         },
@@ -264,19 +263,6 @@ export const getShiftReport = async (req: AuthRequest, res: Response) => {
       return acc;
     }, {});
 
-    const paymentChannels = shift.transactions.reduce((acc: any, transaction) => {
-      const channel = transaction.payment_channel || 'cash';
-      if (!acc[channel]) {
-        acc[channel] = {
-          count: 0,
-          total: 0,
-        };
-      }
-      acc[channel].count += 1;
-      acc[channel].total += Number(transaction.total || 0);
-      return acc;
-    }, {});
-
     // Top selling items
     const itemSales: any = {};
     shift.transactions.forEach(transaction => {
@@ -305,7 +291,6 @@ export const getShiftReport = async (req: AuthRequest, res: Response) => {
         shift,
         statistics: {
           paymentMethods,
-          paymentChannels,
           topItems,
           summary: {
             total_transactions: shift.transaction_count,
@@ -400,22 +385,6 @@ export const getDailyReport = async (req: AuthRequest, res: Response) => {
       });
     });
 
-    // Payment channel breakdown
-    const paymentChannels: any = {};
-    shifts.forEach(shift => {
-      shift.transactions.forEach(transaction => {
-        const channel = transaction.payment_channel || 'cash';
-        if (!paymentChannels[channel]) {
-          paymentChannels[channel] = {
-            count: 0,
-            total: 0,
-          };
-        }
-        paymentChannels[channel].count += 1;
-        paymentChannels[channel].total += Number(transaction.total || 0);
-      });
-    });
-
     res.json({
       success: true,
       data: {
@@ -427,7 +396,6 @@ export const getDailyReport = async (req: AuthRequest, res: Response) => {
           total_transactions: totalTransactions,
           total_difference: totalDifference,
           payment_methods: paymentMethods,
-          payment_channels: paymentChannels,
         },
       },
     });
