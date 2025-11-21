@@ -30,7 +30,7 @@ interface Ingredient {
   is_active: boolean;
 }
 
-export default function IngredientManagementPage() {
+export default function IngredientsManagementPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
