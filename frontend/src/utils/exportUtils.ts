@@ -29,6 +29,7 @@ interface ReceiptItem {
   name: string;
   quantity: number;
   price: number;
+  modifiers?: { id: number; name: string; price: number }[];
   notes?: string;
 }
 
@@ -294,7 +295,10 @@ export const printReceipt = (
 
   // Items
   transactionData.items.forEach(item => {
-    const itemTotal = item.quantity * item.price;
+    // Calculate base price + modifiers
+    const modifiersTotal = (item.modifiers || []).reduce((sum, m) => sum + Number(m.price), 0);
+    const itemPriceWithModifiers = Number(item.price) + modifiersTotal;
+    const itemTotal = item.quantity * itemPriceWithModifiers;
 
     // Item name - truncate if too long based on printer width
     const maxNameLength = is58mm ? 12 : 18;
@@ -303,9 +307,23 @@ export const printReceipt = (
     // All in one line: Name, Qty, Price, Total
     doc.text(itemName, margin, yPos);
     doc.text(item.quantity.toString(), colQty, yPos);
-    doc.text(item.price.toLocaleString('id-ID'), colPrice, yPos);
+    doc.text(itemPriceWithModifiers.toLocaleString('id-ID'), colPrice, yPos);
     doc.text(itemTotal.toLocaleString('id-ID'), colTotal, yPos, { align: 'right' });
     yPos += 4;
+
+    // Modifiers if any (in separate lines with smaller font)
+    if (item.modifiers && item.modifiers.length > 0) {
+      doc.setFontSize(7);
+      item.modifiers.forEach(modifier => {
+        const modText = modifier.price > 0
+          ? `  + ${modifier.name} (+${Number(modifier.price).toLocaleString('id-ID')})`
+          : `  + ${modifier.name}`;
+        doc.text(modText, margin, yPos);
+        yPos += 3;
+      });
+      doc.setFontSize(8);
+      yPos += 0.5;
+    }
 
     // Notes if any (in separate line with smaller font)
     if (item.notes) {
