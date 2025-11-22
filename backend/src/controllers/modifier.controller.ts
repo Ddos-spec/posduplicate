@@ -1,9 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 
-export const getModifiers = async (_req: Request, res: Response, _next: NextFunction) => {
+export const getModifiers = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const where: any = { is_active: true };
+    // If activeOnly query param is true, filter by active only
+    const activeOnly = req.query.activeOnly === 'true';
+    const where: any = activeOnly ? { is_active: true } : {};
+
     const modifiers = await prisma.modifiers.findMany({
       where,
       orderBy: { name: 'asc' }
@@ -16,7 +19,7 @@ export const getModifiers = async (_req: Request, res: Response, _next: NextFunc
 
 export const createModifier = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { name, price } = req.body;
+    const { name, price, category } = req.body;
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -24,7 +27,12 @@ export const createModifier = async (req: Request, res: Response, _next: NextFun
       });
     }
     const modifier = await prisma.modifiers.create({
-      data: { name, price: price || 0 }
+      data: {
+        name,
+        price: price || 0,
+        category: category || 'addon',
+        is_active: true // Default to active
+      }
     });
     res.status(201).json({ success: true, data: modifier, message: 'Modifier created successfully' });
   } catch (error) {
