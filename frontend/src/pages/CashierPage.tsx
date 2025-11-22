@@ -19,6 +19,9 @@ interface Product {
   id: number;
   name: string;
   price: number;
+  priceGofood?: number | null;
+  priceGrabfood?: number | null;
+  priceShopeefood?: number | null;
   category?: { id: number; name: string };
   categories?: { id: number; name: string };
   image?: string;
@@ -161,6 +164,9 @@ export default function CashierPage() {
       itemId: product.id,
       name: product.name,
       price: parseFloat(product.price.toString()),
+      priceGofood: product.priceGofood ? parseFloat(product.priceGofood.toString()) : null,
+      priceGrabfood: product.priceGrabfood ? parseFloat(product.priceGrabfood.toString()) : null,
+      priceShopeefood: product.priceShopeefood ? parseFloat(product.priceShopeefood.toString()) : null,
     });
     toast.success(`${product.name} added to cart`);
   };
@@ -183,7 +189,7 @@ export default function CashierPage() {
     }
 
     const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-    const remaining = getTotal() - totalPaid;
+    const remaining = getTotal(paymentMethod) - totalPaid;
     const amount = parseFloat(currentPaymentAmount);
 
     if (amount > remaining) {
@@ -211,7 +217,7 @@ export default function CashierPage() {
   };
 
   const getRemainingAmount = () => {
-    return getTotal() - getTotalPaid();
+    return getTotal(paymentMethod) - getTotalPaid();
   };
 
   const handlePayment = async () => {
@@ -235,8 +241,8 @@ export default function CashierPage() {
       } else {
         finalPayments = [{
           method: paymentMethod,
-          amount: getTotal(),
-          changeAmount: paymentMethod === 'cash' ? parseFloat(cashReceived || '0') - getTotal() : 0,
+          amount: getTotal(paymentMethod),
+          changeAmount: paymentMethod === 'cash' ? parseFloat(cashReceived || '0') - getTotal(paymentMethod) : 0,
         }];
       }
 
@@ -244,8 +250,8 @@ export default function CashierPage() {
       const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
       const outletId = user?.outletId || user?.outlet?.id || null;
 
-      // Calculate tax and service charge based on settings
-      const subtotal = getSubtotal();
+      // Calculate tax and service charge based on settings (use payment method pricing)
+      const subtotal = getSubtotal(splitBillMode ? undefined : paymentMethod);
       const taxAmount = settings?.enableTax && settings?.taxRate ? (subtotal * settings.taxRate) / 100 : 0;
       const serviceChargeAmount = settings?.enableServiceCharge && settings?.serviceCharge ? (subtotal * settings.serviceCharge) / 100 : 0;
 
@@ -323,7 +329,7 @@ export default function CashierPage() {
     }
   };
 
-  const changeAmount = cashReceived ? parseFloat(cashReceived) - getTotal() : 0;
+  const changeAmount = cashReceived ? parseFloat(cashReceived) - getTotal(paymentMethod) : 0;
 
   // Image upload handler
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -694,28 +700,28 @@ export default function CashierPage() {
 
         {/* Products Grid */}
         <div className="flex-1 overflow-y-auto p-2 md:p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
             {products.map((product) => (
               <div
                 key={product.id}
                 onClick={() => !managementMode && handleAddToCart(product)}
-                className={`bg-white rounded-lg p-4 shadow hover:shadow-lg transition relative ${
-                  !managementMode ? 'cursor-pointer' : ''
+                className={`bg-white rounded-lg p-4 shadow hover:shadow-lg transition relative min-h-[180px] touch-manipulation ${
+                  !managementMode ? 'cursor-pointer active:scale-95' : ''
                 }`}
               >
                 {managementMode && (
                   <div className="absolute top-2 right-2 flex gap-1">
                     <button
                       onClick={() => handleOpenProductForm(product)}
-                      className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
+                      className="bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => handleDeleteProduct(product.id)}
-                      className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600"
+                      className="bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 )}
@@ -824,7 +830,10 @@ export default function CashierPage() {
 
             <div className="mb-4 pb-4 border-b">
               <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-              <p className="text-3xl font-bold text-blue-600">{formatCurrencyDisplay(getTotal())}</p>
+              <p className="text-3xl font-bold text-blue-600">{formatCurrencyDisplay(getTotal(paymentMethod))}</p>
+              {paymentMethod !== 'cash' && paymentMethod !== 'card' && paymentMethod !== 'qris' && (
+                <p className="text-xs text-gray-500 mt-1">Platform-specific pricing applied</p>
+              )}
             </div>
 
             {/* Split Bill Toggle */}
@@ -887,17 +896,24 @@ export default function CashierPage() {
                     <div className="mb-4">
                       <label className="block text-sm font-medium mb-2">Payment Method</label>
                       <div className="grid grid-cols-3 gap-2">
-                        {['cash', 'card', 'qris'].map((method) => (
+                        {[
+                          { id: 'cash', label: 'Cash', color: 'bg-blue-500' },
+                          { id: 'card', label: 'Card', color: 'bg-purple-500' },
+                          { id: 'qris', label: 'QRIS', color: 'bg-indigo-500' },
+                          { id: 'gofood', label: 'GoFood', color: 'bg-green-600' },
+                          { id: 'grabfood', label: 'GrabFood', color: 'bg-red-600' },
+                          { id: 'shopeefood', label: 'ShopeeFood', color: 'bg-orange-600' }
+                        ].map((method) => (
                           <button
-                            key={method}
-                            onClick={() => setPaymentMethod(method)}
-                            className={`py-2 rounded-lg capitalize text-sm ${
-                              paymentMethod === method
-                                ? 'bg-blue-500 text-white'
+                            key={method.id}
+                            onClick={() => setPaymentMethod(method.id)}
+                            className={`py-3 px-2 rounded-lg text-sm font-medium transition-all md:py-3 md:px-4 ${
+                              paymentMethod === method.id
+                                ? `${method.color} text-white shadow-lg scale-105`
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
                           >
-                            {method}
+                            {method.label}
                           </button>
                         ))}
                       </div>
@@ -957,17 +973,24 @@ export default function CashierPage() {
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">Payment Method</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {['cash', 'card', 'qris'].map((method) => (
+                    {[
+                      { id: 'cash', label: 'Cash', color: 'bg-blue-500' },
+                      { id: 'card', label: 'Card', color: 'bg-purple-500' },
+                      { id: 'qris', label: 'QRIS', color: 'bg-indigo-500' },
+                      { id: 'gofood', label: 'GoFood', color: 'bg-green-600' },
+                      { id: 'grabfood', label: 'GrabFood', color: 'bg-red-600' },
+                      { id: 'shopeefood', label: 'ShopeeFood', color: 'bg-orange-600' }
+                    ].map((method) => (
                       <button
-                        key={method}
-                        onClick={() => setPaymentMethod(method)}
-                        className={`py-2 rounded-lg capitalize ${
-                          paymentMethod === method
-                            ? 'bg-blue-500 text-white'
+                        key={method.id}
+                        onClick={() => setPaymentMethod(method.id)}
+                        className={`py-3 px-2 rounded-lg text-sm font-medium transition-all md:py-4 md:px-4 touch-manipulation ${
+                          paymentMethod === method.id
+                            ? `${method.color} text-white shadow-lg scale-105`
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`}
                       >
-                        {method}
+                        {method.label}
                       </button>
                     ))}
                   </div>

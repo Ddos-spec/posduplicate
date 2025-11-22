@@ -24,6 +24,9 @@ interface Product {
   id: number;
   name: string;
   price: number;
+  priceGofood?: number | null;
+  priceGrabfood?: number | null;
+  priceShopeefood?: number | null;
   image?: string;
   description?: string;
   categoryId: number;
@@ -67,6 +70,9 @@ export default function ProductManagementPage() {
     name: '',
     categoryId: '',
     price: '',
+    priceGofood: '',
+    priceGrabfood: '',
+    priceShopeefood: '',
     image: '',
     description: ''
   });
@@ -137,6 +143,9 @@ export default function ProductManagementPage() {
         name: product.name,
         categoryId: catId.toString(),
         price: product.price.toString(),
+        priceGofood: product.priceGofood?.toString() || '',
+        priceGrabfood: product.priceGrabfood?.toString() || '',
+        priceShopeefood: product.priceShopeefood?.toString() || '',
         image: product.image || '',
         description: product.description || ''
       });
@@ -147,6 +156,9 @@ export default function ProductManagementPage() {
         name: '',
         categoryId: '',
         price: '',
+        priceGofood: '',
+        priceGrabfood: '',
+        priceShopeefood: '',
         image: '',
         description: ''
       });
@@ -167,6 +179,9 @@ export default function ProductManagementPage() {
         name: productForm.name,
         categoryId: parseInt(productForm.categoryId),
         price: parseFloat(productForm.price),
+        priceGofood: productForm.priceGofood ? parseFloat(productForm.priceGofood) : null,
+        priceGrabfood: productForm.priceGrabfood ? parseFloat(productForm.priceGrabfood) : null,
+        priceShopeefood: productForm.priceShopeefood ? parseFloat(productForm.priceShopeefood) : null,
         image: productForm.image || null,
         description: productForm.description || null,
       };
@@ -226,6 +241,9 @@ export default function ProductManagementPage() {
       name: '',
       categoryId: '',
       price: '',
+      priceGofood: '',
+      priceGrabfood: '',
+      priceShopeefood: '',
       image: '',
       description: ''
     });
@@ -458,7 +476,7 @@ export default function ProductManagementPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Harga (Rp) *</label>
+                  <label className="block text-sm font-medium mb-1">Harga Cash/Default (Rp) *</label>
                   <input
                     type="text"
                     value={productForm.price ? formatPriceInput(productForm.price) : ''}
@@ -467,10 +485,60 @@ export default function ProductManagementPage() {
                       handleFormChange('price', rawValue);
                     }}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Masukkan harga"
+                    placeholder="Masukkan harga default"
                   />
                 </div>
-                
+
+                {/* Platform-specific pricing */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-semibold mb-3 text-gray-700">Harga Platform (Opsional)</h4>
+                  <p className="text-xs text-gray-500 mb-3">Kosongkan untuk menggunakan harga default</p>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-green-700">Harga GoFood (Rp)</label>
+                      <input
+                        type="text"
+                        value={productForm.priceGofood ? formatPriceInput(productForm.priceGofood) : ''}
+                        onChange={(e) => {
+                          const rawValue = parsePriceInput(e.target.value);
+                          handleFormChange('priceGofood', rawValue);
+                        }}
+                        className="w-full px-3 py-2 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="Kosongkan untuk harga default"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-red-700">Harga GrabFood (Rp)</label>
+                      <input
+                        type="text"
+                        value={productForm.priceGrabfood ? formatPriceInput(productForm.priceGrabfood) : ''}
+                        onChange={(e) => {
+                          const rawValue = parsePriceInput(e.target.value);
+                          handleFormChange('priceGrabfood', rawValue);
+                        }}
+                        className="w-full px-3 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                        placeholder="Kosongkan untuk harga default"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-orange-700">Harga ShopeeFood (Rp)</label>
+                      <input
+                        type="text"
+                        value={productForm.priceShopeefood ? formatPriceInput(productForm.priceShopeefood) : ''}
+                        onChange={(e) => {
+                          const rawValue = parsePriceInput(e.target.value);
+                          handleFormChange('priceShopeefood', rawValue);
+                        }}
+                        className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Kosongkan untuk harga default"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-1">Gambar Produk</label>
                   <input
