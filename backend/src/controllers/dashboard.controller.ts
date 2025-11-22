@@ -102,29 +102,66 @@ export const getSalesTrend = async (req: Request, res: Response, _next: NextFunc
 };
 
 /**
- * Get Top Products
+ * Get Top Products (by sales)
  */
 export const getTopProducts = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { tenantId } = req;
     const { limit = 5 } = req.query;
 
-    // This is simplified - ideally would aggregate from transaction_items
-    const products = await prisma.items.findMany({
-      where: tenantId ? { outletId: { in: await getOutletIdsByTenant(tenantId) } } : {},
-      take: Number(limit),
-      orderBy: { stock: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        stock: true
+    // Get transaction items grouped by product
+    const transactionItems = await prisma.transactionItem.findMany({
+      where: {
+        transactions: {
+          status: 'completed',
+          ...(tenantId ? { outletId: { in: await getOutletIdsByTenant(tenantId) } } : {})
+        }
+      },
+      include: {
+        items: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            stock: true
+          }
+        }
       }
     });
 
+    // Aggregate sales by product
+    const productSales: { [key: number]: { id: number; name: string; price: number; stock: number; totalSales: number; totalQuantity: number } } = {};
+
+    transactionItems.forEach(item => {
+      const productId = item.item_id;
+      if (!productSales[productId]) {
+        productSales[productId] = {
+          id: item.items.id,
+          name: item.items.name,
+          price: Number(item.items.price),
+          stock: Number(item.items.stock),
+          totalSales: 0,
+          totalQuantity: 0
+        };
+      }
+      productSales[productId].totalSales += Number(item.subtotal);
+      productSales[productId].totalQuantity += Number(item.quantity);
+    });
+
+    // Sort by total sales and get top N
+    const topProducts = Object.values(productSales)
+      .sort((a, b) => b.totalSales - a.totalSales)
+      .slice(0, Number(limit))
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        price: p.totalSales, // Use totalSales for the chart
+        stock: p.stock
+      }));
+
     res.json({
       success: true,
-      data: products
+      data: topProducts
     });
   } catch (error) {
     _next(error);
@@ -138,20 +175,58 @@ export const getSalesByCategory = async (req: Request, res: Response, _next: Nex
   try {
     const { tenantId } = req;
 
-    const categories = await prisma.categories.findMany({
-      where: tenantId ? { outletId: { in: await getOutletIdsByTenant(tenantId) } } : {},
+    // Get all transaction items for completed transactions
+    const transactionItems = await prisma.transactionItem.findMany({
+      where: {
+        transactions: {
+          status: 'completed',
+          ...(tenantId ? { outletId: { in: await getOutletIdsByTenant(tenantId) } } : {})
+        }
+      },
       include: {
-        _count: {
-          select: { items: true }
+        items: {
+          select: {
+            categoryId: true,
+            categories: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
         }
       }
     });
 
-    const data = categories.map(cat => ({
-      name: cat.name,
-      count: cat._count.items,
-      value: cat._count.items * 1000000 // Mock sales value
-    }));
+    // Aggregate sales by category
+    const categorySales: { [key: number]: { id: number; name: string; count: number; value: number } } = {};
+
+    transactionItems.forEach(item => {
+      if (!item.items || !item.items.categories) return; // Skip items without category
+
+      const categoryId = item.items.categoryId;
+      if (!categoryId) return;
+
+      if (!categorySales[categoryId]) {
+        categorySales[categoryId] = {
+          id: item.items.categories.id,
+          name: item.items.categories.name,
+          count: 0,
+          value: 0
+        };
+      }
+      categorySales[categoryId].count += Number(item.quantity);
+      categorySales[categoryId].value += Number(item.subtotal);
+    });
+
+    // Convert to array and sort by value
+    const data = Object.values(categorySales)
+      .sort((a, b) => b.value - a.value)
+      .map(cat => ({
+        name: cat.name,
+        count: cat.count,
+        value: cat.value
+      }));
 
     res.json({
       success: true,
