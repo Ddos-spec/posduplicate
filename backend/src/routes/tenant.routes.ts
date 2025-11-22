@@ -21,7 +21,7 @@ router.get('/me', authMiddleware, tenantMiddleware, getMyTenant);
 // Super Admin only routes
 router.get('/', authMiddleware, superAdminOnly, getAllTenants);
 router.get('/:id', authMiddleware, superAdminOnly, getTenantById);
-router.post('/', createTenant); // Public for self-registration
+router.post('/', authMiddleware, superAdminOnly, createTenant); // Protected - admin creation only
 router.put('/:id', authMiddleware, superAdminOnly, updateTenant);
 router.patch('/:id/status', authMiddleware, superAdminOnly, toggleTenantStatus);
 router.patch('/:id/subscription', authMiddleware, superAdminOnly, updateSubscription);
