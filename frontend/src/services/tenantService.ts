@@ -62,12 +62,12 @@ export const tenantService = {
   },
 
   async toggleStatus(id: number, isActive: boolean) {
-    const response = await api.put<{ success: boolean; data: Tenant; message: string }>(`/tenants/${id}/toggle-status`, { isActive });
+    const response = await api.patch<{ success: boolean; data: Tenant; message: string }>(`/tenants/${id}/status`, { isActive });
     return response.data;
   },
 
   async updateSubscription(id: number, data: { plan?: string; status?: string; expiresAt?: string }) {
-    const response = await api.put<{ success: boolean; data: Tenant; message: string }>(`/tenants/${id}/subscription`, data);
+    const response = await api.patch<{ success: boolean; data: Tenant; message: string }>(`/tenants/${id}/subscription`, data);
     return response.data;
   },
 
