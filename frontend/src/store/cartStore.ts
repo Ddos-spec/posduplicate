@@ -5,6 +5,9 @@ interface CartItem {
   itemId: number;
   name: string;
   price: number;
+  priceGofood?: number | null;
+  priceGrabfood?: number | null;
+  priceShopeefood?: number | null;
   quantity: number;
   variantId?: number;
   variantName?: string;
@@ -25,8 +28,9 @@ interface CartState {
   setOrderType: (type: string) => void;
   setTable: (tableId: number | null) => void;
   setCustomer: (name: string, phone: string) => void;
-  getTotal: () => number;
-  getSubtotal: () => number;
+  getTotal: (paymentMethod?: string) => number;
+  getSubtotal: (paymentMethod?: string) => number;
+  getItemPrice: (item: CartItem, paymentMethod?: string) => number;
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -79,14 +83,29 @@ export const useCartStore = create<CartState>((set, get) => ({
   setTable: (tableId) => set({ tableId }),
   setCustomer: (name, phone) => set({ customerName: name, customerPhone: phone }),
 
-  getSubtotal: () => {
+  getItemPrice: (item, paymentMethod) => {
+    // Get platform-specific price or fallback to default price
+    if (paymentMethod === 'gofood' && item.priceGofood) {
+      return item.priceGofood;
+    }
+    if (paymentMethod === 'grabfood' && item.priceGrabfood) {
+      return item.priceGrabfood;
+    }
+    if (paymentMethod === 'shopeefood' && item.priceShopeefood) {
+      return item.priceShopeefood;
+    }
+    return item.price; // Default/cash price
+  },
+
+  getSubtotal: (paymentMethod) => {
     return get().items.reduce((sum, item) => {
+      const itemPrice = get().getItemPrice(item, paymentMethod);
       const modifiersTotal = (item.modifiers || []).reduce((s, m) => s + m.price, 0);
-      return sum + (item.price + modifiersTotal) * item.quantity;
+      return sum + (itemPrice + modifiersTotal) * item.quantity;
     }, 0);
   },
 
-  getTotal: () => {
-    return get().getSubtotal();
+  getTotal: (paymentMethod) => {
+    return get().getSubtotal(paymentMethod);
   },
 }));
