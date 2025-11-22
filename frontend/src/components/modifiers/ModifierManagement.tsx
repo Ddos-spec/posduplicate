@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import { X, Plus, Edit, Trash2, Tag, DollarSign } from 'lucide-react';
+import { X, Plus, Edit, Trash2, Tag } from 'lucide-react';
 import useConfirmationStore from '../../store/confirmationStore';
 
 interface Modifier {
@@ -273,20 +273,21 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Price Adjustment *</label>
+                <label className="block text-sm font-medium mb-2">Harga Tambahan (Rp) *</label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
                   <input
-                    type="number"
-                    value={form.price}
-                    onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    value={form.price ? parseInt(form.price).toLocaleString('id-ID') : ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setForm({ ...form, price: value });
+                    }}
+                    className="w-full pl-12 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="0"
-                    min="0"
-                    step="1000"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Enter 0 for free modifiers</p>
+                <p className="text-xs text-gray-500 mt-1">Masukkan 0 untuk modifier gratis</p>
               </div>
 
               <div className="flex gap-2 pt-4">
