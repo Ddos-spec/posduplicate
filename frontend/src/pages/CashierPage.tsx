@@ -7,6 +7,7 @@ import { ShoppingCart, Search, X, Plus, Minus, Trash2, CreditCard, Edit, Setting
 import TransactionHistory from '../components/transaction/TransactionHistory';
 import TableManagement from '../components/table/TableManagement';
 import ModifierManagement from '../components/modifiers/ModifierManagement';
+import ProductCustomizeModal from '../components/cashier/ProductCustomizeModal';
 import ProfileMenu from '../components/cashier/ProfileMenu';
 import RunningLogo from '../components/RunningLogo';
 import { printReceipt } from '../utils/exportUtils';
@@ -98,6 +99,9 @@ export default function CashierPage() {
   const [showTableManagement, setShowTableManagement] = useState(false);
   const [showModifierManagement, setShowModifierManagement] = useState(false);
 
+  // Product customize modal state
+  const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
+
   // Profile menu state
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -159,7 +163,17 @@ export default function CashierPage() {
     loadSettings();
   }, [loadProducts, loadCategories]);
 
-  const handleAddToCart = (product: Product) => {
+  const handleProductClick = (product: Product) => {
+    if (managementMode) return;
+    // Show customize modal
+    setCustomizingProduct(product);
+  };
+
+  const handleAddToCart = (
+    product: Product,
+    modifiers: { id: number; name: string; price: number }[] = [],
+    notes: string = ''
+  ) => {
     addItem({
       itemId: product.id,
       name: product.name,
@@ -167,8 +181,11 @@ export default function CashierPage() {
       priceGofood: product.priceGofood ? parseFloat(product.priceGofood.toString()) : null,
       priceGrabfood: product.priceGrabfood ? parseFloat(product.priceGrabfood.toString()) : null,
       priceShopeefood: product.priceShopeefood ? parseFloat(product.priceShopeefood.toString()) : null,
+      modifiers: modifiers.length > 0 ? modifiers : undefined,
+      notes: notes || undefined,
     });
-    toast.success(`${product.name} added to cart`);
+    const modifierText = modifiers.length > 0 ? ` with ${modifiers.length} modifier(s)` : '';
+    toast.success(`${product.name}${modifierText} added to cart`);
   };
 
   const handleCheckout = async () => {
@@ -704,7 +721,7 @@ export default function CashierPage() {
             {products.map((product) => (
               <div
                 key={product.id}
-                onClick={() => !managementMode && handleAddToCart(product)}
+                onClick={() => handleProductClick(product)}
                 className={`bg-white rounded-lg p-4 shadow hover:shadow-lg transition relative min-h-[180px] touch-manipulation ${
                   !managementMode ? 'cursor-pointer active:scale-95' : ''
                 }`}
@@ -764,7 +781,25 @@ export default function CashierPage() {
               {items.map((item) => (
                 <div key={item.id} className="bg-gray-50 rounded-lg p-3">
                   <div className="flex justify-between mb-2">
-                    <span className="font-medium">{item.name}</span>
+                    <div className="flex-1">
+                      <span className="font-medium">{item.name}</span>
+                      {item.modifiers && item.modifiers.length > 0 && (
+                        <div className="mt-1 space-y-0.5">
+                          {item.modifiers.map((mod, idx) => (
+                            <div key={idx} className="text-xs text-gray-600 flex items-center gap-1">
+                              <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                              <span>{mod.name}</span>
+                              {mod.price > 0 && (
+                                <span className="text-blue-600">+{formatCurrencyDisplay(mod.price)}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {item.notes && (
+                        <p className="text-xs text-gray-500 italic mt-1">Note: {item.notes}</p>
+                      )}
+                    </div>
                     <button onClick={() => removeItem(item.id)} className="text-red-500">
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -786,7 +821,7 @@ export default function CashierPage() {
                       </button>
                     </div>
                     <span className="font-semibold text-blue-600">
-                      {formatCurrencyDisplay(item.price * item.quantity)}
+                      {formatCurrencyDisplay((item.price + (item.modifiers?.reduce((sum, m) => sum + m.price, 0) || 0)) * item.quantity)}
                     </span>
                   </div>
                 </div>
@@ -1243,7 +1278,25 @@ export default function CashierPage() {
                   {items.map((item) => (
                     <div key={item.id} className="bg-gray-50 rounded-lg p-3">
                       <div className="flex justify-between mb-2">
-                        <span className="font-medium">{item.name}</span>
+                        <div className="flex-1">
+                          <span className="font-medium">{item.name}</span>
+                          {item.modifiers && item.modifiers.length > 0 && (
+                            <div className="mt-1 space-y-0.5">
+                              {item.modifiers.map((mod, idx) => (
+                                <div key={idx} className="text-xs text-gray-600 flex items-center gap-1">
+                                  <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                                  <span>{mod.name}</span>
+                                  {mod.price > 0 && (
+                                    <span className="text-blue-600">+{formatCurrencyDisplay(mod.price)}</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {item.notes && (
+                            <p className="text-xs text-gray-500 italic mt-1">Note: {item.notes}</p>
+                          )}
+                        </div>
                         <button onClick={() => removeItem(item.id)} className="text-red-500">
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1265,7 +1318,7 @@ export default function CashierPage() {
                           </button>
                         </div>
                         <span className="font-semibold text-blue-600">
-                          {formatCurrencyDisplay(item.price * item.quantity)}
+                          {formatCurrencyDisplay((item.price + (item.modifiers?.reduce((sum, m) => sum + m.price, 0) || 0)) * item.quantity)}
                         </span>
                       </div>
                     </div>
@@ -1377,6 +1430,15 @@ export default function CashierPage() {
       {/* Modifier Management Modal */}
       {showModifierManagement && (
         <ModifierManagement onClose={() => setShowModifierManagement(false)} />
+      )}
+
+      {/* Product Customize Modal */}
+      {customizingProduct && (
+        <ProductCustomizeModal
+          product={customizingProduct}
+          onClose={() => setCustomizingProduct(null)}
+          onAddToCart={handleAddToCart}
+        />
       )}
 
       {/* Profile Menu Modal */}
