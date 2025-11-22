@@ -98,6 +98,21 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
     }
   };
 
+  const handleToggleStatus = async (modifierId: number, currentStatus: boolean) => {
+    try {
+      await api.put(`/modifiers/${modifierId}`, { isActive: !currentStatus });
+      toast.success(`Modifier ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+      loadModifiers();
+    } catch (error: unknown) {
+      console.error('Error toggling modifier status:', error);
+      let errorMessage = 'Failed to update modifier status';
+      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      }
+      toast.error(errorMessage);
+    }
+  };
+
   const handleDelete = (modifierId: number) => {
     showConfirmation(
       'Delete Modifier',
@@ -187,23 +202,30 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
                         {modifier.price > 0 ? `+Rp ${modifier.price.toLocaleString('id-ID')}` : 'Free'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          modifier.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                        }`}>
+                        <button
+                          onClick={() => handleToggleStatus(modifier.id, modifier.isActive)}
+                          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
+                            modifier.isActive
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
                           {modifier.isActive ? 'Active' : 'Inactive'}
-                        </span>
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex gap-2 justify-end">
                           <button
                             onClick={() => handleOpenForm(modifier)}
                             className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            title="Edit modifier"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(modifier.id)}
                             className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+                            title="Delete modifier"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

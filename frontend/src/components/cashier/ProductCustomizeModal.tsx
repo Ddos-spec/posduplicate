@@ -41,9 +41,8 @@ export default function ProductCustomizeModal({ product, onClose, onAddToCart }:
 
   const loadModifiers = async () => {
     try {
-      const { data } = await api.get('/modifiers');
-      // Filter only active modifiers
-      setAllModifiers(data.data.filter((m: Modifier) => m.isActive));
+      const { data } = await api.get('/modifiers', { params: { activeOnly: 'true' } });
+      setAllModifiers(data.data);
     } catch (error: unknown) {
       console.error('Error loading modifiers:', error);
       let errorMessage = 'Failed to load modifiers';
