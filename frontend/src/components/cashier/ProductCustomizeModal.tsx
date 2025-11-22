@@ -66,11 +66,11 @@ export default function ProductCustomizeModal({ product, onClose, onAddToCart }:
       // Remove modifier
       setSelectedModifiers(selectedModifiers.filter(m => m.id !== modifier.id));
     } else {
-      // Add modifier
+      // Add modifier - ensure price is a number
       setSelectedModifiers([...selectedModifiers, {
         id: modifier.id,
         name: modifier.name,
-        price: modifier.price
+        price: Number(modifier.price) // Convert to number
       }]);
     }
   };
@@ -97,8 +97,8 @@ export default function ProductCustomizeModal({ product, onClose, onAddToCart }:
   };
 
   const calculateTotal = () => {
-    const modifiersTotal = selectedModifiers.reduce((sum, m) => sum + m.price, 0);
-    return product.price + modifiersTotal;
+    const modifiersTotal = selectedModifiers.reduce((sum, m) => sum + Number(m.price), 0);
+    return Number(product.price) + modifiersTotal;
   };
 
   const handleAddToCart = () => {
