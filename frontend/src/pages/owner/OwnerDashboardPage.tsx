@@ -283,7 +283,11 @@ export default function OwnerDashboardPage() {
           <div className="space-y-3">
             {recentTransactions.length > 0 ? (
               recentTransactions.map((trx) => (
-                <div key={trx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div
+                  key={trx.id}
+                  onClick={() => navigate(`/owner/transactions/${trx.id}`)}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                >
                   <div>
                     <p className="font-medium text-gray-800">{trx.transactionNumber}</p>
                     <p className="text-xs text-gray-500">
