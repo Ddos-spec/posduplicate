@@ -112,13 +112,22 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
       loadIngredients();
     } catch (error: any) {
       console.error('Error adjusting stock:', error);
-      console.error('Error response:', error.response?.data);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error response status:', error.response?.status);
+      console.error('Error response headers:', error.response?.headers);
+      console.error('Request data:', {
+        ingredientId: selectedIngredient.id,
+        quantity: parseFloat(quantity),
+        type: adjustmentType,
+        reason: reason.trim(),
+        notes: notes.trim() || null,
+      });
 
       // Show detailed error message from backend if available
       const errorMessage = error.response?.data?.error?.message
         || error.response?.data?.message
         || error.message
-        || 'Gagal menyesuaikan stok';
+        || 'Gagal menyesuaikan stok - Server Error (500)';
 
       toast.error(errorMessage);
     } finally {
