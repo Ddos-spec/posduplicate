@@ -115,6 +115,10 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
       console.error('Error response data:', error.response?.data);
       console.error('Error response status:', error.response?.status);
       console.error('Error response headers:', error.response?.headers);
+      console.error('Error details object:', error.response?.data?.error);
+      console.error('Error message:', error.response?.data?.error?.message);
+      console.error('Error code:', error.response?.data?.error?.code);
+      console.error('Error details:', error.response?.data?.error?.details);
       console.error('Request data:', {
         ingredientId: selectedIngredient.id,
         quantity: parseFloat(quantity),
