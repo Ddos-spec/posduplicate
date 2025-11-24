@@ -140,17 +140,22 @@ export const adjustIngredientStock = async (req: Request, res: Response, _next: 
       data: { stock: newStock }
     });
 
-    // Log the activity
-    await createActivityLog(
-      req.userId!,
-      type === 'in' ? 'stock_in' : 'stock_out',
-      'ingredient',
-      ingredient.id,
-      { stock: oldStock },
-      { stock: newStock },
-      `${reason}${notes ? ` - ${notes}` : ''}`,
-      req.outletId || ingredient.outlet_id || null
-    );
+    // Log the activity (non-critical, don't fail if logging fails)
+    try {
+      await createActivityLog(
+        req.userId!,
+        type === 'in' ? 'stock_in' : 'stock_out',
+        'ingredient',
+        ingredient.id,
+        { stock: oldStock },
+        { stock: newStock },
+        `${reason}${notes ? ` - ${notes}` : ''}`,
+        req.outletId || ingredient.outlet_id || null
+      );
+    } catch (logError: any) {
+      console.error('Failed to create activity log (non-critical):', logError.message);
+      // Continue even if logging fails
+    }
 
     res.json({
       success: true,
