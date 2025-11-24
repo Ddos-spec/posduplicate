@@ -85,8 +85,8 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
 
     // Check if stock will be negative
     const newStock = adjustmentType === 'in'
-      ? selectedIngredient.stock + parseFloat(quantity)
-      : selectedIngredient.stock - parseFloat(quantity);
+      ? parseFloat(selectedIngredient.stock) + parseFloat(quantity)
+      : parseFloat(selectedIngredient.stock) - parseFloat(quantity);
 
     if (newStock < 0) {
       toast.error('Stok tidak boleh negatif');
@@ -415,13 +415,13 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
                         <p className="mt-2 text-sm">
                           Stok setelah penyesuaian:{' '}
                           <span className={`font-semibold ${
-                            (adjustmentType === 'in' ? selectedIngredient.stock + parseFloat(quantity) : selectedIngredient.stock - parseFloat(quantity)) < 0
+                            (adjustmentType === 'in' ? parseFloat(selectedIngredient.stock) + parseFloat(quantity) : parseFloat(selectedIngredient.stock) - parseFloat(quantity)) < 0
                               ? 'text-red-600'
                               : 'text-green-600'
                           }`}>
                             {adjustmentType === 'in'
-                              ? selectedIngredient.stock + parseFloat(quantity)
-                              : selectedIngredient.stock - parseFloat(quantity)
+                              ? parseFloat(selectedIngredient.stock) + parseFloat(quantity)
+                              : parseFloat(selectedIngredient.stock) - parseFloat(quantity)
                             } {selectedIngredient.unit}
                           </span>
                         </p>
