@@ -110,9 +110,17 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
       setNotes('');
       setAdjustmentType('in');
       loadIngredients();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adjusting stock:', error);
-      toast.error('Gagal menyesuaikan stok');
+      console.error('Error response:', error.response?.data);
+
+      // Show detailed error message from backend if available
+      const errorMessage = error.response?.data?.error?.message
+        || error.response?.data?.message
+        || error.message
+        || 'Gagal menyesuaikan stok';
+
+      toast.error(errorMessage);
     } finally {
       setIsAdjusting(false);
     }
