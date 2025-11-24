@@ -105,6 +105,14 @@ export const adjustIngredientStock = async (req: Request, res: Response, _next: 
       });
     }
 
+    // Check if user is authenticated
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'User authentication required for stock adjustment' }
+      });
+    }
+
     const ingredient = await prisma.ingredients.findUnique({
       where: { id: parseInt(ingredientId) }
     });
@@ -149,7 +157,22 @@ export const adjustIngredientStock = async (req: Request, res: Response, _next: 
       data: { oldStock, newStock, adjustment: adjustmentQty, type },
       message: `Stock ${type === 'in' ? 'added' : 'removed'} successfully`
     });
-  } catch (error) {
-    return _next(error);
+  } catch (error: any) {
+    console.error('Error in adjustIngredientStock:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+
+    // Send detailed error for debugging
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'SERVER_ERROR',
+        message: 'Failed to adjust ingredient stock',
+        details: error.message
+      }
+    });
   }
 };
