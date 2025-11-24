@@ -305,6 +305,7 @@ export default function CashierPage() {
             name: item.name,
             quantity: item.quantity,
             price: item.price,
+            modifiers: item.modifiers,
             notes: item.notes
           })),
           subtotal: subtotal,
