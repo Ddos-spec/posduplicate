@@ -1,0 +1,24 @@
+{
+  "name": "MyPOS - Point of Sale System",
+  "short_name": "MyPOS",
+  "description": "Modern Point of Sale System for Cashiers - Optimized for Tablet",
+  "start_url": "/cashier",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["business", "productivity", "finance"],
+  "display_override": ["fullscreen", "standalone"],
+  "prefer_related_applications": false,
+  "lang": "id-ID",
+  "dir": "ltr"
+}
