@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
-import { hashApiKey } from '../utils/apiKeyGenerator';
 
 // Extend Express Request type
 declare global {
@@ -29,23 +28,10 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
       });
     }
 
-    // Validate API key format
-    if (!apiKey.startsWith('mypos_live_')) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: 'INVALID_API_KEY_FORMAT',
-          message: 'Invalid API key format.',
-        },
-      });
-    }
-
-    // Hash the provided API key
-    const hashedKey = hashApiKey(apiKey);
-
-    // Find the API key in database
+    // Find the API key in database (Comparing PLAIN TEXT for simplicity per user request, 
+    // normally hashing is preferred but requires more complex management UI for "show once")
     const apiKeyRecord = await prisma.apiKey.findUnique({
-      where: { api_key: hashedKey },
+      where: { api_key: apiKey },
       include: {
         tenant: {
           select: {
@@ -101,25 +87,16 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
       });
     }
 
-    // Check tenant subscription status
-    if (apiKeyRecord.tenant.subscriptionStatus !== 'active') {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'SUBSCRIPTION_INACTIVE',
-          message: 'Your subscription is not active. Please renew your subscription.',
-        },
-      });
-    }
-
-    // Update last used timestamp
-    await prisma.apiKey.update({
+    // Update last used timestamp (Async - don't await to keep response fast)
+    prisma.apiKey.update({
       where: { id: apiKeyRecord.id },
       data: { last_used: new Date() },
-    });
+    }).catch(err => console.error('Failed to update last_used:', err));
 
     // Attach tenant ID to request
     req.apiKeyTenantId = apiKeyRecord.tenant_id;
+    // Also attach to standard tenantId for compatibility with other controllers if needed
+    req.tenantId = apiKeyRecord.tenant_id;
 
     return next();
   } catch (error) {
