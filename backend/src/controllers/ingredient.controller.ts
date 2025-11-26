@@ -20,7 +20,7 @@ export const getIngredients = async (req: Request, res: Response, _next: NextFun
       },
       orderBy: { name: 'asc' }
     });
-    res.json({ success: true, data: ingredients, count: ingredients.length });
+    return res.json({ success: true, data: ingredients, count: ingredients.length });
   } catch (error) {
     return _next(error);
   }
@@ -46,7 +46,7 @@ export const createIngredient = async (req: Request, res: Response, _next: NextF
         outlet_id: outletId
       }
     });
-    res.status(201).json({ success: true, data: ingredient, message: 'Ingredient created successfully' });
+    return res.status(201).json({ success: true, data: ingredient, message: 'Ingredient created successfully' });
   } catch (error) {
     return _next(error);
   }
@@ -67,7 +67,7 @@ export const updateIngredient = async (req: Request, res: Response, _next: NextF
         ...(isActive !== undefined && { is_active: isActive })
       }
     });
-    res.json({ success: true, data: ingredient, message: 'Ingredient updated successfully' });
+    return res.json({ success: true, data: ingredient, message: 'Ingredient updated successfully' });
   } catch (error) {
     return _next(error);
   }
@@ -80,7 +80,7 @@ export const deleteIngredient = async (req: Request, res: Response, _next: NextF
       where: { id: parseInt(id) },
       data: { is_active: false }
     });
-    res.json({ success: true, message: 'Ingredient deleted successfully' });
+    return res.json({ success: true, message: 'Ingredient deleted successfully' });
   } catch (error) {
     return _next(error);
   }
@@ -157,7 +157,7 @@ export const adjustIngredientStock = async (req: Request, res: Response, _next: 
       // Continue even if logging fails
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: { oldStock, newStock, adjustment: adjustmentQty, type },
       message: `Stock ${type === 'in' ? 'added' : 'removed'} successfully`
