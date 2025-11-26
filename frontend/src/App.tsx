@@ -17,6 +17,7 @@ import TenantManagementPage from './pages/admin/TenantManagementPage';
 import SystemAnalyticsPage from './pages/admin/SystemAnalyticsPage';
 import BillingManagementPage from './pages/admin/BillingManagementPage';
 import ApiDocumentationPage from './pages/admin/ApiDocumentationPage';
+import ApiKeyManagementPage from './pages/admin/ApiKeyManagementPage';
 
 // Owner
 import OwnerLayout from './components/owner/OwnerLayout';
@@ -28,7 +29,7 @@ import ReportsPage from './pages/owner/ReportsPage';
 import SettingsPage from './pages/owner/SettingsPage';
 import ProductManagementPage from './pages/owner/ProductManagementPage';
 import TransactionDetailPage from './pages/owner/TransactionDetailPage';
-import ApiKeysPage from './pages/owner/ApiKeysPage';
+
 // SECURITY: Base protected route - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
@@ -120,6 +121,7 @@ function App() {
           <Route path="tenants" element={<TenantManagementPage />} />
           <Route path="analytics" element={<SystemAnalyticsPage />} />
           <Route path="billing" element={<BillingManagementPage />} />
+          <Route path="api-keys" element={<ApiKeyManagementPage />} />
           <Route path="api-docs" element={<ApiDocumentationPage />} />
           <Route index element={<Navigate to="/admin/dashboard" />} />
         </Route>
@@ -141,7 +143,7 @@ function App() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="products" element={<ProductManagementPage />} />
           <Route path="transactions/:id" element={<TransactionDetailPage />} />
-          <Route path="api-keys" element={<ApiKeysPage />} />
+          
           <Route index element={<Navigate to="/owner/dashboard" />} />
         </Route>
 
