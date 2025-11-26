@@ -2,22 +2,40 @@ import { Router } from 'express';
 import {
   getSalesReport,
   getStockReport,
-  getTransactionSummary,
-  getCashFlowReport,
-  getTopSellingItems,
 } from '../controllers/ownerApi.controller';
 import { apiKeyAuth } from '../middlewares/apiKey.middleware';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
 
-// All routes require API key authentication
+// Apply rate limiting specifically for external API to prevent abuse
+// Limit: 100 requests per 15 minutes per IP
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many requests, please try again later.'
+    }
+  }
+});
+
+// Apply security and rate limiting middleware
+router.use(apiLimiter);
 router.use(apiKeyAuth);
 
-// Reporting endpoints
-router.get('/reports/sales', getSalesReport);
-router.get('/reports/stock', getStockReport);
-router.get('/reports/transactions', getTransactionSummary);
-router.get('/reports/cash-flow', getCashFlowReport);
-router.get('/reports/top-items', getTopSellingItems);
+// === SIMPLE & EASY API ENDPOINTS ===
+
+// 1. Laporan Transaksi (Transaction Report)
+// Endpoint: GET /api/owner/transactions
+router.get('/transactions', getSalesReport);
+
+// 2. Laporan Stok (Stock Report)
+// Endpoint: GET /api/owner/stock
+router.get('/stock', getStockReport);
 
 export default router;

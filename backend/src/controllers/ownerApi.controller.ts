@@ -4,10 +4,6 @@ import { Prisma } from '@prisma/client';
 
 /**
  * Get sales report for the authenticated tenant
- * Query parameters:
- * - startDate: ISO date string (optional)
- * - endDate: ISO date string (optional)
- * - outletId: number (optional)
  */
 export const getSalesReport = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -72,11 +68,11 @@ export const getSalesReport = async (req: Request, res: Response, next: NextFunc
     // Calculate summary
     const summary = {
       totalTransactions: transactions.length,
-      totalRevenue: transactions.reduce((sum, t) => sum + (t.total?.toNumber() || 0), 0),
-      totalDiscount: transactions.reduce((sum, t) => sum + (t.discountAmount?.toNumber() || 0), 0),
-      totalTax: transactions.reduce((sum, t) => sum + (t.taxAmount?.toNumber() || 0), 0),
+      totalRevenue: transactions.reduce((sum, t) => sum + (Number(t.total) || 0), 0),
+      totalDiscount: transactions.reduce((sum, t) => sum + (Number(t.discountAmount) || 0), 0),
+      totalTax: transactions.reduce((sum, t) => sum + (Number(t.taxAmount) || 0), 0),
       totalItems: transactions.reduce(
-        (sum, t) => sum + t.transaction_items.reduce((itemSum, item) => itemSum + item.quantity.toNumber(), 0),
+        (sum, t) => sum + t.transaction_items.reduce((itemSum, item) => itemSum + Number(item.quantity), 0),
         0
       ),
     };
@@ -88,23 +84,23 @@ export const getSalesReport = async (req: Request, res: Response, next: NextFunc
         transactions: transactions.map((t) => ({
           transactionNumber: t.transaction_number,
           orderType: t.order_type,
-          subtotal: t.subtotal?.toNumber(),
-          discountAmount: t.discountAmount?.toNumber(),
-          taxAmount: t.taxAmount?.toNumber(),
-          total: t.total?.toNumber(),
+          subtotal: Number(t.subtotal),
+          discountAmount: Number(t.discountAmount),
+          taxAmount: Number(t.taxAmount),
+          total: Number(t.total),
           cashier: t.users?.name,
           outlet: t.outlets?.name,
           createdAt: t.createdAt,
           items: t.transaction_items.map((item) => ({
             itemName: item.item_name,
             variant: item.variants?.name,
-            quantity: item.quantity.toNumber(),
-            unitPrice: item.unit_price.toNumber(),
-            subtotal: item.subtotal.toNumber(),
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unit_price),
+            subtotal: Number(item.subtotal),
           })),
           payments: t.payments.map((p) => ({
             method: p.method,
-            amount: p.amount.toNumber(),
+            amount: Number(p.amount),
           })),
         })),
       },
@@ -117,9 +113,6 @@ export const getSalesReport = async (req: Request, res: Response, next: NextFunc
 
 /**
  * Get stock/inventory report for the authenticated tenant
- * Query parameters:
- * - outletId: number (optional)
- * - lowStock: boolean (optional) - filter items below min stock
  */
 export const getStockReport = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -166,9 +159,8 @@ export const getStockReport = async (req: Request, res: Response, next: NextFunc
 
     const summary = {
       totalItems: items.length,
-      lowStockItems: items.filter((item) => item.stock && item.minStock && item.stock.toNumber() <= item.minStock.toNumber())
-        .length,
-      totalStockValue: items.reduce((sum, item) => sum + item.price.toNumber() * (item.stock?.toNumber() || 0), 0),
+      lowStockItems: items.filter((item) => Number(item.stock) <= Number(item.minStock)).length,
+      totalStockValue: items.reduce((sum, item) => sum + Number(item.price) * Number(item.stock || 0), 0),
     };
 
     res.json({
@@ -180,224 +172,16 @@ export const getStockReport = async (req: Request, res: Response, next: NextFunc
           sku: item.sku,
           name: item.name,
           category: item.categories?.name,
-          stock: item.stock?.toNumber() || 0,
-          minStock: item.minStock?.toNumber() || 0,
-          price: item.price.toNumber(),
+          stock: Number(item.stock || 0),
+          minStock: Number(item.minStock || 0),
+          price: Number(item.price),
           outlet: item.outlets?.name,
-          isLowStock: item.stock && item.minStock ? item.stock.toNumber() <= item.minStock.toNumber() : false,
+          isLowStock: Number(item.stock || 0) <= Number(item.minStock || 0),
         })),
       },
     });
   } catch (error) {
     console.error('Error fetching stock report:', error);
-    return next(error);
-  }
-};
-
-/**
- * Get transaction summary by date range
- */
-export const getTransactionSummary = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const tenantId = req.apiKeyTenantId!;
-    const { startDate, endDate } = req.query;
-
-    const dateFilter: any = {};
-    if (startDate) {
-      dateFilter.gte = new Date(startDate as string);
-    }
-    if (endDate) {
-      const end = new Date(endDate as string);
-      end.setHours(23, 59, 59, 999);
-      dateFilter.lte = end;
-    }
-
-    const where: Prisma.TransactionWhereInput = {
-      outlets: {
-        tenantId: tenantId,
-      },
-    };
-
-    if (Object.keys(dateFilter).length > 0) {
-      where.createdAt = dateFilter;
-    }
-
-    const transactions = await prisma.transaction.findMany({
-      where,
-      include: {
-        payments: true,
-        transaction_items: true,
-      },
-    });
-
-    // Group by payment method
-    const paymentMethods: Record<string, number> = {};
-    transactions.forEach((t) => {
-      t.payments.forEach((p) => {
-        const method = p.method || 'Unknown';
-        paymentMethods[method] = (paymentMethods[method] || 0) + p.amount.toNumber();
-      });
-    });
-
-    // Group by order type
-    const orderTypes: Record<string, number> = {};
-    transactions.forEach((t) => {
-      const type = t.order_type || 'Unknown';
-      orderTypes[type] = (orderTypes[type] || 0) + 1;
-    });
-
-    res.json({
-      success: true,
-      data: {
-        totalTransactions: transactions.length,
-        totalRevenue: transactions.reduce((sum, t) => sum + (t.total?.toNumber() || 0), 0),
-        averageOrderValue:
-          transactions.length > 0
-            ? transactions.reduce((sum, t) => sum + (t.total?.toNumber() || 0), 0) / transactions.length
-            : 0,
-        paymentMethods,
-        orderTypes,
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching transaction summary:', error);
-    return next(error);
-  }
-};
-
-/**
- * Get cash flow report (transactions + expenses)
- */
-export const getCashFlowReport = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const tenantId = req.apiKeyTenantId!;
-    const { startDate, endDate } = req.query;
-
-    const dateFilter: any = {};
-    if (startDate) {
-      dateFilter.gte = new Date(startDate as string);
-    }
-    if (endDate) {
-      const end = new Date(endDate as string);
-      end.setHours(23, 59, 59, 999);
-      dateFilter.lte = end;
-    }
-
-    const where: any = {
-      outlets: {
-        tenantId: tenantId,
-      },
-    };
-
-    if (Object.keys(dateFilter).length > 0) {
-      where.createdAt = dateFilter;
-    }
-
-    // Fetch all transactions (revenue)
-    const transactions = await prisma.transaction.findMany({
-      where,
-      select: {
-        total: true,
-        createdAt: true,
-      },
-    });
-
-    const totalRevenue = transactions.reduce((sum, t) => sum + (t.total?.toNumber() || 0), 0);
-
-    res.json({
-      success: true,
-      data: {
-        revenue: totalRevenue,
-        expenses: 0, // Placeholder - implement expenses tracking if needed
-        netCashFlow: totalRevenue,
-        transactionCount: transactions.length,
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching cash flow report:', error);
-    return next(error);
-  }
-};
-
-/**
- * Get top selling items
- */
-export const getTopSellingItems = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const tenantId = req.apiKeyTenantId!;
-    const { startDate, endDate, limit = 10 } = req.query;
-
-    const dateFilter: any = {};
-    if (startDate) {
-      dateFilter.gte = new Date(startDate as string);
-    }
-    if (endDate) {
-      const end = new Date(endDate as string);
-      end.setHours(23, 59, 59, 999);
-      dateFilter.lte = end;
-    }
-
-    const where: Prisma.TransactionWhereInput = {
-      outlets: {
-        tenantId: tenantId,
-      },
-    };
-
-    if (Object.keys(dateFilter).length > 0) {
-      where.createdAt = dateFilter;
-    }
-
-    // Fetch transaction items
-    const transactionItems = await prisma.transactionItem.findMany({
-      where: {
-        transactions: where,
-      },
-      include: {
-        items: true,
-      },
-    });
-
-    // Group by item and calculate totals
-    const itemStats: Record<
-      number,
-      {
-        itemId: number;
-        itemName: string;
-        totalQuantity: number;
-        totalRevenue: number;
-        transactionCount: number;
-      }
-    > = {};
-
-    transactionItems.forEach((ti) => {
-      if (!ti.item_id) return;
-
-      if (!itemStats[ti.item_id]) {
-        itemStats[ti.item_id] = {
-          itemId: ti.item_id,
-          itemName: ti.item_name || ti.items?.name || 'Unknown',
-          totalQuantity: 0,
-          totalRevenue: 0,
-          transactionCount: 0,
-        };
-      }
-
-      itemStats[ti.item_id].totalQuantity += ti.quantity.toNumber();
-      itemStats[ti.item_id].totalRevenue += ti.subtotal.toNumber();
-      itemStats[ti.item_id].transactionCount += 1;
-    });
-
-    // Sort by quantity and limit
-    const topItems = Object.values(itemStats)
-      .sort((a, b) => b.totalQuantity - a.totalQuantity)
-      .slice(0, parseInt(limit as string));
-
-    res.json({
-      success: true,
-      data: topItems,
-    });
-  } catch (error) {
-    console.error('Error fetching top selling items:', error);
     return next(error);
   }
 };
