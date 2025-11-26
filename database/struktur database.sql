@@ -1,3 +1,16 @@
+CREATE TABLE "public"."activity_logs" ( 
+  "id" SERIAL,
+  "user_id" INTEGER NOT NULL,
+  "outlet_id" INTEGER NULL,
+  "action_type" VARCHAR(100) NOT NULL,
+  "entity_type" VARCHAR(100) NOT NULL,
+  "entity_id" INTEGER NULL,
+  "old_value" JSON NULL,
+  "new_value" JSON NULL,
+  "reason" TEXT NULL,
+  "created_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
+  CONSTRAINT "activity_logs_pkey" PRIMARY KEY ("id")
+);
 CREATE TABLE "public"."categories" ( 
   "id" SERIAL,
   "name" VARCHAR(255) NOT NULL,
@@ -59,6 +72,22 @@ CREATE TABLE "public"."ingredients" (
   "updated_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
   CONSTRAINT "ingredients_pkey" PRIMARY KEY ("id")
 );
+CREATE TABLE "public"."inventory" ( 
+  "id" SERIAL,
+  "name" VARCHAR(255) NOT NULL,
+  "category" VARCHAR(100) NOT NULL,
+  "unit" VARCHAR(50) NOT NULL,
+  "current_stock" NUMERIC NULL DEFAULT 0 ,
+  "alert" BOOLEAN NULL DEFAULT false ,
+  "stock_alert" NUMERIC NULL DEFAULT 0 ,
+  "track_cost" BOOLEAN NULL DEFAULT false ,
+  "cost_amount" NUMERIC NULL DEFAULT 0 ,
+  "outlet_id" INTEGER NULL,
+  "is_active" BOOLEAN NULL DEFAULT true ,
+  "created_at" TIMESTAMP NULL DEFAULT now() ,
+  "updated_at" TIMESTAMP NULL DEFAULT now() ,
+  CONSTRAINT "inventory_pkey" PRIMARY KEY ("id")
+);
 CREATE TABLE "public"."item_modifiers" ( 
   "item_id" INTEGER NOT NULL,
   "modifier_id" INTEGER NOT NULL,
@@ -80,6 +109,9 @@ CREATE TABLE "public"."items" (
   "is_active" BOOLEAN NULL DEFAULT true ,
   "created_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
   "updated_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
+  "price_gofood" NUMERIC NULL,
+  "price_grabfood" NUMERIC NULL,
+  "price_shopeefood" NUMERIC NULL,
   CONSTRAINT "items_pkey" PRIMARY KEY ("id")
 );
 CREATE TABLE "public"."modifiers" ( 
@@ -145,6 +177,33 @@ CREATE TABLE "public"."roles" (
   "updated_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
   CONSTRAINT "roles_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "roles_name_key" UNIQUE ("name")
+);
+CREATE TABLE "public"."sales_transactions" ( 
+  "id" SERIAL,
+  "outlet" VARCHAR(255) NOT NULL,
+  "receipt_number" VARCHAR(100) NOT NULL,
+  "date" TIMESTAMP NOT NULL,
+  "time" VARCHAR(20) NOT NULL,
+  "category" VARCHAR(100) NOT NULL,
+  "brand" VARCHAR(100) NULL DEFAULT 'Unbranded'::character varying ,
+  "item_name" VARCHAR(255) NOT NULL,
+  "variant" VARCHAR(100) NULL,
+  "sku" VARCHAR(100) NULL,
+  "quantity" INTEGER NOT NULL,
+  "gross_sales" NUMERIC NOT NULL,
+  "discounts" NUMERIC NULL DEFAULT 0 ,
+  "refunds" NUMERIC NULL DEFAULT 0 ,
+  "net_sales" NUMERIC NOT NULL,
+  "tax" NUMERIC NULL DEFAULT 0 ,
+  "gratuity" NUMERIC NULL DEFAULT 0 ,
+  "sales_type" VARCHAR(50) NOT NULL,
+  "payment_method" VARCHAR(50) NOT NULL,
+  "served_by" VARCHAR(255) NOT NULL,
+  "collected_by" VARCHAR(255) NOT NULL,
+  "outlet_id" INTEGER NULL,
+  "created_at" TIMESTAMP NULL DEFAULT now() ,
+  "updated_at" TIMESTAMP NULL DEFAULT now() ,
+  CONSTRAINT "sales_transactions_pkey" PRIMARY KEY ("id")
 );
 CREATE TABLE "public"."tables" ( 
   "id" SERIAL,
@@ -255,6 +314,22 @@ CREATE TABLE "public"."variants" (
   "created_at" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ,
   CONSTRAINT "variants_pkey" PRIMARY KEY ("id")
 );
+CREATE INDEX "idx_activity_logs_user" 
+ON "public"."activity_logs" (
+  "user_id" ASC
+);
+CREATE INDEX "idx_activity_logs_outlet" 
+ON "public"."activity_logs" (
+  "outlet_id" ASC
+);
+CREATE INDEX "idx_activity_logs_action" 
+ON "public"."activity_logs" (
+  "action_type" ASC
+);
+CREATE INDEX "idx_activity_logs_created" 
+ON "public"."activity_logs" (
+  "created_at" ASC
+);
 CREATE INDEX "idx_customers_phone" 
 ON "public"."customers" (
   "phone" ASC
@@ -279,13 +354,21 @@ CREATE INDEX "idx_ingredients_outlet"
 ON "public"."ingredients" (
   "outlet_id" ASC
 );
-CREATE INDEX "idx_items_outlet" 
-ON "public"."items" (
+CREATE INDEX "idx_inventory_outlet" 
+ON "public"."inventory" (
   "outlet_id" ASC
+);
+CREATE INDEX "idx_inventory_category" 
+ON "public"."inventory" (
+  "category" ASC
 );
 CREATE INDEX "idx_items_category" 
 ON "public"."items" (
   "category_id" ASC
+);
+CREATE INDEX "idx_items_outlet" 
+ON "public"."items" (
+  "outlet_id" ASC
 );
 CREATE INDEX "idx_items_active" 
 ON "public"."items" (
@@ -307,6 +390,22 @@ ON "public"."promotions" (
 CREATE INDEX "idx_promotions_outlet" 
 ON "public"."promotions" (
   "outlet_id" ASC
+);
+CREATE INDEX "idx_sales_outlet" 
+ON "public"."sales_transactions" (
+  "outlet_id" ASC
+);
+CREATE INDEX "idx_sales_date" 
+ON "public"."sales_transactions" (
+  "date" ASC
+);
+CREATE INDEX "idx_sales_receipt" 
+ON "public"."sales_transactions" (
+  "receipt_number" ASC
+);
+CREATE INDEX "idx_sales_category" 
+ON "public"."sales_transactions" (
+  "category" ASC
 );
 CREATE INDEX "idx_tenants_email" 
 ON "public"."tenants" (
@@ -366,8 +465,6 @@ ALTER TABLE "public"."ingredients" ADD CONSTRAINT "ingredients_category_id_fkey"
 ALTER TABLE "public"."ingredients" ADD CONSTRAINT "ingredients_outlet_id_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE "public"."item_modifiers" ADD CONSTRAINT "item_modifiers_item_id_fkey" FOREIGN KEY ("item_id") REFERENCES "public"."items" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "public"."item_modifiers" ADD CONSTRAINT "item_modifiers_modifier_id_fkey" FOREIGN KEY ("modifier_id") REFERENCES "public"."modifiers" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
-ALTER TABLE "public"."items" ADD CONSTRAINT "items_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."categories" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
-ALTER TABLE "public"."items" ADD CONSTRAINT "items_outlet_id_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE "public"."modifiers" ADD CONSTRAINT "modifiers_outlet_id_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 ALTER TABLE "public"."outlets" ADD CONSTRAINT "outlets_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "public"."payments" ADD CONSTRAINT "payments_transaction_id_fkey" FOREIGN KEY ("transaction_id") REFERENCES "public"."transactions" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
