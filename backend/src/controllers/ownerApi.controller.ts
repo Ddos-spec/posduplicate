@@ -126,7 +126,7 @@ export const getStockReport = async (req: Request, res: Response, next: NextFunc
     const tenantId = req.apiKeyTenantId!;
     const { outletId, lowStock } = req.query;
 
-    const where: Prisma.ItemsWhereInput = {
+    const where: Prisma.itemsWhereInput = {
       outlets: {
         tenantId: tenantId,
       },
@@ -370,11 +370,11 @@ export const getTopSellingItems = async (req: Request, res: Response, next: Next
     > = {};
 
     transactionItems.forEach((ti) => {
-      if (!ti.itemId) return;
+      if (!ti.item_id) return;
 
-      if (!itemStats[ti.itemId]) {
-        itemStats[ti.itemId] = {
-          itemId: ti.itemId,
+      if (!itemStats[ti.item_id]) {
+        itemStats[ti.item_id] = {
+          itemId: ti.item_id,
           itemName: ti.item_name || ti.items?.name || 'Unknown',
           totalQuantity: 0,
           totalRevenue: 0,
@@ -382,9 +382,9 @@ export const getTopSellingItems = async (req: Request, res: Response, next: Next
         };
       }
 
-      itemStats[ti.itemId].totalQuantity += ti.quantity.toNumber();
-      itemStats[ti.itemId].totalRevenue += ti.subtotal.toNumber();
-      itemStats[ti.itemId].transactionCount += 1;
+      itemStats[ti.item_id].totalQuantity += ti.quantity.toNumber();
+      itemStats[ti.item_id].totalRevenue += ti.subtotal.toNumber();
+      itemStats[ti.item_id].transactionCount += 1;
     });
 
     // Sort by quantity and limit

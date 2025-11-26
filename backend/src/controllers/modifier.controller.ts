@@ -19,7 +19,7 @@ export const getModifiers = async (req: Request, res: Response, _next: NextFunct
 
 export const createModifier = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { name, price, category } = req.body;
+    const { name, price } = req.body;
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -30,7 +30,6 @@ export const createModifier = async (req: Request, res: Response, _next: NextFun
       data: {
         name,
         price: price || 0,
-        category: category || 'addon',
         is_active: true // Default to active
       }
     });
