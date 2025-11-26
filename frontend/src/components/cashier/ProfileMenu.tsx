@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, User, Package, LogOut, Save, Plus, Minus } from 'lucide-react';
+import { X, User, Package, LogOut, Save, Plus, Minus, Settings, Printer, Download } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import useConfirmationStore from '../../store/confirmationStore';
 import api from '../../services/api';
@@ -20,7 +20,7 @@ interface ProfileMenuProps {
   onClose: () => void;
 }
 
-type TabType = 'profile' | 'inventory';
+type TabType = 'profile' | 'inventory' | 'settings';
 
 const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
@@ -30,6 +30,10 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
   // Profile states
   const [cashierName, setCashierName] = useState(user?.name || '');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
+
+  // Settings states
+  const [printerDevice, setPrinterDevice] = useState(localStorage.getItem('defaultPrinterDevice') || '');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   // Inventory states
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -129,6 +133,48 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen, activeTab, loadIngredients]);
 
+  // PWA install prompt handler
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleSavePrinterDevice = () => {
+    try {
+      localStorage.setItem('defaultPrinterDevice', printerDevice);
+      toast.success('Printer device berhasil disimpan');
+    } catch (error) {
+      console.error('Error saving printer device:', error);
+      toast.error('Gagal menyimpan printer device');
+    }
+  };
+
+  const handleInstallPWA = async () => {
+    if (!deferredPrompt) {
+      toast.error('Aplikasi sudah terinstall atau browser tidak mendukung instalasi');
+      return;
+    }
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+
+    if (outcome === 'accepted') {
+      toast.success('Aplikasi berhasil diinstall!');
+    } else {
+      toast.error('Instalasi dibatalkan');
+    }
+
+    setDeferredPrompt(null);
+  };
+
   const handleUpdateName = async () => {
     if (!cashierName.trim()) {
       toast.error('Nama kasir tidak boleh kosong');
@@ -210,6 +256,17 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
           >
             <Package size={18} />
             Inventori
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex-1 px-4 py-3 font-medium transition-colors flex items-center justify-center gap-2 ${
+              activeTab === 'settings'
+                ? 'bg-white text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            <Settings size={18} />
+            Pengaturan
           </button>
         </div>
 
@@ -471,6 +528,78 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === 'settings' && (
+            <div className="space-y-6">
+              {/* Printer Device Settings */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                  <Printer size={20} />
+                  Pengaturan Printer
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Device Printer Default
+                    </label>
+                    <input
+                      type="text"
+                      value={printerDevice}
+                      onChange={(e) => setPrinterDevice(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      placeholder="Contoh: EPSON TM-T82, Bluetooth Printer, dll"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Masukkan nama device printer yang sering Anda gunakan
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleSavePrinterDevice}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Save size={18} />
+                    Simpan Pengaturan Printer
+                  </button>
+                </div>
+              </div>
+
+              {/* PWA Install */}
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center gap-2">
+                  <Download size={20} />
+                  Install Aplikasi Kasir
+                </h3>
+                <p className="text-sm text-gray-700 mb-4">
+                  Install aplikasi kasir di perangkat Anda untuk akses yang lebih cepat dan mudah.
+                  Aplikasi dapat digunakan secara offline dan memberikan pengalaman seperti aplikasi native.
+                </p>
+                <div className="bg-white rounded-lg p-4 mb-4 border border-purple-200">
+                  <h4 className="font-semibold text-sm mb-2 text-gray-800">✨ Keuntungan Install:</h4>
+                  <ul className="text-xs text-gray-600 space-y-1">
+                    <li>• Akses cepat dari home screen</li>
+                    <li>• Bekerja offline (data tersimpan lokal)</li>
+                    <li>• Notifikasi real-time</li>
+                    <li>• Pengalaman seperti aplikasi native</li>
+                    <li>• Tidak perlu buka browser</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={handleInstallPWA}
+                  disabled={!deferredPrompt}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-semibold flex items-center justify-center gap-2 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg"
+                >
+                  <Download size={18} />
+                  {deferredPrompt ? 'Install Aplikasi Kasir' : 'Aplikasi Sudah Terinstall'}
+                </button>
+                {!deferredPrompt && (
+                  <p className="text-xs text-center text-gray-500 mt-2">
+                    ℹ️ Aplikasi sudah terinstall atau browser tidak mendukung instalasi PWA
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
