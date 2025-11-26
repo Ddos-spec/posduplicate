@@ -16,6 +16,8 @@ interface User {
   role?: { name: string };
   roles?: { name: string };
   tenant?: TenantInfo;
+  outletId?: number;
+  outlets?: any;
 }
 
 interface AuthState {
