@@ -92,9 +92,12 @@ function App() {
       <Toaster
         position="top-right"
         toastOptions={{
-          duration: 2000, // 2 seconds instead of default 4 seconds
+          duration: 1000, // 1 second for all notifications
           success: {
-            duration: 1500, // Even shorter for success messages
+            duration: 1000, // 1 second for success messages
+          },
+          error: {
+            duration: 2000, // 2 seconds for errors (slightly longer so users can read)
           },
         }}
       />
