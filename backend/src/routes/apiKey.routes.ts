@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getTenantApiKeys,
+  getAllApiKeys, // Added this
   getMyApiKeys,
   createApiKey,
   toggleApiKeyStatus,
@@ -16,6 +17,7 @@ const router = Router();
 router.get('/documentation', authMiddleware, superAdminOnly, getApiDocumentation);
 
 // Admin routes - manage API keys for any tenant
+router.get('/', authMiddleware, superAdminOnly, getAllApiKeys); // Added this route
 router.get('/tenant/:tenantId', authMiddleware, superAdminOnly, getTenantApiKeys);
 router.post('/tenant/:tenantId', authMiddleware, superAdminOnly, createApiKey);
 router.patch('/:keyId/toggle', authMiddleware, superAdminOnly, toggleApiKeyStatus);
