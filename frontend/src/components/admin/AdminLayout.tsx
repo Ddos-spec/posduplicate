@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Building2,
   TrendingUp,
-  CreditCard,
   LogOut,
   Menu,
   X,
@@ -41,7 +40,7 @@ export default function AdminLayout() {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: Building2, label: 'Tenant Management', path: '/admin/tenants' },
     { icon: TrendingUp, label: 'System Analytics', path: '/admin/analytics' },
-    { icon: CreditCard, label: 'Billing', path: '/admin/billing' },
+    // Billing removed as requested
     { icon: Key, label: 'API Key Management', path: '/admin/api-keys' },
     { icon: Book, label: 'API Documentation', path: '/admin/api-docs' },
   ];
