@@ -28,6 +28,8 @@ import ReportsPage from './pages/owner/ReportsPage';
 import SettingsPage from './pages/owner/SettingsPage';
 import ProductManagementPage from './pages/owner/ProductManagementPage';
 import TransactionDetailPage from './pages/owner/TransactionDetailPage';
+import InventoryManagementPage from './pages/owner/InventoryManagementPage';
+import SalesAnalyticsPage from './pages/owner/SalesAnalyticsPage';
 
 // SECURITY: Base protected route - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -136,7 +138,9 @@ function App() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="products" element={<ProductManagementPage />} />
           <Route path="transactions/:id" element={<TransactionDetailPage />} />
-          
+          <Route path="inventory" element={<InventoryManagementPage />} />
+          <Route path="analytics" element={<SalesAnalyticsPage />} />
+
           <Route index element={<Navigate to="/owner/dashboard" />} />
         </Route>
 
