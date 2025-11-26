@@ -743,9 +743,17 @@ export default function CashierPage() {
                     </button>
                   </div>
                 )}
-                <div className="aspect-square bg-gray-200 rounded-lg mb-3 flex items-center justify-center">
+                <div className="aspect-square bg-gray-200 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
                   {product.image ? (
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded-lg" />
+                    <img 
+                      src={product.image} 
+                      alt={product.name} 
+                      className="w-full h-full object-cover rounded-lg"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://placehold.co/400x400?text=No+Image';
+                        (e.target as HTMLImageElement).onerror = null; // Prevent infinite loop
+                      }}
+                    />
                   ) : (
                     <span className="text-4xl text-gray-400">📦</span>
                   )}
