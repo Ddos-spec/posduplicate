@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import axios from 'axios';
 import { Shield, LogIn, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
@@ -53,7 +53,7 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
-      <Toaster position="top-right" />
+      
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
