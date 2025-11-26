@@ -10,6 +10,7 @@ import {
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import useConfirmationStore from '../../store/confirmationStore';
+import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/format';
 
 interface Ingredient {
@@ -42,14 +43,14 @@ export default function IngredientManager() {
   });
 
   const { showConfirmation } = useConfirmationStore();
+  const { user } = useAuthStore();
 
   // Load ingredients
   const loadIngredients = useCallback(async () => {
     try {
       setLoading(true);
-      // Get user's outlet ID from localStorage
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlet?.id;
+      // Get user's outlet ID from auth store
+      const outletId = user?.outletId || user?.outlets?.id;
 
       if (!outletId) {
         toast.error('Outlet information missing');
@@ -66,7 +67,7 @@ export default function IngredientManager() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     loadIngredients();
@@ -116,8 +117,7 @@ export default function IngredientManager() {
       return;
     }
 
-    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-    const outletId = user?.outletId || user?.outlet?.id;
+    const outletId = user?.outletId || user?.outlets?.id;
 
     if (!outletId) {
       toast.error('Outlet ID missing');

@@ -14,6 +14,7 @@ import toast from 'react-hot-toast';
 import useConfirmationStore from '../../store/confirmationStore';
 import RecipeModal from '../../components/owner/RecipeModal';
 import IngredientManager from '../../components/owner/IngredientManager';
+import { useAuthStore } from '../../store/authStore';
 
 interface Category {
   id: number;
@@ -78,6 +79,7 @@ export default function ProductManagementPage() {
   });
 
   const { showConfirmation } = useConfirmationStore();
+  const { user } = useAuthStore();
 
   // Load products
   const loadProducts = useCallback(async () => {
@@ -174,6 +176,13 @@ export default function ProductManagementPage() {
       return;
     }
 
+    const outletId = user?.outletId || user?.outlets?.id;
+
+    if (!outletId) {
+      toast.error('Outlet ID missing. Please try logging in again.');
+      return;
+    }
+
     try {
       const data = {
         name: productForm.name,
@@ -184,6 +193,7 @@ export default function ProductManagementPage() {
         priceShopeefood: productForm.priceShopeefood ? parseFloat(productForm.priceShopeefood) : null,
         image: productForm.image || null,
         description: productForm.description || null,
+        outletId: outletId
       };
 
       if (editingProduct) {

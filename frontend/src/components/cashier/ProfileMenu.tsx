@@ -47,8 +47,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
   const loadIngredients = useCallback(async () => {
     try {
       setLoadingIngredients(true);
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlet?.id;
+      const outletId = user?.outletId || user?.outlets?.id;
 
       if (!outletId) {
         toast.error('Outlet information missing');
@@ -65,7 +64,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
     } finally {
       setLoadingIngredients(false);
     }
-  }, []);
+  }, [user]);
 
   const handleAdjustStock = async () => {
     if (!selectedIngredient) {
@@ -85,8 +84,8 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
 
     // Check if stock will be negative
     const newStock = adjustmentType === 'in'
-      ? parseFloat(selectedIngredient.stock) + parseFloat(quantity)
-      : parseFloat(selectedIngredient.stock) - parseFloat(quantity);
+      ? parseFloat(selectedIngredient.stock.toString()) + parseFloat(quantity)
+      : parseFloat(selectedIngredient.stock.toString()) - parseFloat(quantity);
 
     if (newStock < 0) {
       toast.error('Stok tidak boleh negatif');
@@ -112,22 +111,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
       loadIngredients();
     } catch (error: any) {
       console.error('Error adjusting stock:', error);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error response status:', error.response?.status);
-      console.error('Error response headers:', error.response?.headers);
-      console.error('Error details object:', error.response?.data?.error);
-      console.error('Error message:', error.response?.data?.error?.message);
-      console.error('Error code:', error.response?.data?.error?.code);
-      console.error('Error details:', error.response?.data?.error?.details);
-      console.error('Request data:', {
-        ingredientId: selectedIngredient.id,
-        quantity: parseFloat(quantity),
-        type: adjustmentType,
-        reason: reason.trim(),
-        notes: notes.trim() || null,
-      });
-
-      // Show detailed error message from backend if available
+      // ... error handling ...
       const errorMessage = error.response?.data?.error?.message
         || error.response?.data?.message
         || error.message
@@ -156,13 +140,12 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
       // Update user name in the backend
       await api.put(`/users/${user?.id}`, { name: cashierName });
 
-      // Update localStorage
-      const storedUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : {};
-      storedUser.name = cashierName;
-      localStorage.setItem('user', JSON.stringify(storedUser));
-
       // Update auth store
-      useAuthStore.setState({ user: { ...user!, name: cashierName } });
+      // We don't need to update localStorage manually as zustand persist handles it
+      // useAuthStore.setState({ user: { ...user!, name: cashierName } });
+      // Better to fetch me again or just update store optimistically if we are sure
+      const updatedUser = { ...user!, name: cashierName };
+      useAuthStore.setState({ user: updatedUser });
 
       toast.success('Nama kasir berhasil diperbarui');
     } catch (error) {
