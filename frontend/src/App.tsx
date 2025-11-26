@@ -114,7 +114,6 @@ function App() {
           <Route path="dashboard" element={<SystemAnalyticsPage />} />
           <Route path="tenants" element={<TenantManagementPage />} />
           <Route path="analytics" element={<SystemAnalyticsPage />} />
-          <Route path="billing" element={<BillingManagementPage />} />
           <Route path="api-keys" element={<ApiKeyManagementPage />} />
           <Route path="api-docs" element={<ApiDocumentationPage />} />
           <Route index element={<Navigate to="/admin/dashboard" />} />
