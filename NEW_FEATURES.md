@@ -404,14 +404,18 @@ Or manually execute:
 - [x] Auto-generate API key on tenant creation
 - [x] Create Owner API controller with 5 reporting endpoints
 - [x] Create printer settings controller
-- [x] Add routes for Owner API and printer settings
+- [x] Create API key management controller
+- [x] Add routes for Owner API, printer settings, and API keys
 - [x] Update database schema (Prisma)
 - [x] Generate Prisma client
 
 ### Frontend
 - [x] Create printer settings service
+- [x] Create API key service
 - [x] Add printer settings tab to cashier profile
 - [x] Add printer settings UI components
+- [x] Create admin API documentation page
+- [x] Create owner API keys view page
 
 ### Database
 - [x] Create migration SQL file
