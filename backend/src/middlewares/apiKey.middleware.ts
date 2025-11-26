@@ -121,7 +121,7 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
     // Attach tenant ID to request
     req.apiKeyTenantId = apiKeyRecord.tenant_id;
 
-    next();
+    return next();
   } catch (error) {
     console.error('API key authentication error:', error);
     return res.status(500).json({
