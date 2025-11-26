@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useCartStore } from '../store/cartStore';
+import { useAuthStore } from '../store/authStore';
 import api, { getFullUrl } from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
 import axios from 'axios';
@@ -263,9 +264,9 @@ export default function CashierPage() {
         }];
       }
 
-      // Get user's outlet ID from localStorage
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlet?.id || null;
+      // Get user's outlet ID from auth store
+      const user = useAuthStore.getState().user;
+      const outletId = user?.outletId || user?.outlets?.id || null;
 
       // Calculate tax and service charge based on settings (use payment method pricing)
       const subtotal = getSubtotal(splitBillMode ? undefined : paymentMethod);
@@ -314,7 +315,7 @@ export default function CashierPage() {
           serviceCharge: serviceChargeAmount,
           total: subtotal + taxAmount + serviceChargeAmount,
           payments: finalPayments,
-          cashierName: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').name : undefined,
+          cashierName: useAuthStore.getState().user?.name,
           outletName: undefined
         },
         settings ? {
@@ -427,9 +428,9 @@ export default function CashierPage() {
       return;
     }
 
-    // Get user's outlet ID from localStorage
-    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-    const outletId = user?.outletId || user?.outlet?.id || null;
+    // Get user's outlet ID from auth store
+    const user = useAuthStore.getState().user;
+    const outletId = user?.outletId || user?.outlets?.id || null;
 
     if (!outletId) {
       toast.error('Outlet ID is required. Please ensure you are logged in properly.');
@@ -515,9 +516,9 @@ export default function CashierPage() {
       return;
     }
 
-    // Get user's outlet ID from localStorage
-    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-    const outletId = user?.outletId || user?.outlet?.id || null;
+    // Get user's outlet ID from auth store
+    const user = useAuthStore.getState().user;
+    const outletId = user?.outletId || user?.outlets?.id || null;
 
     if (!outletId) {
       toast.error('Outlet ID is required. Please ensure you are logged in properly.');
