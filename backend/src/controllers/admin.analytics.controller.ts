@@ -131,10 +131,10 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
       where: { transactions: { status: 'completed' } },
       select: {
         subtotal: true,
-        transaction_id: true,
+        transactionId: true,
         transactions: {
           select: {
-            outlet: {
+            outlets: {
               select: {
                 tenantId: true,
                 tenants: { select: { businessName: true } }
@@ -149,7 +149,7 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
     const tenantStats: { [key: number]: { name: string; revenue: number; transactionIds: Set<number> } } = {};
 
     items.forEach(item => {
-      const outlet = item.transactions?.outlet;
+      const outlet = item.transactions?.outlets;
       if (outlet && outlet.tenantId && outlet.tenants) {
         const tenantId = outlet.tenantId;
         if (!tenantStats[tenantId]) {
@@ -160,8 +160,8 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
           };
         }
         tenantStats[tenantId].revenue += Number(item.subtotal);
-        if (item.transaction_id) {
-          tenantStats[tenantId].transactionIds.add(item.transaction_id);
+        if (item.transactionId) {
+          tenantStats[tenantId].transactionIds.add(item.transactionId);
         }
       }
     });

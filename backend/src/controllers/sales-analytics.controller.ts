@@ -262,7 +262,7 @@ export const getAnalyticsSummary = async (req: Request, res: Response, _next: Ne
 // Get net sales trend (for chart)
 export const getNetSalesTrend = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { outlet_id, date_from, date_to, group_by = 'day' } = req.query;
+    const { outlet_id, date_from, date_to } = req.query;
 
     const where: any = {};
 
