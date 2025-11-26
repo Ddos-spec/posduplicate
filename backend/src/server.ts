@@ -36,6 +36,7 @@ import shiftRoutes from './routes/shift.routes';
 import activityLogRoutes from './routes/activity-log.routes';
 import ownerApiRoutes from './routes/ownerApi.routes';
 import printerSettingsRoutes from './routes/printerSettings.routes';
+import apiKeyRoutes from './routes/apiKey.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -137,6 +138,7 @@ app.use('/api/shifts', shiftRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/owner', ownerApiRoutes);
 app.use('/api/printer-settings', printerSettingsRoutes);
+app.use('/api/api-keys', apiKeyRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
