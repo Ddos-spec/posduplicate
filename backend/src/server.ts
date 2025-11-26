@@ -164,9 +164,9 @@ app.get('/api/debug/logs', (req: Request, res: Response) => {
     const logs = fs.readFileSync(logPath, 'utf-8');
     // Display as plain text for easy reading
     res.set('Content-Type', 'text/plain');
-    res.send(logs);
+    return res.send(logs);
   } else {
-    res.send('No errors logged yet. File server-error.log does not exist.');
+    return res.send('No errors logged yet. File server-error.log does not exist.');
   }
 });
 
