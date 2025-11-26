@@ -436,6 +436,68 @@ Or manually execute:
 2. Settings are stored as JSON in the database
 3. Validated on the server side before saving
 
+## 🖥️ Admin & Owner Pages
+
+### Admin API Documentation Page
+**Path:** `/admin/api-documentation`
+
+Features:
+- Complete API documentation with interactive examples
+- Copy-to-clipboard for all code snippets
+- cURL and JavaScript examples for each endpoint
+- Query parameter documentation
+- Response examples
+- Error codes reference
+- Base URL and authentication info
+
+**Access:** Admin only (Super Admin role)
+
+### Owner API Keys Page
+**Path:** `/owner/api-keys`
+
+Features:
+- View all API keys for the tenant
+- See API key status (active/inactive)
+- View creation date and last used timestamp
+- Check expiration dates
+- Basic usage instructions
+- Security notes
+
+**Access:** Owner and Manager roles
+
+**Note:** Owners can only VIEW their API keys. All management (create, delete, toggle status) is done by admins.
+
+### API Key Management (Admin)
+
+Admins can manage API keys via the API:
+
+**Get Tenant API Keys:**
+```
+GET /api/api-keys/tenant/:tenantId
+```
+
+**Create New API Key:**
+```
+POST /api/api-keys/tenant/:tenantId
+Body: { keyName: string, expiresAt?: string }
+```
+
+**Toggle API Key Status:**
+```
+PATCH /api/api-keys/:keyId/toggle
+Body: { isActive: boolean }
+```
+
+**Delete API Key:**
+```
+DELETE /api/api-keys/:keyId
+```
+
+**Get API Documentation Data:**
+```
+GET /api/api-keys/documentation
+```
+
 ## 📝 Notes for Developers
 
 ### Adding New Owner API Endpoints
