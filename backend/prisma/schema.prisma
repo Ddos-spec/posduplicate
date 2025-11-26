@@ -89,7 +89,6 @@ model User {
   outletId      Int?           @map("outlet_id")
   isActive      Boolean?       @default(true) @map("is_active")
   lastLogin     DateTime?      @map("last_login") @db.Timestamp(6)
-  printerSettings Json?        @default("{}") @map("printer_settings") @db.Json
   createdAt     DateTime?      @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt     DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
   employees     employees[]

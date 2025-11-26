@@ -54,11 +54,11 @@ export default function AdminLayout() {
     <div className="flex h-screen bg-gray-50">
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:block relative bg-gray-900 text-white transition-all duration-300 ${
+        className={`hidden md:flex flex-col relative bg-gray-900 text-white transition-all duration-300 ${
           sidebarOpen ? 'w-64' : 'w-20'
         }`}
       >
-        <div className="p-4 flex items-center justify-between border-b border-gray-800">
+        <div className="p-4 flex items-center justify-between border-b border-gray-800 shrink-0">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
               <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain" />
@@ -76,36 +76,41 @@ export default function AdminLayout() {
           </button>
         </div>
 
-        <nav className="p-4 space-y-2">
-          {menuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 p-3 rounded-lg transition ${
-                isActivePath(item.path)
-                  ? 'bg-blue-600 text-white'
-                  : 'hover:bg-gray-800 text-gray-300'
-              }`}
-            >
-              <item.icon className="w-5 h-5" />
-              {sidebarOpen && <span>{item.label}</span>}
-            </Link>
-          ))}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+          <nav className="space-y-2">
+            {menuItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 p-3 rounded-lg transition ${
+                  isActivePath(item.path)
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-gray-800 text-gray-300'
+                }`}
+              >
+                <item.icon className="w-5 h-5 shrink-0" />
+                {sidebarOpen && <span>{item.label}</span>}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="p-4 border-t border-gray-800 shrink-0">
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-red-700 w-full transition text-red-400 hover:text-white"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-5 h-5 shrink-0" />
             {sidebarOpen && <span className="text-red-400">Logout</span>}
           </button>
-        </nav>
+        </div>
       </aside>
 
       {/* Mobile Sidebar */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-50 bg-black bg-opacity-50" onClick={() => setMobileMenuOpen(false)}>
-          <aside className="bg-gray-900 text-white w-64 h-full" onClick={(e) => e.stopPropagation()}>
-            <div className="p-4 flex items-center justify-between border-b border-gray-800">
+          <aside className="bg-gray-900 text-white w-64 h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 flex items-center justify-between border-b border-gray-800 shrink-0">
               <div className="flex items-center gap-2">
                 <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain" />
                 <h1 className="text-xl font-bold">MyPOS Admin</h1>
@@ -118,23 +123,28 @@ export default function AdminLayout() {
               </button>
             </div>
 
-            <nav className="p-4 space-y-2">
-              {menuItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition ${
-                    isActivePath(item.path)
-                      ? 'bg-blue-600 text-white'
-                      : 'hover:bg-gray-800 text-gray-300'
-                  }`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.label}</span>
-                </Link>
-              ))}
-              <button
+            <div className="flex-1 overflow-y-auto p-4">
+              <nav className="space-y-2">
+                {menuItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 p-3 rounded-lg transition ${
+                      isActivePath(item.path)
+                        ? 'bg-blue-600 text-white'
+                        : 'hover:bg-gray-800 text-gray-300'
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            
+            <div className="p-4 border-t border-gray-800 shrink-0">
+               <button
                 onClick={() => {
                   handleLogout();
                   setMobileMenuOpen(false);
@@ -144,7 +154,7 @@ export default function AdminLayout() {
                 <LogOut className="w-5 h-5" />
                 <span className="text-red-400">Logout</span>
               </button>
-            </nav>
+            </div>
           </aside>
         </div>
       )}
