@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useAuthStore } from '../../store/authStore';
 import NotificationPanel from '../admin/NotificationPanel';
 
 export default function OwnerLayout() {
@@ -24,17 +25,15 @@ export default function OwnerLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadCount, fetchNotifications, togglePanel } = useNotificationStore();
+  const { user, logout } = useAuthStore();
 
   // Fetch notifications on initial load
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    logout();
     toast.success('Logged out successfully');
     navigate('/login');
   };
@@ -147,8 +146,8 @@ export default function OwnerLayout() {
                 <Menu className="w-6 h-6" />
               </button>
               <div>
-                <h2 className="text-xl font-semibold text-gray-800">{user.tenant?.businessName || 'Owner Dashboard'}</h2>
-                <p className="text-sm text-gray-500">Welcome back, {user.name}!</p>
+                <h2 className="text-xl font-semibold text-gray-800">{user?.tenant?.businessName || 'Owner Dashboard'}</h2>
+                <p className="text-sm text-gray-500">Welcome back, {user?.name}!</p>
               </div>
             </div>
             <div className="flex items-center gap-4 relative">
@@ -169,7 +168,7 @@ export default function OwnerLayout() {
               <NotificationPanel />
               <div className="hidden sm:flex items-center gap-2">
                 <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                  {user.name?.[0] || 'O'}
+                  {user?.name?.[0] || 'O'}
                 </div>
               </div>
             </div>
