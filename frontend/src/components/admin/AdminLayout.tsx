@@ -10,7 +10,8 @@ import {
   X,
   Bell,
   User,
-  Book
+  Book,
+  Key
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -43,6 +44,7 @@ export default function AdminLayout() {
     { icon: Building2, label: 'Tenant Management', path: '/admin/tenants' },
     { icon: TrendingUp, label: 'System Analytics', path: '/admin/analytics' },
     { icon: CreditCard, label: 'Billing', path: '/admin/billing' },
+    { icon: Key, label: 'API Key Management', path: '/admin/api-keys' },
     { icon: Book, label: 'API Documentation', path: '/admin/api-docs' },
   ];
 

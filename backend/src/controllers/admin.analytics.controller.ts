@@ -60,24 +60,29 @@ export const getSystemRevenue = async (req: Request, res: Response, next: NextFu
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - monthsInt);
 
-    // Get transactions from all tenants
-    const transactions = await prisma.transaction.findMany({
+    // Get transaction items from all tenants
+    const transactionItems = await prisma.transactionItem.findMany({
       where: {
-        status: 'completed',
-        createdAt: { gte: startDate }
+        transactions: {
+          status: 'completed',
+          createdAt: { gte: startDate }
+        }
       },
       select: {
-        createdAt: true,
-        total: true
-      },
-      orderBy: { createdAt: 'asc' }
+        subtotal: true,
+        transactions: {
+          select: {
+            createdAt: true
+          }
+        }
+      }
     });
 
     // Group by month
     const monthlyRevenue: { [key: string]: number } = {};
-    transactions.forEach((t: any) => {
-      const monthKey = t.createdAt.toISOString().substring(0, 7);
-      monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + Number(t.total ?? 0);
+    transactionItems.forEach((item: any) => {
+      const monthKey = item.transactions.createdAt.toISOString().substring(0, 7);
+      monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + Number(item.subtotal ?? 0);
     });
 
     const result = Object.keys(monthlyRevenue).sort().map((month: string) => ({
@@ -121,41 +126,60 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
     const { limit = 10 } = req.query;
     const parsedLimit = parseInt(limit as string);
 
-    // Get transaction counts and totals per outlet
-    const outletStats = await prisma.transaction.groupBy({
-      by: ['outletId'],
-      where: { status: 'completed', outletId: { not: null } }, // Ensure outletId is not null
-      _count: { id: true },
-      _sum: { total: true },
-      orderBy: { _sum: { total: 'desc' } },
-      take: parsedLimit
-    });
-
-    // Extract unique outlet IDs
-    const outletIds = outletStats.map(stat => stat.outletId as number);
-
-    // Fetch all necessary outlet and tenant data in a single query
-    const outletsWithTenants = await prisma.outlet.findMany({
-      where: { id: { in: outletIds } },
+    // Step 1: Get all items from completed transactions, including relational data.
+    const items = await prisma.transactionItem.findMany({
+      where: { transactions: { status: 'completed' } },
       select: {
-        id: true,
-        tenants: {
-          select: { businessName: true }
+        subtotal: true,
+        transaction_id: true,
+        transactions: {
+          select: {
+            outlet: {
+              select: {
+                tenantId: true,
+                tenants: { select: { businessName: true } }
+              }
+            }
+          }
         }
       }
     });
 
-    // Create a map for quick lookup
-    const outletTenantMap = new Map(
-      outletsWithTenants.map(outlet => [outlet.id, outlet.tenants?.businessName || 'Unknown'])
-    );
+    // Step 2: Aggregate the data in JavaScript.
+    const tenantStats: { [key: number]: { name: string; revenue: number; transactionIds: Set<number> } } = {};
 
-    // Combine stats with tenant names
-    const result = outletStats.map((stat, index) => ({
+    items.forEach(item => {
+      const outlet = item.transactions?.outlet;
+      if (outlet && outlet.tenantId && outlet.tenants) {
+        const tenantId = outlet.tenantId;
+        if (!tenantStats[tenantId]) {
+          tenantStats[tenantId] = {
+            name: outlet.tenants.businessName || 'Unknown Tenant',
+            revenue: 0,
+            transactionIds: new Set()
+          };
+        }
+        tenantStats[tenantId].revenue += Number(item.subtotal);
+        if (item.transaction_id) {
+          tenantStats[tenantId].transactionIds.add(item.transaction_id);
+        }
+      }
+    });
+
+    // Step 3: Convert the aggregated object into an array and calculate transaction counts.
+    const aggregated = Object.values(tenantStats).map(stat => ({
+      name: stat.name,
+      revenue: stat.revenue,
+      transactions: stat.transactionIds.size
+    }));
+
+    // Step 4: Sort by revenue and slice to get the top tenants.
+    const sorted = aggregated.sort((a, b) => b.revenue - a.revenue).slice(0, parsedLimit);
+
+    // Step 5: Add rank to the final result.
+    const result = sorted.map((tenant, index) => ({
+      ...tenant,
       rank: index + 1,
-      name: outletTenantMap.get(stat.outletId as number) || 'Unknown',
-      transactions: stat._count.id,
-      revenue: Number((stat._sum.total ?? 0) || 0)
     }));
 
     res.json({ success: true, data: result });
@@ -178,9 +202,9 @@ export const getSystemSummary = async (_req: Request, res: Response, next: NextF
       prisma.tenant.count({ where: { deletedAt: null } }),
       prisma.tenant.count({ where: { deletedAt: null, isActive: true, subscriptionStatus: 'active' } }),
       prisma.transaction.count({ where: { status: 'completed' } }),
-      prisma.transaction.aggregate({
-        where: { status: 'completed' },
-        _sum: { total: true }
+      prisma.transactionItem.aggregate({
+        where: { transactions: { status: 'completed' } },
+        _sum: { subtotal: true }
       })
     ]);
 
@@ -190,7 +214,7 @@ export const getSystemSummary = async (_req: Request, res: Response, next: NextF
         totalTenants,
         activeTenants,
         totalTransactions,
-        totalRevenue: Number((totalRevenue._sum.total ?? 0) || 0)
+        totalRevenue: Number((totalRevenue._sum.subtotal ?? 0) || 0)
       }
     });
   } catch (error) {
