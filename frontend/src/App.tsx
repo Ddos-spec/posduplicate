@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { Toaster } from 'react-hot-toast';
@@ -32,14 +31,14 @@ import TransactionDetailPage from './pages/owner/TransactionDetailPage';
 
 // SECURITY: Base protected route - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
+  const token = useAuthStore((state) => state.token);
   return token ? <>{children}</> : <Navigate to="/login" />;
 }
 
 // SECURITY: Admin-only route guard
 // Allows: super admin, admin
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
+  const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
 
   if (!token) {
@@ -58,7 +57,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 // SECURITY: Owner-level route guard
 // Allows: super admin, admin, owner, manager
 function OwnerRoute({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
+  const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
 
   if (!token) {
@@ -77,17 +76,11 @@ function OwnerRoute({ children }: { children: React.ReactNode }) {
 // SECURITY: Cashier-level route guard
 // Allows: any authenticated user (cashier, owner, admin, etc.)
 function CashierRoute({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((state) => state.token) || localStorage.getItem('token');
+  const token = useAuthStore((state) => state.token);
   return token ? <>{children}</> : <Navigate to="/login" />;
 }
 
 function App() {
-  const init = useAuthStore((state) => state.init);
-
-  useEffect(() => {
-    init();
-  }, [init]);
-
   return (
     <BrowserRouter>
       <Toaster

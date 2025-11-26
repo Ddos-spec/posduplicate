@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from '../../store/notificationStore';
+import { useAuthStore } from '../../store/authStore';
 import NotificationPanel from './NotificationPanel';
 
 export default function AdminLayout() {
@@ -23,18 +24,15 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadCount, fetchNotifications, togglePanel } = useNotificationStore();
+  const { user, logout } = useAuthStore();
 
   // Fetch notifications on initial load
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Get admin user from localStorage (mock)
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    logout();
     toast.success('Logged out successfully');
     navigate('/admin/login');
   };
@@ -180,8 +178,8 @@ export default function AdminLayout() {
               <NotificationPanel />
               <div className="flex items-center gap-3">
                 <div className="hidden sm:block text-right">
-                  <p className="text-sm font-medium text-gray-700">{user.name || 'Admin'}</p>
-                  <p className="text-xs text-gray-500">{user.email || 'admin@mypos.com'}</p>
+                  <p className="text-sm font-medium text-gray-700">{user?.name || 'Admin'}</p>
+                  <p className="text-xs text-gray-500">{user?.email || 'admin@mypos.com'}</p>
                 </div>
                 <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center">
                   <User className="w-5 h-5 text-white" />
