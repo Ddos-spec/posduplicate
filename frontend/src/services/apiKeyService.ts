@@ -42,6 +42,12 @@ export interface ApiDocumentation {
 }
 
 export const apiKeyService = {
+  // Admin: Get all API keys (all tenants)
+  async getAllKeys(): Promise<ApiKey[]> {
+    const response = await api.get('/api-keys');
+    return response.data.data;
+  },
+
   // Admin: Get all API keys for a tenant
   async getTenantApiKeys(tenantId: number): Promise<ApiKey[]> {
     const response = await api.get(`/api-keys/tenant/${tenantId}`);

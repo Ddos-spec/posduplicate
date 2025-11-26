@@ -3,6 +3,36 @@ import prisma from '../utils/prisma';
 import { generateApiKey, hashApiKey } from '../utils/apiKeyGenerator';
 
 /**
+ * Get ALL API keys for ALL tenants (Admin only)
+ */
+export const getAllApiKeys = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const apiKeys = await prisma.apiKey.findMany({
+      include: {
+        tenant: {
+          select: {
+            id: true,
+            businessName: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+
+    res.json({
+      success: true,
+      data: apiKeys,
+    });
+  } catch (error) {
+    console.error('Error fetching all API keys:', error);
+    return next(error);
+  }
+};
+
+/**
  * Get all API keys for a specific tenant (Admin only)
  */
 export const getTenantApiKeys = async (req: Request, res: Response, next: NextFunction) => {
