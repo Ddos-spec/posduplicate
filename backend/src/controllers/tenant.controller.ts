@@ -1,77 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 import bcrypt from 'bcrypt';
-import { GoogleSheetService, SheetStructure } from '../services/googleSheet.service';
-import { GoogleSheetValidator } from '../utils/googleSheetValidator';
-
-// Service Account Credentials from environment variables
-const SERVICE_ACCOUNT_CREDENTIALS = {
-  type: "service_account",
-  project_id: process.env.GOOGLE_PROJECT_ID || "peroject-whatsapp",
-  private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID || "ee4e8f569dbd1345b6581b5edab5e2a2692ce941",
-  private_key: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, '\n'),
-  client_email: process.env.GOOGLE_CLIENT_EMAIL || "n8n-refresh-token@peroject-whatsapp.iam.gserviceaccount.com",
-  client_id: process.env.GOOGLE_CLIENT_ID || "118421492513506607479",
-  auth_uri: "https://accounts.google.com/o/oauth2/auth",
-  token_uri: "https://oauth2.googleapis.com/token",
-  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-  client_x509_cert_url: process.env.GOOGLE_CERT_URL || "https://www.googleapis.com/robot/v1/metadata/x509/n8n-refresh-token%40peroject-whatsapp.iam.gserviceaccount.com",
-  universe_domain: "googleapis.com"
-};
-
-const googleSheetService = new GoogleSheetService(SERVICE_ACCOUNT_CREDENTIALS);
-
-const SHEETS_STRUCTURE: SheetStructure[] = [
-  {
-    title: 'Detail Penjualan',
-    headers: [
-      'Tanggal Transaksi',
-      'Waktu Transaksi',
-      'ID Transaksi',
-      'Nama Kasir',
-      'Tipe Pesanan',
-      'Nama Item',
-      'Varian Item',
-      'Jumlah',
-      'Harga Satuan',
-      'Subtotal',
-      'Total Diskon',
-      'Total Pajak',
-      'Total Akhir Transaksi',
-      'Metode Pembayaran',
-    ],
-  },
-  {
-    title: 'Stok',
-    headers: [
-      'SKU',
-      'Nama Produk / Bahan',
-      'Kategori',
-      'Stok Saat Ini',
-      'Unit',
-      'Batas Stok Minimum',
-    ],
-  },
-  {
-    title: 'Daftar Harga',
-    headers: [
-      'SKU',
-      'Nama Item',
-      'Kategori',
-      'Harga Jual',
-    ],
-  },
-  {
-    title: 'Pengeluaran',
-    headers: [
-      'Tanggal',
-      'Deskripsi Pengeluaran',
-      'Kategori',
-      'Jumlah',
-      'Dicatat Oleh',
-    ],
-  },
-];
+import { generateApiKey, hashApiKey } from '../utils/apiKeyGenerator';
 
 /**
  * Get all tenants (Super Admin only)
@@ -173,51 +103,39 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
         },
       });
 
-      // Create Google Sheet for the new tenant
-      let googleSheetId: string | null = null;
-      try {
-        googleSheetId = await googleSheetService.createSpreadsheetForOwner(ownerName, SHEETS_STRUCTURE);
-        if (!googleSheetId) {
-          console.warn(`Failed to create Google Sheet for owner ${ownerName}. Tenant will be created without sheet ID.`);
-        } else {
-          console.log(`Successfully created Google Sheet with ID: ${googleSheetId} for owner ${ownerName}`);
-        }
-      } catch (sheetError) {
-        console.error(`Error creating Google Sheet for owner ${ownerName}:`, sheetError);
-        // Log more specific error for debugging
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Detailed error:', sheetError);
-        }
-        // Decide if tenant creation should fail if sheet creation fails.
-        // For now, we'll proceed with tenant creation but without a sheet ID.
-      }
-
-      // Update the tenant with the new googleSheetId
-      const updatedTenant = await tx.tenant.update({
-        where: { id: tenant.id },
-        data: { googleSheetId: googleSheetId },
-      });
-
       const hashedPassword = await bcrypt.hash(password, 10);
       await tx.user.create({
         data: {
           name: ownerName,
           email: email,
           passwordHash: hashedPassword,
-          tenantId: updatedTenant.id, // Use updatedTenant.id
+          tenantId: tenant.id,
           roleId: ownerRole.id,
           isActive: true,
         },
       });
 
-      return updatedTenant;
+      // Auto-generate API key for the new tenant
+      const apiKey = generateApiKey();
+      const hashedApiKey = hashApiKey(apiKey);
+
+      await tx.apiKey.create({
+        data: {
+          tenant_id: tenant.id,
+          key_name: 'Default API Key',
+          api_key: hashedApiKey,
+          is_active: true,
+        },
+      });
+
+      return { tenant, apiKey };
     });
 
     res.status(201).json({
       success: true,
-      data: result,
-      message: 'Tenant and Owner account created successfully',
-      sheetCreationStatus: result.googleSheetId ? 'success' : 'failed - check server logs for details'
+      data: result.tenant,
+      apiKey: result.apiKey,
+      message: 'Tenant and Owner account created successfully. IMPORTANT: Save your API key now, it will not be shown again.',
     });
   } catch (error: any) {
     if (error.message === 'EMAIL_EXISTS') {
@@ -339,35 +257,6 @@ export const getMyTenant = async (req: Request, res: Response, next: NextFunctio
 };
 
 /**
- * Check Google API health
- */
-export const checkGoogleApiHealth = async (_req: Request, res: Response, next: NextFunction) => {
-  try {
-    const validator = new GoogleSheetValidator(SERVICE_ACCOUNT_CREDENTIALS);
-    const result = await validator.validateCredentials();
-
-    if (result.isValid) {
-      res.json({
-        success: true,
-        message: 'Google API credentials are valid and working',
-        data: { isValid: true }
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'GOOGLE_API_INVALID',
-          message: 'Google API credentials are invalid or not working properly',
-          details: result.error
-        }
-      });
-    }
-  } catch (error) {
-    return next(error);
-  }
-};
-
-/**
  * Delete tenant (soft delete)
  */
 export const deleteTenant = async (req: Request, res: Response, next: NextFunction) => {
@@ -375,18 +264,7 @@ export const deleteTenant = async (req: Request, res: Response, next: NextFuncti
     const { id } = req.params;
     const tenantId = parseInt(id);
 
-    // First, find the tenant to get their Google Sheet ID
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { googleSheetId: true },
-    });
-
-    // If tenant exists and has a sheet ID, delete the sheet
-    if (tenant && tenant.googleSheetId) {
-      await googleSheetService.deleteSpreadsheet(tenant.googleSheetId);
-    }
-
-    // Then, perform the soft delete
+    // Perform the soft delete
     await prisma.tenant.update({
       where: { id: tenantId },
       data: {

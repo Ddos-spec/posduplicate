@@ -34,8 +34,9 @@ import uploadRoutes from './routes/upload.routes';
 import notificationRoutes from './routes/notification.routes';
 import shiftRoutes from './routes/shift.routes';
 import activityLogRoutes from './routes/activity-log.routes';
-
-import { startDailyRecapCronJob } from './cron/dailyRecap';
+import ownerApiRoutes from './routes/ownerApi.routes';
+import printerSettingsRoutes from './routes/printerSettings.routes';
+import apiKeyRoutes from './routes/apiKey.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -135,6 +136,9 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/shifts', shiftRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
+app.use('/api/owner', ownerApiRoutes);
+app.use('/api/printer-settings', printerSettingsRoutes);
+app.use('/api/api-keys', apiKeyRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
@@ -171,9 +175,6 @@ app.listen(PORT, () => {
     console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'Not set'}`);
     console.log(`ℹ️  External access via reverse proxy (EasyPanel/Nginx)`);
   }
-
-  // Start the daily Google Sheet recap cron job
-  startDailyRecapCronJob();
 });
 
 export default app;
