@@ -3,6 +3,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
 // Load environment variables
 dotenv.config();
@@ -42,6 +43,9 @@ import salesAnalyticsRoutes from './routes/sales-analytics.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
+
+// Trust proxy (required for rate limiting behind proxies like Nginx/Easypanel)
+app.set('trust proxy', 1);
 
 // Middleware
 const allowedOrigins = process.env.CORS_ORIGIN
@@ -144,6 +148,28 @@ app.use('/api/api-keys', apiKeyRoutes);
 app.use('/api/inventory-module', inventoryModuleRoutes);
 app.use('/api/sales-analytics', salesAnalyticsRoutes);
 
+// DEBUG: View Error Logs directly from browser
+// Usage: /api/debug/logs?key=admin123
+app.get('/api/debug/logs', (req: Request, res: Response) => {
+  const secretKey = req.query.key;
+  
+  // Simple security check
+  if (secretKey !== 'admin123') {
+    return res.status(403).send('Forbidden: Invalid Key');
+  }
+
+  const logPath = path.join(__dirname, '../server-error.log');
+
+  if (fs.existsSync(logPath)) {
+    const logs = fs.readFileSync(logPath, 'utf-8');
+    // Display as plain text for easy reading
+    res.set('Content-Type', 'text/plain');
+    res.send(logs);
+  } else {
+    res.send('No errors logged yet. File server-error.log does not exist.');
+  }
+});
+
 // 404 Handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({
@@ -156,8 +182,16 @@ app.use((req: Request, res: Response) => {
 });
 
 // Error Handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   console.error('Error:', err);
+
+  // Simple File Logging for easier debugging without asking AI
+  try {
+    const logMessage = `[${new Date().toISOString()}] ${req.method} ${req.path} - Error: ${err.message}\nStack: ${err.stack}\n\n`;
+    fs.appendFileSync(path.join(__dirname, '../server-error.log'), logMessage);
+  } catch (logErr) {
+    console.error('Failed to write to error log file:', logErr);
+  }
 
   res.status(err.status || 500).json({
     success: false,

@@ -301,7 +301,8 @@ export const createTransaction = async (
       // Validate payments
       if (payments && payments.length > 0) {
         const totalPaid = payments.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
-        if (totalPaid < total) {
+        // Allow small floating point difference (e.g., 0.5)
+        if (totalPaid < total - 0.5) {
           throw new Error(`Total payment (${totalPaid}) is less than transaction total (${total})`);
         }
       }
@@ -311,7 +312,7 @@ export const createTransaction = async (
         data: {
           transaction_number: transactionNumber,
           order_type: orderType,
-          table_id: tableId,
+          table_id: tableId ? parseInt(tableId) : null,
           customer_name: customerName,
           customer_phone: customerPhone,
           subtotal,
@@ -320,7 +321,7 @@ export const createTransaction = async (
           service_charge: serviceCharge,
           total,
           status: 'completed',
-          outletId,
+          outletId: parseInt(outletId),
           cashier_id: req.userId,
           notes,
           completed_at: new Date(),

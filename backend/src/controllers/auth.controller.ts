@@ -20,9 +20,22 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     // Find user
+    // Explicitly select fields to ensure we only get what exists in the DB
+    // and avoid any schema-DB mismatch (like missing printerSettings column)
     const user = await prisma.user.findUnique({
       where: { email },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        name: true,
+        roleId: true,
+        tenantId: true,
+        outletId: true,
+        isActive: true,
+        lastLogin: true,
+        createdAt: true,
+        updatedAt: true,
         roles: true,
         tenants: true,
         outlets: true
