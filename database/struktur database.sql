@@ -1,3 +1,14 @@
+CREATE TABLE "public"."_prisma_migrations" ( 
+  "id" VARCHAR(36) NOT NULL,
+  "checksum" VARCHAR(64) NOT NULL,
+  "finished_at" TIMESTAMP WITH TIME ZONE NULL,
+  "migration_name" VARCHAR(255) NOT NULL,
+  "logs" TEXT NULL,
+  "rolled_back_at" TIMESTAMP WITH TIME ZONE NULL,
+  "started_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now() ,
+  "applied_steps_count" INTEGER NOT NULL DEFAULT 0 ,
+  CONSTRAINT "_prisma_migrations_pkey" PRIMARY KEY ("id")
+);
 CREATE TABLE "public"."activity_logs" ( 
   "id" SERIAL,
   "user_id" INTEGER NOT NULL,

@@ -45,19 +45,30 @@ export const getTransactions = async (
       }
     }
 
-    console.log('Simplified Transaction Query:', JSON.stringify(where, null, 2));
+    console.log('Transaction query params:', { status, date_from, date_to });
+    console.log('Transaction query where:', JSON.stringify(where, null, 2));
 
     const transactions = await prisma.transaction.findMany({
       where,
       include: {
-        outlets: { select: { id: true, name: true } },
-        tables: { select: { id: true, name: true } },
-        users: { select: { id: true, name: true, email: true } },
+        outlets: {
+          select: { id: true, name: true }
+        },
+        tables: {
+          select: { id: true, name: true }
+        },
+        users: {
+          select: { id: true, name: true, email: true }
+        },
         transaction_items: {
           include: {
             items: true,
             variants: true,
-            transaction_modifiers: { include: { modifiers: true } }
+            transaction_modifiers: {
+              include: {
+                modifiers: true
+              }
+            }
           }
         },
         payments: true
@@ -66,26 +77,14 @@ export const getTransactions = async (
       take: parseInt(limit as string)
     });
 
-    console.log(`Found ${transactions.length} transactions`);
-    if (transactions.length > 0) {
-        console.log('Latest transaction:', {
-            id: transactions[0].id,
-            number: transactions[0].transaction_number,
-            created: transactions[0].createdAt,
-            outletId: transactions[0].outletId
-        });
-    }
-
     res.json({
       success: true,
       data: transactions,
       count: transactions.length,
       debug: {
         serverTime: new Date().toISOString(),
-        tenantId,
-        userOutletIds: outletIds,
         queryParams: { status, outlet_id, date_from, date_to },
-        constructedWhere: JSON.parse(JSON.stringify(where, (key, value) =>
+        constructedWhere: JSON.parse(JSON.stringify(where, (_, value) =>
           typeof value === 'bigint' ? value.toString() : value // Handle BigInt serialization if any
         ))
       }
