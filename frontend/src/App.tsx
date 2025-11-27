@@ -21,14 +21,12 @@ import ApiKeyManagementPage from './pages/admin/ApiKeyManagementPage';
 // Owner
 import OwnerLayout from './components/owner/OwnerLayout';
 import OwnerDashboardPage from './pages/owner/OwnerDashboardPage';
-import EmployeeManagementPage from './pages/owner/EmployeeManagementPage';
 import UserManagementPage from './pages/owner/UserManagementPage';
 import OutletManagementPage from './pages/owner/OutletManagementPage';
 import ReportsPage from './pages/owner/ReportsPage';
 import SettingsPage from './pages/owner/SettingsPage';
 import ProductManagementPage from './pages/owner/ProductManagementPage';
 import TransactionDetailPage from './pages/owner/TransactionDetailPage';
-import InventoryManagementPage from './pages/owner/InventoryManagementPage';
 
 // SECURITY: Base protected route - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -129,15 +127,13 @@ function App() {
           }
         >
           <Route path="dashboard" element={<OwnerDashboardPage />} />
-          <Route path="employees" element={<EmployeeManagementPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="outlets" element={<OutletManagementPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="products" element={<ProductManagementPage />} />
+          <Route path="inventory" element={<ProductManagementPage />} />
+          <Route path="products" element={<Navigate to="/owner/inventory" />} />
           <Route path="transactions/:id" element={<TransactionDetailPage />} />
-          <Route path="inventory" element={<InventoryManagementPage />} />
-          <Route path="analytics" element={<Navigate to="/owner/reports" />} />
 
           <Route index element={<Navigate to="/owner/dashboard" />} />
         </Route>
@@ -154,7 +150,6 @@ function App() {
 
         {/* Legacy/Compatibility Routes */}
         <Route path="/dashboard" element={<Navigate to="/owner/dashboard" />} />
-        <Route path="/employees" element={<Navigate to="/owner/employees" />} />
 
         {/* Default Route */}
         <Route path="/" element={<Navigate to="/login" />} />
