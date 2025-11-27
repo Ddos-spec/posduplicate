@@ -66,18 +66,22 @@ export const getTransactions = async (
     if (date_from || date_to) {
       where.createdAt = {};
       if (date_from) {
-        // Set to start of day (00:00:00)
-        const fromDate = new Date(date_from as string);
-        fromDate.setHours(0, 0, 0, 0);
+        // Parse date string and create start of day in local timezone
+        // Add 'T00:00:00' to ensure local timezone interpretation
+        const fromDate = new Date(`${date_from}T00:00:00`);
         where.createdAt.gte = fromDate;
+        console.log('Date filter - from:', fromDate.toISOString());
       }
       if (date_to) {
-        // Set to end of day (23:59:59.999)
-        const toDate = new Date(date_to as string);
-        toDate.setHours(23, 59, 59, 999);
+        // Parse date string and create end of day in local timezone
+        // Add 'T23:59:59.999' to ensure local timezone interpretation
+        const toDate = new Date(`${date_to}T23:59:59.999`);
         where.createdAt.lte = toDate;
+        console.log('Date filter - to:', toDate.toISOString());
       }
     }
+
+    console.log('Transaction query where:', JSON.stringify(where, null, 2));
 
     const transactions = await prisma.transaction.findMany({
       where,
