@@ -361,7 +361,18 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
 
         <script>
           window.onload = function() {
-            window.print();
+            // Check if running in PWA mode and has printer device saved
+            const printerDevice = localStorage.getItem('defaultPrinterDevice');
+            if (window.matchMedia('(display-mode: standalone)').matches && printerDevice) {
+              // Try to trigger RawBT print if available
+              if (window.RawBT && window.RawBT.print) {
+                window.RawBT.print(printerDevice);
+              } else {
+                window.print();
+              }
+            } else {
+              window.print();
+            }
           }
         </script>
       </body>
@@ -600,7 +611,18 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
 
           <script>
             window.onload = function() {
-              window.print();
+              // Check if running in PWA mode and has printer device saved
+              const printerDevice = localStorage.getItem('defaultPrinterDevice');
+              if (window.matchMedia('(display-mode: standalone)').matches && printerDevice) {
+                // Try to trigger RawBT print if available
+                if (window.RawBT && window.RawBT.print) {
+                  window.RawBT.print(printerDevice);
+                } else {
+                  window.print();
+                }
+              } else {
+                window.print();
+              }
             }
           </script>
         </body>
@@ -619,6 +641,268 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
     }
   };
 
+  const handlePrintDateRangeReport = async () => {
+    if (!dateFrom || !dateTo) {
+      toast.error('Pilih tanggal terlebih dahulu');
+      return;
+    }
+
+    try {
+      // Calculate summary from current transactions
+      const summary = {
+        totalTransactions: transactions.length,
+        totalSales: transactions.reduce((sum, t) => sum + parseFloat(t.total.toString()), 0),
+        averageTransaction: transactions.length > 0
+          ? transactions.reduce((sum, t) => sum + parseFloat(t.total.toString()), 0) / transactions.length
+          : 0
+      };
+
+      // Calculate payment methods breakdown
+      const paymentMethods: { [key: string]: { count: number; total: number } } = {};
+      transactions.forEach(t => {
+        t.payments.forEach(p => {
+          if (!paymentMethods[p.method]) {
+            paymentMethods[p.method] = { count: 0, total: 0 };
+          }
+          paymentMethods[p.method].count += 1;
+          paymentMethods[p.method].total += parseFloat(p.amount.toString());
+        });
+      });
+
+      const reportWindow = window.open('', '_blank');
+      if (!reportWindow) return;
+
+      const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('id-ID', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      };
+
+      const reportHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Laporan Transaksi ${formatDate(dateFrom)} - ${formatDate(dateTo)}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              max-width: 800px;
+              margin: 20px auto;
+              padding: 20px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 3px solid #333;
+              padding-bottom: 15px;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 24px;
+              color: #333;
+            }
+            .header p {
+              margin: 5px 0;
+              color: #666;
+            }
+            .info-section {
+              background: #f5f5f5;
+              padding: 15px;
+              border-radius: 8px;
+              margin-bottom: 20px;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 8px 0;
+            }
+            .info-label {
+              font-weight: bold;
+              color: #555;
+            }
+            .summary-cards {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 15px;
+              margin-bottom: 30px;
+            }
+            .summary-card {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 20px;
+              border-radius: 10px;
+              text-align: center;
+            }
+            .summary-card h3 {
+              margin: 0 0 10px 0;
+              font-size: 14px;
+              opacity: 0.9;
+            }
+            .summary-card .value {
+              font-size: 24px;
+              font-weight: bold;
+            }
+            .transactions-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            .transactions-table th,
+            .transactions-table td {
+              border: 1px solid #ddd;
+              padding: 10px;
+              text-align: left;
+            }
+            .transactions-table th {
+              background: #333;
+              color: white;
+              font-weight: bold;
+            }
+            .transactions-table tr:nth-child(even) {
+              background: #f9f9f9;
+            }
+            .payment-methods {
+              margin-bottom: 30px;
+            }
+            .payment-method-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 10px;
+              border-bottom: 1px solid #eee;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 2px solid #333;
+              color: #666;
+              font-size: 12px;
+            }
+            @media print {
+              body { margin: 0; padding: 15px; }
+              .summary-cards { page-break-inside: avoid; }
+              .transactions-table { page-break-inside: auto; }
+              .transactions-table tr { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>LAPORAN TRANSAKSI</h1>
+            <p>${formatDate(dateFrom)} - ${formatDate(dateTo)}</p>
+            <p>MyPOS - Point of Sale System</p>
+          </div>
+
+          <div class="info-section">
+            <div class="info-row">
+              <span class="info-label">Periode:</span>
+              <span>${formatDate(dateFrom)} - ${formatDate(dateTo)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Waktu Cetak:</span>
+              <span>${new Date().toLocaleString('id-ID')}</span>
+            </div>
+          </div>
+
+          <div class="summary-cards">
+            <div class="summary-card">
+              <h3>Total Transaksi</h3>
+              <div class="value">${summary.totalTransactions}</div>
+            </div>
+            <div class="summary-card">
+              <h3>Total Penjualan</h3>
+              <div class="value">Rp ${Number(summary.totalSales).toLocaleString('id-ID')}</div>
+            </div>
+            <div class="summary-card">
+              <h3>Rata-rata Transaksi</h3>
+              <div class="value">Rp ${Number(summary.averageTransaction).toLocaleString('id-ID')}</div>
+            </div>
+          </div>
+
+          ${Object.keys(paymentMethods).length > 0 ? `
+            <h2>Metode Pembayaran</h2>
+            <div class="payment-methods">
+              ${Object.entries(paymentMethods).map(([method, data]) => `
+                <div class="payment-method-row">
+                  <span><strong>${method.toUpperCase()}</strong> (${data.count} transaksi)</span>
+                  <span><strong>Rp ${Number(data.total).toLocaleString('id-ID')}</strong></span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          <h2>Detail Transaksi</h2>
+          ${transactions.length > 0 ? `
+            <table class="transactions-table">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Tanggal & Waktu</th>
+                  <th>No. Transaksi</th>
+                  <th>Tipe Order</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${transactions.map((t, idx) => `
+                  <tr>
+                    <td>${idx + 1}</td>
+                    <td>${new Date(t.createdAt).toLocaleString('id-ID')}</td>
+                    <td>${t.transactionNumber}</td>
+                    <td style="text-transform: capitalize">${t.orderType}</td>
+                    <td><strong>Rp ${Number(t.total).toLocaleString('id-ID')}</strong></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              <tfoot>
+                <tr style="background: #f0f0f0; font-weight: bold;">
+                  <td colspan="4" style="text-align: right;">TOTAL:</td>
+                  <td>Rp ${Number(summary.totalSales).toLocaleString('id-ID')}</td>
+                </tr>
+              </tfoot>
+            </table>
+          ` : '<p style="text-align: center; padding: 40px; color: #666;">Tidak ada transaksi ditemukan dalam periode ini.</p>'}
+
+          <div class="footer">
+            <p>Laporan ini dibuat secara otomatis oleh MyPOS</p>
+            <p>Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+          </div>
+
+          <script>
+            window.onload = function() {
+              // Check if running in PWA mode and has printer device saved
+              const printerDevice = localStorage.getItem('defaultPrinterDevice');
+              if (window.matchMedia('(display-mode: standalone)').matches && printerDevice) {
+                // Try to trigger RawBT print if available
+                if (window.RawBT && window.RawBT.print) {
+                  window.RawBT.print(printerDevice);
+                } else {
+                  window.print();
+                }
+              } else {
+                window.print();
+              }
+            }
+          </script>
+        </body>
+        </html>
+      `;
+
+      reportWindow.document.write(reportHTML);
+      reportWindow.document.close();
+    } catch (error: unknown) {
+      console.error('Error printing date range report:', error);
+      let errorMessage = 'Gagal mencetak laporan';
+      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      }
+      toast.error(errorMessage);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-[90vw] max-w-5xl h-[90vh] flex flex-col">
@@ -630,11 +914,19 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
           </h2>
           <div className="flex items-center gap-2">
             <button
+              onClick={handlePrintDateRangeReport}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 flex items-center gap-2 shadow-lg transition-all"
+              title="Cetak laporan berdasarkan tanggal yang dipilih"
+            >
+              <Printer className="w-5 h-5" />
+              Cetak Laporan
+            </button>
+            <button
               onClick={handlePrintTodayReport}
               className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 flex items-center gap-2 shadow-lg transition-all"
             >
               <FileText className="w-5 h-5" />
-              Cetak Laporan Hari Ini
+              Laporan Hari Ini
             </button>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X className="w-6 h-6" />
