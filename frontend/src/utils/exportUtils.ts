@@ -180,8 +180,13 @@ export const printReceipt = (
     <head>
       <title>Receipt - ${transactionData.transactionNumber || 'TRX'}</title>
       <style>
+        @page {
+          margin: 0;
+          size: auto;
+        }
         body {
           font-family: 'Courier New', monospace;
+          font-weight: bold; /* Make all text bold */
           max-width: ${maxWidth};
           margin: 0 auto;
           padding: 10px;
@@ -190,7 +195,7 @@ export const printReceipt = (
         .header {
           text-align: center;
           margin-bottom: 10px;
-          border-bottom: 1px dashed #000;
+          border-bottom: 2px dashed #000; /* Thicker line */
           padding-bottom: 10px;
         }
         .header img {
@@ -202,23 +207,25 @@ export const printReceipt = (
         .header h2 {
           margin: 5px 0;
           font-size: 16px;
-          font-weight: bold;
+          font-weight: 800; /* Extra bold for headers */
         }
         .header p {
           margin: 2px 0;
           font-size: 12px;
+          font-weight: bold;
         }
         .info {
           margin-bottom: 10px;
           font-size: 12px;
+          font-weight: bold;
         }
         .info div {
           margin: 2px 0;
         }
         .items {
           margin: 10px 0;
-          border-top: 1px dashed #000;
-          border-bottom: 1px dashed #000;
+          border-top: 2px dashed #000; /* Thicker line */
+          border-bottom: 2px dashed #000; /* Thicker line */
           padding: 5px 0;
         }
         .item {
@@ -227,6 +234,7 @@ export const printReceipt = (
           margin: 5px 0;
           font-size: 12px;
           align-items: flex-start;
+          font-weight: bold;
         }
         .item-details {
           flex: 1;
@@ -238,11 +246,13 @@ export const printReceipt = (
         }
         .modifiers {
           font-size: 10px;
-          color: #333;
+          color: #000;
           margin-left: 10px;
+          font-weight: bold;
         }
         .totals {
           margin-top: 10px;
+          font-weight: bold;
         }
         .total-row {
           display: flex;
@@ -251,9 +261,9 @@ export const printReceipt = (
           font-size: 12px;
         }
         .total-row.grand {
-          font-weight: bold;
-          font-size: 14px;
-          border-top: 1px dashed #000;
+          font-weight: 900; /* Extra bold for total */
+          font-size: 16px; /* Larger total */
+          border-top: 2px dashed #000;
           padding-top: 5px;
           margin-top: 5px;
         }
@@ -261,8 +271,9 @@ export const printReceipt = (
           text-align: center;
           margin-top: 20px;
           font-size: 10px;
-          border-top: 1px dashed #000;
+          border-top: 2px dashed #000;
           padding-top: 10px;
+          font-weight: bold;
         }
         @media print {
           body { margin: 0; padding: 5px; }
