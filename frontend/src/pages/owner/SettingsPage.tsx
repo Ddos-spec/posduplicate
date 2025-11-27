@@ -217,7 +217,7 @@ export default function SettingsPage() {
                 email: formData.get('email'),
                 phone: formData.get('phone'),
                 address: formData.get('address'),
-                logo: logoPreview || null
+                logo: settings.logo || null
               });
             }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -279,10 +279,12 @@ export default function SettingsPage() {
                       />
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           setLogoPreview('');
                           if (settings) {
-                            setSettings({ ...settings, logo: '' });
+                            setSettings({ ...settings, logo: null });
+                            // Save the removal to database
+                            await handleSave({ logo: null });
                           }
                         }}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
@@ -494,10 +496,12 @@ export default function SettingsPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setLogoPreview('');
                       if (settings) {
-                        setSettings({ ...settings, logo: '' });
+                        setSettings({ ...settings, logo: null });
+                        // Save the removal to database
+                        await handleSave({ logo: null });
                       }
                     }}
                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
@@ -543,7 +547,7 @@ export default function SettingsPage() {
                 receiptHeader: settings.receiptHeader,
                 receiptFooter: settings.receiptFooter,
                 printerWidth: settings.printerWidth,
-                logo: logoPreview || null,
+                logo: settings.logo || null,
                 showLogoOnReceipt: settings.showLogoOnReceipt
               })}
               disabled={saving}
