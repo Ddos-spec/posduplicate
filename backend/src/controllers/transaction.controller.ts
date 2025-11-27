@@ -10,9 +10,9 @@ export const getTransactions = async (
   next: NextFunction
 ) => {
   try {
-    const { status, outlet_id, date_from, date_to, limit = '50' } = req.query;
+    const { status, outlet_id, date_from, date_to } = req.query;
 
-    // FAIL-SAFE SIMPLIFIED QUERY:
+    // NUCLEAR DEBUG OPTION: Fetch EVERYTHING to see what is actually in the DB
     // Instead of complex tenant logic, just get transactions for this cashier.
     // This guarantees that if I created it, I can see it.
     const where: any = {
