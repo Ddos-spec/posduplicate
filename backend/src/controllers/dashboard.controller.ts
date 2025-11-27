@@ -225,7 +225,8 @@ export const getSalesByCategory = async (req: Request, res: Response, _next: Nex
       .map(cat => ({
         name: cat.name,
         count: cat.count,
-        value: cat.value
+        value: cat.value,
+        totalSales: cat.value  // Add for compatibility
       }));
 
     res.json({

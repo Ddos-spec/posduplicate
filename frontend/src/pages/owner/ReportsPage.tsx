@@ -199,18 +199,18 @@ export default function ReportsPage() {
       if (dateRange.endDate) params.date_to = dateRange.endDate;
       if (categoryFilter) params.category = categoryFilter;
 
-      // Load transactions
-      const txResponse = await api.get('/sales-analytics/transactions', {
+      // Load transactions from actual POS transactions
+      const txResponse = await api.get('/dashboard/transaction-analytics', {
         params: { ...params, limit: 100 }
       });
       setTransactions(txResponse.data.data || []);
 
-      // Load trend data
-      const trendResponse = await api.get('/sales-analytics/trend', { params });
+      // Load trend data from actual POS transactions
+      const trendResponse = await api.get('/dashboard/transaction-analytics/trend', { params });
       setTrendData(trendResponse.data.data || []);
 
-      // Load summary
-      const summaryResponse = await api.get('/sales-analytics/summary', { params });
+      // Load summary from actual POS transactions
+      const summaryResponse = await api.get('/dashboard/transaction-analytics/summary', { params });
       setSummary(summaryResponse.data.data || null);
     } catch (error) {
       console.error('Failed to load analytics:', error);
