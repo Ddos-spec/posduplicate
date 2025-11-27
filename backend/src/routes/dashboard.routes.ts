@@ -7,6 +7,11 @@ import {
   getRecentTransactions
 } from '../controllers/dashboard.controller';
 import { getCashierPerformance } from '../controllers/cashier.analytics.controller';
+import {
+  getTransactionAnalytics,
+  getTransactionAnalyticsSummary,
+  getTransactionAnalyticsTrend
+} from '../controllers/transaction-analytics.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -54,5 +59,26 @@ router.get('/recent-transactions', getRecentTransactions);
  * Query params: days (default: 30)
  */
 router.get('/cashier-performance', getCashierPerformance);
+
+/**
+ * GET /api/dashboard/transaction-analytics
+ * Get detailed transaction analytics (for reports page)
+ * Query params: outlet_id, date_from, date_to, category, limit
+ */
+router.get('/transaction-analytics', getTransactionAnalytics);
+
+/**
+ * GET /api/dashboard/transaction-analytics/summary
+ * Get transaction analytics summary
+ * Query params: outlet_id, date_from, date_to
+ */
+router.get('/transaction-analytics/summary', getTransactionAnalyticsSummary);
+
+/**
+ * GET /api/dashboard/transaction-analytics/trend
+ * Get transaction analytics trend data
+ * Query params: outlet_id, date_from, date_to
+ */
+router.get('/transaction-analytics/trend', getTransactionAnalyticsTrend);
 
 export default router;
