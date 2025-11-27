@@ -205,34 +205,19 @@ export const printReceipt = (
   const pageWidth = printerWidth;
   const margin = 5;
 
-  // Logo (if enabled and available)
-  if (settings?.logo && settings?.showLogoOnReceipt) {
-    try {
-      // Validate logo URL before attempting to add
-      if (settings.logo && settings.logo.trim() !== '') {
-        // Try to detect image format from URL
-        const logoUrl = settings.logo.toLowerCase();
-        let format = 'PNG';
-
-        if (logoUrl.includes('.jpg') || logoUrl.includes('.jpeg')) {
-          format = 'JPEG';
-        } else if (logoUrl.includes('.png')) {
-          format = 'PNG';
-        }
-
-        // Add logo image
-        const logoSize = is58mm ? 15 : 20;
-        const logoX = (pageWidth - logoSize) / 2;
-        doc.addImage(settings.logo, format, logoX, yPos, logoSize, logoSize);
-        yPos += logoSize + 3;
-        // Add spacing between logo and header
-        yPos += 4;
-      }
-    } catch (error) {
-      console.error('Failed to add logo to receipt:', error);
-      // Continue without logo if error - just skip the logo section
-    }
-  }
+  // Logo - DISABLED temporarily to prevent crashes
+  // Logo loading can cause crashes if URL is invalid or image fails to load
+  // TODO: Implement proper async image loading or fix logo URL in settings
+  // if (settings?.logo && settings?.showLogoOnReceipt) {
+  //   try {
+  //     const logoSize = is58mm ? 15 : 20;
+  //     const logoX = (pageWidth - logoSize) / 2;
+  //     doc.addImage(settings.logo, 'PNG', logoX, yPos, logoSize, logoSize);
+  //     yPos += logoSize + 7;
+  //   } catch (error) {
+  //     console.warn('Logo failed to load, continuing without it');
+  //   }
+  // }
 
   // Header - Store Name
   doc.setFontSize(14);
