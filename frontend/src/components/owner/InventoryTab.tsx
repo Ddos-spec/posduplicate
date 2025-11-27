@@ -30,7 +30,7 @@ interface InventoryItem {
   updatedAt: string;
 }
 
-export default function InventoryManagementPage() {
+export default function InventoryTab() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -201,16 +201,7 @@ export default function InventoryManagementPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <Package className="w-8 h-8 text-blue-600" />
-          Manajemen Stok Inventory
-        </h1>
-        <p className="text-gray-600 mt-1">Kelola stok bahan baku dan produk Anda</p>
-      </div>
-
+    <>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
@@ -621,6 +612,6 @@ export default function InventoryManagementPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
