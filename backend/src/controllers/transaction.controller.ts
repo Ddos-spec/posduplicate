@@ -66,16 +66,14 @@ export const getTransactions = async (
     if (date_from || date_to) {
       where.createdAt = {};
       if (date_from) {
-        // Parse date string and create start of day in local timezone
-        // Add 'T00:00:00' to ensure local timezone interpretation
-        const fromDate = new Date(`${date_from}T00:00:00`);
+        const fromDate = new Date(date_from as string);
+        fromDate.setHours(0, 0, 0, 0);
         where.createdAt.gte = fromDate;
         console.log('Date filter - from:', fromDate.toISOString());
       }
       if (date_to) {
-        // Parse date string and create end of day in local timezone
-        // Add 'T23:59:59.999' to ensure local timezone interpretation
-        const toDate = new Date(`${date_to}T23:59:59.999`);
+        const toDate = new Date(date_to as string);
+        toDate.setHours(23, 59, 59, 999);
         where.createdAt.lte = toDate;
         console.log('Date filter - to:', toDate.toISOString());
       }
@@ -224,6 +222,29 @@ export const createTransaction = async (
       notes
     } = req.body;
 
+    console.log(`[CreateTransaction] Starting for Outlet ${outletId}, Items: ${items?.length}`);
+
+    // Validate Outlet Ownership (Tenant Isolation)
+    if (req.tenantId) {
+      const outlet = await prisma.outlet.findFirst({
+        where: {
+          id: parseInt(outletId),
+          tenantId: req.tenantId
+        }
+      });
+
+      if (!outlet) {
+        console.error(`[CreateTransaction] Security Alert: Outlet ${outletId} does not belong to Tenant ${req.tenantId}`);
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'You do not have permission to create transactions for this outlet'
+          }
+        });
+      }
+    }
+
     // Enforce these values on the server-side
     const discountAmount = 0;
     const taxAmount = 0;
@@ -322,6 +343,8 @@ export const createTransaction = async (
       }
 
       // Create transaction with items
+      console.log(`[CreateTransaction] Creating transaction record ${transactionNumber}...`);
+
       const transaction = await tx.transaction.create({
         data: {
           transaction_number: transactionNumber,
@@ -377,6 +400,8 @@ export const createTransaction = async (
           payments: true
         }
       });
+
+      console.log(`[CreateTransaction] Transaction ${transaction.id} created successfully.`);
 
       // Update stock for items with tracking enabled
       for (const item of itemsWithPrices) {
