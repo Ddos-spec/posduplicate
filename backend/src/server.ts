@@ -91,7 +91,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 // Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Use process.cwd() to match the upload middleware path
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 
 
@@ -173,6 +174,44 @@ app.get('/api/debug/logs', (req: Request, res: Response) => {
     return res.send(logs);
   } else {
     return res.send('No errors logged yet. File server-error.log does not exist.');
+  }
+});
+
+// DEBUG: Check uploads folder content and permissions
+app.get('/api/debug/check-uploads', (req: Request, res: Response) => {
+  const secretKey = req.query.key;
+  if (secretKey !== 'admin123') {
+    return res.status(403).send('Forbidden');
+  }
+
+  const uploadPath = path.join(process.cwd(), 'uploads');
+  
+  try {
+    const files = fs.readdirSync(uploadPath);
+    const stats = fs.statSync(uploadPath);
+    
+    res.json({
+      process: {
+        cwd: process.cwd(),
+        uid: process.getuid ? process.getuid() : 'N/A',
+        gid: process.getgid ? process.getgid() : 'N/A',
+      },
+      directory: {
+        path: uploadPath,
+        exists: fs.existsSync(uploadPath),
+        permissions: stats.mode,
+        owner_uid: stats.uid,
+        owner_gid: stats.gid,
+      },
+      files: files,
+      message: "If 'files' is empty or your logo is missing here, the Volume is NOT mounted correctly."
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      error: error.message,
+      stack: error.stack,
+      path: uploadPath
+    });
   }
 });
 
