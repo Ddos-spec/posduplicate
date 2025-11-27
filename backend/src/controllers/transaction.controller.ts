@@ -222,6 +222,28 @@ export const createTransaction = async (
       notes
     } = req.body;
 
+    // Validate required fields
+    if (!orderType) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Order type is required'
+        }
+      });
+    }
+
+    // Validate order type value
+    if (!['dine_in', 'takeaway', 'delivery'].includes(orderType)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid order type. Must be one of: dine_in, takeaway, delivery'
+        }
+      });
+    }
+
     console.log(`[CreateTransaction] Starting for Outlet ${outletId}, Items: ${items?.length}`);
 
     // Validate Outlet Ownership (Tenant Isolation)
@@ -478,13 +500,24 @@ export const holdOrder = async (
       });
     }
 
+    // Validate order type if provided
+    if (orderData.orderType && !['dine_in', 'takeaway', 'delivery'].includes(orderData.orderType)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid order type. Must be one of: dine_in, takeaway, delivery'
+        }
+      });
+    }
+
     // Store as pending transaction instead of separate table
     const transactionNumber = `HOLD-${Date.now()}`;
 
     const heldOrder = await prisma.transaction.create({
       data: {
         transaction_number: transactionNumber,
-        order_type: orderData.orderType || 'dine-in',
+        order_type: orderData.orderType || 'dine_in',
         table_id: orderData.tableId,
         customer_name: orderData.customerName,
         customer_phone: orderData.customerPhone,
