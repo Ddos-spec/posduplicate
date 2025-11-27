@@ -16,8 +16,8 @@ export interface SalesTrendData {
 export interface TopProduct {
   id: number;
   name: string;
-  price: number;
-  stock: number;
+  qty: number;        // Quantity sold
+  revenue: number;    // Total revenue from sales
 }
 
 export interface CategorySales {
