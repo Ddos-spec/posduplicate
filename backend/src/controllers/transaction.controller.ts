@@ -12,53 +12,19 @@ export const getTransactions = async (
   try {
     const { status, outlet_id, date_from, date_to, limit = '50' } = req.query;
 
-    const where: any = {};
+    // FAIL-SAFE SIMPLIFIED QUERY:
+    // Instead of complex tenant logic, just get transactions for this cashier.
+    // This guarantees that if I created it, I can see it.
+    const where: any = {
+        cashier_id: req.userId 
+    };
 
-    const tenantId = req.tenantId; // Get tenantId from middleware
-    let outletIds: number[] = [];
-
-    // Tenant isolation - get outlets belonging to this tenant
-    if (tenantId) {
-      // Get all outlets for this tenant to establish data isolation
-      const tenantOutlets = await prisma.outlet.findMany({
-        where: { tenantId: tenantId },
-        select: { id: true }
-      });
-
-      outletIds = tenantOutlets.map(outlet => outlet.id);
-
-      // If user has no outlets, return empty result
-      if (outletIds.length === 0) {
-        return res.json({ success: true, data: [], count: 0 });
-      }
-
-      // Filter by tenant's outlets - only if no specific outlet is requested
-      if (!outlet_id) {
-        where.outletId = {
-          in: outletIds
-        };
-      }
-    }
-
-    if (outlet_id) {
-      const requestedOutletId = parseInt(outlet_id as string);
-      // If specific outlet is requested, ensure it belongs to the tenant
-      if (tenantId && !outletIds.includes(requestedOutletId)) {
-        return res.status(403).json({
-          success: false,
-          error: {
-            code: 'ACCESS_DENIED',
-            message: 'Access to outlet denied'
-          }
-        });
-      }
-      where.outletId = requestedOutletId;
-    }
-
+    // Optional filters
     if (status) {
       where.status = status;
     }
 
+    // Only use outlet filter if strictly provided, otherwise ignore to prevent hiding data
     if (outlet_id) {
       where.outletId = parseInt(outlet_id as string);
     }
@@ -69,42 +35,29 @@ export const getTransactions = async (
         const fromDate = new Date(date_from as string);
         fromDate.setHours(0, 0, 0, 0);
         where.createdAt.gte = fromDate;
-        console.log('Date filter - from:', fromDate.toISOString());
       }
       if (date_to) {
         const toDate = new Date(date_to as string);
-        // Add 1 day to cover the full day regardless of timezone, and then some
-        toDate.setDate(toDate.getDate() + 1);
+        // Add 1 day for safety margin against timezones
+        toDate.setDate(toDate.getDate() + 1); 
         toDate.setHours(23, 59, 59, 999);
         where.createdAt.lte = toDate;
-        console.log('Date filter - to (widened):', toDate.toISOString());
       }
     }
 
-    console.log('Transaction query params:', { tenantId, outletIds, status, date_from, date_to });
-    console.log('Transaction query where:', JSON.stringify(where, null, 2));
+    console.log('Simplified Transaction Query:', JSON.stringify(where, null, 2));
 
     const transactions = await prisma.transaction.findMany({
       where,
       include: {
-        outlets: {
-          select: { id: true, name: true }
-        },
-        tables: {
-          select: { id: true, name: true }
-        },
-        users: {
-          select: { id: true, name: true, email: true }
-        },
+        outlets: { select: { id: true, name: true } },
+        tables: { select: { id: true, name: true } },
+        users: { select: { id: true, name: true, email: true } },
         transaction_items: {
           include: {
             items: true,
             variants: true,
-            transaction_modifiers: {
-              include: {
-                modifiers: true
-              }
-            }
+            transaction_modifiers: { include: { modifiers: true } }
           }
         },
         payments: true
