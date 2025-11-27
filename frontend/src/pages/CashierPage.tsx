@@ -45,6 +45,7 @@ export default function CashierPage() {
   const [cashReceived, setCashReceived] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [settings, setSettings] = useState<TenantSettings | null>(null);
+  const [orderType, setOrderType] = useState('dine_in');
 
   // Helper function to format currency with dot as thousand separator
   const formatCurrencyDisplay = (value: number): string => {
@@ -274,7 +275,7 @@ export default function CashierPage() {
       const serviceChargeAmount = settings?.enableServiceCharge && settings?.serviceCharge ? (subtotal * settings.serviceCharge) / 100 : 0;
 
       const orderData = {
-        orderType: 'dine_in',
+        orderType: orderType,
         outletId: outletId,
         items: items.map(item => ({
           itemId: item.itemId,
@@ -1017,7 +1018,31 @@ export default function CashierPage() {
               </>
             ) : (
               <>
-                {/* Single Payment UI */}
+                {/* Order Type Selection */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Order Type</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'dine_in', label: 'Dine In', color: 'bg-blue-500' },
+                      { id: 'takeaway', label: 'Takeaway', color: 'bg-purple-500' },
+                      { id: 'delivery', label: 'Delivery', color: 'bg-green-500' }
+                    ].map((type) => (
+                      <button
+                        key={type.id}
+                        onClick={() => setOrderType(type.id)}
+                        className={`py-3 px-2 rounded-lg text-sm font-medium transition-all md:py-4 md:px-4 touch-manipulation ${
+                          orderType === type.id
+                            ? `${type.color} text-white shadow-lg scale-105`
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Payment Method Selection */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">Payment Method</label>
                   <div className="grid grid-cols-3 gap-2">
