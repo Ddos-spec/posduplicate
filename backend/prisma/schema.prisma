@@ -44,6 +44,7 @@ model Tenant {
   outlets               Outlet[]
   users                 User[]
   apiKeys               ApiKey[]
+  integrations          Integration[]
 
   @@index([subscriptionStatus], map: "idx_tenants_status")
   @@index([isActive], map: "idx_tenants_active")
@@ -480,4 +481,26 @@ model SalesTransaction {
   @@index([receiptNumber], map: "idx_sales_receipt")
   @@index([category], map: "idx_sales_category")
   @@map("sales_transactions")
+}
+
+model Integration {
+  id                Int       @id @default(autoincrement())
+  tenantId          Int       @map("tenant_id")
+  integrationType   String    @map("integration_type") @db.VarChar(50) // qris, gofood, grabfood, shopeefood
+  status            String    @default("inactive") @db.VarChar(20) // active, inactive, pending
+  configuration     Json?     @default("{}")  // API endpoints, webhook URLs, etc
+  credentials       Json?     @default("{}")  // API keys, OAuth tokens (encrypted)
+  metadata          Json?     @default("{}")  // merchant_id, shop_id, additional info
+  isActive          Boolean   @default(false) @map("is_active")
+  activatedAt       DateTime? @map("activated_at") @db.Timestamp(6)
+  lastSyncAt        DateTime? @map("last_sync_at") @db.Timestamp(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, integrationType], map: "unique_tenant_integration")
+  @@index([tenantId], map: "idx_integrations_tenant")
+  @@index([integrationType], map: "idx_integrations_type")
+  @@index([status], map: "idx_integrations_status")
+  @@map("integrations")
 }

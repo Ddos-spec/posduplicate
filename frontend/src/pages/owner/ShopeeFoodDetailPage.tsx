@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  ShoppingBag,
   CheckCircle,
   XCircle,
   Info,
@@ -32,8 +31,12 @@ export default function ShopeeFoodDetailPage() {
 
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="bg-orange-50 p-4 rounded-lg">
-              <ShoppingBag className="w-10 h-10 text-orange-600" />
+            <div className="bg-orange-50 p-4 rounded-lg flex items-center justify-center">
+              <img
+                src="/assets/integrations/shopeefood.png"
+                alt="ShopeeFood logo"
+                className="w-16 h-16 object-contain"
+              />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-800">ShopeeFood</h1>

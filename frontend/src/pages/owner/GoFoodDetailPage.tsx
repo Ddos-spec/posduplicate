@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  UtensilsCrossed,
   CheckCircle,
   XCircle,
   Info,
@@ -30,8 +29,12 @@ export default function GoFoodDetailPage() {
 
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <UtensilsCrossed className="w-10 h-10 text-green-600" />
+            <div className="bg-green-50 p-4 rounded-lg flex items-center justify-center">
+              <img
+                src="/assets/integrations/gofood.png"
+                alt="GoFood logo"
+                className="w-16 h-16 object-contain"
+              />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-800">GoFood</h1>
