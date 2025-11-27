@@ -10,25 +10,15 @@ export const getTransactions = async (
   next: NextFunction
 ) => {
   try {
-    const { status, outlet_id, date_from, date_to } = req.query;
+    const { status, outlet_id, date_from, date_to, limit = '50' } = req.query;
 
-    // NUCLEAR DEBUG OPTION: Fetch EVERYTHING to see what is actually in the DB
-    // Instead of complex tenant logic, just get transactions for this cashier.
-    // This guarantees that if I created it, I can see it.
+    // SAFE FILTER MODE:
+    // 1. Always filter by current cashier (User ID)
     const where: any = {
-        cashier_id: req.userId 
+      cashier_id: req.userId
     };
 
-    // Optional filters
-    if (status) {
-      where.status = status;
-    }
-
-    // Only use outlet filter if strictly provided, otherwise ignore to prevent hiding data
-    if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
-    }
-
+    // 2. Apply Date Filter if provided
     if (date_from || date_to) {
       where.createdAt = {};
       if (date_from) {
@@ -38,16 +28,21 @@ export const getTransactions = async (
       }
       if (date_to) {
         const toDate = new Date(date_to as string);
-        // Add 1 day for safety margin against timezones
-        toDate.setDate(toDate.getDate() + 1); 
+        // Safety buffer: +1 day to handle timezone differences
+        toDate.setDate(toDate.getDate() + 1);
         toDate.setHours(23, 59, 59, 999);
         where.createdAt.lte = toDate;
       }
     }
 
+    // 3. Apply Status Filter if provided
+    if (status) {
+      where.status = status;
+    }
+
     // NUCLEAR DEBUG OPTION: Fetch EVERYTHING to see what is actually in the DB
     const transactions = await prisma.transaction.findMany({
-      // where: where, // DISABLE FILTER COMPLETELY
+      where, // <--- RESTORED SAFE FILTER
       include: {
         outlets: { select: { id: true, name: true } },
         tables: { select: { id: true, name: true } },
@@ -62,7 +57,7 @@ export const getTransactions = async (
         payments: true
       },
       orderBy: { createdAt: 'desc' },
-      take: 10 // Take last 10 transactions
+      take: parseInt(limit as string)
     });
 
     res.json({
@@ -71,10 +66,11 @@ export const getTransactions = async (
       count: transactions.length,
       debug: {
         serverTime: new Date().toISOString(),
-        status: "NUCLEAR MODE ACTIVE - NO FILTERS", // Changed text to verify update
+        status: "SAFE FILTER MODE - DATE SEARCH ENABLED",
         queryParams: { status, outlet_id, date_from, date_to },
-        // constructedWhere: ... // Don't send this to avoid confusion since we aren't using it
-        firstTransactionId: transactions[0]?.id
+        constructedWhere: JSON.parse(JSON.stringify(where, (_, value) =>
+          typeof value === 'bigint' ? value.toString() : value
+        ))
       }
     });
 
