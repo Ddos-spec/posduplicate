@@ -215,6 +215,7 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
 app.listen(PORT, () => {
   console.log(`🚀 MyPOS API Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔄 Server Restart Triggered at: ${new Date().toISOString()}`); // Trigger restart
   console.log(`🔗 Internal health check: http://localhost:${PORT}/health`);
 
   if (process.env.NODE_ENV === 'production') {
