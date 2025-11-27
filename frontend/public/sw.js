@@ -1,5 +1,5 @@
 // MyPOS Service Worker
-const CACHE_NAME = 'mypos-v1';
+const CACHE_NAME = 'mypos-v2'; // Increment version to force cache update
 const urlsToCache = [
   '/',
   '/cashier',
@@ -36,6 +36,12 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - Network first, fallback to cache
 self.addEventListener('fetch', (event) => {
+  // Skip caching for API requests to ensure fresh data
+  if (event.request.url.includes('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {

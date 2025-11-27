@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import { X, Calendar, DollarSign, User, Clock, Receipt, Trash2, AlertCircle, Printer, FileText } from 'lucide-react';
+import { X, Calendar, DollarSign, User, Clock, Receipt, Trash2, AlertCircle, Printer, FileText, RefreshCw } from 'lucide-react';
 import ConfirmDialog, { ConfirmDialogType } from '../common/ConfirmDialog';
 
 interface Transaction {
@@ -99,7 +99,13 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       if (dateTo) params.date_to = dateTo;
       if (statusFilter) params.status = statusFilter;
 
+      console.log('Loading transactions with params:', params);
       const { data } = await api.get('/transactions', { params });
+      console.log('Received transaction data:', data.data.length, 'transactions');
+      if (data.data.length > 0) {
+        console.log('Latest transaction date:', data.data[0].createdAt);
+        console.log('Latest transaction number:', data.data[0].transaction_number);
+      }
       const transformedData = data.data.map(transformTransaction);
       setTransactions(transformedData);
     } catch (error: unknown) {
@@ -913,6 +919,18 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
             Riwayat Transaksi
           </h2>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                console.log('Manual refresh triggered');
+                loadTransactions();
+                toast.success('Memuat ulang transaksi...');
+              }}
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-cyan-600 hover:to-blue-700 flex items-center gap-2 shadow-lg transition-all"
+              title="Muat ulang transaksi"
+            >
+              <RefreshCw className="w-5 h-5" />
+              Refresh
+            </button>
             <button
               onClick={handlePrintDateRangeReport}
               className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 flex items-center gap-2 shadow-lg transition-all"
