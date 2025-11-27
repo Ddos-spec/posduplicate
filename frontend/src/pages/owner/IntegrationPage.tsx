@@ -1,10 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  QrCode,
-  UtensilsCrossed,
-  Bike,
-  ShoppingBag,
   ArrowRight,
   Check
 } from 'lucide-react';
@@ -12,7 +8,7 @@ import {
 interface IntegrationCard {
   id: string;
   name: string;
-  icon: React.ElementType;
+  logo: string;
   description: string;
   color: string;
   bgColor: string;
@@ -27,7 +23,7 @@ export default function IntegrationPage() {
     {
       id: 'qris',
       name: 'QRIS',
-      icon: QrCode,
+      logo: '/assets/integrations/qris.svg',
       description: 'Terima pembayaran digital melalui QRIS dari berbagai e-wallet dan bank',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
@@ -37,7 +33,7 @@ export default function IntegrationPage() {
     {
       id: 'gofood',
       name: 'GoFood',
-      icon: UtensilsCrossed,
+      logo: '/assets/integrations/gofood.png',
       description: 'Integrasikan bisnis Anda dengan platform GoFood untuk jangkauan lebih luas',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
@@ -47,7 +43,7 @@ export default function IntegrationPage() {
     {
       id: 'grabfood',
       name: 'GrabFood',
-      icon: Bike,
+      logo: '/assets/integrations/grabfood.png',
       description: 'Hubungkan toko Anda dengan GrabFood dan tingkatkan penjualan online',
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
@@ -57,7 +53,7 @@ export default function IntegrationPage() {
     {
       id: 'shopeefood',
       name: 'ShopeeFood',
-      icon: ShoppingBag,
+      logo: '/assets/integrations/shopeefood.png',
       description: 'Bergabung dengan ShopeeFood untuk menjangkau lebih banyak pelanggan',
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
@@ -126,7 +122,6 @@ export default function IntegrationPage() {
       {/* Integration Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
         {integrations.map((integration) => {
-          const Icon = integration.icon;
           return (
             <div
               key={integration.id}
@@ -136,8 +131,12 @@ export default function IntegrationPage() {
               <div className="p-6">
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
-                  <div className={`${integration.bgColor} p-4 rounded-lg`}>
-                    <Icon className={`w-8 h-8 ${integration.color}`} />
+                  <div className={`${integration.bgColor} p-4 rounded-lg flex items-center justify-center`}>
+                    <img
+                      src={integration.logo}
+                      alt={`${integration.name} logo`}
+                      className="w-12 h-12 object-contain"
+                    />
                   </div>
                   {integration.isActive && (
                     <span className="bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full">
