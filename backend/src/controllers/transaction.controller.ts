@@ -24,6 +24,9 @@ export const getTransactions = async (
       if (date_from) {
         const fromDate = new Date(date_from as string);
         fromDate.setHours(0, 0, 0, 0);
+        // Adjust for Timezone (assuming UTC+7 / WIB):
+        // 00:00 WIB is 17:00 UTC previous day.
+        fromDate.setHours(fromDate.getHours() - 7);
         where.createdAt.gte = fromDate;
       }
       if (date_to) {
@@ -709,6 +712,8 @@ export const getTodayReport = async (
     // Get start and end of today
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
+    // Adjust for Timezone (assuming UTC+7 / WIB):
+    startOfDay.setHours(startOfDay.getHours() - 7);
 
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
