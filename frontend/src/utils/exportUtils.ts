@@ -416,7 +416,31 @@ export const printReceipt = (
   yPos += 4;
   doc.text('tidak dapat ditukar/dikembalikan', pageWidth / 2, yPos, { align: 'center' });
 
-  // Auto print or save
+  // Auto print logic
   doc.autoPrint();
-  window.open(doc.output('bloburl'), '_blank');
+
+  // Check if running in standalone mode (PWA/Android)
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+  
+  if (isStandalone) {
+    // PWA Mode: Use RawBT Intent Scheme
+    try {
+      // Get Base64 of the PDF without the data URI prefix
+      const pdfBase64 = doc.output('datauristring').split(',')[1];
+      
+      // Construct RawBT intent URL
+      // Scheme: rawbt:base64,[base64_data]
+      const intentUrl = `rawbt:base64,${pdfBase64}`;
+      
+      // Trigger intent
+      window.location.href = intentUrl;
+    } catch (error) {
+      console.error('Failed to trigger RawBT print:', error);
+      // Fallback if intent fails
+      window.open(doc.output('bloburl'), '_blank');
+    }
+  } else {
+    // Browser Mode: Open blob URL
+    window.open(doc.output('bloburl'), '_blank');
+  }
 };
