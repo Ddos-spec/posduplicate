@@ -46,6 +46,11 @@ export const tenantService = {
     return response.data;
   },
 
+  // Alias for backward compatibility
+  async getAllTenants(params?: { status?: string; plan?: string; search?: string }) {
+    return this.getAll(params);
+  },
+
   async getById(id: number) {
     const response = await api.get<{ success: boolean; data: Tenant }>(`/tenants/${id}`);
     return response.data.data;

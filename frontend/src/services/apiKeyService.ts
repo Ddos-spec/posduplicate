@@ -43,9 +43,9 @@ export interface ApiDocumentation {
 
 export const apiKeyService = {
   // Admin: Get all API keys (all tenants)
-  async getAllKeys(): Promise<ApiKey[]> {
+  async getAllKeys() {
     const response = await api.get('/api-keys');
-    return response.data.data;
+    return response.data;
   },
 
   // Admin: Get all API keys for a tenant
@@ -84,5 +84,14 @@ export const apiKeyService = {
   async getMyApiKeys(): Promise<ApiKey[]> {
     const response = await api.get('/api-keys/my-keys');
     return response.data.data;
+  },
+
+  // Aliases for backward compatibility with ApiKeyManagementPage
+  async generateKey(params: { tenantId: number; name: string }) {
+    return this.createApiKey(params.tenantId, params.name);
+  },
+
+  async revokeKey(keyId: number) {
+    return this.deleteApiKey(keyId);
   },
 };
