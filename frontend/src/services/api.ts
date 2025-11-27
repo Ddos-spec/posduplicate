@@ -13,8 +13,10 @@ const getBaseUrl = () => {
     return 'http://localhost:3000/api';
   }
 
-  // If running on a LAN IP (e.g., 192.168.x.x), assume backend is on the same IP at port 3000
-  return `http://${window.location.hostname}:3000/api`;
+  // If running on a LAN IP or VPS, match the current protocol (HTTP or HTTPS)
+  // This prevents "Mixed Content" errors if the PWA is served over HTTPS
+  const protocol = window.location.protocol; // 'http:' or 'https:'
+  return `${protocol}//${window.location.hostname}:3000/api`;
 };
 
 const API_URL = getBaseUrl();
