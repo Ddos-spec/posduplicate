@@ -65,10 +65,9 @@ export default function ApiKeyManagementPage() {
         tenantId: parseInt(selectedTenant),
         name: keyName
       });
-      
+
       const newKey = response.data;
-      setGeneratedKey(newKey.apiKey); // Show full key once
-      setApiKeys([newKey, ...apiKeys]); // Optimistic update (might need reload if structure differs)
+      setGeneratedKey(newKey.api_key); // Show full key once
       toast.success('API Key generated successfully');
       // Don't close modal yet, let them copy the key
     } catch (error) {
