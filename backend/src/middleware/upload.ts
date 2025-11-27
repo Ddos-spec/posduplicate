@@ -3,7 +3,10 @@ import path from 'path';
 import fs from 'fs';
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../../uploads');
+// Use process.cwd() to ensure we always target the project root 'uploads' folder
+// This works consistently across 'src' (dev) and 'dist' (prod)
+const uploadsDir = path.join(process.cwd(), 'uploads');
+
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
