@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  Bike,
   CheckCircle,
   XCircle,
   Info,
@@ -31,8 +30,12 @@ export default function GrabFoodDetailPage() {
 
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="bg-emerald-50 p-4 rounded-lg">
-              <Bike className="w-10 h-10 text-emerald-600" />
+            <div className="bg-emerald-50 p-4 rounded-lg flex items-center justify-center">
+              <img
+                src="/assets/integrations/grabfood.png"
+                alt="GrabFood logo"
+                className="w-16 h-16 object-contain"
+              />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-800">GrabFood</h1>
