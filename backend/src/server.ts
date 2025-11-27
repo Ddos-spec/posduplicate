@@ -181,7 +181,8 @@ app.get('/api/debug/logs', (req: Request, res: Response) => {
 app.get('/api/debug/check-uploads', (req: Request, res: Response) => {
   const secretKey = req.query.key;
   if (secretKey !== 'admin123') {
-    return res.status(403).send('Forbidden');
+    res.status(403).send('Forbidden');
+    return;
   }
 
   const uploadPath = path.join(process.cwd(), 'uploads');
