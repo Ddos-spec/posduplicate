@@ -45,36 +45,38 @@ export const getTransactions = async (
       }
     }
 
-    console.log('Transaction query params:', { status, date_from, date_to });
-    console.log('Transaction query where:', JSON.stringify(where, null, 2));
-
+    // NUCLEAR DEBUG OPTION: Fetch EVERYTHING to see what is actually in the DB
     const transactions = await prisma.transaction.findMany({
-      where,
+      // where, // <--- COMMENTED OUT FILTER
       include: {
-        outlets: {
-          select: { id: true, name: true }
-        },
-        tables: {
-          select: { id: true, name: true }
-        },
-        users: {
-          select: { id: true, name: true, email: true }
-        },
+        outlets: { select: { id: true, name: true } },
+        tables: { select: { id: true, name: true } },
+        users: { select: { id: true, name: true, email: true } },
         transaction_items: {
           include: {
             items: true,
             variants: true,
-            transaction_modifiers: {
-              include: {
-                modifiers: true
-              }
-            }
+            transaction_modifiers: { include: { modifiers: true } }
           }
         },
         payments: true
       },
       orderBy: { createdAt: 'desc' },
-      take: parseInt(limit as string)
+      take: 10 // Take last 10 transactions
+    });
+
+    res.json({
+      success: true,
+      data: transactions,
+      count: transactions.length,
+      debug: {
+        serverTime: new Date().toISOString(),
+        queryParams: { status, outlet_id, date_from, date_to },
+        note: "NUCLEAR DEBUG MODE - FILTERS DISABLED",
+        firstTransactionCashierId: transactions[0]?.cashier_id,
+        firstTransactionOutletId: transactions[0]?.outletId,
+        firstTransactionDate: transactions[0]?.createdAt
+      }
     });
 
     res.json({
@@ -339,7 +341,7 @@ export const createTransaction = async (
       }
 
       // Create transaction with items
-      console.log(`[CreateTransaction] Creating transaction record ${transactionNumber}...`);
+      console.log(`[CreateTransaction] Creating transaction record ${transactionNumber}... CashierID: ${req.userId}`);
 
       const transaction = await tx.transaction.create({
         data: {
