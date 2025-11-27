@@ -105,6 +105,11 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       console.log('Loading transactions with params:', params);
       const { data } = await api.get('/transactions', { params });
       console.log('Received transaction data:', data.data.length, 'transactions');
+      if (data.debug) {
+        console.log('🔍 SERVER DEBUG INFO:', data.debug);
+        console.log('   Server Time:', data.debug.serverTime);
+        console.log('   Constructed Where:', JSON.stringify(data.debug.constructedWhere, null, 2));
+      }
       if (data.data.length > 0) {
         console.log('Latest transaction date:', data.data[0].createdAt);
         console.log('Latest transaction number:', data.data[0].transaction_number);

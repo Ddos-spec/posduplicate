@@ -126,7 +126,16 @@ export const getTransactions = async (
     res.json({
       success: true,
       data: transactions,
-      count: transactions.length
+      count: transactions.length,
+      debug: {
+        serverTime: new Date().toISOString(),
+        tenantId,
+        userOutletIds: outletIds,
+        queryParams: { status, outlet_id, date_from, date_to },
+        constructedWhere: JSON.parse(JSON.stringify(where, (key, value) =>
+          typeof value === 'bigint' ? value.toString() : value // Handle BigInt serialization if any
+        ))
+      }
     });
   } catch (error) {
     return next(error);
