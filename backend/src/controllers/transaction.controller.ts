@@ -73,9 +73,11 @@ export const getTransactions = async (
       }
       if (date_to) {
         const toDate = new Date(date_to as string);
+        // Add 1 day to cover the full day regardless of timezone, and then some
+        toDate.setDate(toDate.getDate() + 1);
         toDate.setHours(23, 59, 59, 999);
         where.createdAt.lte = toDate;
-        console.log('Date filter - to:', toDate.toISOString());
+        console.log('Date filter - to (widened):', toDate.toISOString());
       }
     }
 
@@ -394,7 +396,6 @@ export const createTransaction = async (
           outletId: parseInt(outletId),
           cashier_id: req.userId,
           notes,
-          createdAt: new Date(),
           completed_at: new Date(),
           transaction_items: {
             create: itemsWithPrices.map((item: any) => ({
