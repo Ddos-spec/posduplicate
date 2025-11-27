@@ -155,8 +155,8 @@ export const getTopProducts = async (req: Request, res: Response, _next: NextFun
       .map(p => ({
         id: p.id,
         name: p.name,
-        price: p.totalSales, // Use totalSales for the chart
-        stock: p.stock
+        qty: p.totalQuantity,  // Quantity sold (not inventory stock)
+        revenue: p.totalSales  // Total revenue from sales
       }));
 
     res.json({

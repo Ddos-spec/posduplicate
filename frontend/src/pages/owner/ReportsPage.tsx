@@ -86,7 +86,7 @@ interface AnalyticsSummary {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'category' | 'cashier' | 'transactions'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'cashier' | 'transactions'>('sales');
   const [loading, setLoading] = useState(true);
   
   // General Report State
@@ -162,11 +162,7 @@ export default function ReportsPage() {
         sales: item.sales
       })));
 
-      setTopProducts(products.map((item: { name: string; stock: number; price: number }) => ({
-        name: item.name,
-        qty: item.stock || 0,
-        revenue: item.price * (item.stock || 0)
-      })));
+      setTopProducts(products);
 
       setCategoryData(categories.map((item: { name: string; totalSales: number }, index: number) => ({
         name: item.name,
@@ -382,7 +378,7 @@ export default function ReportsPage() {
       {/* Tabs */}
       <div className="mb-6 border-b overflow-x-auto">
         <div className="flex gap-4 min-w-max">
-          {['sales', 'products', 'category', 'cashier', 'transactions'].map((tab) => (
+          {['sales', 'products', 'cashier', 'transactions'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -390,7 +386,9 @@ export default function ReportsPage() {
                 activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
               }`}
             >
-              {tab === 'transactions' ? 'Detailed Transactions' : tab.charAt(0).toUpperCase() + tab.slice(1) + ' Report'}
+              {tab === 'transactions' ? 'Detailed Transactions' :
+               tab === 'products' ? 'Product Analytics' :
+               tab.charAt(0).toUpperCase() + tab.slice(1) + ' Report'}
             </button>
           ))}
         </div>
@@ -429,52 +427,54 @@ export default function ReportsPage() {
       )}
 
       {activeTab === 'products' && (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="font-semibold mb-4">Top Products</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left">Product</th>
-                  <th className="px-4 py-2 text-right">Sold</th>
-                  <th className="px-4 py-2 text-right">Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topProducts.map((p, i) => (
-                  <tr key={i} className="border-t">
-                    <td className="px-4 py-3">{p.name}</td>
-                    <td className="px-4 py-3 text-right">{p.qty}</td>
-                    <td className="px-4 py-3 text-right font-semibold">{formatCurrency(p.revenue)}</td>
+        <div className="space-y-6">
+          {/* Top Products Table */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="font-semibold mb-4">Top Products</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Product</th>
+                    <th className="px-4 py-2 text-right">Sold</th>
+                    <th className="px-4 py-2 text-right">Revenue</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {topProducts.map((p, i) => (
+                    <tr key={i} className="border-t">
+                      <td className="px-4 py-3">{p.name}</td>
+                      <td className="px-4 py-3 text-right">{p.qty}</td>
+                      <td className="px-4 py-3 text-right font-semibold">{formatCurrency(p.revenue)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
 
-      {activeTab === 'category' && (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="font-semibold mb-4">Sales by Category</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
-                outerRadius={100}
-                dataKey="value"
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
-            </PieChart>
-          </ResponsiveContainer>
+          {/* Sales by Category */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="font-semibold mb-4">Sales by Category</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  dataKey="value"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v: number) => formatCurrency(v)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 
