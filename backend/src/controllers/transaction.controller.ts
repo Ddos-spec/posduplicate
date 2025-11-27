@@ -414,7 +414,8 @@ export const createTransaction = async (
           });
         }
 
-        // Deduct ingredients based on recipe (if recipes feature is enabled)
+        // Deduct ingredients based on recipe (DISABLED: recipes table missing in DB)
+        /*
         try {
           const recipes = await tx.recipes.findMany({
             where: { item_id: item.itemId }
@@ -432,8 +433,9 @@ export const createTransaction = async (
           }
         } catch (error) {
           // Skip recipe-based ingredient deduction if recipes table doesn't exist
-          // This is normal if the recipes feature hasn't been set up yet
+          console.warn('Skipping recipe deduction:', error);
         }
+        */
       }
 
       return transaction;
