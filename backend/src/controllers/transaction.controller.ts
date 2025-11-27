@@ -65,8 +65,18 @@ export const getTransactions = async (
 
     if (date_from || date_to) {
       where.createdAt = {};
-      if (date_from) where.createdAt.gte = new Date(date_from as string);
-      if (date_to) where.createdAt.lte = new Date(date_to as string);
+      if (date_from) {
+        // Set to start of day (00:00:00)
+        const fromDate = new Date(date_from as string);
+        fromDate.setHours(0, 0, 0, 0);
+        where.createdAt.gte = fromDate;
+      }
+      if (date_to) {
+        // Set to end of day (23:59:59.999)
+        const toDate = new Date(date_to as string);
+        toDate.setHours(23, 59, 59, 999);
+        where.createdAt.lte = toDate;
+      }
     }
 
     const transactions = await prisma.transaction.findMany({
