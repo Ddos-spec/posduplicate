@@ -14,6 +14,7 @@ import toast from 'react-hot-toast';
 import useConfirmationStore from '../../store/confirmationStore';
 import RecipeModal from '../../components/owner/RecipeModal';
 import IngredientManager from '../../components/owner/IngredientManager';
+import InventoryTab from '../../components/owner/InventoryTab';
 import { useAuthStore } from '../../store/authStore';
 
 interface Category {
@@ -35,7 +36,7 @@ interface Product {
 }
 
 export default function ProductManagementPage() {
-  const [activeTab, setActiveTab] = useState<'products' | 'ingredients'>('products');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'products' | 'ingredients'>('inventory');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -274,6 +275,16 @@ export default function ProductManagementPage() {
         {/* Sub Navbar / Tabs */}
         <div className="mt-4 sm:mt-0 flex gap-2 bg-gray-100 p-1 rounded-lg">
           <button
+            onClick={() => setActiveTab('inventory')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'inventory'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Inventory
+          </button>
+          <button
             onClick={() => setActiveTab('products')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === 'products'
@@ -296,7 +307,9 @@ export default function ProductManagementPage() {
         </div>
       </div>
 
-      {activeTab === 'products' ? (
+      {activeTab === 'inventory' ? (
+        <InventoryTab />
+      ) : activeTab === 'products' ? (
         <>
           {/* Actions and Search */}
           <div className="flex justify-between items-center mb-6">
