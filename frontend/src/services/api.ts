@@ -1,7 +1,23 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Determine API URL dynamically to support LAN/Mobile testing
+const getBaseUrl = () => {
+  // If VITE_API_URL is explicitly set, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // If running on localhost/127.0.0.1, default to localhost:3000
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3000/api';
+  }
+
+  // If running on a LAN IP (e.g., 192.168.x.x), assume backend is on the same IP at port 3000
+  return `http://${window.location.hostname}:3000/api`;
+};
+
+const API_URL = getBaseUrl();
 
 // Extract base URL (without /api) for full URL construction
 export const BASE_URL = API_URL.replace(/\/api\/?$/, '');

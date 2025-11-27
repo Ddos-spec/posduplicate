@@ -41,10 +41,17 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1. API Requests: NETWORK ONLY (Critical for POS data integrity)
-  // Never serve cached transaction data
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(fetch(event.request));
+  // 1. API Requests & Non-GET methods: NETWORK ONLY
+  // Critical for POS data integrity. Never serve cached transaction data.
+  // Also ensures all POST/PUT/DELETE requests go straight to network.
+  if (url.pathname.startsWith('/api/') || event.request.method !== 'GET') {
+    event.respondWith(
+      fetch(event.request).catch((error) => {
+        console.error('SW: API/Network request failed:', error);
+        // Optional: Return a custom offline JSON response here if desired
+        throw error;
+      })
+    );
     return;
   }
 
