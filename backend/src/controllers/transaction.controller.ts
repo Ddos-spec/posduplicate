@@ -79,6 +79,7 @@ export const getTransactions = async (
       }
     }
 
+    console.log('Transaction query params:', { tenantId, outletIds, status, date_from, date_to });
     console.log('Transaction query where:', JSON.stringify(where, null, 2));
 
     const transactions = await prisma.transaction.findMany({
@@ -109,6 +110,16 @@ export const getTransactions = async (
       orderBy: { createdAt: 'desc' },
       take: parseInt(limit as string)
     });
+
+    console.log(`Found ${transactions.length} transactions`);
+    if (transactions.length > 0) {
+        console.log('Latest transaction:', {
+            id: transactions[0].id,
+            number: transactions[0].transaction_number,
+            created: transactions[0].createdAt,
+            outletId: transactions[0].outletId
+        });
+    }
 
     res.json({
       success: true,
@@ -383,6 +394,7 @@ export const createTransaction = async (
           outletId: parseInt(outletId),
           cashier_id: req.userId,
           notes,
+          createdAt: new Date(),
           completed_at: new Date(),
           transaction_items: {
             create: itemsWithPrices.map((item: any) => ({
@@ -423,7 +435,7 @@ export const createTransaction = async (
         }
       });
 
-      console.log(`[CreateTransaction] Transaction ${transaction.id} created successfully.`);
+      console.log(`[CreateTransaction] Transaction ${transaction.id} created successfully. Number: ${transaction.transaction_number}, CreatedAt: ${transaction.createdAt}, OutletId: ${transaction.outletId}`);
 
       // Update stock for items with tracking enabled
       for (const item of itemsWithPrices) {
