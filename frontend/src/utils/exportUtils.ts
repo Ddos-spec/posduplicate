@@ -354,9 +354,11 @@ export const printReceipt = (
       </div>
 
       <div class="footer">
-        ${settings?.receiptFooter ? `<p>${settings.receiptFooter}</p>` : ''}
-        <p>Terima kasih atas kunjungan Anda!</p>
-        <p>Barang yang sudah dibeli tidak dapat ditukar/dikembalikan</p>
+        ${settings?.receiptFooter ? 
+          `<p>${settings.receiptFooter.replace(/\n/g, '<br/>')}</p>` : 
+          `<p>Terima kasih atas kunjungan Anda!</p>
+           <p>Barang yang sudah dibeli tidak dapat ditukar/dikembalikan</p>`
+        }
       </div>
 
       <script>
