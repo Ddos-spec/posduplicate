@@ -12,8 +12,7 @@ import {
   Menu,
   X,
   Bell,
-  Package,
-  Warehouse
+  Package
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -41,10 +40,7 @@ export default function OwnerLayout() {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/owner/dashboard' },
-    { icon: Package, label: 'Manajemen Stok', path: '/owner/products' },
-    { icon: Warehouse, label: 'Inventory', path: '/owner/inventory' },
-    // Sales Analytics removed as it is merged into Reports
-    { icon: Users, label: 'Employees', path: '/owner/employees' },
+    { icon: Package, label: 'Manajemen Stok', path: '/owner/inventory' },
     { icon: UserCircle, label: 'Users', path: '/owner/users' },
     { icon: Store, label: 'Outlets', path: '/owner/outlets' },
     { icon: BarChart3, label: 'Reports', path: '/owner/reports' },
