@@ -293,8 +293,10 @@ export default function CashierPage() {
         payments: finalPayments,
       };
 
+      console.log('Creating transaction with data:', orderData);
       const response = await api.post('/transactions', orderData);
       const transactionData = response.data.data;
+      console.log('Transaction created successfully:', transactionData);
 
       toast.success('Payment successful!');
 
@@ -338,6 +340,7 @@ export default function CashierPage() {
       setSplitBillMode(false);
     } catch (error: unknown) {
       console.error('Payment failed:', error);
+      console.error('Error details:', axios.isAxiosError(error) ? error.response?.data : error);
       let errorMessage = 'Payment failed';
       if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
         errorMessage = error.response.data.error.message;
