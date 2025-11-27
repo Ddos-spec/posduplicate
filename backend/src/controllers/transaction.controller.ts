@@ -47,7 +47,7 @@ export const getTransactions = async (
 
     // NUCLEAR DEBUG OPTION: Fetch EVERYTHING to see what is actually in the DB
     const transactions = await prisma.transaction.findMany({
-      // where, // <--- COMMENTED OUT FILTER
+      // where: where, // DISABLE FILTER COMPLETELY
       include: {
         outlets: { select: { id: true, name: true } },
         tables: { select: { id: true, name: true } },
@@ -71,11 +71,10 @@ export const getTransactions = async (
       count: transactions.length,
       debug: {
         serverTime: new Date().toISOString(),
+        status: "NUCLEAR MODE ACTIVE - NO FILTERS", // Changed text to verify update
         queryParams: { status, outlet_id, date_from, date_to },
-        note: "NUCLEAR DEBUG MODE - FILTERS DISABLED",
-        firstTransactionCashierId: transactions[0]?.cashier_id,
-        firstTransactionOutletId: transactions[0]?.outletId,
-        firstTransactionDate: transactions[0]?.createdAt
+        // constructedWhere: ... // Don't send this to avoid confusion since we aren't using it
+        firstTransactionId: transactions[0]?.id
       }
     });
 
