@@ -5,7 +5,7 @@ import { generateApiKey, hashApiKey } from '../utils/apiKeyGenerator';
 /**
  * Get ALL API keys for ALL tenants (Admin only)
  */
-export const getAllApiKeys = async (req: Request, res: Response, next: NextFunction) => {
+export const getAllApiKeys = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const apiKeys = await prisma.apiKey.findMany({
       include: {
