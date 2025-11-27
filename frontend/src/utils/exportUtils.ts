@@ -208,16 +208,29 @@ export const printReceipt = (
   // Logo (if enabled and available)
   if (settings?.logo && settings?.showLogoOnReceipt) {
     try {
-      // Add logo image
-      const logoSize = is58mm ? 15 : 20;
-      const logoX = (pageWidth - logoSize) / 2;
-      doc.addImage(settings.logo, 'PNG', logoX, yPos, logoSize, logoSize);
-      yPos += logoSize + 3;
-      // Add spacing between logo and header
-      yPos += 4;
+      // Validate logo URL before attempting to add
+      if (settings.logo && settings.logo.trim() !== '') {
+        // Try to detect image format from URL
+        const logoUrl = settings.logo.toLowerCase();
+        let format = 'PNG';
+
+        if (logoUrl.includes('.jpg') || logoUrl.includes('.jpeg')) {
+          format = 'JPEG';
+        } else if (logoUrl.includes('.png')) {
+          format = 'PNG';
+        }
+
+        // Add logo image
+        const logoSize = is58mm ? 15 : 20;
+        const logoX = (pageWidth - logoSize) / 2;
+        doc.addImage(settings.logo, format, logoX, yPos, logoSize, logoSize);
+        yPos += logoSize + 3;
+        // Add spacing between logo and header
+        yPos += 4;
+      }
     } catch (error) {
       console.error('Failed to add logo to receipt:', error);
-      // Continue without logo if error
+      // Continue without logo if error - just skip the logo section
     }
   }
 
@@ -232,8 +245,13 @@ export const printReceipt = (
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   if (settings?.address) {
-    doc.text(settings.address, pageWidth / 2, yPos, { align: 'center' });
-    yPos += 4;
+    // Split address into multiple lines if too long
+    const maxWidth = pageWidth - (margin * 2);
+    const addressLines = doc.splitTextToSize(settings.address, maxWidth);
+    addressLines.forEach((line: string) => {
+      doc.text(line, pageWidth / 2, yPos, { align: 'center' });
+      yPos += 4;
+    });
   }
   if (settings?.phone) {
     doc.text(`Telp: ${settings.phone}`, pageWidth / 2, yPos, { align: 'center' });
