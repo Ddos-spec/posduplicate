@@ -79,8 +79,7 @@ export const getOutletById = async (
           select: {
             users: true,
             items: true,
-            transactions: true,
-            employees: true
+            transactions: true
           }
         }
       }
