@@ -99,6 +99,9 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       if (dateTo) params.date_to = dateTo;
       if (statusFilter) params.status = statusFilter;
 
+      // Add timestamp to bust cache
+      params._t = Date.now().toString();
+
       console.log('Loading transactions with params:', params);
       const { data } = await api.get('/transactions', { params });
       console.log('Received transaction data:', data.data.length, 'transactions');
