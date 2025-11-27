@@ -1,5 +1,5 @@
 // MyPOS Service Worker
-const CACHE_NAME = 'mypos-v2'; // Increment version to force cache update
+const CACHE_NAME = 'mypos-v3'; // Increment version to force cache update
 const urlsToCache = [
   '/',
   '/cashier',
@@ -42,18 +42,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Only handle GET requests for caching
+  if (event.request.method !== 'GET') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Only cache GET requests
-        if (event.request.method === 'GET') {
-          // Clone the response
-          const responseToCache = response.clone();
+        // Clone the response
+        const responseToCache = response.clone();
 
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
 
         return response;
       })
