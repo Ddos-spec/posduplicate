@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  QrCode,
   CheckCircle,
   XCircle,
   Info,
@@ -29,8 +28,12 @@ export default function QRISDetailPage() {
 
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <QrCode className="w-10 h-10 text-blue-600" />
+            <div className="bg-blue-50 p-4 rounded-lg flex items-center justify-center">
+              <img
+                src="/assets/integrations/qris.svg"
+                alt="QRIS logo"
+                className="w-16 h-16 object-contain"
+              />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-800">QRIS</h1>
