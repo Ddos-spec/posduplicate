@@ -5,66 +5,42 @@
 - Project Type: POS (Point of Sales) System
 - Tech Stack: React (Frontend), Node.js/Express (Backend), Prisma (ORM), PostgreSQL (Database).
 
-## 🚀 Development Progress Status (Updated: 28 Nov 2025)
+## 🚀 Development Progress Status (Updated: 29 Nov 2025)
 
 ### ✅ Completed & Verified (Tuntas)
-1.  **PWA Transaction Fix:**
-    - Masalah transaksi gagal di HP/Android teratasi.
-    - Solusi: Service Worker `NetworkOnly` untuk API, Dynamic API URL, CORS khusus VPS.
-2.  **Pencetakan Struk (Receipt):**
-    - Metode: HTML/CSS Print (bukan jsPDF).
-    - Fitur: Support RawBT (Android PWA), Layout Bersih (tanpa header browser), Teks **BOLD** agar terbaca jelas.
-    - Footer: Logika kondisional (Pesan default vs Custom Footer).
-3.  **Persiapan Deployment VPS:**
-    - Upload Path: Menggunakan `process.cwd()` agar logo tidak hilang saat rebuild.
-    - Debugging: Endpoint `/api/debug/check-uploads` untuk cek volume mounting.
+1.  **Report & Dashboard Logic Fixes:**
+    - **Net Sales Trend:** Chart now correctly groups by **Hour (WIB/UTC+7)** when viewing "Today".
+    - **Detail Transaksi Table:** Refactored to show **Per-Transaction (Receipt)** rows instead of per-item. Columns synced with chart logic (WIB Timezone).
+    - **Sync:** Chart and Table data are now consistent in logic and timezone.
+2.  **Ingredient Management (Bahan Baku):**
+    - **Bulk Import:** Created `bahan.sql` for mass inserting ingredients.
+    - **UX Improvement:** Added support for **Fraction Inputs** (e.g., "1/2", "1/4") in Stock/MinStock fields. System auto-converts to decimals.
+    - **Pagination:** Removed pagination to show all ingredients in one scrollable list.
+3.  **Product Form Simplification:**
+    - Refactored Product Form to use a **Single Input** for "Harga Platform Online".
+    - Auto-synced to GoFood, GrabFood, and ShopeeFood prices on save.
+4.  **Product Page Crash Fix:**
+    - **Issue:** Infinite loading/crash on "Produk" tab due to unsafe property access.
+    - **Fix:** Implemented safe access (`?.`) and fallback strings for product name/category filtering. Restored missing data loading logic.
 
-### 🛠 Implemented (Siap Tes User)
-1.  **Modul Integrasi (Simulasi):**
-    - Menu `Owner > Integrasi`.
-    - Kartu GoFood/Grab/Shopee/QRIS dengan status "Terhubung/Belum".
-    - Form input Merchant ID / Store URL (Data disimpan di DB).
-2.  **Kasir Pintar (Smart Cashier UI):**
-    - **Switch Harga:** Tombol "GoFood/Grab" muncul di kasir jika integrasi aktif.
-    - **Markup Otomatis:** Harga produk di keranjang otomatis berubah sesuai platform (Mark-up).
-    - **QRIS on Screen:** Gambar QRIS muncul otomatis di layar saat metode bayar = QRIS.
-3.  **Otomasi Laporan (API untuk n8n):**
-    - Endpoint Admin: Generate API Key (Plain text storage).
-    - Endpoint Laporan: `/api/owner/reports/sales` & `/stock` (JSON Output).
-    - Tujuan: Ditarik oleh n8n -> Masuk Google Sheet otomatis.
+### 🔴 Known Issues / Immediate Next Steps (CRITICAL)
+*(None at the moment)*
 
-### 📝 Planned / Next Steps
-- Verifikasi User untuk alur Integrasi GoFood (Cek apakah harga berubah sesuai).
-- Setup n8n untuk menarik data via API Key yang baru dibuat.
+### 🛠 Previous Accomplishments
+1.  **PWA Transaction Fix:** Service Worker `NetworkOnly` for API, Dynamic API URL.
+2.  **Printing:** RawBT integration for Android PWA.
+3.  **Integrations:** DB Schema synced, basic UI for GoFood/Grab/Shopee status.
 
 ---
 
 ## Critical Success Factors (Do Not Remove/Break)
 
 ### 1. Transaction Module
-- **Create Transaction:**
-  - **NEVER** use `prisma.recipes.update` or `prisma.recipes.findMany` inside the transaction creation block. The `recipes` table does not exist in the current production database schema, and attempting to access it causes a silent rollback of the entire transaction.
-  - Keep the recipe deduction logic **COMMENTED OUT** or removed until the database schema is synchronized.
-  - `createdAt` timestamp: Let the database handle it via `DEFAULT CURRENT_TIMESTAMP`. Do not send `createdAt: new Date()` from the backend to avoid timezone mismatches.
+- **Create Transaction:** Do not access `recipes` table directly (schema mismatch). Keep deduction logic disabled for now.
+- **History:** Filter by `cashier_id` for cashiers. Always add +1 day buffer for date filters.
 
-- **Get Transaction History:**
-  - **Tenant/Outlet Isolation:** Do NOT use complex tenant/outlet validation logic (e.g., checking `outlet.tenantId`). It is prone to bugs where valid transactions are hidden.
-  - **Safe Filter Logic:** Use a simple filter: `where: { cashier_id: req.userId }`. This ensures the logged-in cashier always sees their own transactions.
-  - **Date Filter:** When filtering by date range (`date_to`), always add **+1 day** buffer (e.g., `toDate.setDate(toDate.getDate() + 1)`) to handle timezone differences between client/server/database effectively.
-
-### 2. Printing / Receipt
-- **PWA/Android Support:**
-  - **NEVER** rely solely on `window.print()` or `window.open()` for Android devices.
-  - **RawBT Integration:** Use the `rawbt:` Intent Scheme for printing in PWA mode.
-  - Logic: Check `isStandalone`. If true -> Generate Base64 PDF -> `window.location.href = 'rawbt:base64,...'`.
-  - This bypasses browser dialogs and works reliably on mobile POS setups.
+### 2. Timezone Handling
+- **Strict Rule:** Always convert UTC dates from Database to **WIB (UTC+7)** manually in the Controller (`date + 7 hours`) before sending to Frontend for Charts/Reports to ensure "Today" data looks correct to the user.
 
 ## Debugging Lessons
-- **"Nuclear Mode":** When data is missing but creation is success, assume "Silent Rollback" or "Over-aggressive Filtering".
-- **Log Level:** Always check the Server Logs for `prisma:error` even if the API returns 201/200. Silent DB errors are common in Prisma transactions.
-
-## Removed Credentials
-- Google Service Account Credentials have been removed for security.
-
-## Communication Language
-- **ALWAYS** communicate in Indonesian.
+- **Reports:** If Chart and Table don't match, check the Timezone conversion logic in the Controller. Chart usually needs explicit grouping by Hour for single-day views.

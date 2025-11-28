@@ -80,7 +80,53 @@ export default function ProductManagementPage() {
   const { showConfirmation } = useConfirmationStore();
   const { user } = useAuthStore();
 
-  // ... (Load products and categories logic remains same)
+  const loadProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/products');
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast.error('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const response = await api.get('/categories');
+      setCategories(response.data);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      toast.error('Failed to load categories');
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProducts();
+    loadCategories();
+  }, [loadProducts, loadCategories]);
+
+  // Filter products with safe access to prevent crashes
+  const filteredProducts = products.filter((product) => {
+    const searchLower = searchTerm.toLowerCase();
+    // Safe access: check product.name exists, check category name exists via relation or lookup
+    const productName = (product.name || '').toLowerCase();
+    const categoryName = (
+      product.categories?.name || 
+      categories.find(c => c.id === product.categoryId)?.name || 
+      ''
+    ).toLowerCase();
+
+    return productName.includes(searchLower) || categoryName.includes(searchLower);
+  });
+
+  // Pagination logic
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   // Handle form changes
   const handleFormChange = (field: string, value: string) => {
