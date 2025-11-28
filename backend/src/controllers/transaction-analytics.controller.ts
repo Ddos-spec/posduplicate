@@ -12,7 +12,6 @@ export const getTransactionAnalytics = async (req: Request, res: Response, _next
       outlet_id,
       date_from,
       date_to,
-      category,
       limit = '100'
     } = req.query;
 
@@ -72,42 +71,33 @@ export const getTransactionAnalytics = async (req: Request, res: Response, _next
       }
     });
 
-    // Transform to analytics format
+    // Transform to analytics format (Grouped by Transaction)
     const analyticsData: any[] = [];
 
     for (const tx of transactions) {
-      for (const item of tx.transaction_items) {
-        // Filter by category if specified
-        if (category && item.items?.categories?.name !== category) {
-          continue;
-        }
+      // Summary of items in this transaction
+      const itemsList = tx.transaction_items.map(item => {
+         const variantInfo = item.variants?.name ? ` (${item.variants.name})` : '';
+         return `${item.item_name}${variantInfo} x${Number(item.quantity)}`;
+      }).join(', ');
 
-        const netSales = Number(item.subtotal) - Number(item.discount_amount || 0);
+      // Total Quantity
+      const totalQty = tx.transaction_items.reduce((sum, item) => sum + Number(item.quantity), 0);
 
-        analyticsData.push({
-          id: item.id,
-          outlet: tx.outlets?.name || 'Unknown',
-          receiptNumber: tx.transaction_number,
-          date: tx.createdAt?.toISOString().split('T')[0] || '',
-          time: tx.createdAt?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) || '',
-          category: item.items?.categories?.name || 'Uncategorized',
-          brand: 'Unbranded',
-          itemName: item.item_name,
-          variant: item.variants?.name || null,
-          sku: item.items?.sku || null,
-          quantity: Number(item.quantity),
-          grossSales: Number(item.subtotal),
-          discounts: Number(item.discount_amount || 0),
-          refunds: 0,
-          netSales: netSales,
-          tax: Number(tx.taxAmount || 0),
-          gratuity: Number(tx.service_charge || 0),
-          salesType: tx.order_type,
-          paymentMethod: tx.payments?.[0]?.method || 'cash',
-          servedBy: tx.users?.name || 'Unknown',
-          collectedBy: tx.users?.name || 'Unknown'
-        });
-      }
+      analyticsData.push({
+        id: tx.id,
+        outlet: tx.outlets?.name || 'Unknown',
+        receiptNumber: tx.transaction_number,
+        date: tx.createdAt?.toISOString().split('T')[0] || '',
+        time: tx.createdAt?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) || '',
+        itemsSummary: itemsList, // New field for item summary
+        quantity: totalQty,
+        amount: Number(tx.total || 0), // Total Transaction Amount
+        salesType: tx.order_type,
+        paymentMethod: tx.payments?.[0]?.method || 'Unknown',
+        servedBy: tx.users?.name || 'Unknown',
+        collectedBy: tx.users?.name || 'Unknown'
+      });
     }
 
     res.json({

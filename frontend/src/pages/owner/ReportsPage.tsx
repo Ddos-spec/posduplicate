@@ -650,15 +650,14 @@ export default function ReportsPage() {
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date/Time</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Receipt #</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Qty</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net Sales</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items Summary</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cashier</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {paginatedTransactions.map((tx) => (
+                      {paginatedTransactions.map((tx: any) => (
                         <tr key={tx.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-xs">
@@ -670,24 +669,23 @@ export default function ReportsPage() {
                             <span className="text-xs font-mono text-gray-700">{tx.receiptNumber}</span>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="text-xs">
-                              <div className="font-medium text-gray-900">{tx.itemName}</div>
-                              {tx.variant && <div className="text-gray-500">{tx.variant}</div>}
+                            <div className="text-xs text-gray-600 max-w-xs truncate" title={tx.itemsSummary}>
+                              {tx.itemsSummary}
                             </div>
                           </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            <span className="text-xs font-bold text-green-600">{formatCurrency(tx.amount)}</span>
+                          </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                              {tx.category}
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                tx.paymentMethod === 'qris' ? 'bg-blue-100 text-blue-800' : 
+                                tx.paymentMethod === 'cash' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {tx.paymentMethod.toUpperCase()}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center whitespace-nowrap">
-                            <span className="text-xs font-semibold text-gray-900">{tx.quantity}</span>
-                          </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap">
-                            <span className="text-xs font-bold text-green-600">{formatCurrency(tx.netSales)}</span>
-                          </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="text-xs text-gray-700">{tx.salesType}</span>
+                            <span className="text-xs text-gray-700">{tx.servedBy}</span>
                           </td>
                         </tr>
                       ))}
