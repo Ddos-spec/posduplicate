@@ -16,6 +16,11 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
       where.outletId = parseInt(outlet_id as string);
     }
 
+    // Exclude Super Admin users (roleId = 1) from tenant/owner views
+    where.roleId = {
+      not: 1
+    };
+
     const users = await prisma.user.findMany({
       where,
       select: {
