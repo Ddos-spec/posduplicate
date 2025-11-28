@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -80,7 +78,7 @@ export default function SystemAnalyticsPage() {
   };
 
   const formatNumber = (num: number) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}jt`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
   };
@@ -197,14 +195,14 @@ export default function SystemAnalyticsPage() {
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold mb-4">System Revenue</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={revenueData}>
+            <LineChart data={revenueData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip formatter={(value) => formatCurrency(Number(value))} />
               <Legend />
-              <Bar dataKey="revenue" fill="#10b981" />
-            </BarChart>
+              <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} />
+            </LineChart>
           </ResponsiveContainer>
         </div>
       </div>

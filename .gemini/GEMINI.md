@@ -7,41 +7,47 @@
 
 ## 🚀 Development Progress Status (Updated: 29 Nov 2025)
 
-### ✅ Completed & Verified (Tuntas)
-1.  **Report & Dashboard Logic Fixes:**
-    - **Net Sales Trend:** Chart now correctly groups by **Hour (WIB/UTC+7)** when viewing "Today".
-    - **Detail Transaksi Table:** Refactored to show **Per-Transaction (Receipt)** rows instead of per-item. Columns synced with chart logic (WIB Timezone).
-    - **Sync:** Chart and Table data are now consistent in logic and timezone.
-2.  **Ingredient Management (Bahan Baku):**
-    - **Bulk Import:** Created `bahan.sql` for mass inserting ingredients.
-    - **UX Improvement:** Added support for **Fraction Inputs** (e.g., "1/2", "1/4") in Stock/MinStock fields. System auto-converts to decimals.
-    - **Pagination:** Removed pagination to show all ingredients in one scrollable list.
-3.  **Product Form Simplification:**
-    - Refactored Product Form to use a **Single Input** for "Harga Platform Online".
-    - Auto-synced to GoFood, GrabFood, and ShopeeFood prices on save.
-4.  **Product Page Crash Fix:**
-    - **Issue:** Infinite loading/crash on "Produk" tab due to unsafe property access AND incorrect data structure handling.
-    - **Fix 1:** Implemented safe access (`?.`) for filtering.
-    - **Fix 2:** Corrected API response handling. `setProducts(response.data)` was setting an object, causing `.filter` to crash. Changed to `setProducts(response.data.data)` to correctly extract the array.
+### 🌟 Global Status
+- **Owner Module:** ✅ **100% Completed & Functional** (Products, Ingredients, Reports, Integration, Settings).
+- **Cashier Module:** ✅ **100% Completed & Functional** (POS, Transactions, Shift Management, Printing).
+- **Current Focus:** 🚧 **Admin Module Development**.
 
-### 🔴 Known Issues / Immediate Next Steps (CRITICAL)
-*(None at the moment)*
+### ✅ Recently Completed & Verified
+1.  **Product Page Crash Fix:**
+    - Fixed infinite loading/crash on "Produk" tab caused by incorrect API response handling (`response.data` vs `response.data.data`) and unsafe property access.
+2.  **Report & Dashboard Logic:**
+    - **Net Sales Trend:** Correctly groups by **Hour (WIB/UTC+7)** for "Today" view.
+    - **Detail Transaksi:** Refactored to show **Per-Transaction (Receipt)** rows.
+    - **Sync:** Chart and Table data are consistent in logic and timezone.
+3.  **Ingredient Management:**
+    - Bulk Import (`bahan.sql`), Fraction Inputs ("1/2"), and Pagination removal for better UX.
+4.  **Product Form:**
+    - Simplified "Harga Platform Online" input (auto-sync to all platforms).
 
-### 🛠 Previous Accomplishments
-1.  **PWA Transaction Fix:** Service Worker `NetworkOnly` for API, Dynamic API URL.
-2.  **Printing:** RawBT integration for Android PWA.
-3.  **Integrations:** DB Schema synced, basic UI for GoFood/Grab/Shopee status.
+### 🎯 Next Steps: Admin Module
+The focus has shifted entirely to the **Admin Dashboard/Panel**.
+1.  **Admin Authentication:** Verify Login/Logout for Admin role.
+2.  **Dashboard Overview:** System-wide analytics (Total Tenants, Revenue, etc.).
+3.  **User/Tenant Management:** Create, Edit, Suspend Tenants/Owners.
+4.  **Billing & Subscriptions:** Manage plan expiry, renewals, and payment status.
+5.  **System Settings:** Global configuration, API Key management (if applicable).
 
 ---
 
 ## Critical Success Factors (Do Not Remove/Break)
 
-### 1. Transaction Module
+### 1. Transaction Module (Cashier)
 - **Create Transaction:** Do not access `recipes` table directly (schema mismatch). Keep deduction logic disabled for now.
 - **History:** Filter by `cashier_id` for cashiers. Always add +1 day buffer for date filters.
+- **Printing:** Use RawBT for Android PWA (`rawbt:` intent).
 
-### 2. Timezone Handling
+### 2. Timezone Handling (Global)
 - **Strict Rule:** Always convert UTC dates from Database to **WIB (UTC+7)** manually in the Controller (`date + 7 hours`) before sending to Frontend for Charts/Reports to ensure "Today" data looks correct to the user.
 
+### 3. API Response Handling (Frontend)
+- **Strict Rule:** Always check if the API response is wrapped. e.g., `response.data.data` vs `response.data`.
+- **Safety:** Use optional chaining (`?.`) and fallback values (`|| []` or `|| ''`) when accessing properties of potentially undefined objects to prevent White Screen of Death (WSOD).
+
 ## Debugging Lessons
-- **Reports:** If Chart and Table don't match, check the Timezone conversion logic in the Controller. Chart usually needs explicit grouping by Hour for single-day views.
+- **Reports:** If Chart and Table don't match, check the Timezone conversion logic in the Controller.
+- **White Screen (Crash):** Check console for `filter is not a function` or `cannot read property of undefined`. Usually indicates incorrect API data structure or unsafe property access.
