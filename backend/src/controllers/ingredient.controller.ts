@@ -24,7 +24,7 @@ export const getIngredients = async (req: Request, res: Response, _next: NextFun
       }
     }
 
-    // If specific outlet_id is requested, use that instead
+    // If specific outlet_id is requested, override tenant filter
     if (outlet_id) {
       where.outlet_id = parseInt(outlet_id as string);
     }
@@ -36,7 +36,8 @@ export const getIngredients = async (req: Request, res: Response, _next: NextFun
     const ingredients = await prisma.ingredients.findMany({
       where,
       include: {
-        outlets: { select: { id: true, name: true } }
+        outlets: { select: { id: true, name: true } },
+        categories: { select: { id: true, name: true } }
       },
       orderBy: { name: 'asc' }
     });
