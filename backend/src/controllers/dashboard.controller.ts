@@ -297,7 +297,9 @@ export const getRecentTransactions = async (req: Request, res: Response, _next: 
     const { tenantId } = req;
     const { limit = 10 } = req.query;
 
-    const where: any = {};
+    const where: any = {
+      status: 'completed' // Only show completed transactions to match Sales Trend and Summary
+    };
     if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
 
     const transactions = await prisma.transaction.findMany({
