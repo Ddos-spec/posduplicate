@@ -7,16 +7,37 @@ export const getIngredients = async (req: Request, res: Response, _next: NextFun
     const { outlet_id, category_id } = req.query;
     const where: any = { is_active: true };
 
+    // Filter by tenant - get all outlets for this tenant
     if (req.tenantId) {
-      where.outlets = { tenantId: req.tenantId };
+      const tenantOutlets = await prisma.outlet.findMany({
+        where: { tenantId: req.tenantId },
+        select: { id: true }
+      });
+
+      const outletIds = tenantOutlets.map(outlet => outlet.id);
+
+      if (outletIds.length > 0) {
+        where.outlet_id = { in: outletIds };
+      } else {
+        // No outlets for this tenant, return empty
+        return res.json({ success: true, data: [], count: 0 });
+      }
     }
-    if (outlet_id) where.outlet_id = parseInt(outlet_id as string);
-    if (category_id) where.category_id = parseInt(category_id as string);
+
+    // If specific outlet_id is requested, override tenant filter
+    if (outlet_id) {
+      where.outlet_id = parseInt(outlet_id as string);
+    }
+
+    if (category_id) {
+      where.category_id = parseInt(category_id as string);
+    }
 
     const ingredients = await prisma.ingredients.findMany({
       where,
       include: {
-        outlets: { select: { id: true, name: true } }
+        outlets: { select: { id: true, name: true } },
+        categories: { select: { id: true, name: true } }
       },
       orderBy: { name: 'asc' }
     });

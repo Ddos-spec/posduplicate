@@ -51,12 +51,30 @@ export default function OwnerDashboardPage() {
       try {
         setLoading(true);
 
-        const days = dateRange === 'today' ? 1 : dateRange === 'week' ? 7 : 30;
         const outletId = selectedOutlet === 'all' ? undefined : Number(selectedOutlet);
 
+        // Calculate date range
+        const endDate = new Date();
+        const startDate = new Date();
+        if (dateRange === 'today') {
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+        } else if (dateRange === 'week') {
+          startDate.setDate(startDate.getDate() - 6);  // Last 7 days including today
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+        } else {  // month
+          startDate.setDate(startDate.getDate() - 29);  // Last 30 days including today
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+        }
+
+        const startDateStr = startDate.toISOString().split('T')[0];
+        const endDateStr = endDate.toISOString().split('T')[0];
+
         const [summaryData, trendData, productsData, categoryData, transactionsData] = await Promise.all([
-          dashboardService.getSummary({ outletId }),
-          dashboardService.getSalesTrend({ days, outletId }),
+          dashboardService.getSummary({ outletId, startDate: startDateStr, endDate: endDateStr }),
+          dashboardService.getSalesTrend({ outletId, startDate: startDateStr, endDate: endDateStr }),
           dashboardService.getTopProducts({ limit: 5 }),
           dashboardService.getSalesByCategory(),
           dashboardService.getRecentTransactions({ limit: 5 })
@@ -259,12 +277,12 @@ export default function OwnerDashboardPage() {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Top 5 Products</h3>
           {topProducts.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topProducts.map(p => ({ name: p.name, price: Number(p.price) }))} layout="vertical">
+              <BarChart data={topProducts.map(p => ({ name: p.name, revenue: Number(p.revenue) }))} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" tickFormatter={(value) => `Rp ${formatNumber(value)}`} />
                 <YAxis type="category" dataKey="name" width={100} />
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Bar dataKey="price" fill="#10b981" />
+                <Bar dataKey="revenue" fill="#10b981" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -278,7 +296,12 @@ export default function OwnerDashboardPage() {
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800">Recent Transactions</h3>
-            <button className="text-sm text-blue-600 hover:text-blue-700">View All</button>
+            <button
+              onClick={() => navigate('/owner/reports?tab=transactions')}
+              className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              View All
+            </button>
           </div>
           <div className="space-y-3">
             {recentTransactions.length > 0 ? (

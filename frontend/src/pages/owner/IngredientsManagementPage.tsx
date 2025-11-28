@@ -46,18 +46,17 @@ export default function IngredientsManagementPage() {
   const loadIngredients = useCallback(async () => {
     try {
       setLoading(true);
-      // Get user's outlet ID from localStorage
+      // Get user's outlet ID from localStorage (optional)
       const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
       const outletId = user?.outletId || user?.outlet?.id;
 
-      if (!outletId) {
-        toast.error('Outlet information missing');
-        return;
+      // If outletId exists, filter by it; otherwise get all ingredients for tenant
+      const params: any = {};
+      if (outletId) {
+        params.outlet_id = outletId;
       }
 
-      const response = await api.get('/ingredients', {
-        params: { outlet_id: outletId }
-      });
+      const response = await api.get('/ingredients', { params });
       setIngredients(response.data.data);
     } catch (error) {
       console.error('Failed to load ingredients:', error);
