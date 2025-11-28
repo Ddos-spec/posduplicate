@@ -78,12 +78,6 @@ export default function IngredientManager() {
     ing.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Paginate
-  const paginatedIngredients = filteredIngredients.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   const handleFormChange = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
@@ -233,12 +227,12 @@ export default function IngredientManager() {
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center">Loading...</td>
                 </tr>
-              ) : paginatedIngredients.length === 0 ? (
+              ) : filteredIngredients.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500">Tidak ada bahan baku ditemukan</td>
                 </tr>
               ) : (
-                paginatedIngredients.map((ing) => (
+                filteredIngredients.map((ing) => (
                   <tr key={ing.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{ing.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
