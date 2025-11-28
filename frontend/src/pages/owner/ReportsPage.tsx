@@ -591,8 +591,9 @@ export default function ReportsPage() {
                     dataKey="date"
                     stroke="#6b7280"
                     tick={{ fill: '#6b7280', fontSize: 12 }}
-                    tickFormatter={(date) => {
-                      const d = new Date(date);
+                    tickFormatter={(value) => {
+                      if (value.includes(':')) return value; // Time format HH:00
+                      const d = new Date(value);
                       return `${d.getDate()}/${d.getMonth() + 1}`;
                     }}
                   />
@@ -612,7 +613,10 @@ export default function ReportsPage() {
                       borderRadius: '8px',
                       padding: '12px'
                     }}
-                    labelFormatter={(label) => formatDate(label)}
+                    labelFormatter={(label) => {
+                      if (label.includes(':')) return `Time: ${label}`;
+                      return formatDate(label);
+                    }}
                     formatter={(value: any) => [formatCurrency(value), 'Net Sales']}
                   />
                   {renderColorfulLine()}
