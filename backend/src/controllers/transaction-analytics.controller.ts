@@ -84,12 +84,15 @@ export const getTransactionAnalytics = async (req: Request, res: Response, _next
       // Total Quantity
       const totalQty = tx.transaction_items.reduce((sum, item) => sum + Number(item.quantity), 0);
 
+      // Convert to WIB (UTC+7)
+      const dateObj = tx.createdAt ? new Date(tx.createdAt.getTime() + (7 * 60 * 60 * 1000)) : new Date();
+
       analyticsData.push({
         id: tx.id,
         outlet: tx.outlets?.name || 'Unknown',
         receiptNumber: tx.transaction_number,
-        date: tx.createdAt?.toISOString().split('T')[0] || '',
-        time: tx.createdAt?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) || '',
+        date: dateObj.toISOString().split('T')[0], // WIB Date
+        time: dateObj.toISOString().split('T')[1].substring(0, 5), // WIB Time (HH:mm)
         itemsSummary: itemsList, // New field for item summary
         quantity: totalQty,
         amount: Number(tx.total || 0), // Total Transaction Amount
