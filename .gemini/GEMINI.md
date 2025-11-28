@@ -20,8 +20,9 @@
     - Refactored Product Form to use a **Single Input** for "Harga Platform Online".
     - Auto-synced to GoFood, GrabFood, and ShopeeFood prices on save.
 4.  **Product Page Crash Fix:**
-    - **Issue:** Infinite loading/crash on "Produk" tab due to unsafe property access.
-    - **Fix:** Implemented safe access (`?.`) and fallback strings for product name/category filtering. Restored missing data loading logic.
+    - **Issue:** Infinite loading/crash on "Produk" tab due to unsafe property access AND incorrect data structure handling.
+    - **Fix 1:** Implemented safe access (`?.`) for filtering.
+    - **Fix 2:** Corrected API response handling. `setProducts(response.data)` was setting an object, causing `.filter` to crash. Changed to `setProducts(response.data.data)` to correctly extract the array.
 
 ### 🔴 Known Issues / Immediate Next Steps (CRITICAL)
 *(None at the moment)*

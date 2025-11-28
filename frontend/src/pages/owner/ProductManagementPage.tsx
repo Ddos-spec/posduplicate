@@ -84,10 +84,13 @@ export default function ProductManagementPage() {
     try {
       setLoading(true);
       const response = await api.get('/products');
-      setProducts(response.data);
+      // API returns wrapped object { success: true, data: [...] }
+      // Ensure we are setting the array, defaulting to empty array if undefined
+      setProducts(Array.isArray(response.data.data) ? response.data.data : []);
     } catch (error) {
       console.error('Error loading products:', error);
       toast.error('Failed to load products');
+      setProducts([]); // Fallback to empty array on error
     } finally {
       setLoading(false);
     }
@@ -96,10 +99,12 @@ export default function ProductManagementPage() {
   const loadCategories = useCallback(async () => {
     try {
       const response = await api.get('/categories');
-      setCategories(response.data);
+      // API returns wrapped object { success: true, data: [...] }
+      setCategories(Array.isArray(response.data.data) ? response.data.data : []);
     } catch (error) {
       console.error('Error loading categories:', error);
       toast.error('Failed to load categories');
+      setCategories([]);
     }
   }, []);
 
