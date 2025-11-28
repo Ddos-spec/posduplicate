@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
-import { generateApiKey, hashApiKey } from '../utils/apiKeyGenerator';
+import { generateApiKey } from '../utils/apiKeyGenerator';
 
 /**
  * Get ALL API keys for ALL tenants (Admin only)

@@ -6,13 +6,12 @@ import prisma from '../utils/prisma';
  */
 export const getIntegrations = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const tenantId = req.tenantId;
-
     if (!tenantId) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: { code: 'NO_TENANT', message: 'No tenant ID found' }
       });
+      return;
     }
 
     // Default integration types
@@ -56,10 +55,11 @@ export const updateIntegration = async (req: Request, res: Response, next: NextF
     const { status, configuration, credentials, isActive } = req.body;
 
     if (!tenantId) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: { code: 'NO_TENANT', message: 'No tenant ID found' }
       });
+      return;
     }
 
     // Upsert (Update if exists, Create if not)
