@@ -5,6 +5,40 @@
 - Project Type: POS (Point of Sales) System
 - Tech Stack: React (Frontend), Node.js/Express (Backend), Prisma (ORM), PostgreSQL (Database).
 
+## 🚀 Development Progress Status (Updated: 28 Nov 2025)
+
+### ✅ Completed & Verified (Tuntas)
+1.  **PWA Transaction Fix:**
+    - Masalah transaksi gagal di HP/Android teratasi.
+    - Solusi: Service Worker `NetworkOnly` untuk API, Dynamic API URL, CORS khusus VPS.
+2.  **Pencetakan Struk (Receipt):**
+    - Metode: HTML/CSS Print (bukan jsPDF).
+    - Fitur: Support RawBT (Android PWA), Layout Bersih (tanpa header browser), Teks **BOLD** agar terbaca jelas.
+    - Footer: Logika kondisional (Pesan default vs Custom Footer).
+3.  **Persiapan Deployment VPS:**
+    - Upload Path: Menggunakan `process.cwd()` agar logo tidak hilang saat rebuild.
+    - Debugging: Endpoint `/api/debug/check-uploads` untuk cek volume mounting.
+
+### 🛠 Implemented (Siap Tes User)
+1.  **Modul Integrasi (Simulasi):**
+    - Menu `Owner > Integrasi`.
+    - Kartu GoFood/Grab/Shopee/QRIS dengan status "Terhubung/Belum".
+    - Form input Merchant ID / Store URL (Data disimpan di DB).
+2.  **Kasir Pintar (Smart Cashier UI):**
+    - **Switch Harga:** Tombol "GoFood/Grab" muncul di kasir jika integrasi aktif.
+    - **Markup Otomatis:** Harga produk di keranjang otomatis berubah sesuai platform (Mark-up).
+    - **QRIS on Screen:** Gambar QRIS muncul otomatis di layar saat metode bayar = QRIS.
+3.  **Otomasi Laporan (API untuk n8n):**
+    - Endpoint Admin: Generate API Key (Plain text storage).
+    - Endpoint Laporan: `/api/owner/reports/sales` & `/stock` (JSON Output).
+    - Tujuan: Ditarik oleh n8n -> Masuk Google Sheet otomatis.
+
+### 📝 Planned / Next Steps
+- Verifikasi User untuk alur Integrasi GoFood (Cek apakah harga berubah sesuai).
+- Setup n8n untuk menarik data via API Key yang baru dibuat.
+
+---
+
 ## Critical Success Factors (Do Not Remove/Break)
 
 ### 1. Transaction Module

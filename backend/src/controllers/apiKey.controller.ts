@@ -127,7 +127,9 @@ export const createApiKey = async (req: Request, res: Response, next: NextFuncti
 
     // Generate new API key
     const apiKey = generateApiKey();
-    const hashedKey = hashApiKey(apiKey);
+    // Store plain text as requested for easier integration/lookup by middleware
+    // Security note: Ideally this should be hashed, but current middleware uses findUnique lookup
+    const hashedKey = apiKey; 
 
     // Create API key record
     const apiKeyRecord = await prisma.apiKey.create({

@@ -30,12 +30,12 @@ router.use(apiKeyAuth);
 
 // === SIMPLE & EASY API ENDPOINTS ===
 
-// 1. Laporan Transaksi (Transaction Report)
-// Endpoint: GET /api/owner/transactions
-router.get('/transactions', getSalesReport);
+// 1. Laporan Penjualan (Sales Report)
+// Endpoint: GET /api/owner/reports/sales
+router.get('/reports/sales', getSalesReport);
 
 // 2. Laporan Stok (Stock Report)
-// Endpoint: GET /api/owner/stock
-router.get('/stock', getStockReport);
+// Endpoint: GET /api/owner/reports/stock
+router.get('/reports/stock', getStockReport);
 
 export default router;

@@ -37,18 +37,38 @@ export default function ApiKeyManagementPage() {
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [keysRes, tenantsRes] = await Promise.all([
-        apiKeyService.getAllKeys(),
-        tenantService.getAllTenants()
-      ]);
-      
-      if (keysRes.data) setApiKeys(keysRes.data);
-      if (tenantsRes.data) setTenants(tenantsRes.data);
+      // Load Keys
+      try {
+        const keysRes = await apiKeyService.getAllKeys();
+        if (keysRes && keysRes.data) {
+          setApiKeys(keysRes.data);
+        } else if (Array.isArray(keysRes)) {
+          setApiKeys(keysRes);
+        }
+      } catch (err) {
+        console.error('Error loading API keys:', err);
+        // Don't block tenants loading
+      }
+
+      // Load Tenants
+      try {
+        const tenantsRes = await tenantService.getAllTenants();
+        console.log('Tenants response:', tenantsRes); // Debug log for user/dev
+        if (tenantsRes && tenantsRes.data) {
+          setTenants(tenantsRes.data);
+        } else if (Array.isArray(tenantsRes)) {
+          setTenants(tenantsRes);
+        }
+      } catch (err) {
+        console.error('Error loading tenants:', err);
+        toast.error('Failed to load tenants list');
+      }
+
     } catch (error) {
       console.error('Failed to load data:', error);
-      toast.error('Failed to load API keys');
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }

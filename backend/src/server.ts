@@ -39,6 +39,7 @@ import printerSettingsRoutes from './routes/printerSettings.routes';
 import apiKeyRoutes from './routes/apiKey.routes';
 import inventoryModuleRoutes from './routes/inventory-module.routes';
 import salesAnalyticsRoutes from './routes/sales-analytics.routes';
+import integrationRoutes from './routes/integration.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -154,6 +155,7 @@ app.use('/api/printer-settings', printerSettingsRoutes);
 app.use('/api/api-keys', apiKeyRoutes);
 app.use('/api/inventory-module', inventoryModuleRoutes);
 app.use('/api/sales-analytics', salesAnalyticsRoutes);
+app.use('/api/integrations', integrationRoutes);
 
 // DEBUG: View Error Logs directly from browser
 // Usage: /api/debug/logs?key=admin123
