@@ -111,8 +111,32 @@ export default function CashierPage() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showMobileCart, setShowMobileCart] = useState(false);
 
+  // Integrations state
+  const [qrisImage, setQrisImage] = useState<string | null>(null);
+  const [activeIntegrations, setActiveIntegrations] = useState<string[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+
   const { items, addItem, updateQuantity, removeItem, clearCart, getTotal, getSubtotal } = useCartStore();
   const { showConfirmation } = useConfirmationStore();
+
+  const loadIntegrations = async () => {
+    try {
+      const { data } = await api.get('/integrations');
+      const active = data.data
+        .filter((i: any) => i.status === 'active')
+        .map((i: any) => i.integrationType);
+      
+      setActiveIntegrations(active);
+
+      if (active.includes('qris')) {
+        // In a real scenario, this would be qris.configuration.imageUrl
+        // For now, we use a placeholder or the static asset if configured
+        setQrisImage('/assets/integrations/qris.svg'); 
+      }
+    } catch (error) {
+      console.error('Failed to load integrations:', error);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -163,6 +187,7 @@ export default function CashierPage() {
     loadProducts();
     loadCategories();
     loadSettings();
+    loadIntegrations();
   }, [loadProducts, loadCategories]);
 
   const handleProductClick = (product: Product) => {
@@ -603,6 +628,62 @@ export default function CashierPage() {
                 onKeyUp={(e) => e.key === 'Enter' && loadProducts()}
               />
             </div>
+
+            {/* Platform Switcher */}
+            {(activeIntegrations.includes('gofood') || activeIntegrations.includes('grabfood') || activeIntegrations.includes('shopeefood')) && (
+              <div className="flex gap-2 items-center overflow-x-auto pb-1 no-scrollbar">
+                <button
+                  onClick={() => setSelectedPlatform(null)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition border whitespace-nowrap ${
+                    selectedPlatform === null 
+                      ? 'bg-gray-800 text-white border-gray-800' 
+                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  🏠 Dine In
+                </button>
+                
+                {activeIntegrations.includes('gofood') && (
+                  <button
+                    onClick={() => setSelectedPlatform('gofood')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition border whitespace-nowrap ${
+                      selectedPlatform === 'gofood' 
+                        ? 'bg-green-600 text-white border-green-600' 
+                        : 'bg-white text-green-600 border-green-200 hover:bg-green-50'
+                    }`}
+                  >
+                    GoFood
+                  </button>
+                )}
+
+                {activeIntegrations.includes('grabfood') && (
+                  <button
+                    onClick={() => setSelectedPlatform('grabfood')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition border whitespace-nowrap ${
+                      selectedPlatform === 'grabfood' 
+                        ? 'bg-emerald-600 text-white border-emerald-600' 
+                        : 'bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-50'
+                    }`}
+                  >
+                    GrabFood
+                  </button>
+                )}
+
+                {activeIntegrations.includes('shopeefood') && (
+                  <button
+                    onClick={() => setSelectedPlatform('shopeefood')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition border whitespace-nowrap ${
+                      selectedPlatform === 'shopeefood' 
+                        ? 'bg-orange-500 text-white border-orange-500' 
+                        : 'bg-white text-orange-500 border-orange-200 hover:bg-orange-50'
+                    }`}
+                  >
+                    ShopeeFood
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Desktop Buttons */}
             <div className="hidden md:flex gap-2">
               <button
@@ -724,31 +805,55 @@ export default function CashierPage() {
         {/* Products Grid */}
         <div className="flex-1 overflow-y-auto p-2 md:p-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
-            {products.map((product) => (
+            {products.map((product) => {
+              // Calculate Dynamic Price based on Selected Platform
+              let displayPrice = product.price;
+              let isMarkup = false;
+
+              if (selectedPlatform === 'gofood' && product.priceGofood) {
+                displayPrice = product.priceGofood;
+                isMarkup = true;
+              } else if (selectedPlatform === 'grabfood' && product.priceGrabfood) {
+                displayPrice = product.priceGrabfood;
+                isMarkup = true;
+              } else if (selectedPlatform === 'shopeefood' && product.priceShopeefood) {
+                displayPrice = product.priceShopeefood;
+                isMarkup = true;
+              }
+
+              // Create a proxy product with the updated price for the cart/modal
+              const platformProduct = { ...product, price: displayPrice };
+
+              return (
               <div
                 key={product.id}
-                onClick={() => handleProductClick(product)}
+                onClick={() => handleProductClick(platformProduct)}
                 className={`bg-white rounded-lg p-4 shadow hover:shadow-lg transition relative min-h-[180px] touch-manipulation ${
                   !managementMode ? 'cursor-pointer active:scale-95' : ''
-                }`}
+                } ${isMarkup ? 'ring-2 ring-blue-100' : ''}`}
               >
                 {managementMode && (
                   <div className="absolute top-2 right-2 flex gap-1">
                     <button
-                      onClick={() => handleOpenProductForm(product)}
+                      onClick={(e) => { e.stopPropagation(); handleOpenProductForm(product); }}
                       className="bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
                     >
                       <Edit className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => handleDeleteProduct(product.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteProduct(product.id); }}
                       className="bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 )}
-                <div className="aspect-square bg-gray-200 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                <div className="aspect-square bg-gray-200 rounded-lg mb-3 flex items-center justify-center overflow-hidden relative">
+                  {isMarkup && (
+                    <span className="absolute top-1 right-1 bg-yellow-100 text-yellow-800 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+                      {selectedPlatform === 'gofood' ? 'GO' : selectedPlatform === 'grabfood' ? 'GRAB' : 'SHOPEE'}
+                    </span>
+                  )}
                   {product.image ? (
                     <img 
                       src={product.image} 
@@ -764,12 +869,15 @@ export default function CashierPage() {
                   )}
                 </div>
                 <h3 className="font-semibold text-sm mb-1 truncate">{product.name}</h3>
-                <p className="text-blue-600 font-bold">{formatCurrency(product.price)}</p>
+                <p className={`font-bold ${isMarkup ? 'text-orange-600' : 'text-blue-600'}`}>
+                  {formatCurrency(displayPrice)}
+                </p>
                 <span className="text-xs text-gray-500">
                   {product.categories?.name || product.category?.name || categories.find(c => c.id === (product as any).categoryId)?.name || ''}
                 </span>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       </div>
@@ -1068,6 +1176,37 @@ export default function CashierPage() {
                     ))}
                   </div>
                 </div>
+
+                {paymentMethod === 'qris' && (
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg text-center">
+                    {qrisImage ? (
+                      <div className="flex flex-col items-center">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Scan QRIS</p>
+                        <div className="bg-white p-2 rounded-lg shadow-sm border">
+                          <img 
+                            src={qrisImage} 
+                            alt="QRIS Code" 
+                            className="w-48 h-48 object-contain" 
+                            onError={(e) => {
+                              // Fallback if image fails to load
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              setQrisImage(null); 
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">Tunjukkan ke pelanggan</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center text-gray-500">
+                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-2">
+                          <CreditCard className="w-6 h-6" />
+                        </div>
+                        <p className="text-sm font-medium">QRIS Digital Belum Aktif</p>
+                        <p className="text-xs mt-1">Silakan gunakan QRIS Fisik / Stand Acrylic</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {paymentMethod === 'cash' && (
                   <div className="mb-4">

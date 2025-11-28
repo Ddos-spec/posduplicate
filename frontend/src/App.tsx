@@ -27,11 +27,7 @@ import ReportsPage from './pages/owner/ReportsPage';
 import SettingsPage from './pages/owner/SettingsPage';
 import ProductManagementPage from './pages/owner/ProductManagementPage';
 import TransactionDetailPage from './pages/owner/TransactionDetailPage';
-import IntegrationPage from './pages/owner/IntegrationPage';
-import QRISDetailPage from './pages/owner/QRISDetailPage';
-import GoFoodDetailPage from './pages/owner/GoFoodDetailPage';
-import GrabFoodDetailPage from './pages/owner/GrabFoodDetailPage';
-import ShopeeFoodDetailPage from './pages/owner/ShopeeFoodDetailPage';
+import IntegrationsPage from './pages/owner/IntegrationsPage';
 
 // SECURITY: Base protected route - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -139,11 +135,7 @@ function App() {
           <Route path="inventory" element={<ProductManagementPage />} />
           <Route path="products" element={<Navigate to="/owner/inventory" />} />
           <Route path="transactions/:id" element={<TransactionDetailPage />} />
-          <Route path="integration" element={<IntegrationPage />} />
-          <Route path="integration/qris" element={<QRISDetailPage />} />
-          <Route path="integration/gofood" element={<GoFoodDetailPage />} />
-          <Route path="integration/grabfood" element={<GrabFoodDetailPage />} />
-          <Route path="integration/shopeefood" element={<ShopeeFoodDetailPage />} />
+          <Route path="integrations" element={<IntegrationsPage />} />
 
           <Route index element={<Navigate to="/owner/dashboard" />} />
         </Route>
