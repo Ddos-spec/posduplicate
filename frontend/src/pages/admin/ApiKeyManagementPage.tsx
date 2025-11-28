@@ -86,9 +86,13 @@ export default function ApiKeyManagementPage() {
         name: keyName
       });
 
-      const newKey = response.data;
-      setGeneratedKey(newKey.api_key); // Show full key once
-      toast.success('API Key generated successfully');
+      const newKey = response;
+      setGeneratedKey(newKey.api_key || ''); // Show full key once
+      if (newKey.api_key) {
+        toast.success('API Key generated successfully');
+      } else {
+        toast.error('API Key generated but secret was missing in response');
+      }
       // Don't close modal yet, let them copy the key
     } catch (error) {
       console.error('Failed to generate key:', error);
