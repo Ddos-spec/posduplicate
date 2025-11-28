@@ -111,6 +111,25 @@ export default function IngredientManager() {
     setShowForm(true);
   };
 
+  // Helper to parse quantity (supports fractions like 1/2, 1/4)
+  const parseQuantity = (value: string): number => {
+    if (!value) return 0;
+    // Remove any non-numeric chars except / and .
+    const cleanValue = value.replace(/[^0-9./]/g, '');
+    
+    if (cleanValue.includes('/')) {
+      const parts = cleanValue.split('/');
+      if (parts.length === 2) {
+        const numerator = parseFloat(parts[0]);
+        const denominator = parseFloat(parts[1]);
+        if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
+          return numerator / denominator;
+        }
+      }
+    }
+    return parseFloat(cleanValue) || 0;
+  };
+
   const handleSave = async () => {
     if (!form.name || !form.unit) {
       toast.error('Please fill in required fields');
@@ -128,8 +147,8 @@ export default function IngredientManager() {
       const data = {
         name: form.name,
         unit: form.unit,
-        stock: parseFloat(form.stock || '0'),
-        minStock: parseFloat(form.minStock || '0'),
+        stock: parseQuantity(form.stock), // Use parseQuantity
+        minStock: parseQuantity(form.minStock), // Use parseQuantity
         cost: parseFloat(form.cost || '0'),
         outletId: outletId
       };
@@ -270,8 +289,8 @@ export default function IngredientManager() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Stok</label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="text" 
+                    placeholder="e.g. 10 or 1/2"
                     value={form.stock}
                     onChange={(e) => handleFormChange('stock', e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg"
@@ -300,8 +319,8 @@ export default function IngredientManager() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Min Stok</label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    placeholder="e.g. 5 or 1/4"
                     value={form.minStock}
                     onChange={(e) => handleFormChange('minStock', e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg"
