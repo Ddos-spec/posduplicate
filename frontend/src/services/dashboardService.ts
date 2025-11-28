@@ -49,7 +49,7 @@ export const dashboardService = {
     return response.data.data;
   },
 
-  async getSalesTrend(params?: { days?: number; outletId?: number }) {
+  async getSalesTrend(params?: { days?: number; outletId?: number; startDate?: string; endDate?: string }) {
     const response = await api.get<{ success: boolean; data: SalesTrendData[] }>('/dashboard/sales-trend', { params });
     return response.data.data;
   },

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
+import { useSearchParams } from 'react-router-dom';
+import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line 
+  LineChart, Line
 } from 'recharts';
 import { FileDown, Printer, Filter, Loader2, TrendingUp, Calendar, Download, ShoppingCart, DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -86,7 +87,9 @@ interface AnalyticsSummary {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'cashier' | 'transactions'>('sales');
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab') as 'sales' | 'products' | 'cashier' | 'transactions' | null;
+  const [activeTab, setActiveTab] = useState<'sales' | 'products' | 'cashier' | 'transactions'>(tabFromUrl || 'sales');
   const [loading, setLoading] = useState(true);
   
   // General Report State
@@ -139,13 +142,10 @@ export default function ReportsPage() {
   const fetchReportData = async (start = dateRange.startDate, end = dateRange.endDate) => {
     try {
       setLoading(true);
-      // Use params if provided, else state
-      // Note: dashboardService might not support custom dates for all endpoints yet, 
-      // but we'll pass them where possible or default to 7/30 days logic
-      
+
       const [summary, salesTrend, products, categories, cashiers] = await Promise.all([
-        dashboardService.getSummary(),
-        dashboardService.getSalesTrend({ days: 7 }), // Ideally pass dates
+        dashboardService.getSummary({ startDate: start, endDate: end }),
+        dashboardService.getSalesTrend({ startDate: start, endDate: end }),
         dashboardService.getTopProducts({ limit: 10 }),
         dashboardService.getSalesByCategory(),
         dashboardService.getCashierPerformance({ days: 30 })
@@ -414,13 +414,20 @@ export default function ReportsPage() {
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="font-semibold mb-4">Sales Trend (Last 7 Days)</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={salesData}>
+              <LineChart data={salesData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis tickFormatter={(v) => `Rp ${v / 1000000}jt`} />
                 <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                <Bar dataKey="sales" fill="#3b82f6" />
-              </BarChart>
+                <Line
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="#3b82f6"
+                  strokeWidth={3}
+                  dot={{ fill: '#3b82f6', r: 5 }}
+                  activeDot={{ r: 7 }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
