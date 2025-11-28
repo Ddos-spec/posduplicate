@@ -13,11 +13,12 @@ import {
   getTransactionAnalyticsTrend
 } from '../controllers/transaction-analytics.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { tenantMiddleware } from '../middlewares/tenant.middleware';
 
 const router = Router();
 
-// All routes require authentication
-router.use(authMiddleware);
+// All routes require authentication and tenant context
+router.use(authMiddleware, tenantMiddleware);
 
 /**
  * GET /api/dashboard/summary
