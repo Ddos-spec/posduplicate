@@ -248,17 +248,53 @@ export const getTransactionAnalyticsTrend = async (req: Request, res: Response, 
       orderBy: { createdAt: 'asc' }
     });
 
-    // Group by date
+    // Determine if "Today" or Single Day View
+    let isDailyView = false;
+    if (where.createdAt?.gte && where.createdAt?.lte) {
+       const start = where.createdAt.gte.getTime();
+       const end = where.createdAt.lte.getTime();
+       const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24));
+       isDailyView = diffDays <= 1;
+    } else if (!date_from && !date_to) {
+       // Default logic usually implies large range, but check your frontend default.
+       // Assuming explicit filters are passed for 'Today'.
+       // If no filters, we default to false (Daily Grouping).
+    }
+
+    // Group by date OR hour
     const groupedData: { [key: string]: number } = {};
 
     transactions.forEach(t => {
       if (!t.createdAt) return;
-      const dateKey = t.createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
-      if (!groupedData[dateKey]) {
-        groupedData[dateKey] = 0;
+      
+      // Convert to WIB (UTC+7)
+      const dateObj = new Date(t.createdAt.getTime() + (7 * 60 * 60 * 1000));
+
+      let key: string;
+      if (isDailyView) {
+          // Group by Hour: "HH:00"
+          const hour = dateObj.getUTCHours().toString().padStart(2, '0');
+          key = `${hour}:00`;
+      } else {
+          // Group by Date: "YYYY-MM-DD"
+          key = dateObj.toISOString().split('T')[0];
       }
-      groupedData[dateKey] += Number(t.total || 0);
+
+      if (!groupedData[key]) {
+        groupedData[key] = 0;
+      }
+      groupedData[key] += Number(t.total || 0);
     });
+
+    // If Daily View, fill gaps for 00:00 - 23:00
+    if (isDailyView) {
+        for (let i = 0; i < 24; i++) {
+            const hourKey = `${i.toString().padStart(2, '0')}:00`;
+            if (!groupedData[hourKey]) {
+                groupedData[hourKey] = 0;
+            }
+        }
+    }
 
     // Convert to array format for chart
     const trendData = Object.keys(groupedData)
