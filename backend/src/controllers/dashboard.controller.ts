@@ -14,9 +14,14 @@ export const getDashboardSummary = async (req: Request, res: Response, _next: Ne
     if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
     if (outletId) where.outletId = Number(outletId);
     if (startDate && endDate) {
+      // Add time to make it inclusive of the entire end date
+      const start = new Date(startDate as string);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate as string);
+      end.setHours(23, 59, 59, 999);
       where.createdAt = {
-        gte: new Date(startDate as string),
-        lte: new Date(endDate as string)
+        gte: start,
+        lte: end
       };
     }
 
@@ -58,14 +63,26 @@ export const getDashboardSummary = async (req: Request, res: Response, _next: Ne
 export const getSalesTrend = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { tenantId } = req;
-    const { days = 7, outletId } = req.query;
+    const { days = 7, outletId, startDate: startDateParam, endDate: endDateParam } = req.query;
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - Number(days));
+    let startDate: Date;
+    let endDate: Date;
+
+    // Use custom date range if provided, otherwise use days parameter
+    if (startDateParam && endDateParam) {
+      startDate = new Date(startDateParam as string);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(endDateParam as string);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      endDate = new Date();
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - Number(days));
+    }
 
     const where: any = {
       status: 'completed',
-      createdAt: { gte: startDate }
+      createdAt: { gte: startDate, lte: endDate }
     };
 
     if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
