@@ -15,9 +15,9 @@ const router = Router();
  * @route   GET /api/products
  * @desc    Get all products with optional filters
  * @query   category, search, outlet_id
- * @access  Public
+ * @access  Protected
  */
-router.get('/', optionalAuth, getProducts);
+router.get('/', authMiddleware, tenantMiddleware, getProducts);
 
 /**
  * @route   GET /api/products/:id

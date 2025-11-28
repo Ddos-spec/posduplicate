@@ -9,29 +9,35 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
     const { category, category_id, search, outlet_id } = req.query;
     const tenantId = (req as any).tenantId; // Get tenantId from middleware
 
-    // First, get all outlets for this tenant
-    const tenantOutlets = await prisma.outlet.findMany({
-      where: { tenantId: tenantId },
-      select: { id: true }
-    });
-
-    const outletIds = tenantOutlets.map(outlet => outlet.id);
-
-    // If user has no outlets, return empty result
-    if (outletIds.length === 0) {
-      return res.json({
-        success: true,
-        data: [],
-        count: 0
-      });
-    }
-
+    // Build where clause for products
     const where: any = {
-      isActive: true,
-      outletId: {
-        in: outletIds
-      }
+      isActive: true
     };
+
+    let outletIds: number[] = [];
+
+    // First, get all outlets for this tenant
+    if (tenantId) {
+      const tenantOutlets = await prisma.outlet.findMany({
+        where: { tenantId: tenantId },
+        select: { id: true }
+      });
+
+      outletIds = tenantOutlets.map(outlet => outlet.id);
+
+      // If user has no outlets, return empty result
+      if (outletIds.length === 0) {
+        return res.json({
+          success: true,
+          data: [],
+          count: 0
+        });
+      }
+
+      where.outletId = {
+        in: outletIds
+      };
+    }
 
     if (category_id) {
       where.categoryId = parseInt(category_id as string);
@@ -46,7 +52,7 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
     if (outlet_id) {
       // Ensure the requested outlet belongs to the current tenant
       const requestedOutletId = parseInt(outlet_id as string);
-      if (!outletIds.includes(requestedOutletId)) {
+      if (tenantId && outletIds.length > 0 && !outletIds.includes(requestedOutletId)) {
         return res.status(403).json({
           success: false,
           error: {
