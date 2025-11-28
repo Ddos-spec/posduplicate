@@ -97,17 +97,51 @@ export const getSalesTrend = async (req: Request, res: Response, _next: NextFunc
       orderBy: { createdAt: 'asc' }
     });
 
-    // Group by date
+    // Determine if "Today" view (or range <= 1 day)
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    const isDailyView = diffDays <= 1;
+
+    // Group by date or hour
     const grouped: { [key: string]: number } = {};
+    
     transactions.forEach((t: any) => {
-      const date = t.createdAt.toISOString().split('T')[0];
-      grouped[date] = (grouped[date] || 0) + Number(t.total);
+      if (!t.createdAt) return;
+
+      // Convert to WIB (UTC+7) for grouping
+      // We do this manually because the server is likely UTC
+      const dateObj = new Date(t.createdAt.getTime() + (7 * 60 * 60 * 1000));
+      
+      let key: string;
+      if (isDailyView) {
+        // Group by Hour for "Today" view: "HH:00"
+        const hour = dateObj.getUTCHours().toString().padStart(2, '0');
+        key = `${hour}:00`; 
+      } else {
+        // Group by Date: "YYYY-MM-DD"
+        key = dateObj.toISOString().split('T')[0];
+      }
+
+      grouped[key] = (grouped[key] || 0) + Number(t.total);
     });
 
-    const data = Object.entries(grouped).map(([date, sales]) => ({
-      date,
-      sales
-    }));
+    // If Daily View, ensure all hours 00-23 are present for a nice chart
+    if (isDailyView) {
+      for (let i = 0; i < 24; i++) {
+        const hourKey = `${i.toString().padStart(2, '0')}:00`;
+        if (!grouped[hourKey]) {
+          grouped[hourKey] = 0;
+        }
+      }
+    }
+
+    // Sort by key
+    const data = Object.entries(grouped)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, sales]) => ({
+        date,
+        sales
+      }));
 
     res.json({
       success: true,

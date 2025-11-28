@@ -213,11 +213,20 @@ export default function OwnerDashboardPage() {
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={salesTrend}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={(value) => new Date(value).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} />
+                <XAxis 
+                  dataKey="date" 
+                  tickFormatter={(value) => {
+                    if (value.includes(':')) return value; // Return time as is (HH:00)
+                    return new Date(value).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                  }} 
+                />
                 <YAxis tickFormatter={(value) => `Rp ${formatNumber(value)}`} />
                 <Tooltip
                   formatter={(value: number) => formatCurrency(value)}
-                  labelFormatter={(label) => `Date: ${label}`}
+                  labelFormatter={(label) => {
+                    if (label.includes(':')) return `Time: ${label}`;
+                    return `Date: ${label}`;
+                  }}
                 />
                 <Legend />
                 <Line

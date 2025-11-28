@@ -65,3 +65,6 @@
 
 ## Removed Credentials
 - Google Service Account Credentials have been removed for security.
+
+## Communication Language
+- **ALWAYS** communicate in Indonesian.
