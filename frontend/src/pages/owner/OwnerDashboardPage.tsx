@@ -51,12 +51,30 @@ export default function OwnerDashboardPage() {
       try {
         setLoading(true);
 
-        const days = dateRange === 'today' ? 1 : dateRange === 'week' ? 7 : 30;
         const outletId = selectedOutlet === 'all' ? undefined : Number(selectedOutlet);
 
+        // Calculate date range
+        const endDate = new Date();
+        const startDate = new Date();
+        if (dateRange === 'today') {
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+        } else if (dateRange === 'week') {
+          startDate.setDate(startDate.getDate() - 6);  // Last 7 days including today
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+        } else {  // month
+          startDate.setDate(startDate.getDate() - 29);  // Last 30 days including today
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+        }
+
+        const startDateStr = startDate.toISOString().split('T')[0];
+        const endDateStr = endDate.toISOString().split('T')[0];
+
         const [summaryData, trendData, productsData, categoryData, transactionsData] = await Promise.all([
-          dashboardService.getSummary({ outletId }),
-          dashboardService.getSalesTrend({ days, outletId }),
+          dashboardService.getSummary({ outletId, startDate: startDateStr, endDate: endDateStr }),
+          dashboardService.getSalesTrend({ outletId, startDate: startDateStr, endDate: endDateStr }),
           dashboardService.getTopProducts({ limit: 5 }),
           dashboardService.getSalesByCategory(),
           dashboardService.getRecentTransactions({ limit: 5 })
