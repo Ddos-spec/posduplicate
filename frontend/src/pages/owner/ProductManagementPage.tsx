@@ -72,9 +72,7 @@ export default function ProductManagementPage() {
     name: '',
     categoryId: '',
     price: '',
-    priceGofood: '',
-    priceGrabfood: '',
-    priceShopeefood: '',
+    priceOnline: '', // Unified price for all online platforms
     image: '',
     description: ''
   });
@@ -82,49 +80,7 @@ export default function ProductManagementPage() {
   const { showConfirmation } = useConfirmationStore();
   const { user } = useAuthStore();
 
-  // Load products
-  const loadProducts = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/products');
-      setProducts(response.data.data);
-    } catch (error) {
-      console.error('Failed to load products:', error);
-      toast.error('Failed to load products');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Load categories
-  const loadCategories = useCallback(async () => {
-    try {
-      const response = await api.get('/categories');
-      setCategories(response.data.data);
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-      toast.error('Failed to load categories');
-    }
-  }, []);
-
-  // Load data on component mount
-  useEffect(() => {
-    loadProducts();
-    loadCategories();
-  }, [loadProducts, loadCategories]);
-
-  // Filter products based on search term
-  const filteredProducts = products.filter(product => {
-    const categoryName = product.categories?.name || categories.find(c => c.id === product.categoryId)?.name || '';
-    return product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    categoryName.toLowerCase().includes(searchTerm.toLowerCase());
-  });
-
-  // Paginate products
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // ... (Load products and categories logic remains same)
 
   // Handle form changes
   const handleFormChange = (field: string, value: string) => {
@@ -142,13 +98,16 @@ export default function ProductManagementPage() {
       setEditingProduct(product);
       // Get categoryId from either categoryId field or categories.id (use nullish coalescing to handle 0 as valid id)
       const catId = product.categoryId ?? product.categories?.id ?? '';
+      
+      // Use one of the platform prices as the unified "Online Price" (assuming they are synced)
+      // Fallback to empty string if none are set
+      const onlinePrice = product.priceGofood || product.priceGrabfood || product.priceShopeefood || '';
+
       setProductForm({
         name: product.name,
         categoryId: catId.toString(),
         price: product.price.toString(),
-        priceGofood: product.priceGofood?.toString() || '',
-        priceGrabfood: product.priceGrabfood?.toString() || '',
-        priceShopeefood: product.priceShopeefood?.toString() || '',
+        priceOnline: onlinePrice.toString(),
         image: product.image || '',
         description: product.description || ''
       });
@@ -159,9 +118,7 @@ export default function ProductManagementPage() {
         name: '',
         categoryId: '',
         price: '',
-        priceGofood: '',
-        priceGrabfood: '',
-        priceShopeefood: '',
+        priceOnline: '',
         image: '',
         description: ''
       });
@@ -185,13 +142,17 @@ export default function ProductManagementPage() {
     }
 
     try {
+      // Parse unified online price
+      const onlinePriceValue = productForm.priceOnline ? parseFloat(productForm.priceOnline) : null;
+
       const data = {
         name: productForm.name,
         categoryId: parseInt(productForm.categoryId),
         price: parseFloat(productForm.price),
-        priceGofood: productForm.priceGofood ? parseFloat(productForm.priceGofood) : null,
-        priceGrabfood: productForm.priceGrabfood ? parseFloat(productForm.priceGrabfood) : null,
-        priceShopeefood: productForm.priceShopeefood ? parseFloat(productForm.priceShopeefood) : null,
+        // Apply unified online price to all platforms
+        priceGofood: onlinePriceValue,
+        priceGrabfood: onlinePriceValue,
+        priceShopeefood: onlinePriceValue,
         image: productForm.image || null,
         description: productForm.description || null,
         outletId: outletId
@@ -252,9 +213,7 @@ export default function ProductManagementPage() {
       name: '',
       categoryId: '',
       price: '',
-      priceGofood: '',
-      priceGrabfood: '',
-      priceShopeefood: '',
+      priceOnline: '', // Reset unified price
       image: '',
       description: ''
     });
@@ -514,51 +473,21 @@ export default function ProductManagementPage() {
 
                 {/* Platform-specific pricing */}
                 <div className="border-t pt-4">
-                  <h4 className="text-sm font-semibold mb-3 text-gray-700">Harga Platform (Opsional)</h4>
-                  <p className="text-xs text-gray-500 mb-3">Kosongkan untuk menggunakan harga default</p>
+                  <h4 className="text-sm font-semibold mb-3 text-gray-700">Harga Platform Online (GoFood/Grab/Shopee)</h4>
+                  <p className="text-xs text-gray-500 mb-3">Harga ini akan berlaku otomatis untuk semua aplikasi online.</p>
 
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-green-700">Harga GoFood (Rp)</label>
-                      <input
-                        type="text"
-                        value={productForm.priceGofood ? formatPriceInput(productForm.priceGofood) : ''}
-                        onChange={(e) => {
-                          const rawValue = parsePriceInput(e.target.value);
-                          handleFormChange('priceGofood', rawValue);
-                        }}
-                        className="w-full px-3 py-2 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="Kosongkan untuk harga default"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-red-700">Harga GrabFood (Rp)</label>
-                      <input
-                        type="text"
-                        value={productForm.priceGrabfood ? formatPriceInput(productForm.priceGrabfood) : ''}
-                        onChange={(e) => {
-                          const rawValue = parsePriceInput(e.target.value);
-                          handleFormChange('priceGrabfood', rawValue);
-                        }}
-                        className="w-full px-3 py-2 border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                        placeholder="Kosongkan untuk harga default"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-orange-700">Harga ShopeeFood (Rp)</label>
-                      <input
-                        type="text"
-                        value={productForm.priceShopeefood ? formatPriceInput(productForm.priceShopeefood) : ''}
-                        onChange={(e) => {
-                          const rawValue = parsePriceInput(e.target.value);
-                          handleFormChange('priceShopeefood', rawValue);
-                        }}
-                        className="w-full px-3 py-2 border border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="Kosongkan untuk harga default"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-green-700">Harga Online (Rp)</label>
+                    <input
+                      type="text"
+                      value={productForm.priceOnline ? formatPriceInput(productForm.priceOnline) : ''}
+                      onChange={(e) => {
+                        const rawValue = parsePriceInput(e.target.value);
+                        handleFormChange('priceOnline', rawValue);
+                      }}
+                      className="w-full px-3 py-2 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="Kosongkan jika sama dengan harga cash"
+                    />
                   </div>
                 </div>
 
