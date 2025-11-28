@@ -6,6 +6,8 @@ import prisma from '../utils/prisma';
  */
 export const getIntegrations = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.tenantId;
+
     if (!tenantId) {
       res.status(400).json({
         success: false,
