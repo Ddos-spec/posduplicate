@@ -49,3 +49,8 @@ coverage/
 # Misc
 .cache/
 .temp/
+
+# AI Config Files
+.claude/
+.gemini/
+CLAUDE.md
