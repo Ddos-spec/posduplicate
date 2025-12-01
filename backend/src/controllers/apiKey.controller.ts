@@ -230,20 +230,26 @@ export const getApiDocumentation = async (_req: Request, res: Response, next: Ne
         {
           method: 'GET',
           path: '/api/owner/reports/transactions',
-          description: 'Get comprehensive transaction report including sales, cash flow, payment methods, order types, and top selling items',
+          description: 'Get comprehensive transaction report. Use `date` for a simple full-day report (00:00-23:59), or `startDate` & `endDate` for a custom range.',
           authentication: true,
           queryParameters: [
+            {
+              name: 'date',
+              type: 'string',
+              required: false,
+              description: 'Simplified single date filter (YYYY-MM-DD). Automagically sets 00:00-23:59 for that day. Ideal for daily cron jobs.',
+            },
             {
               name: 'startDate',
               type: 'string',
               required: false,
-              description: 'Start date in ISO format (e.g., 2025-11-01)',
+              description: 'Start date in ISO format (e.g., 2025-11-01). Optional if `date` is provided.',
             },
             {
               name: 'endDate',
               type: 'string',
               required: false,
-              description: 'End date in ISO format (e.g., 2025-11-30)',
+              description: 'End date in ISO format (e.g., 2025-11-30). Optional if `date` is provided.',
             },
             {
               name: 'outletId',
