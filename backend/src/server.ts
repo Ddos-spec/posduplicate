@@ -39,6 +39,7 @@ import apiKeyRoutes from './routes/apiKey.routes';
 import inventoryModuleRoutes from './routes/inventory-module.routes';
 import salesAnalyticsRoutes from './routes/sales-analytics.routes';
 import integrationRoutes from './routes/integration.routes';
+import webhookRoutes from './routes/webhook.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -154,67 +155,10 @@ app.use('/api/api-keys', apiKeyRoutes);
 app.use('/api/inventory-module', inventoryModuleRoutes);
 app.use('/api/sales-analytics', salesAnalyticsRoutes);
 app.use('/api/integrations', integrationRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
-// DEBUG: View Error Logs directly from browser
-// Usage: /api/debug/logs?key=admin123
-app.get('/api/debug/logs', (req: Request, res: Response) => {
-  const secretKey = req.query.key;
-  
-  // Simple security check
-  if (secretKey !== 'admin123') {
-    return res.status(403).send('Forbidden: Invalid Key');
-  }
-
-  const logPath = path.join(__dirname, '../server-error.log');
-
-  if (fs.existsSync(logPath)) {
-    const logs = fs.readFileSync(logPath, 'utf-8');
-    // Display as plain text for easy reading
-    res.set('Content-Type', 'text/plain');
-    return res.send(logs);
-  } else {
-    return res.send('No errors logged yet. File server-error.log does not exist.');
-  }
-});
-
-// DEBUG: Check uploads folder content and permissions
-app.get('/api/debug/check-uploads', (req: Request, res: Response) => {
-  const secretKey = req.query.key;
-  if (secretKey !== 'admin123') {
-    res.status(403).send('Forbidden');
-    return;
-  }
-
-  const uploadPath = path.join(process.cwd(), 'uploads');
-  
-  try {
-    const files = fs.readdirSync(uploadPath);
-    const stats = fs.statSync(uploadPath);
-    
-    res.json({
-      process: {
-        cwd: process.cwd(),
-        uid: process.getuid ? process.getuid() : 'N/A',
-        gid: process.getgid ? process.getgid() : 'N/A',
-      },
-      directory: {
-        path: uploadPath,
-        exists: fs.existsSync(uploadPath),
-        permissions: stats.mode,
-        owner_uid: stats.uid,
-        owner_gid: stats.gid,
-      },
-      files: files,
-      message: "If 'files' is empty or your logo is missing here, the Volume is NOT mounted correctly."
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      error: error.message,
-      stack: error.stack,
-      path: uploadPath
-    });
-  }
-});
+// DEBUG endpoints removed for security
+// Use proper logging and monitoring service in production
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

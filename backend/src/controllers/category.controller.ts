@@ -87,14 +87,20 @@ export const getCategoryById = async (
     }
 
     // Tenant isolation check
-    if (req.tenantId && category.outletId !== req.tenantId) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'FORBIDDEN',
-          message: 'Access denied'
-        }
+    if (req.tenantId && category.outletId) {
+      const outlet = await prisma.outlet.findUnique({
+        where: { id: category.outletId }
       });
+
+      if (!outlet || outlet.tenantId !== req.tenantId) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Access denied'
+          }
+        });
+      }
     }
 
     res.json({

@@ -12,13 +12,28 @@ export const getTransactions = async (
   try {
     const { status, outlet_id, date_from, date_to, limit = '50' } = req.query;
 
+    // Get tenant's outlets for isolation
+    let outletIds: number[] = [];
+    if (req.tenantId) {
+      const tenantOutlets = await prisma.outlet.findMany({
+        where: { tenantId: req.tenantId },
+        select: { id: true }
+      });
+      outletIds = tenantOutlets.map(outlet => outlet.id);
+    }
+
     // SAFE FILTER MODE:
     // 1. Always filter by current cashier (User ID)
     const where: any = {
       cashier_id: req.userId
     };
 
-    // 2. Apply Date Filter if provided
+    // 2. Apply Tenant Isolation via Outlet IDs
+    if (outletIds.length > 0) {
+      where.outletId = { in: outletIds };
+    }
+
+    // 3. Apply Date Filter if provided
     if (date_from || date_to) {
       where.createdAt = {};
       if (date_from) {
@@ -38,14 +53,13 @@ export const getTransactions = async (
       }
     }
 
-    // 3. Apply Status Filter if provided
+    // 4. Apply Status Filter if provided
     if (status) {
       where.status = status;
     }
 
-    // NUCLEAR DEBUG OPTION: Fetch EVERYTHING to see what is actually in the DB
     const transactions = await prisma.transaction.findMany({
-      where, // <--- RESTORED SAFE FILTER
+      where,
       include: {
         outlets: { select: { id: true, name: true } },
         tables: { select: { id: true, name: true } },
@@ -69,23 +83,10 @@ export const getTransactions = async (
       count: transactions.length,
       debug: {
         serverTime: new Date().toISOString(),
-        status: "SAFE FILTER MODE - DATE SEARCH ENABLED",
+        status: "SAFE FILTER MODE - TENANT ISOLATION ENABLED",
         queryParams: { status, outlet_id, date_from, date_to },
         constructedWhere: JSON.parse(JSON.stringify(where, (_, value) =>
           typeof value === 'bigint' ? value.toString() : value
-        ))
-      }
-    });
-
-    res.json({
-      success: true,
-      data: transactions,
-      count: transactions.length,
-      debug: {
-        serverTime: new Date().toISOString(),
-        queryParams: { status, outlet_id, date_from, date_to },
-        constructedWhere: JSON.parse(JSON.stringify(where, (_, value) =>
-          typeof value === 'bigint' ? value.toString() : value // Handle BigInt serialization if any
         ))
       }
     });

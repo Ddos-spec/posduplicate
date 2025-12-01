@@ -109,7 +109,7 @@ export const getProductById = async (req: Request, res: Response, _next: NextFun
 
     const outletIds = tenantOutlets.map(outlet => outlet.id);
 
-    const product = await prisma.items.findUnique({
+    const product = await prisma.items.findFirst({
       where: {
         id: parseInt(id),
         outletId: {
