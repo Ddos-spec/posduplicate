@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Store, CreditCard, CheckCircle2, XCircle, ExternalLink, Loader2, ArrowRight, ShoppingBag } from 'lucide-react';
+import { CreditCard, CheckCircle2, XCircle, ExternalLink, Loader2, ArrowRight, ShoppingBag } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Link } from 'react-router-dom';
 
 interface Integration {
   integrationType: 'qris' | 'gofood' | 'grabfood' | 'shopeefood';

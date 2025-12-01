@@ -92,7 +92,6 @@ model User {
   createdAt     DateTime?      @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt     DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
   transactions  Transaction[]
-  cashierShifts CashierShift[]
   activityLogs  ActivityLog[]
   outlets       Outlet?        @relation(fields: [outletId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   roles         Role           @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -365,33 +364,6 @@ model promotions {
   @@index([is_active], map: "idx_promotions_active")
   @@index([start_date, end_date], map: "idx_promotions_dates")
   @@index([outlet_id], map: "idx_promotions_outlet")
-}
-
-model CashierShift {
-  id               Int           @id @default(autoincrement())
-  shift_number     String        @unique @map("shift_number") @db.VarChar(100)
-  user_id          Int           @map("user_id")
-  outlet_id        Int           @map("outlet_id")
-  started_at       DateTime      @map("started_at") @db.Timestamp(6)
-  ended_at         DateTime?     @map("ended_at") @db.Timestamp(6)
-  opening_cash     Decimal?      @default(0) @map("opening_cash") @db.Decimal(12, 2)
-  closing_cash     Decimal?      @map("closing_cash") @db.Decimal(12, 2)
-  expected_cash    Decimal?      @default(0) @map("expected_cash") @db.Decimal(12, 2)
-  actual_cash      Decimal?      @map("actual_cash") @db.Decimal(12, 2)
-  difference       Decimal?      @default(0) @map("difference") @db.Decimal(12, 2)
-  total_sales      Decimal?      @default(0) @map("total_sales") @db.Decimal(12, 2)
-  transaction_count Int?         @default(0) @map("transaction_count")
-  status           String        @default("open") @db.VarChar(50)
-  notes            String?
-  created_at       DateTime?     @default(now()) @db.Timestamp(6)
-  updated_at       DateTime?     @default(now()) @db.Timestamp(6)
-  users            User          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([user_id], map: "idx_cashier_shifts_user")
-  @@index([outlet_id], map: "idx_cashier_shifts_outlet")
-  @@index([started_at], map: "idx_cashier_shifts_started")
-  @@index([status], map: "idx_cashier_shifts_status")
-  @@map("cashier_shifts")
 }
 
 model ActivityLog {

@@ -1,17 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Package,
   Search,
   Plus,
   Edit2,
-  Trash2,
-  AlertCircle
+  Trash2
 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import useConfirmationStore from '../../store/confirmationStore';
 import { useAuthStore } from '../../store/authStore';
-import { formatCurrency } from '../../utils/format';
 
 interface Ingredient {
   id: number;
@@ -30,8 +27,6 @@ export default function IngredientManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   // State for form
   const [form, setForm] = useState({

@@ -1622,10 +1622,6 @@ export default function CashierPage() {
       <ProfileMenu
         isOpen={showProfileMenu}
         onClose={() => setShowProfileMenu(false)}
-        onShiftChange={() => {
-          // Refresh data if needed when shift changes
-          loadProducts();
-        }}
       />
     </div>
   );

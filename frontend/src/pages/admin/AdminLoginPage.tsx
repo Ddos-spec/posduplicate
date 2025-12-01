@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { Shield, LogIn, Eye, EyeOff } from 'lucide-react';
-import { useAuthStore } from '../../store/authStore';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -11,7 +10,6 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const init = useAuthStore((state) => state.init);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,9 +28,6 @@ export default function AdminLoginPage() {
         };
         localStorage.setItem('user', JSON.stringify(mockAdminUser));
         localStorage.setItem('token', 'mock-admin-token');
-
-        // Re-initialize auth store to load from localStorage
-        init();
 
         toast.success('Admin login successful!');
         navigate('/admin/dashboard');

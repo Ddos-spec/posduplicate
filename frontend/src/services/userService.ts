@@ -29,6 +29,7 @@ export interface UpdateUserData {
   roleId?: number;
   outletId?: number;
   isActive?: boolean;
+  password?: string;
 }
 
 export const userService = {
