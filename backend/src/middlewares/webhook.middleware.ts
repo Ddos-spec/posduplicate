@@ -83,7 +83,7 @@ export const verifyQRISSignature = async (
       });
     }
 
-    next();
+    return next();
   } catch (error) {
     console.error('[QRIS Signature Verification] Error:', error);
     return res.status(500).json({
@@ -101,7 +101,7 @@ export const verifyQRISSignature = async (
  */
 export const verifyGoFoodSignature = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -114,10 +114,10 @@ export const verifyGoFoodSignature = async (
     }
 
     // Implementation similar to QRIS
-    next();
+    return next();
   } catch (error) {
     console.error('[GoFood Signature Verification] Error:', error);
-    next(error);
+    return next(error);
   }
 };
 
@@ -126,7 +126,7 @@ export const verifyGoFoodSignature = async (
  */
 export const verifyGrabFoodSignature = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -138,10 +138,10 @@ export const verifyGrabFoodSignature = async (
     }
 
     // Implementation similar to QRIS
-    next();
+    return next();
   } catch (error) {
     console.error('[GrabFood Signature Verification] Error:', error);
-    next(error);
+    return next(error);
   }
 };
 
@@ -150,7 +150,7 @@ export const verifyGrabFoodSignature = async (
  */
 export const verifyShopeeFoodSignature = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -162,9 +162,9 @@ export const verifyShopeeFoodSignature = async (
     }
 
     // Implementation similar to QRIS
-    next();
+    return next();
   } catch (error) {
     console.error('[ShopeeFood Signature Verification] Error:', error);
-    next(error);
+    return next(error);
   }
 };

@@ -24,7 +24,12 @@
       "Bash(nul)",
       "Bash(timeout 8 echo:*)",
       "Bash(npx prisma:*)",
-      "Bash(npm run build:check:*)"
+      "Bash(npm run build:check:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nsecurity: clean credentials & simplify API docs\n\n- Remove hardcoded credentials from .env.example\n- Add placeholder values with generation instructions\n- Simplify API documentation: 5 endpoints → 2 comprehensive endpoints\n  * /api/owner/reports/transactions (all transaction data)\n  * /api/owner/reports/stock (all inventory data)\n- Update base URL to production endpoint\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
