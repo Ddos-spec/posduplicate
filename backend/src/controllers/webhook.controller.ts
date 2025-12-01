@@ -7,7 +7,7 @@ import crypto from 'crypto';
  */
 export const qrisWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { transactionId, status, amount, referenceNumber, metadata } = req.body;
+    const { transactionId, status, amount, referenceNumber, metadata: _metadata } = req.body;
 
     console.log('[QRIS Webhook] Received:', {
       transactionId,
@@ -17,13 +17,13 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
     });
 
     // Find the transaction by reference number
-    const payment = await prisma.payment.findFirst({
+    const payment = await prisma.payments.findFirst({
       where: {
         reference_number: referenceNumber,
         method: 'qris'
       },
       include: {
-        transaction: true
+        transactions: true
       }
     });
 
@@ -38,7 +38,7 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
     }
 
     // Update payment status
-    await prisma.payment.update({
+    await prisma.payments.update({
       where: { id: payment.id },
       data: {
         status: status === 'success' ? 'completed' : 'failed'
@@ -48,7 +48,7 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
     // Update transaction status if all payments are completed
     if (status === 'success') {
       await prisma.transaction.update({
-        where: { id: payment.transactionId },
+        where: { id: payment.transaction_id },
         data: {
           status: 'completed',
           completed_at: new Date()
@@ -56,13 +56,13 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'QRIS webhook processed successfully'
     });
   } catch (error) {
     console.error('[QRIS Webhook] Error:', error);
-    next(error);
+    return next(error);
   }
 };
 
@@ -71,7 +71,7 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
  */
 export const gofoodWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { orderId, status, items, customer, totalAmount, metadata } = req.body;
+    const { orderId, status, items: _items, customer: _customer, totalAmount, metadata: _metadata } = req.body;
 
     console.log('[GoFood Webhook] Received:', {
       orderId,
@@ -102,13 +102,13 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
       console.log('[GoFood Webhook] New order received, manual processing required');
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'GoFood webhook processed successfully'
     });
   } catch (error) {
     console.error('[GoFood Webhook] Error:', error);
-    next(error);
+    return next(error);
   }
 };
 
@@ -117,7 +117,7 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
  */
 export const grabfoodWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { orderId, status, items, customer, totalAmount, metadata } = req.body;
+    const { orderId, status, items: _items, customer: _customer, totalAmount, metadata: _metadata } = req.body;
 
     console.log('[GrabFood Webhook] Received:', {
       orderId,
@@ -144,13 +144,13 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
       console.log('[GrabFood Webhook] New order received, manual processing required');
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'GrabFood webhook processed successfully'
     });
   } catch (error) {
     console.error('[GrabFood Webhook] Error:', error);
-    next(error);
+    return next(error);
   }
 };
 
@@ -159,7 +159,7 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
  */
 export const shopeefoodWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { orderId, status, items, customer, totalAmount, metadata } = req.body;
+    const { orderId, status, items: _items, customer: _customer, totalAmount, metadata: _metadata } = req.body;
 
     console.log('[ShopeeFood Webhook] Received:', {
       orderId,
@@ -186,13 +186,13 @@ export const shopeefoodWebhook = async (req: Request, res: Response, next: NextF
       console.log('[ShopeeFood Webhook] New order received, manual processing required');
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'ShopeeFood webhook processed successfully'
     });
   } catch (error) {
     console.error('[ShopeeFood Webhook] Error:', error);
-    next(error);
+    return next(error);
   }
 };
 
