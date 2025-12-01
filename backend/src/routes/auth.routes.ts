@@ -7,6 +7,7 @@ import {
   changePassword
 } from '../controllers/auth.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { validateLogin, validateRegister } from '../middlewares/validation.middleware';
 
 const router = Router();
 
@@ -26,9 +27,9 @@ const authLimiter = rateLimit({
   }
 });
 
-// Public routes (with rate limiting)
-router.post('/login', authLimiter, login);
-router.post('/register', authLimiter, register);
+// Public routes (with rate limiting and validation)
+router.post('/login', authLimiter, validateLogin, login);
+router.post('/register', authLimiter, validateRegister, register);
 
 // Protected routes
 router.get('/me', authMiddleware, getMe);

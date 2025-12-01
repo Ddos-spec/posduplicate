@@ -9,11 +9,13 @@ import {
   updateOutletSettings
 } from '../controllers/outlet.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { tenantMiddleware } from '../middlewares/tenant.middleware';
 
 const router = Router();
 
-// All routes require authentication
+// All routes require authentication and tenant isolation
 router.use(authMiddleware);
+router.use(tenantMiddleware);
 
 /**
  * GET /api/outlets
