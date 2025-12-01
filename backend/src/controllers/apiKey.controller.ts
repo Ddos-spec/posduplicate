@@ -219,7 +219,7 @@ export const deleteApiKey = async (req: Request, res: Response, next: NextFuncti
 export const getApiDocumentation = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const documentation = {
-      baseUrl: process.env.API_BASE_URL || 'https://your-api.com',
+      baseUrl: process.env.API_BASE_URL || 'https://filter-bot-mypos-backend.qk6yxt.easypanel.host',
       version: '1.0.0',
       authentication: {
         type: 'API Key',
@@ -229,8 +229,8 @@ export const getApiDocumentation = async (_req: Request, res: Response, next: Ne
       endpoints: [
         {
           method: 'GET',
-          path: '/api/owner/reports/sales',
-          description: 'Get sales report with detailed transaction data',
+          path: '/api/owner/reports/transactions',
+          description: 'Get comprehensive transaction report including sales, cash flow, payment methods, order types, and top selling items',
           authentication: true,
           queryParameters: [
             {
@@ -251,6 +251,12 @@ export const getApiDocumentation = async (_req: Request, res: Response, next: Ne
               required: false,
               description: 'Filter by specific outlet ID',
             },
+            {
+              name: 'limit',
+              type: 'number',
+              required: false,
+              description: 'Limit number of top items returned (default: 10)',
+            },
           ],
           responseExample: {
             success: true,
@@ -260,17 +266,56 @@ export const getApiDocumentation = async (_req: Request, res: Response, next: Ne
                 totalRevenue: 45000000,
                 totalDiscount: 500000,
                 totalTax: 4500000,
+                averageOrderValue: 300000,
                 totalItems: 320,
               },
+              cashFlow: {
+                revenue: 45000000,
+                expenses: 0,
+                netCashFlow: 45000000,
+              },
+              paymentMethods: {
+                cash: 25000000,
+                card: 15000000,
+                qris: 5000000,
+              },
+              orderTypes: {
+                'dine-in': 80,
+                takeaway: 50,
+                delivery: 20,
+              },
+              topSellingItems: [
+                {
+                  itemId: 5,
+                  itemName: 'Nasi Goreng Special',
+                  category: 'Main Course',
+                  totalQuantity: 120,
+                  totalRevenue: 3000000,
+                  transactionCount: 85,
+                },
+              ],
               transactions: [
                 {
+                  id: 1,
                   transactionNumber: 'TRX-001',
                   orderType: 'dine-in',
                   subtotal: 100000,
+                  discount: 0,
+                  tax: 10000,
                   total: 110000,
+                  status: 'completed',
+                  paymentMethod: 'cash',
                   cashier: 'John Doe',
                   outlet: 'Main Branch',
                   createdAt: '2025-11-26T10:30:00Z',
+                  items: [
+                    {
+                      itemName: 'Nasi Goreng',
+                      quantity: 2,
+                      unitPrice: 25000,
+                      subtotal: 50000,
+                    },
+                  ],
                 },
               ],
             },
@@ -279,7 +324,7 @@ export const getApiDocumentation = async (_req: Request, res: Response, next: Ne
         {
           method: 'GET',
           path: '/api/owner/reports/stock',
-          description: 'Get inventory/stock report',
+          description: 'Get comprehensive inventory/stock report including all items, stock levels, low stock alerts, and total stock value',
           authentication: true,
           queryParameters: [
             {
@@ -292,7 +337,13 @@ export const getApiDocumentation = async (_req: Request, res: Response, next: Ne
               name: 'lowStock',
               type: 'boolean',
               required: false,
-              description: 'Filter items with low stock (true/false)',
+              description: 'Show only items with low stock (true/false)',
+            },
+            {
+              name: 'categoryId',
+              type: 'number',
+              required: false,
+              description: 'Filter by category ID',
             },
           ],
           responseExample: {
@@ -301,8 +352,23 @@ export const getApiDocumentation = async (_req: Request, res: Response, next: Ne
               summary: {
                 totalItems: 120,
                 lowStockItems: 5,
+                outOfStockItems: 2,
                 totalStockValue: 15000000,
+                averageStockPerItem: 45,
               },
+              lowStockAlerts: [
+                {
+                  id: 3,
+                  sku: 'ITM-003',
+                  name: 'Ayam Geprek',
+                  category: 'Main Course',
+                  stock: 5,
+                  minStock: 10,
+                  price: 30000,
+                  stockValue: 150000,
+                  status: 'low',
+                },
+              ],
               items: [
                 {
                   id: 1,
@@ -312,115 +378,26 @@ export const getApiDocumentation = async (_req: Request, res: Response, next: Ne
                   stock: 50,
                   minStock: 10,
                   price: 25000,
+                  stockValue: 1250000,
                   isLowStock: false,
+                  isActive: true,
+                  outlet: 'Main Branch',
+                },
+                {
+                  id: 2,
+                  sku: 'ITM-002',
+                  name: 'Mie Goreng',
+                  category: 'Main Course',
+                  stock: 30,
+                  minStock: 10,
+                  price: 20000,
+                  stockValue: 600000,
+                  isLowStock: false,
+                  isActive: true,
+                  outlet: 'Main Branch',
                 },
               ],
             },
-          },
-        },
-        {
-          method: 'GET',
-          path: '/api/owner/reports/transactions',
-          description: 'Get transaction summary with payment methods and order types breakdown',
-          authentication: true,
-          queryParameters: [
-            {
-              name: 'startDate',
-              type: 'string',
-              required: false,
-              description: 'Start date in ISO format',
-            },
-            {
-              name: 'endDate',
-              type: 'string',
-              required: false,
-              description: 'End date in ISO format',
-            },
-          ],
-          responseExample: {
-            success: true,
-            data: {
-              totalTransactions: 150,
-              totalRevenue: 45000000,
-              averageOrderValue: 300000,
-              paymentMethods: {
-                cash: 25000000,
-                card: 15000000,
-                qris: 5000000,
-              },
-              orderTypes: {
-                'dine-in': 80,
-                takeaway: 50,
-                delivery: 20,
-              },
-            },
-          },
-        },
-        {
-          method: 'GET',
-          path: '/api/owner/reports/cash-flow',
-          description: 'Get cash flow report showing revenue and expenses',
-          authentication: true,
-          queryParameters: [
-            {
-              name: 'startDate',
-              type: 'string',
-              required: false,
-              description: 'Start date in ISO format',
-            },
-            {
-              name: 'endDate',
-              type: 'string',
-              required: false,
-              description: 'End date in ISO format',
-            },
-          ],
-          responseExample: {
-            success: true,
-            data: {
-              revenue: 45000000,
-              expenses: 0,
-              netCashFlow: 45000000,
-              transactionCount: 150,
-            },
-          },
-        },
-        {
-          method: 'GET',
-          path: '/api/owner/reports/top-items',
-          description: 'Get top selling items ranked by quantity sold',
-          authentication: true,
-          queryParameters: [
-            {
-              name: 'startDate',
-              type: 'string',
-              required: false,
-              description: 'Start date in ISO format',
-            },
-            {
-              name: 'endDate',
-              type: 'string',
-              required: false,
-              description: 'End date in ISO format',
-            },
-            {
-              name: 'limit',
-              type: 'number',
-              required: false,
-              description: 'Number of items to return (default: 10)',
-            },
-          ],
-          responseExample: {
-            success: true,
-            data: [
-              {
-                itemId: 5,
-                itemName: 'Nasi Goreng Special',
-                totalQuantity: 120,
-                totalRevenue: 3000000,
-                transactionCount: 85,
-              },
-            ],
           },
         },
       ],
