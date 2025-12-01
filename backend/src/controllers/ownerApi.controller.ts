@@ -8,17 +8,33 @@ import { Prisma } from '@prisma/client';
 export const getSalesReport = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.apiKeyTenantId!;
-    const { startDate, endDate, outletId } = req.query;
+    const { startDate, endDate, outletId, date } = req.query;
 
     // Build date filter
     const dateFilter: any = {};
-    if (startDate) {
-      dateFilter.gte = new Date(startDate as string);
-    }
-    if (endDate) {
-      const end = new Date(endDate as string);
+
+    // SIMPLIFICATION: Support single 'date' parameter for full-day reports
+    if (date) {
+      // Start of the day (00:00:00)
+      const start = new Date(date as string);
+      start.setHours(0, 0, 0, 0);
+      dateFilter.gte = start;
+
+      // End of the day (23:59:59)
+      const end = new Date(date as string);
       end.setHours(23, 59, 59, 999);
       dateFilter.lte = end;
+    } 
+    // Fallback to manual startDate/endDate range
+    else {
+      if (startDate) {
+        dateFilter.gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.lte = end;
+      }
     }
 
     // Build where clause

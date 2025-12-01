@@ -34,7 +34,11 @@ router.use(apiKeyAuth);
 // Endpoint: GET /api/owner/reports/sales
 router.get('/reports/sales', getSalesReport);
 
-// 2. Laporan Stok (Stock Report)
+// 2. Laporan Transaksi (Transaction Report)
+// Endpoint: GET /api/owner/reports/transactions
+router.get('/reports/transactions', getSalesReport);
+
+// 3. Laporan Stok (Stock Report)
 // Endpoint: GET /api/owner/reports/stock
 router.get('/reports/stock', getStockReport);
 
