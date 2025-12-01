@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line
 } from 'recharts';
 import { FileDown, Printer, Filter, Loader2, TrendingUp, Calendar, Download, ShoppingCart, DollarSign } from 'lucide-react';
@@ -164,7 +164,7 @@ export default function ReportsPage() {
 
       setTopProducts(products);
 
-      setCategoryData(categories.map((item: { name: string; totalSales: number }, index: number) => ({
+      setCategoryData((categories as any[]).map((item, index) => ({
         name: item.name,
         value: item.totalSales,
         color: COLORS[index % COLORS.length]
@@ -246,7 +246,7 @@ export default function ReportsPage() {
   // Helper for analytics chart
   const renderColorfulLine = () => {
     if (trendData.length < 2) return null;
-    const segments: JSX.Element[] = [];
+    const segments: any[] = [];
     for (let i = 0; i < trendData.length - 1; i++) {
       const current = trendData[i];
       const next = trendData[i + 1];
@@ -466,7 +466,7 @@ export default function ReportsPage() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={categoryData}
+                  data={categoryData as any[]}
                   cx="50%"
                   cy="50%"
                   labelLine={false}

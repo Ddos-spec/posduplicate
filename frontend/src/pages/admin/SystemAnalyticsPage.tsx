@@ -213,15 +213,16 @@ export default function SystemAnalyticsPage() {
           <h3 className="text-lg font-semibold mb-4">Tenant Status</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-                          <Pie
-                            data={tenantStatusData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={(entry) => `${entry.name}: ${entry.value}`}
-                            outerRadius={80}
-                            dataKey="value"
-                          >                {tenantStatusData.map((entry, index) => (
+              <Pie
+                data={tenantStatusData as any[]}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={(entry) => `${entry.name}: ${entry.value}`}
+                outerRadius={80}
+                dataKey="value"
+              >
+                {tenantStatusData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={getStatusColor(entry.name)} />
                 ))}
               </Pie>

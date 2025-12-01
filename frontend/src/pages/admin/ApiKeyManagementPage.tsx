@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Eye, EyeOff, Copy, RefreshCw, Key, Check } from 'lucide-react';
+import { Plus, Trash2, Eye, EyeOff, Copy, Key, Check } from 'lucide-react';
 import { apiKeyService } from '../../services/apiKeyService';
 import { tenantService } from '../../services/tenantService';
 import toast from 'react-hot-toast';

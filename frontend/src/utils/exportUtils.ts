@@ -77,14 +77,14 @@ const formatCurrency = (value: number) => {
 // I will comment out the PDF export functions to avoid errors, as they depend on jsPDF.
 
 // Export Sales Report to PDF (Disabled to remove jsPDF dependency per instruction to "match HTML method")
-export const exportSalesPDF = (salesData: SalesDataPoint[], stats: Statistics) => {
+export const exportSalesPDF = (_salesData: SalesDataPoint[], _stats: Statistics) => {
   alert('PDF Export is currently disabled in favor of HTML Print.');
   // const doc = new jsPDF();
   // ... (code removed)
 };
 
 // Export Products Report to PDF (Disabled)
-export const exportProductsPDF = (products: TopProduct[]) => {
+export const exportProductsPDF = (_products: TopProduct[]) => {
   alert('PDF Export is currently disabled in favor of HTML Print.');
   // const doc = new jsPDF();
   // ... (code removed)
@@ -171,7 +171,6 @@ export const printReceipt = (
   // Determine width based on settings
   // 58mm is approx 220px safe printable area usually, but for HTML print we use standard mm or percentages
   // The reference code uses 300px max-width.
-  const printerWidthSetting = settings?.printerWidth === '58mm' ? '58mm' : '80mm';
   const maxWidth = settings?.printerWidth === '58mm' ? '220px' : '300px';
 
   const receiptHTML = `

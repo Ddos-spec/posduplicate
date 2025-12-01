@@ -6,10 +6,9 @@ import {
   Edit2,
   Trash2,
   Image as ImageIcon,
-  AlertCircle,
   ChefHat
 } from 'lucide-react';
-import api, { getFullUrl } from '../../services/api';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 import useConfirmationStore from '../../store/confirmationStore';
 import RecipeModal from '../../components/owner/RecipeModal';

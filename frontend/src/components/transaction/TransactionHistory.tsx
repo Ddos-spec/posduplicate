@@ -3,7 +3,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { X, Calendar, DollarSign, User, Clock, Receipt, Trash2, AlertCircle, Printer, FileText, RefreshCw } from 'lucide-react';
-import ConfirmDialog, { ConfirmDialogType } from '../common/ConfirmDialog';
+import ConfirmDialog, { type ConfirmDialogType } from '../common/ConfirmDialog';
 
 interface Transaction {
   id: number;

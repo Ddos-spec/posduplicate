@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,7 +15,7 @@ import {
 
 export default function ShopeeFoodDetailPage() {
   const navigate = useNavigate();
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, _setIsActive] = useState(false);
 
   return (
     <div className="p-6">

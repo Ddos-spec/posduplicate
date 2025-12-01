@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { X, ShoppingCart } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import axios from 'axios';

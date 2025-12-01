@@ -23,7 +23,8 @@
       "Bash(taskkill:*)",
       "Bash(nul)",
       "Bash(timeout 8 echo:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(npm run build:check:*)"
     ],
     "deny": [],
     "ask": []

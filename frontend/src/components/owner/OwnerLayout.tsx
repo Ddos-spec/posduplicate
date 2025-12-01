@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Users,
   UserCircle,
   Store,
   BarChart3,

@@ -109,7 +109,7 @@ export default function SettingsPage() {
       const cleanUpdateData = { ...updateData };
       delete (cleanUpdateData as any).id; // Remove id if it's not supposed to be updated
 
-      await settingsService.updateSettings(cleanUpdateData);
+      await settingsService.updateSettings(cleanUpdateData as any);
       toast.success('Settings saved successfully!');
       fetchSettings(); // Refresh settings
     } catch (error: unknown) {
@@ -193,7 +193,7 @@ export default function SettingsPage() {
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => setActiveTab(tab.key as any)}
               className={`px-4 py-2 font-medium border-b-2 whitespace-nowrap ${
                 activeTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
               }`}
@@ -212,11 +212,11 @@ export default function SettingsPage() {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
               handleSave({
-                businessName: formData.get('businessName'),
-                ownerName: formData.get('ownerName'),
-                email: formData.get('email'),
-                phone: formData.get('phone'),
-                address: formData.get('address'),
+                businessName: (formData.get('businessName') as string) || '',
+                ownerName: (formData.get('ownerName') as string) || null,
+                email: (formData.get('email') as string) || '',
+                phone: (formData.get('phone') as string) || null,
+                address: (formData.get('address') as string) || null,
                 logo: settings.logo || null
               });
             }}>
@@ -577,7 +577,7 @@ export default function SettingsPage() {
                 <input type="checkbox" defaultChecked={item !== 'WhatsApp notifications'} className="w-4 h-4" />
               </div>
             ))}
-            <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save Changes</button>
+            <button onClick={() => handleSave({})} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save Changes</button>
           </div>
         )}
 
@@ -614,7 +614,7 @@ export default function SettingsPage() {
                 </select>
               </div>
             </div>
-            <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save Changes</button>
+            <button onClick={() => handleSave({})} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save Changes</button>
           </div>
         )}
 
