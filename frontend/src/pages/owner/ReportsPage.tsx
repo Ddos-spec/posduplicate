@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { dashboardService } from '../../services/dashboardService';
 import api from '../../services/api';
-import { exportSalesPDF, exportProductsPDF, exportSalesExcel, exportProductsExcel } from '../../utils/exportUtils';
+import { exportSalesPDF, exportProductsPDF, exportSalesExcel, exportProductsExcel, exportExpensesExcel, exportExpensesPDF, exportTransactionsExcel, exportTransactionsPDF } from '../../utils/exportUtils';
 
 interface SalesDataPoint {
   date: string;
@@ -630,13 +630,28 @@ export default function ReportsPage() {
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">Detail Transaksi</h2>
-              <button
-                onClick={() => toast.success('Export feature coming soon!')}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    exportTransactionsPDF(transactions);
+                    toast.success('Exported to PDF!');
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Export PDF
+                </button>
+                <button
+                  onClick={() => {
+                    exportTransactionsExcel(transactions);
+                    toast.success('Exported to Excel!');
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Export Excel
+                </button>
+              </div>
             </div>
 
             {loading && transactions.length === 0 ? (
@@ -917,8 +932,30 @@ function ExpenseTrackingTab() {
 
       {/* Movements Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Riwayat Pergerakan Stok</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                exportExpensesPDF(movements, summary);
+                toast.success('Exported to PDF!');
+              }}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            >
+              <FileDown className="w-4 h-4" />
+              Export PDF
+            </button>
+            <button
+              onClick={() => {
+                exportExpensesExcel(movements, summary);
+                toast.success('Exported to Excel!');
+              }}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            >
+              <FileDown className="w-4 h-4" />
+              Export Excel
+            </button>
+          </div>
         </div>
 
         {loading ? (
