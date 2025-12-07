@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface SalesDataPoint {
   date: string;
@@ -76,18 +78,65 @@ const formatCurrency = (value: number) => {
 // BETTER: I will NOT remove jsPDF import if it breaks other functions, but the prompt said "Remove jsPDF... usage".
 // I will comment out the PDF export functions to avoid errors, as they depend on jsPDF.
 
-// Export Sales Report to PDF (Disabled to remove jsPDF dependency per instruction to "match HTML method")
-export const exportSalesPDF = (_salesData: SalesDataPoint[], _stats: Statistics) => {
-  alert('PDF Export is currently disabled in favor of HTML Print.');
-  // const doc = new jsPDF();
-  // ... (code removed)
+// Export Sales Report to PDF
+export const exportSalesPDF = (salesData: SalesDataPoint[], stats: Statistics) => {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text('Sales Report', 14, 20);
+
+  doc.setFontSize(11);
+  doc.text(`Generated: ${new Date().toLocaleString('id-ID')}`, 14, 30);
+
+  // Summary statistics
+  doc.setFontSize(14);
+  doc.text('Summary', 14, 45);
+
+  autoTable(doc, {
+    startY: 50,
+    head: [['Metric', 'Value']],
+    body: [
+      ['Total Sales', formatCurrency(stats.totalSales)],
+      ['Total Transactions', stats.totalTransactions.toString()],
+      ['Average per Transaction', formatCurrency(stats.avgPerTransaction)]
+    ],
+  });
+
+  // Sales data table
+  doc.setFontSize(14);
+  const finalY = (doc as any).lastAutoTable.finalY || 100;
+  doc.text('Sales Data', 14, finalY + 15);
+
+  autoTable(doc, {
+    startY: finalY + 20,
+    head: [['Date', 'Sales']],
+    body: salesData.map(item => [item.date, formatCurrency(item.sales)]),
+  });
+
+  doc.save(`sales-report-${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
-// Export Products Report to PDF (Disabled)
-export const exportProductsPDF = (_products: TopProduct[]) => {
-  alert('PDF Export is currently disabled in favor of HTML Print.');
-  // const doc = new jsPDF();
-  // ... (code removed)
+// Export Products Report to PDF
+export const exportProductsPDF = (products: TopProduct[]) => {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text('Top Products Report', 14, 20);
+
+  doc.setFontSize(11);
+  doc.text(`Generated: ${new Date().toLocaleString('id-ID')}`, 14, 30);
+
+  autoTable(doc, {
+    startY: 40,
+    head: [['Product Name', 'Quantity Sold', 'Revenue']],
+    body: products.map(item => [
+      item.name,
+      item.qty.toString(),
+      formatCurrency(item.revenue)
+    ]),
+  });
+
+  doc.save(`products-report-${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
 // Export Sales Report to Excel
@@ -397,4 +446,142 @@ export const printReceipt = (
 
   receiptWindow.document.write(receiptHTML);
   receiptWindow.document.close();
+};
+
+// Export Expenses/Stock Movements to Excel
+export const exportExpensesExcel = (movements: any[], summary: any) => {
+  const wb = XLSX.utils.book_new();
+
+  // Summary Sheet
+  const summaryData = [
+    ['Expense Tracking Report'],
+    ['Generated:', new Date().toLocaleString('id-ID')],
+    [],
+    ['Summary'],
+    ['Total Pengeluaran', formatCurrency(summary?.totalExpense || 0)],
+    ['Stok Masuk', formatCurrency(summary?.stockIn?.totalCost || 0)],
+    ['Jumlah Transaksi Masuk', summary?.stockIn?.count || 0],
+    ['Jumlah Transaksi Keluar', summary?.stockOut?.count || 0],
+    []
+  ];
+
+  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+  // Movements Sheet
+  const movementsData = [
+    ['Riwayat Pergerakan Stok'],
+    [],
+    ['Tanggal', 'Item', 'Tipe', 'Qty', 'Harga/Unit', 'Total Biaya', 'Supplier', 'User'],
+    ...movements.map(m => [
+      new Date(m.createdAt).toLocaleString('id-ID'),
+      m.ingredient?.name || m.inventory?.name,
+      m.type,
+      m.quantity,
+      m.unitPrice,
+      m.totalCost,
+      m.supplier || '-',
+      m.user?.name || '-'
+    ])
+  ];
+
+  const movementsSheet = XLSX.utils.aoa_to_sheet(movementsData);
+  XLSX.utils.book_append_sheet(wb, movementsSheet, 'Movements');
+
+  XLSX.writeFile(wb, `expense-tracking-${new Date().toISOString().split('T')[0]}.xlsx`);
+};
+
+// Export Expenses/Stock Movements to PDF
+export const exportExpensesPDF = (movements: any[], summary: any) => {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text('Expense Tracking Report', 14, 20);
+
+  doc.setFontSize(11);
+  doc.text(`Generated: ${new Date().toLocaleString('id-ID')}`, 14, 30);
+
+  // Summary
+  doc.setFontSize(14);
+  doc.text('Summary', 14, 45);
+
+  autoTable(doc, {
+    startY: 50,
+    head: [['Metric', 'Value']],
+    body: [
+      ['Total Pengeluaran', formatCurrency(summary?.totalExpense || 0)],
+      ['Stok Masuk', formatCurrency(summary?.stockIn?.totalCost || 0)],
+      ['Jumlah Transaksi', ((summary?.stockIn?.count || 0) + (summary?.stockOut?.count || 0)).toString()]
+    ],
+  });
+
+  // Movements Table
+  const finalY = (doc as any).lastAutoTable.finalY || 100;
+  doc.setFontSize(14);
+  doc.text('Riwayat Pergerakan', 14, finalY + 15);
+
+  autoTable(doc, {
+    startY: finalY + 20,
+    head: [['Tanggal', 'Item', 'Tipe', 'Qty', 'Total']],
+    body: movements.map(m => [
+      new Date(m.createdAt).toLocaleDateString('id-ID'),
+      (m.ingredient?.name || m.inventory?.name || '-').substring(0, 30),
+      m.type,
+      m.quantity.toString(),
+      formatCurrency(m.totalCost)
+    ]),
+    styles: { fontSize: 8 }
+  });
+
+  doc.save(`expense-tracking-${new Date().toISOString().split('T')[0]}.pdf`);
+};
+
+// Export Transactions to Excel
+export const exportTransactionsExcel = (transactions: any[]) => {
+  const wb = XLSX.utils.book_new();
+
+  const data = [
+    ['Transaction History Report'],
+    ['Generated:', new Date().toLocaleString('id-ID')],
+    [],
+    ['No. Transaksi', 'Tanggal', 'Tipe Order', 'Total', 'Status', 'Kasir'],
+    ...transactions.map(t => [
+      t.transaction_number,
+      new Date(t.created_at).toLocaleString('id-ID'),
+      t.order_type,
+      t.total_amount,
+      t.status,
+      t.user?.name || '-'
+    ])
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+
+  XLSX.writeFile(wb, `transactions-${new Date().toISOString().split('T')[0]}.xlsx`);
+};
+
+// Export Transactions to PDF
+export const exportTransactionsPDF = (transactions: any[]) => {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text('Transaction History', 14, 20);
+
+  doc.setFontSize(11);
+  doc.text(`Generated: ${new Date().toLocaleString('id-ID')}`, 14, 30);
+
+  autoTable(doc, {
+    startY: 40,
+    head: [['No. Transaksi', 'Tanggal', 'Total', 'Status']],
+    body: transactions.map(t => [
+      t.transaction_number,
+      new Date(t.created_at).toLocaleDateString('id-ID'),
+      formatCurrency(t.total_amount),
+      t.status
+    ]),
+    styles: { fontSize: 9 }
+  });
+
+  doc.save(`transactions-${new Date().toISOString().split('T')[0]}.pdf`);
 };
