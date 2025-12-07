@@ -1133,7 +1133,7 @@ export default function CashierPage() {
                     {[
                       { id: 'dine_in', label: 'Dine In', color: 'bg-blue-500' },
                       { id: 'takeaway', label: 'Takeaway', color: 'bg-purple-500' },
-                      { id: 'delivery', label: 'Delivery', color: 'bg-green-500' }
+                      { id: 'delivery', label: 'Pesan WA', color: 'bg-green-500' }
                     ].map((type) => (
                       <button
                         key={type.id}
