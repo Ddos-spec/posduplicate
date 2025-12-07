@@ -12,8 +12,7 @@ import {
   X,
   Bell,
   Package,
-  Plug,
-  DollarSign
+  Plug
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -42,7 +41,6 @@ export default function OwnerLayout() {
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/owner/dashboard' },
     { icon: Package, label: 'Manajemen Stok', path: '/owner/inventory' },
-    { icon: DollarSign, label: 'Tracking Pengeluaran', path: '/owner/expense-tracking' },
     { icon: UserCircle, label: 'Users', path: '/owner/users' },
     { icon: Store, label: 'Outlets', path: '/owner/outlets' },
     { icon: BarChart3, label: 'Reports', path: '/owner/reports' },
