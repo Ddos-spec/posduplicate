@@ -71,9 +71,9 @@ export default defineConfig({
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
             // lucide-react separate chunk (fixes undefined export issue)
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
-            }
+            // if (id.includes('lucide-react')) {
+            //   return 'vendor-icons';
+            // }
             // Core React libs (keep together)
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
               return 'vendor-react';
