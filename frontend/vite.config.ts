@@ -8,6 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
         runtimeCaching: [
           {
@@ -45,12 +47,19 @@ export default defineConfig({
   ],
   optimizeDeps: {
     include: ['lucide-react'],
+    esbuildOptions: {
+      target: 'es2020',
+    },
   },
   build: {
-    target: 'es2015',
+    target: 'es2020',
     cssCodeSplit: true,
     sourcemap: false,
     minify: 'terser',
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
     terserOptions: {
       compress: {
         drop_console: true,
