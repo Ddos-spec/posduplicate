@@ -1,33 +1,41 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { useAuthStore } from './store/authStore';
 import { Toaster } from 'react-hot-toast';
 import ConfirmationModal from './components/common/ConfirmationModal';
+import PWARefreshPrompt from './components/common/PWARefreshPrompt';
 
-// Auth
+// Auth (eager - needed immediately)
 import LoginPage from './pages/LoginPage';
 
-// Cashier
-import CashierPage from './pages/CashierPage';
+// Lazy load everything else
+const CashierPage = lazy(() => import('./pages/CashierPage'));
+const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
+const TenantManagementPage = lazy(() => import('./pages/admin/TenantManagementPage'));
+const SystemAnalyticsPage = lazy(() => import('./pages/admin/SystemAnalyticsPage'));
+const BillingManagementPage = lazy(() => import('./pages/admin/BillingManagementPage'));
+const ApiDocumentationPage = lazy(() => import('./pages/admin/ApiDocumentationPage'));
+const ApiKeyManagementPage = lazy(() => import('./pages/admin/ApiKeyManagementPage'));
+const OwnerLayout = lazy(() => import('./components/owner/OwnerLayout'));
+const OwnerDashboardPage = lazy(() => import('./pages/owner/OwnerDashboardPage'));
+const UserManagementPage = lazy(() => import('./pages/owner/UserManagementPage'));
+const OutletManagementPage = lazy(() => import('./pages/owner/OutletManagementPage'));
+const ReportsPage = lazy(() => import('./pages/owner/ReportsPage'));
+const SettingsPage = lazy(() => import('./pages/owner/SettingsPage'));
+const ProductManagementPage = lazy(() => import('./pages/owner/ProductManagementPage'));
+const TransactionDetailPage = lazy(() => import('./pages/owner/TransactionDetailPage'));
+const IntegrationsPage = lazy(() => import('./pages/owner/IntegrationsPage'));
 
-// Admin (Super Admin)
-import AdminLoginPage from './pages/admin/AdminLoginPage';
-import AdminLayout from './components/admin/AdminLayout';
-import TenantManagementPage from './pages/admin/TenantManagementPage';
-import SystemAnalyticsPage from './pages/admin/SystemAnalyticsPage';
-import BillingManagementPage from './pages/admin/BillingManagementPage';
-import ApiDocumentationPage from './pages/admin/ApiDocumentationPage';
-import ApiKeyManagementPage from './pages/admin/ApiKeyManagementPage';
-
-// Owner
-import OwnerLayout from './components/owner/OwnerLayout';
-import OwnerDashboardPage from './pages/owner/OwnerDashboardPage';
-import UserManagementPage from './pages/owner/UserManagementPage';
-import OutletManagementPage from './pages/owner/OutletManagementPage';
-import ReportsPage from './pages/owner/ReportsPage';
-import SettingsPage from './pages/owner/SettingsPage';
-import ProductManagementPage from './pages/owner/ProductManagementPage';
-import TransactionDetailPage from './pages/owner/TransactionDetailPage';
-import IntegrationsPage from './pages/owner/IntegrationsPage';
+// Loading fallback
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+      <p className="mt-4 text-gray-600">Loading...</p>
+    </div>
+  </div>
+);
 
 // SECURITY: Base protected route - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -86,17 +94,15 @@ function App() {
       <Toaster
         position="top-right"
         toastOptions={{
-          duration: 1000, // 1 second for all notifications
-          success: {
-            duration: 1000, // 1 second for success messages
-          },
-          error: {
-            duration: 2000, // 2 seconds for errors (slightly longer so users can read)
-          },
+          duration: 1000,
+          success: { duration: 1000 },
+          error: { duration: 2000 },
         }}
       />
       <ConfirmationModal />
-      <Routes>
+      <PWARefreshPrompt />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
@@ -156,7 +162,8 @@ function App() {
         {/* Default Route */}
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
