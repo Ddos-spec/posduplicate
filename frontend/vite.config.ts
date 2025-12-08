@@ -46,7 +46,7 @@ export default defineConfig({
     }),
   ],
   optimizeDeps: {
-    include: ['lucide-react'],
+    // include: ['lucide-react'],
     esbuildOptions: {
       target: 'es2020',
     },
