@@ -57,34 +57,29 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Vendor chunks
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            // Core React libs (keep together)
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router') || id.includes('lucide-react')) {
               return 'vendor-react';
             }
-            if (id.includes('recharts')) {
+            // Charts (lazy loaded)
+            if (id.includes('recharts') || id.includes('d3-')) {
               return 'vendor-charts';
             }
+            // PDF libs (lazy loaded)
             if (id.includes('jspdf') || id.includes('html2canvas')) {
               return 'vendor-pdf';
             }
+            // Excel (lazy loaded)
             if (id.includes('xlsx')) {
               return 'vendor-xlsx';
             }
-            if (id.includes('axios') || id.includes('zustand')) {
+            // Keep axios, zustand, hot-toast together
+            if (id.includes('axios') || id.includes('zustand') || id.includes('react-hot-toast')) {
               return 'vendor-core';
             }
-            return 'vendor-misc';
-          }
-          // Page chunks
-          if (id.includes('/pages/owner/')) {
-            return 'pages-owner';
-          }
-          if (id.includes('/pages/admin/')) {
-            return 'pages-admin';
-          }
-          if (id.includes('/pages/CashierPage')) {
-            return 'pages-cashier';
+            // Everything else
+            return 'vendor';
           }
         },
       },
