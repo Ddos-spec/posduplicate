@@ -43,6 +43,9 @@ export default defineConfig({
       },
     }),
   ],
+  optimizeDeps: {
+    include: ['lucide-react'],
+  },
   build: {
     target: 'es2015',
     cssCodeSplit: true,
@@ -58,8 +61,12 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
+            // lucide-react separate chunk (fixes undefined export issue)
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
             // Core React libs (keep together)
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router') || id.includes('lucide-react')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
               return 'vendor-react';
             }
             // Charts (lazy loaded)
