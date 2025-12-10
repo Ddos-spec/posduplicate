@@ -220,6 +220,14 @@ export default function CashierPage() {
       toast.error('Cart is empty');
       return;
     }
+    
+    // Auto-select payment method based on current platform mode
+    if (selectedPlatform) {
+      setPaymentMethod(selectedPlatform);
+    } else {
+      setPaymentMethod('cash');
+    }
+
     setShowPayment(true);
     setSplitBillMode(false);
     setPayments([]);
