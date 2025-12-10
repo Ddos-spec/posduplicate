@@ -40,6 +40,7 @@ import printerSettingsRoutes from './routes/printerSettings.routes';
 import apiKeyRoutes from './routes/apiKey.routes';
 import inventoryModuleRoutes from './routes/inventory-module.routes';
 import salesAnalyticsRoutes from './routes/sales-analytics.routes';
+import reportRoutes from './routes/report.routes';
 import integrationRoutes from './routes/integration.routes';
 import webhookRoutes from './routes/webhook.routes';
 
@@ -158,6 +159,7 @@ app.use('/api/printer-settings', printerSettingsRoutes);
 app.use('/api/api-keys', apiKeyRoutes);
 app.use('/api/inventory-module', inventoryModuleRoutes);
 app.use('/api/sales-analytics', salesAnalyticsRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/webhooks', webhookRoutes);
 
