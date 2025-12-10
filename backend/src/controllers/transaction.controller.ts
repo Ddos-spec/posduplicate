@@ -271,6 +271,10 @@ export const createTransaction = async (
       // Generate transaction number
       const transactionNumber = `TRX-${Date.now()}`;
 
+      // Determine pricing tier based on payment method
+      // We assume the first payment method dictates the pricing tier for the whole order
+      const primaryPaymentMethod = payments && payments.length > 0 ? payments[0].method : 'cash';
+
       // Calculate totals and validate
       let subtotal = 0;
       const itemsWithPrices: any[] = [];
@@ -284,7 +288,18 @@ export const createTransaction = async (
           throw new Error(`Item with ID ${item.itemId} not found`);
         }
 
-        let itemPrice = parseFloat(itemData.price.toString());
+        // Determine base price based on payment method/platform
+        let itemPrice = parseFloat(itemData.price.toString()); // Default to standard price
+        
+        // Override with platform specific price if available
+        if (primaryPaymentMethod === 'gofood' && itemData.priceGofood) {
+          itemPrice = parseFloat(itemData.priceGofood.toString());
+        } else if (primaryPaymentMethod === 'grabfood' && itemData.priceGrabfood) {
+          itemPrice = parseFloat(itemData.priceGrabfood.toString());
+        } else if (primaryPaymentMethod === 'shopeefood' && itemData.priceShopeefood) {
+          itemPrice = parseFloat(itemData.priceShopeefood.toString());
+        }
+
         const modifiersData: any[] = [];
 
         // Add variant price adjustment
