@@ -1,19 +1,18 @@
-import express from 'express';
-import { authenticate } from '../middlewares/auth.middleware';
+import { Router } from 'express';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import {
-  getFinancialReport,
+  getSalesReport,
   getOperationalReport,
   getInventoryValuation,
   getCustomerAnalytics,
   getFraudStats
 } from '../controllers/report.controller';
 
-const router = express.Router();
+const router = Router();
 
-router.use(authenticate);
+router.use(authMiddleware);
 
-// Financials
-router.get('/financials', getFinancialReport);
+router.get('/sales', getSalesReport);
 
 // Operations (Peak Hours)
 router.get('/operations', getOperationalReport);

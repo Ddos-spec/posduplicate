@@ -372,3 +372,53 @@ export const getFraudStats = async (req: Request, res: Response, _next: NextFunc
         _next(error);
     }
 };
+
+/**
+ * Get Sales Report (Simple Version)
+ */
+export const getSalesReport = async (req: Request, res: Response, _next: NextFunction) => {
+    try {
+        const { tenantId } = req;
+        const { outlet_id, start_date, end_date } = req.query;
+
+        const startDate = new Date(start_date as string);
+        const endDate = new Date(end_date as string);
+        endDate.setHours(23, 59, 59, 999);
+
+        const where: any = {
+            status: 'completed',
+            createdAt: { gte: startDate, lte: endDate }
+        };
+
+        if (outlet_id) {
+            where.outletId = parseInt(outlet_id as string);
+        } else if (tenantId) {
+            const outletIds = await getOutletIdsByTenant(tenantId);
+            where.outletId = { in: outletIds };
+        }
+
+        const aggregate = await prisma.transaction.aggregate({
+            where,
+            _sum: { total: true },
+            _count: { id: true }
+        });
+
+        const totalSales = Number(aggregate._sum.total || 0);
+        const transactionCount = Number(aggregate._count.id || 0);
+        const averageTransaction = transactionCount > 0 ? totalSales / transactionCount : 0;
+
+        res.json({
+            success: true,
+            data: {
+                startDate,
+                endDate,
+                totalSales,
+                transactionCount,
+                averageTransaction
+            }
+        });
+
+    } catch (error) {
+        _next(error);
+    }
+};
