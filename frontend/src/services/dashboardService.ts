@@ -73,4 +73,30 @@ export const dashboardService = {
     const response = await api.get<{ success: boolean; data: CashierPerformance[] }>('/dashboard/cashier-performance', { params });
     return response.data.data;
   },
+
+  // New Report Endpoints
+  async getFinancialReport(params?: { outlet_id?: number; start_date?: string; end_date?: string }) {
+    const response = await api.get('/reports/financials', { params });
+    return response.data.data;
+  },
+
+  async getOperationalReport(params?: { outlet_id?: number; start_date?: string; end_date?: string }) {
+    const response = await api.get('/reports/operations', { params });
+    return response.data.data;
+  },
+
+  async getInventoryValue(params?: { outlet_id?: number }) {
+    const response = await api.get('/reports/inventory-value', { params });
+    return response.data.data;
+  },
+
+  async getCustomerAnalytics(params?: { outlet_id?: number }) {
+    const response = await api.get('/reports/customers', { params });
+    return response.data.data;
+  },
+
+  async getFraudStats(params?: { outlet_id?: number; start_date?: string; end_date?: string }) {
+    const response = await api.get('/reports/fraud-stats', { params });
+    return response.data.data;
+  }
 };
