@@ -276,25 +276,26 @@ export const getSupplierSpending = async (req: Request, res: Response, _next: Ne
       }
     });
 
-    const spending = suppliers.map(supplier => {
-      const stockCost = supplier.stockMovements.reduce(
-        (sum, m) => sum + parseFloat((m.totalCost || 0).toString()),
+    // Calculate spending per supplier
+    const spending = suppliers.map((supplier: any) => {
+      const stockSpending = supplier.stockMovements.reduce(
+        (sum: number, m: any) => sum + parseFloat((m.totalCost || 0).toString()),
         0
       );
-      const expenseCost = supplier.expenses.reduce(
-        (sum, e) => sum + parseFloat((e.amount || 0).toString()),
+
+      const expenseSpending = supplier.expenses.reduce(
+        (sum: number, e: any) => sum + parseFloat((e.amount || 0).toString()),
         0
       );
 
       return {
         id: supplier.id,
         name: supplier.name,
-        stockPurchases: stockCost,
-        otherExpenses: expenseCost,
-        totalSpending: stockCost + expenseCost,
-        transactionCount: supplier.stockMovements.length + supplier.expenses.length
+        stockSpending,
+        expenseSpending,
+        totalSpending: stockSpending + expenseSpending
       };
-    }).sort((a, b) => b.totalSpending - a.totalSpending);
+    }).sort((a: any, b: any) => b.totalSpending - a.totalSpending);
 
     res.json({
       success: true,

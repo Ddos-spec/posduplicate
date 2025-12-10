@@ -345,12 +345,12 @@ export const getExpenseSummary = async (req: Request, res: Response, _next: Next
         amount: parseFloat((total._sum.amount || 0).toString()),
         count: total._count || 0
       },
-      byType: byType.map(t => ({
+      byType: byType.map((t: any) => ({
         type: t.expenseType,
         amount: parseFloat((t._sum.amount || 0).toString()),
         count: t._count
       })),
-      byCategory: byCategory.map(c => ({
+      byCategory: byCategory.map((c: any) => ({
         category: c.category,
         amount: parseFloat((c._sum.amount || 0).toString()),
         count: c._count
@@ -380,7 +380,7 @@ export const getExpenseCategories = async (req: Request, res: Response, _next: N
       orderBy: { _count: { category: 'desc' } }
     });
 
-    const data = categories.map(c => ({
+    const data = categories.map((c: any) => ({
       category: c.category,
       count: c._count
     }));
