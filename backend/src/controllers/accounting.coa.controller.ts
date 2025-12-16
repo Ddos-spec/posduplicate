@@ -93,13 +93,13 @@ export const seedCoA = async (req: Request, res: Response, next: NextFunction) =
       count++;
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: { count },
       message: `Successfully seeded ${count} accounts`
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -152,14 +152,14 @@ export const getCoA = async (req: Request, res: Response, next: NextFunction) =>
     const roots: any[] = [];
 
     // First pass: Create nodes and map
-    accounts.forEach(acc => {
+    accounts.forEach((acc: any) => {
       const balance = balanceMap.get(acc.account_code) || 0;
       const node = { ...acc, children: [], balance };
       accountMap.set(acc.id, node);
     });
 
     // Second pass: Link parents
-    accounts.forEach(acc => {
+    accounts.forEach((acc: any) => {
       const node = accountMap.get(acc.id);
       if (acc.parent_id && accountMap.has(acc.parent_id)) {
         accountMap.get(acc.parent_id).children.push(node);
@@ -177,7 +177,7 @@ export const getCoA = async (req: Request, res: Response, next: NextFunction) =>
     };
     // Note: Accurate summary requires iterating all accounts or using the view totals.
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         accounts: roots, // Returns tree
@@ -187,7 +187,7 @@ export const getCoA = async (req: Request, res: Response, next: NextFunction) =>
     });
 
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -232,12 +232,12 @@ export const createAccount = async (req: Request, res: Response, next: NextFunct
     // Audit Log handled by middleware if configured, or manual here?
     // We implemented middleware for POST, so it should be logged.
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: account
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -271,11 +271,11 @@ export const updateAccount = async (req: Request, res: Response, next: NextFunct
       }
     });
 
-    res.json({
+    return res.json({
       success: true,
       data: updated
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };

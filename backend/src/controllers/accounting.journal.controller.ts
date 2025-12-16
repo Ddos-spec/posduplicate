@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 import { generateJournalNumber } from '../utils/journal.utils';
 import { postJournalToLedger } from '../services/ledger.service';
-import { Decimal } from '@prisma/client/runtime/library';
 
 /**
  * Get Journals
@@ -49,7 +48,7 @@ export const getJournals = async (req: Request, res: Response, next: NextFunctio
       prisma.journal_entries.count({ where })
     ]);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         journals,
@@ -62,7 +61,7 @@ export const getJournals = async (req: Request, res: Response, next: NextFunctio
       }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -79,7 +78,7 @@ export const getJournalById = async (req: Request, res: Response, next: NextFunc
       include: {
         journal_entry_lines: {
           include: {
-            account: {
+            chart_of_accounts: {
               select: { id: true, account_code: true, account_name: true }
             }
           }
@@ -96,12 +95,12 @@ export const getJournalById = async (req: Request, res: Response, next: NextFunc
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Journal not found' } });
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: journal
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -178,13 +177,13 @@ export const createJournal = async (req: Request, res: Response, next: NextFunct
       return res.status(201).json({ success: true, data: postedJournal });
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: journal
     });
 
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -199,7 +198,7 @@ export const postJournal = async (req: Request, res: Response, next: NextFunctio
 
     await postJournalToLedger(Number(id), tenantId, userId);
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Journal posted successfully'
     });
@@ -208,7 +207,7 @@ export const postJournal = async (req: Request, res: Response, next: NextFunctio
     if (error instanceof Error && error.message.includes('not balanced')) {
         return res.status(400).json({ success: false, error: { code: 'NOT_BALANCED', message: error.message } });
     }
-    next(error);
+    return next(error);
   }
 };
 
@@ -255,7 +254,7 @@ export const voidJournal = async (req: Request, res: Response, next: NextFunctio
         status: 'draft',
         created_by: userId,
         journal_entry_lines: {
-          create: lines.map(line => ({
+          create: lines.map((line: any) => ({
             account_id: line.account_id,
             description: `Reversal: ${line.description}`,
             debit_amount: line.credit_amount, // Swap
@@ -279,13 +278,13 @@ export const voidJournal = async (req: Request, res: Response, next: NextFunctio
       }
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Journal voided successfully',
       data: { reversalJournalId: reversalJournal.id }
     });
 
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };

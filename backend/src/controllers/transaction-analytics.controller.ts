@@ -32,20 +32,20 @@ export const getTransactionAnalytics = async (req: Request, res: Response, _next
 
     // Filter by date range
     if (date_from || date_to) {
-      where.createdAt = {};
-      if (date_from) where.createdAt.gte = new Date(date_from as string);
+      where.created_at = {};
+      if (date_from) where.created_at.gte = new Date(date_from as string);
       if (date_to) {
         const endDate = new Date(date_to as string);
         endDate.setHours(23, 59, 59, 999);
-        where.createdAt.lte = endDate;
+        where.created_at.lte = endDate;
       }
     }
 
     // Get transactions with items
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where,
       take: parseInt(limit as string),
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       include: {
         transaction_items: {
           include: {
@@ -85,7 +85,7 @@ export const getTransactionAnalytics = async (req: Request, res: Response, _next
       const totalQty = tx.transaction_items.reduce((sum, item) => sum + Number(item.quantity), 0);
 
       // Convert to WIB (UTC+7)
-      const dateObj = tx.createdAt ? new Date(tx.createdAt.getTime() + (7 * 60 * 60 * 1000)) : new Date();
+      const dateObj = tx.created_at ? new Date(tx.created_at.getTime() + (7 * 60 * 60 * 1000)) : new Date();
 
       analyticsData.push({
         id: tx.id,
@@ -139,31 +139,31 @@ export const getTransactionAnalyticsSummary = async (req: Request, res: Response
 
     // Filter by date range
     if (date_from || date_to) {
-      where.createdAt = {};
-      if (date_from) where.createdAt.gte = new Date(date_from as string);
+      where.created_at = {};
+      if (date_from) where.created_at.gte = new Date(date_from as string);
       if (date_to) {
         const endDate = new Date(date_to as string);
         endDate.setHours(23, 59, 59, 999);
-        where.createdAt.lte = endDate;
+        where.created_at.lte = endDate;
       }
     }
 
     // Get aggregated data
     const [transactions, items] = await Promise.all([
-      prisma.transaction.aggregate({
+      prisma.transactions.aggregate({
         where,
         _sum: {
           total: true,
           subtotal: true,
-          discountAmount: true,
-          taxAmount: true,
+          discount_amount: true,
+          tax_amount: true,
           service_charge: true
         },
         _count: {
           id: true
         }
       }),
-      prisma.transactionItem.aggregate({
+      prisma.transaction_items.aggregate({
         where: {
           transactions: where
         },
@@ -188,7 +188,7 @@ export const getTransactionAnalyticsSummary = async (req: Request, res: Response
         totalDiscounts,
         totalRefunds: 0,
         totalNetSales,
-        totalTax: Number(transactions._sum.taxAmount || 0),
+        totalTax: Number(transactions._sum.tax_amount || 0),
         totalGratuity: Number(transactions._sum.service_charge || 0)
       }
     });
@@ -222,30 +222,30 @@ export const getTransactionAnalyticsTrend = async (req: Request, res: Response, 
 
     // Filter by date range
     if (date_from || date_to) {
-      where.createdAt = {};
-      if (date_from) where.createdAt.gte = new Date(date_from as string);
+      where.created_at = {};
+      if (date_from) where.created_at.gte = new Date(date_from as string);
       if (date_to) {
         const endDate = new Date(date_to as string);
         endDate.setHours(23, 59, 59, 999);
-        where.createdAt.lte = endDate;
+        where.created_at.lte = endDate;
       }
     }
 
     // Get transactions
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where,
       select: {
-        createdAt: true,
+        created_at: true,
         total: true
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { created_at: 'asc' }
     });
 
     // Determine if "Today" or Single Day View
     let isDailyView = false;
-    if (where.createdAt?.gte && where.createdAt?.lte) {
-       const start = where.createdAt.gte.getTime();
-       const end = where.createdAt.lte.getTime();
+    if (where.created_at?.gte && where.created_at?.lte) {
+       const start = where.created_at.gte.getTime();
+       const end = where.created_at.lte.getTime();
        const diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24));
        isDailyView = diffDays <= 1;
     } else if (!date_from && !date_to) {
@@ -258,10 +258,10 @@ export const getTransactionAnalyticsTrend = async (req: Request, res: Response, 
     const groupedData: { [key: string]: number } = {};
 
     transactions.forEach(t => {
-      if (!t.createdAt) return;
-      
+      if (!t.created_at) return;
+
       // Convert to WIB (UTC+7)
-      const dateObj = new Date(t.createdAt.getTime() + (7 * 60 * 60 * 1000));
+      const dateObj = new Date(t.created_at.getTime() + (7 * 60 * 60 * 1000));
 
       let key: string;
       if (isDailyView) {

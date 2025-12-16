@@ -26,7 +26,7 @@ const getAccountIdByCode = async (tenantId: number, code: string): Promise<numbe
  */
 export const generateJournalFromPOSTransaction = async (transactionId: number) => {
   try {
-    const transaction = await prisma.transaction.findUnique({
+    const transaction = await prisma.transactions.findUnique({
       where: { id: transactionId },
       include: {
         outlets: true,
@@ -39,7 +39,7 @@ export const generateJournalFromPOSTransaction = async (transactionId: number) =
       return;
     }
 
-    const tenantId = transaction.outlets.tenantId;
+    const tenantId = transaction.outlets.tenant_id;
     if (!tenantId) {
         console.error(`Transaction ${transactionId} missing tenantId`);
         return;
@@ -115,10 +115,10 @@ export const generateJournalFromPOSTransaction = async (transactionId: number) =
        // Model has `netSales`?
        // transaction.netSales exists in schema!
        // But wait, Prisma schema provided earlier showed `SalesTransaction` model separate from `Transaction`.
-       // `Transaction` model has `subtotal`, `discountAmount`, `taxAmount`, `service_charge`, `total`.
+       // `Transaction` model has `subtotal`, `discount_amount`, `tax_amount`, `service_charge`, `total`.
        // Net Sales roughly = Subtotal - Discount.
-       
-       const revenueAmount = new Decimal(transaction.subtotal || 0).minus(new Decimal(transaction.discountAmount || 0));
+
+       const revenueAmount = new Decimal(transaction.subtotal || 0).minus(new Decimal(transaction.discount_amount || 0));
        
        if (revenueAmount.greaterThan(0)) {
          lines.push({
@@ -132,14 +132,14 @@ export const generateJournalFromPOSTransaction = async (transactionId: number) =
 
     // 3. CREDIT: Tax (Output VAT)
     // Account 2103: PPN Keluaran
-    if (transaction.taxAmount && new Decimal(transaction.taxAmount).greaterThan(0)) {
+    if (transaction.tax_amount && new Decimal(transaction.tax_amount).greaterThan(0)) {
       const taxAccountId = await getAccountIdByCode(tenantId, '2103');
       if (taxAccountId) {
         lines.push({
           account_id: taxAccountId,
           description: `PPN Keluaran`,
           debit_amount: new Decimal(0),
-          credit_amount: new Decimal(transaction.taxAmount)
+          credit_amount: new Decimal(transaction.tax_amount)
         });
       }
     }
@@ -172,10 +172,10 @@ export const generateJournalFromPOSTransaction = async (transactionId: number) =
     const journal = await prisma.journal_entries.create({
       data: {
         tenant_id: tenantId,
-        outlet_id: transaction.outletId,
+        outlet_id: transaction.outlet_id,
         journal_number: journalNumber,
         journal_type: 'sales',
-        transaction_date: transaction.createdAt || new Date(),
+        transaction_date: transaction.created_at || new Date(),
         description: `Auto-Journal POS: ${transaction.transaction_number}`,
         reference_type: 'pos_transaction',
         reference_id: transaction.id,
@@ -209,13 +209,13 @@ export const generateJournalFromPOSTransaction = async (transactionId: number) =
  */
 export const generateJournalFromExpense = async (expenseId: number) => {
     try {
-        const expense = await prisma.expense.findUnique({
+        const expense = await prisma.expenses.findUnique({
             where: { id: expenseId },
-            include: { outlet: true, supplier: true }
+            include: { outlets: true, suppliers: true }
         });
 
-        if (!expense || !expense.outlet) return;
-        const tenantId = expense.outlet.tenantId;
+        if (!expense || !expense.outlets) return;
+        const tenantId = expense.outlets.tenant_id;
         if (!tenantId) return;
 
         // Check duplicate
@@ -259,14 +259,14 @@ export const generateJournalFromExpense = async (expenseId: number) => {
         });
 
         // 2. CREDIT: Cash or AP
-        if (expense.paidAt) {
+        if (expense.paid_at) {
              // Paid: Credit Cash
-             const cashCode = getPaymentMethodAccountCode(expense.paymentMethod || 'cash');
+             const cashCode = getPaymentMethodAccountCode(expense.payment_method || 'cash');
              const cashAccountId = await getAccountIdByCode(tenantId, cashCode);
              if (cashAccountId) {
                  lines.push({
                      account_id: cashAccountId,
-                     description: `Payment: ${expense.paymentMethod}`,
+                     description: `Payment: ${expense.payment_method}`,
                      debit_amount: new Decimal(0),
                      credit_amount: new Decimal(expense.amount)
                  });
@@ -277,7 +277,7 @@ export const generateJournalFromExpense = async (expenseId: number) => {
              if (apAccountId) {
                  lines.push({
                      account_id: apAccountId,
-                     description: `Hutang: ${expense.supplier?.name || 'Supplier'}`,
+                     description: `Hutang: ${expense.suppliers?.name || 'Supplier'}`,
                      debit_amount: new Decimal(0),
                      credit_amount: new Decimal(expense.amount)
                  });
@@ -287,18 +287,18 @@ export const generateJournalFromExpense = async (expenseId: number) => {
                      await prisma.accounts_payable.create({
                          data: {
                              tenant_id: tenantId,
-                             outlet_id: expense.outletId,
-                             supplier_id: expense.supplierId || 0, // Should have supplier
-                             invoice_number: expense.invoiceNumber || `INV-${Date.now()}`,
-                             invoice_date: expense.createdAt || new Date(),
-                             due_date: expense.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
+                             outlet_id: expense.outlet_id,
+                             supplier_id: expense.supplier_id || 0, // Should have supplier
+                             invoice_number: expense.invoice_number || `INV-${Date.now()}`,
+                             invoice_date: expense.created_at || new Date(),
+                             due_date: expense.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
                              amount: expense.amount,
                              paid_amount: 0,
                              balance: expense.amount,
                              status: 'unpaid',
                              reference_type: 'expense',
                              reference_id: expense.id,
-                             created_by: expense.userId
+                             created_by: expense.user_id
                          }
                      });
                      console.log('Created AP record for expense:', expense.id);
@@ -315,17 +315,17 @@ export const generateJournalFromExpense = async (expenseId: number) => {
         const journal = await prisma.journal_entries.create({
             data: {
                 tenant_id: tenantId,
-                outlet_id: expense.outletId,
+                outlet_id: expense.outlet_id,
                 journal_number: journalNumber,
                 journal_type: 'expense',
-                transaction_date: expense.createdAt || new Date(),
+                transaction_date: expense.created_at || new Date(),
                 description: `Expense: ${expense.description}`,
                 reference_type: 'expense',
                 reference_id: expense.id,
                 total_debit: total,
                 total_credit: total,
                 status: 'draft',
-                created_by: expense.userId,
+                created_by: expense.user_id,
                 journal_entry_lines: {
                     create: lines.map(line => ({
                         account_id: line.account_id,
@@ -337,7 +337,7 @@ export const generateJournalFromExpense = async (expenseId: number) => {
             }
         });
 
-        await postJournalToLedger(journal.id, tenantId, expense.userId);
+        await postJournalToLedger(journal.id, tenantId, expense.user_id);
         console.log(`Auto-journal expense created: ${journal.journal_number}`);
 
     } catch (error) {
