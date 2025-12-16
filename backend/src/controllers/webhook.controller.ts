@@ -16,7 +16,7 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
       referenceNumber
     });
 
-    // Find the transaction by reference number
+    // Find the payment by reference number
     const payment = await prisma.payments.findFirst({
       where: {
         reference_number: referenceNumber,
@@ -47,7 +47,7 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
 
     // Update transaction status if all payments are completed
     if (status === 'success') {
-      await prisma.transaction.update({
+      await prisma.transactions.update({
         where: { id: payment.transaction_id },
         data: {
           status: 'completed',
@@ -80,7 +80,7 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
     });
 
     // Create or update transaction based on GoFood order
-    const existingTransaction = await prisma.transaction.findFirst({
+    const existingTransaction = await prisma.transactions.findFirst({
       where: {
         transaction_number: `GOFOOD-${orderId}`
       }
@@ -88,7 +88,7 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
 
     if (existingTransaction) {
       // Update existing transaction
-      await prisma.transaction.update({
+      await prisma.transactions.update({
         where: { id: existingTransaction.id },
         data: {
           status: status === 'delivered' ? 'completed' : status,
@@ -126,14 +126,14 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
     });
 
     // Similar to GoFood, create or update transaction
-    const existingTransaction = await prisma.transaction.findFirst({
+    const existingTransaction = await prisma.transactions.findFirst({
       where: {
         transaction_number: `GRABFOOD-${orderId}`
       }
     });
 
     if (existingTransaction) {
-      await prisma.transaction.update({
+      await prisma.transactions.update({
         where: { id: existingTransaction.id },
         data: {
           status: status === 'delivered' ? 'completed' : status,
@@ -168,14 +168,14 @@ export const shopeefoodWebhook = async (req: Request, res: Response, next: NextF
     });
 
     // Similar to GoFood and GrabFood
-    const existingTransaction = await prisma.transaction.findFirst({
+    const existingTransaction = await prisma.transactions.findFirst({
       where: {
         transaction_number: `SHOPEEFOOD-${orderId}`
       }
     });
 
     if (existingTransaction) {
-      await prisma.transaction.update({
+      await prisma.transactions.update({
         where: { id: existingTransaction.id },
         data: {
           status: status === 'delivered' ? 'completed' : status,

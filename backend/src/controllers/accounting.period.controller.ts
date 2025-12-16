@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 import { generateJournalNumber } from '../utils/journal.utils';
+import { Decimal } from '@prisma/client/runtime/library';
 
 /**
  * Get Accounting Periods
@@ -13,12 +14,12 @@ export const getPeriods = async (req: Request, res: Response, next: NextFunction
       orderBy: { start_date: 'desc' }
     });
 
-    res.json({
+    return res.json({
       success: true,
       data: { periods }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -44,9 +45,9 @@ export const createPeriod = async (req: Request, res: Response, next: NextFuncti
       }
     });
 
-    res.status(201).json({ success: true, data: period });
+    return res.status(201).json({ success: true, data: period });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -190,7 +191,7 @@ export const closePeriod = async (req: Request, res: Response, next: NextFunctio
         // Create Closing Journal
         if (closingLines.length > 0) {
             const journalNumber = await generateJournalNumber(tenantId, 'general'); // CJ?
-            const journal = await prisma.journal_entries.create({
+            await prisma.journal_entries.create({
                 data: {
                     tenant_id: tenantId,
                     journal_number: journalNumber,
@@ -230,9 +231,9 @@ export const closePeriod = async (req: Request, res: Response, next: NextFunctio
         }
     });
 
-    res.json({ success: true, data: updated });
+    return res.json({ success: true, data: updated });
 
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
