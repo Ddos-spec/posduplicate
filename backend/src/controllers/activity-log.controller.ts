@@ -17,7 +17,7 @@ export const createActivityLog = async (
   outletId?: number | null
 ) => {
   try {
-    const log = await prisma.activityLog.create({
+    const log = await prisma.activity_logs.create({
       data: {
         user_id: userId,
         outlet_id: outletId || null,
@@ -71,7 +71,7 @@ export const getActivityLogs = async (req: AuthRequest, res: Response) => {
     }
 
     const [logs, total] = await Promise.all([
-      prisma.activityLog.findMany({
+      prisma.activity_logs.findMany({
         where,
         include: {
           users: {
@@ -88,7 +88,7 @@ export const getActivityLogs = async (req: AuthRequest, res: Response) => {
         skip,
         take: Number(limit),
       }),
-      prisma.activityLog.count({ where }),
+      prisma.activity_logs.count({ where }),
     ]);
 
     res.json({
@@ -121,7 +121,7 @@ export const getEntityActivityLogs = async (req: AuthRequest, res: Response) => 
     const skip = (Number(page) - 1) * Number(limit);
 
     const [logs, total] = await Promise.all([
-      prisma.activityLog.findMany({
+      prisma.activity_logs.findMany({
         where: {
           outlet_id: outletId,
           entity_type: entityType,
@@ -142,7 +142,7 @@ export const getEntityActivityLogs = async (req: AuthRequest, res: Response) => 
         skip,
         take: Number(limit),
       }),
-      prisma.activityLog.count({
+      prisma.activity_logs.count({
         where: {
           outlet_id: outletId,
           entity_type: entityType,
@@ -180,7 +180,7 @@ export const getRecentActivities = async (req: AuthRequest, res: Response) => {
     const startDate = new Date();
     startDate.setHours(startDate.getHours() - Number(hours));
 
-    const logs = await prisma.activityLog.findMany({
+    const logs = await prisma.activity_logs.findMany({
       where: {
         outlet_id: outletId,
         created_at: {
@@ -263,7 +263,7 @@ export const getUserActivitySummary = async (req: AuthRequest, res: Response) =>
       }
     }
 
-    const logs = await prisma.activityLog.findMany({
+    const logs = await prisma.activity_logs.findMany({
       where,
       orderBy: {
         created_at: 'desc',

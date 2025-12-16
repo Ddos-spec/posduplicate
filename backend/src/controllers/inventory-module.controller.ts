@@ -24,7 +24,7 @@ export const getAllInventory = async (req: Request, res: Response, _next: NextFu
     let filteredItems = items;
     if (low_stock === 'true') {
       filteredItems = items.filter(item =>
-        item.alert && parseFloat(item.currentStock.toString()) <= parseFloat(item.stockAlert.toString())
+        item.alert && parseFloat(item.current_stock.toString()) <= parseFloat(item.stock_alert.toString())
       );
     }
 
@@ -88,7 +88,7 @@ export const createInventory = async (req: Request, res: Response, _next: NextFu
         name,
         category,
         unit,
-        currentStock: parseFloat(currentStock),
+        current_stock: parseFloat(currentStock),
         alert,
         stockAlert: parseFloat(stockAlert),
         trackCost,
@@ -181,7 +181,7 @@ export const deleteInventory = async (req: Request, res: Response, _next: NextFu
 
     await prisma.inventory.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
 
     res.json({
@@ -208,12 +208,12 @@ export const getLowStockItems = async (req: Request, res: Response, _next: NextF
 
     const items = await prisma.inventory.findMany({
       where,
-      orderBy: { currentStock: 'asc' }
+      orderBy: { current_stock: 'asc' }
     });
 
     // Filter items where current stock is at or below alert threshold
     const lowStockItems = items.filter(item =>
-      parseFloat(item.currentStock.toString()) <= parseFloat(item.stockAlert.toString())
+      parseFloat(item.current_stock.toString()) <= parseFloat(item.stock_alert.toString())
     );
 
     res.json({
@@ -230,7 +230,7 @@ export const getLowStockItems = async (req: Request, res: Response, _next: NextF
 export const getInventoryCategories = async (_req: Request, res: Response, _next: NextFunction) => {
   try {
     const categories = await prisma.inventory.findMany({
-      where: { isActive: true },
+      where: { is_active: true },
       select: { category: true },
       distinct: ['category']
     });
@@ -270,7 +270,7 @@ export const adjustInventoryStock = async (req: Request, res: Response, _next: N
       });
     }
 
-    const currentStock = parseFloat(item.currentStock.toString());
+    const currentStock = parseFloat(item.current_stock.toString());
     const adjustment = parseFloat(quantity);
     const newStock = type === 'in' ? currentStock + adjustment : currentStock - adjustment;
 
@@ -283,7 +283,7 @@ export const adjustInventoryStock = async (req: Request, res: Response, _next: N
 
     const updatedItem = await prisma.inventory.update({
       where: { id: parseInt(id) },
-      data: { currentStock: newStock }
+      data: { current_stock: newStock }
     });
 
     res.json({

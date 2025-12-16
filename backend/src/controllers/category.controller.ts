@@ -88,8 +88,8 @@ export const getCategoryById = async (
 
     // Tenant isolation check
     if (req.tenantId && category.outletId) {
-      const outlet = await prisma.outlet.findUnique({
-        where: { id: category.outletId }
+      const outlet = await prisma.outlets.findUnique({
+        where: { id: category.outlet_id }
       });
 
       if (!outlet || outlet.tenantId !== req.tenantId) {
@@ -136,7 +136,7 @@ export const createCategory = async (
 
     // Validate that the outlet belongs to the current tenant
     if (outletId) {
-      const outlet = await prisma.outlet.findUnique({
+      const outlet = await prisma.outlets.findUnique({
         where: { id: outletId }
       });
 
@@ -155,7 +155,7 @@ export const createCategory = async (
       data: {
         name,
         type: type || 'item',
-        outletId: outletId || null
+        outlet_id: outletId || null
       }
     });
 
@@ -200,8 +200,8 @@ export const updateCategory = async (
 
     // Check if the category's outlet belongs to the current tenant
     if (category.outletId) {
-      const outlet = await prisma.outlet.findUnique({
-        where: { id: category.outletId }
+      const outlet = await prisma.outlets.findUnique({
+        where: { id: category.outlet_id }
       });
 
       if (!outlet || outlet.tenantId !== tenantId) {
@@ -218,7 +218,7 @@ export const updateCategory = async (
 
     // If updating outletId, validate the new outlet
     if (outletId !== undefined) {
-      const newOutlet = await prisma.outlet.findUnique({
+      const newOutlet = await prisma.outlets.findUnique({
         where: { id: outletId }
       });
 
@@ -285,8 +285,8 @@ export const deleteCategory = async (
 
     // Check if the category's outlet belongs to the current tenant
     if (category.outletId) {
-      const outlet = await prisma.outlet.findUnique({
-        where: { id: category.outletId }
+      const outlet = await prisma.outlets.findUnique({
+        where: { id: category.outlet_id }
       });
 
       if (!outlet || outlet.tenantId !== tenantId) {
@@ -303,7 +303,7 @@ export const deleteCategory = async (
 
     await prisma.categories.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
 
     res.json({

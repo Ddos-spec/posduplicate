@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 
-// Extend Express Request type
+// Extend Express Request to include API Key info
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       apiKeyTenantId?: number;

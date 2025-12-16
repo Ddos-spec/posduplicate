@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
+import { generateJournalFromPOSTransaction } from '../services/autoJournal.service';
 
 /**
  * Get all transactions
@@ -58,7 +59,7 @@ export const getTransactions = async (
       where.status = status;
     }
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where,
       include: {
         outlets: { select: { id: true, name: true } },
@@ -109,7 +110,7 @@ export const getTransactionById = async (
     const tenantId = req.tenantId; // Get tenantId from middleware
 
     // Verify transaction belongs to tenant's outlet
-    const transaction = await prisma.transaction.findUnique({
+    const transaction = await prisma.transactions.findUnique({
       where: { id: parseInt(id) },
       include: {
         outlets: true,
@@ -357,7 +358,7 @@ export const createTransaction = async (
       // Create transaction with items
       console.log(`[CreateTransaction] Creating transaction record ${transactionNumber}... CashierID: ${req.userId}`);
 
-      const transaction = await tx.transaction.create({
+      const transaction = await tx.transactions.create({
         data: {
           transaction_number: transactionNumber,
           order_type: orderType,
@@ -455,6 +456,12 @@ export const createTransaction = async (
       return transaction;
     });
 
+    // Auto-Journal Hook
+    // Fire and forget (don't await to block response)
+    generateJournalFromPOSTransaction(transactionResult.id).catch(err => {
+        console.error('Auto-journal hook failed:', err);
+    });
+
     res.status(201).json({
       success: true,
       data: transactionResult,
@@ -506,7 +513,7 @@ export const holdOrder = async (
     // Store as pending transaction instead of separate table
     const transactionNumber = `HOLD-${Date.now()}`;
 
-    const heldOrder = await prisma.transaction.create({
+    const heldOrder = await prisma.transactions.create({
       data: {
         transaction_number: transactionNumber,
         order_type: orderData.orderType || 'dine_in',
@@ -544,7 +551,7 @@ export const getHeldOrders = async (
   next: NextFunction
 ) => {
   try {
-    const heldOrders = await prisma.transaction.findMany({
+    const heldOrders = await prisma.transactions.findMany({
       where: {
         cashier_id: req.userId,
         status: 'pending'
@@ -575,7 +582,7 @@ export const updateTransactionStatus = async (
     const { status } = req.body;
 
     // Get existing transaction with items
-    const existingTransaction = await prisma.transaction.findUnique({
+    const existingTransaction = await prisma.transactions.findUnique({
       where: { id: parseInt(id) },
       include: {
         transaction_items: {
@@ -613,7 +620,7 @@ export const updateTransactionStatus = async (
       }
     }
 
-    const transaction = await prisma.transaction.update({
+    const transaction = await prisma.transactions.update({
       where: { id: parseInt(id) },
       data: {
         status,
@@ -644,7 +651,7 @@ export const deleteTransaction = async (
     const tenantId = req.tenantId;
 
     // Get transaction with outlet info for tenant validation
-    const transaction = await prisma.transaction.findUnique({
+    const transaction = await prisma.transactions.findUnique({
       where: { id: parseInt(id) },
       include: {
         outlets: true,
@@ -700,7 +707,7 @@ export const deleteTransaction = async (
     }
 
     // Delete transaction (cascade delete will handle related records)
-    await prisma.transaction.delete({
+    await prisma.transactions.delete({
       where: { id: parseInt(id) }
     });
 
@@ -745,7 +752,7 @@ export const getTodayReport = async (
     }
 
     // Get today's transactions for this cashier
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where: {
         cashier_id: userId,
         status: 'completed',

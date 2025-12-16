@@ -16,7 +16,7 @@ export const getSuppliers = async (req: Request, res: Response, _next: NextFunct
       where.isActive = true;
     }
 
-    const suppliers = await prisma.supplier.findMany({
+    const suppliers = await prisma.suppliers.findMany({
       where,
       include: {
         _count: {
@@ -40,7 +40,7 @@ export const getSupplier = async (req: Request, res: Response, _next: NextFuncti
   try {
     const { id } = req.params;
 
-    const supplier = await prisma.supplier.findUnique({
+    const supplier = await prisma.suppliers.findUnique({
       where: { id: parseInt(id) },
       include: {
         stockMovements: {
@@ -91,7 +91,7 @@ export const createSupplier = async (req: Request, res: Response, _next: NextFun
     }
 
     // Check for duplicate name in same outlet
-    const existing = await prisma.supplier.findFirst({
+    const existing = await prisma.suppliers.findFirst({
       where: {
         outletId: parseInt(outletId),
         name: name,
@@ -106,7 +106,7 @@ export const createSupplier = async (req: Request, res: Response, _next: NextFun
       });
     }
 
-    const supplier = await prisma.supplier.create({
+    const supplier = await prisma.suppliers.create({
       data: {
         outletId: parseInt(outletId),
         name,
@@ -150,7 +150,7 @@ export const updateSupplier = async (req: Request, res: Response, _next: NextFun
     const { id } = req.params;
     const { name, phone, email, address, notes, isActive } = req.body;
 
-    const existing = await prisma.supplier.findUnique({ where: { id: parseInt(id) } });
+    const existing = await prisma.suppliers.findUnique({ where: { id: parseInt(id) } });
 
     if (!existing) {
       return res.status(404).json({
@@ -159,7 +159,7 @@ export const updateSupplier = async (req: Request, res: Response, _next: NextFun
       });
     }
 
-    const supplier = await prisma.supplier.update({
+    const supplier = await prisma.suppliers.update({
       where: { id: parseInt(id) },
       data: {
         ...(name && { name }),
@@ -202,7 +202,7 @@ export const deleteSupplier = async (req: Request, res: Response, _next: NextFun
   try {
     const { id } = req.params;
 
-    const existing = await prisma.supplier.findUnique({ where: { id: parseInt(id) } });
+    const existing = await prisma.suppliers.findUnique({ where: { id: parseInt(id) } });
 
     if (!existing) {
       return res.status(404).json({
@@ -212,7 +212,7 @@ export const deleteSupplier = async (req: Request, res: Response, _next: NextFun
     }
 
     // Soft delete
-    await prisma.supplier.update({
+    await prisma.suppliers.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });
@@ -258,7 +258,7 @@ export const getSupplierSpending = async (req: Request, res: Response, _next: Ne
       if (date_to) where.createdAt.lte = new Date(date_to as string);
     }
 
-    const suppliers = await prisma.supplier.findMany({
+    const suppliers = await prisma.suppliers.findMany({
       where: { isActive: true, ...(outlet_id && { outletId: parseInt(outlet_id as string) }) },
       include: {
         stockMovements: {

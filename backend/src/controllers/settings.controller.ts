@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
+import bcrypt from 'bcrypt';
 
 interface AuthRequest extends Request {
   userId?: number;
@@ -155,8 +156,6 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
         }
       });
     }
-
-    const bcrypt = require('bcrypt');
 
     // Get user with password
     const user = await prisma.user.findUnique({

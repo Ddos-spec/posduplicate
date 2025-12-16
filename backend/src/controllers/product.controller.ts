@@ -18,7 +18,7 @@ export const getProducts = async (req: Request, res: Response, _next: NextFuncti
 
     // First, get all outlets for this tenant
     if (tenantId) {
-      const tenantOutlets = await prisma.outlet.findMany({
+      const tenantOutlets = await prisma.outlets.findMany({
         where: { tenantId: tenantId },
         select: { id: true }
       });
@@ -102,7 +102,7 @@ export const getProductById = async (req: Request, res: Response, _next: NextFun
     const tenantId = (req as any).tenantId; // Get tenantId from middleware
 
     // First get the tenant's outlets to ensure proper isolation
-    const tenantOutlets = await prisma.outlet.findMany({
+    const tenantOutlets = await prisma.outlets.findMany({
       where: { tenantId: tenantId },
       select: { id: true }
     });
@@ -112,7 +112,7 @@ export const getProductById = async (req: Request, res: Response, _next: NextFun
     const product = await prisma.items.findFirst({
       where: {
         id: parseInt(id),
-        outletId: {
+        outlet_id: {
           in: outletIds
         }
       },
@@ -168,7 +168,7 @@ export const createProduct = async (req: Request, res: Response, _next: NextFunc
     }
 
     // Validate that the product's outlet belongs to the current tenant
-    const outlet = await prisma.outlet.findUnique({
+    const outlet = await prisma.outlets.findUnique({
       where: { id: productData.outletId }
     });
 
@@ -231,8 +231,8 @@ export const updateProduct = async (req: Request, res: Response, _next: NextFunc
       });
     }
 
-    const outlet = await prisma.outlet.findUnique({
-      where: { id: product.outletId }
+    const outlet = await prisma.outlets.findUnique({
+      where: { id: product.outlet_id }
     });
 
     if (!outlet || outlet.tenantId !== tenantId) {
@@ -247,7 +247,7 @@ export const updateProduct = async (req: Request, res: Response, _next: NextFunc
 
     // If updating the outletId, also validate the new outlet
     if (updateData.outletId) {
-      const newOutlet = await prisma.outlet.findUnique({
+      const newOutlet = await prisma.outlets.findUnique({
         where: { id: updateData.outletId }
       });
 
@@ -311,8 +311,8 @@ export const deleteProduct = async (req: Request, res: Response, _next: NextFunc
       });
     }
 
-    const outlet = await prisma.outlet.findUnique({
-      where: { id: product.outletId }
+    const outlet = await prisma.outlets.findUnique({
+      where: { id: product.outlet_id }
     });
 
     if (!outlet || outlet.tenantId !== tenantId) {
@@ -327,7 +327,7 @@ export const deleteProduct = async (req: Request, res: Response, _next: NextFunc
 
     await prisma.items.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
 
     res.json({

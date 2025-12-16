@@ -39,7 +39,7 @@ export const getFinancialReport = async (req: Request, res: Response, _next: Nex
     }
 
     // A. Gross & Net Sales
-    const salesAgg = await prisma.transaction.aggregate({
+    const salesAgg = await prisma.transactionsaggregate({
       where: whereTransaction,
       _sum: {
         total: true, // Net Sales
@@ -135,7 +135,7 @@ export const getOperationalReport = async (req: Request, res: Response, _next: N
             where.outletId = { in: outletIds };
         }
 
-        const transactions = await prisma.transaction.findMany({
+        const transactions = await prisma.transactionsfindMany({
             where,
             select: { createdAt: true, total: true }
         });
@@ -324,7 +324,7 @@ export const getFraudStats = async (req: Request, res: Response, _next: NextFunc
         }
 
         // Count Voids/Cancels
-        const voidTransactions = await prisma.transaction.findMany({
+        const voidTransactions = await prisma.transactionsfindMany({
             where: {
                 ...where,
                 status: { in: ['cancelled', 'void'] }
@@ -397,7 +397,7 @@ export const getSalesReport = async (req: Request, res: Response, _next: NextFun
             where.outletId = { in: outletIds };
         }
 
-        const aggregate = await prisma.transaction.aggregate({
+        const aggregate = await prisma.transactionsaggregate({
             where,
             _sum: { total: true },
             _count: { id: true }

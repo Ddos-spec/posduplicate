@@ -9,7 +9,7 @@ export const getIngredients = async (req: Request, res: Response, _next: NextFun
 
     // Filter by tenant - get all outlets for this tenant
     if (req.tenantId) {
-      const tenantOutlets = await prisma.outlet.findMany({
+      const tenantOutlets = await prisma.outlets.findMany({
         where: { tenantId: req.tenantId },
         select: { id: true }
       });

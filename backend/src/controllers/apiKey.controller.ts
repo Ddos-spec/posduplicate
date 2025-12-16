@@ -7,7 +7,7 @@ import { generateApiKey } from '../utils/apiKeyGenerator';
  */
 export const getAllApiKeys = async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const apiKeys = await prisma.apiKey.findMany({
+    const apiKeys = await prisma.api_keys.findMany({
       include: {
         tenant: {
           select: {
@@ -39,7 +39,7 @@ export const getTenantApiKeys = async (req: Request, res: Response, next: NextFu
   try {
     const { tenantId } = req.params;
 
-    const apiKeys = await prisma.apiKey.findMany({
+    const apiKeys = await prisma.api_keys.findMany({
       where: {
         tenant_id: parseInt(tenantId),
       },
@@ -82,7 +82,7 @@ export const getMyApiKeys = async (req: Request, res: Response, next: NextFuncti
       });
     }
 
-    const apiKeys = await prisma.apiKey.findMany({
+    const apiKeys = await prisma.api_keys.findMany({
       where: {
         tenant_id: tenantId,
       },
@@ -132,7 +132,7 @@ export const createApiKey = async (req: Request, res: Response, next: NextFuncti
     const hashedKey = apiKey; 
 
     // Create API key record
-    const apiKeyRecord = await prisma.apiKey.create({
+    const apiKeyRecord = await prisma.api_keys.create({
       data: {
         tenant_id: parseInt(tenantId),
         key_name: keyName,
@@ -168,7 +168,7 @@ export const toggleApiKeyStatus = async (req: Request, res: Response, next: Next
     const { keyId } = req.params;
     const { isActive } = req.body;
 
-    const apiKey = await prisma.apiKey.update({
+    const apiKey = await prisma.api_keys.update({
       where: { id: parseInt(keyId) },
       data: { is_active: isActive },
       select: {
@@ -199,7 +199,7 @@ export const deleteApiKey = async (req: Request, res: Response, next: NextFuncti
   try {
     const { keyId } = req.params;
 
-    await prisma.apiKey.delete({
+    await prisma.api_keys.delete({
       where: { id: parseInt(keyId) },
     });
 

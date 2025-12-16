@@ -7,7 +7,7 @@ export const getAdminNotifications = async (_req: Request, res: Response, next: 
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(now.getDate() + 30);
 
-    const expiringSoonTenants = await prisma.tenant.findMany({
+    const expiringSoonTenants = await prisma.tenants.findMany({
       where: {
         isActive: true,
         subscriptionStatus: 'active',
@@ -23,7 +23,7 @@ export const getAdminNotifications = async (_req: Request, res: Response, next: 
       },
     });
 
-    const overdueTenants = await prisma.tenant.findMany({
+    const overdueTenants = await prisma.tenants.findMany({
       where: {
         isActive: true,
         subscriptionStatus: { not: 'active' },
@@ -89,7 +89,7 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
     const now = new Date();
 
     // Get subscription-related notifications for this tenant
-    const tenant = await prisma.tenant.findUnique({
+    const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
       select: {
         id: true,

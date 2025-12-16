@@ -3,6 +3,7 @@ import prisma from '../utils/prisma';
 
 // Extend Express Request to include tenant info
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       tenantId?: number;
