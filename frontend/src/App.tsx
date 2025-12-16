@@ -27,6 +27,21 @@ const ProductManagementPage = lazy(() => import('./pages/owner/ProductManagement
 const TransactionDetailPage = lazy(() => import('./pages/owner/TransactionDetailPage'));
 const IntegrationsPage = lazy(() => import('./pages/owner/IntegrationsPage'));
 
+// Module Selector
+const ModuleSelectorPage = lazy(() => import('./pages/ModuleSelectorPage'));
+
+// Accounting Module Pages
+const AccountingLayout = lazy(() => import('./components/accounting/AccountingLayout'));
+const DashboardAkuntansiPage = lazy(() => import('./pages/accounting/DashboardAkuntansiPage'));
+const DashboardRetailPage = lazy(() => import('./pages/accounting/DashboardRetailPage'));
+const DashboardDistributorPage = lazy(() => import('./pages/accounting/DashboardDistributorPage'));
+const DashboardProdusenPage = lazy(() => import('./pages/accounting/DashboardProdusenPage'));
+const ChartOfAccountsPage = lazy(() => import('./pages/accounting/ChartOfAccountsPage'));
+const AccountingUserManagementPage = lazy(() => import('./pages/accounting/UserManagementPage'));
+const CreateUserPage = lazy(() => import('./pages/accounting/CreateUserPage'));
+const CreateJournalPage = lazy(() => import('./pages/accounting/CreateJournalPage'));
+const IncomeStatementPage = lazy(() => import('./pages/accounting/IncomeStatementPage'));
+
 // Loading fallback
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -107,6 +122,16 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
 
+        {/* Module Selector Route */}
+        <Route
+          path="/module-selector"
+          element={
+            <ProtectedRoute>
+              <ModuleSelectorPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Admin Routes (Super Admin) */}
         <Route
           path="/admin"
@@ -124,7 +149,7 @@ function App() {
           <Route index element={<Navigate to="/admin/dashboard" />} />
         </Route>
 
-        {/* Owner Routes */}
+        {/* Owner Routes (FNB Module) */}
         <Route
           path="/owner"
           element={
@@ -144,6 +169,60 @@ function App() {
           <Route path="integrations" element={<IntegrationsPage />} />
 
           <Route index element={<Navigate to="/owner/dashboard" />} />
+        </Route>
+
+        {/* Accounting Module Routes */}
+        <Route
+          path="/accounting"
+          element={
+            <OwnerRoute>
+              <AccountingLayout />
+            </OwnerRoute>
+          }
+        >
+          <Route path="dashboard" element={<DashboardAkuntansiPage />} />
+          <Route path="coa" element={<ChartOfAccountsPage />} />
+          <Route path="journal" element={<CreateJournalPage />} />
+          <Route path="reports" element={<IncomeStatementPage />} />
+          <Route path="users" element={<AccountingUserManagementPage />} />
+          <Route path="users/create" element={<CreateUserPage />} />
+          <Route index element={<Navigate to="/accounting/dashboard" />} />
+        </Route>
+
+        {/* Accounting Retail Dashboard */}
+        <Route
+          path="/accounting/retail"
+          element={
+            <OwnerRoute>
+              <AccountingLayout variant="retail" />
+            </OwnerRoute>
+          }
+        >
+          <Route index element={<DashboardRetailPage />} />
+        </Route>
+
+        {/* Accounting Distributor Dashboard */}
+        <Route
+          path="/accounting/distributor"
+          element={
+            <OwnerRoute>
+              <AccountingLayout variant="distributor" />
+            </OwnerRoute>
+          }
+        >
+          <Route index element={<DashboardDistributorPage />} />
+        </Route>
+
+        {/* Accounting Produsen Dashboard */}
+        <Route
+          path="/accounting/produsen"
+          element={
+            <OwnerRoute>
+              <AccountingLayout variant="produsen" />
+            </OwnerRoute>
+          }
+        >
+          <Route index element={<DashboardProdusenPage />} />
         </Route>
 
         {/* Cashier Route */}
