@@ -197,7 +197,7 @@ export const getLowStock = async (req: Request, res: Response, _next: NextFuncti
       // Fallback to regular query
       const items = await prisma.items.findMany({
         where: {
-          isActive: true,
+          is_active: true,
           trackStock: true,
           ...(outlet_id && { outletId: parseInt(outlet_id as string) })
         },
@@ -205,7 +205,7 @@ export const getLowStock = async (req: Request, res: Response, _next: NextFuncti
       });
 
       const lowStock = items.filter(item =>
-        parseFloat((item.stock || 0).toString()) <= parseFloat((item.minStock || 0).toString())
+        parseFloat((item.stock || 0).toString()) <= parseFloat((item.min_stock || 0).toString())
       );
 
       res.json({ success: true, data: lowStock, count: lowStock.length });

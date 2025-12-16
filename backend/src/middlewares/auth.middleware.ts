@@ -123,3 +123,29 @@ export const optionalAuth = async (
     next();
   }
 };
+
+/**
+ * Role Authorization Middleware
+ * Verifies if user has required role
+ * Usage: roleMiddleware(['owner', 'manager'])
+ */
+export const roleMiddleware = (allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    // Super Admin bypass
+    if (req.userRole === 'Super Admin' || req.userRole === 'super_admin') {
+      return next();
+    }
+
+    if (!req.userRole || !allowedRoles.includes(req.userRole)) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_PERMISSIONS',
+          message: `Access denied. Required role: ${allowedRoles.join(' or ')}`
+        }
+      });
+    }
+
+    next();
+  };
+};

@@ -15,7 +15,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     }
 
     // Get all completed transactions
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where: {
         status: 'completed',
         ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
@@ -45,7 +45,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     // Get yesterday's revenue for comparison
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayTransactions = await prisma.transaction.findMany({
+    const yesterdayTransactions = await prisma.transactions.findMany({
       where: {
         status: 'completed',
         createdAt: {
@@ -84,7 +84,7 @@ export const getSalesChart = async (req: Request, res: Response) => {
   try {
     const { period = 'week' } = req.query; // week, month, year
 
-    let startDate = new Date();
+    const startDate = new Date();
     let groupBy = 'day';
 
     if (period === 'week') {
@@ -98,7 +98,7 @@ export const getSalesChart = async (req: Request, res: Response) => {
       groupBy = 'month';
     }
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where: {
         status: 'completed',
         createdAt: {
@@ -155,7 +155,7 @@ export const getTopProducts = async (req: Request, res: Response) => {
   try {
     const { limit = 10 } = req.query;
 
-    const transactionItems = await prisma.transactionItem.findMany({
+    const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
           status: 'completed'
@@ -216,7 +216,7 @@ export const getSalesByCategory = async (_req: Request, res: Response) => {
     });
 
     // Get transaction items
-    const transactionItems = await prisma.transactionItem.findMany({
+    const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
           status: 'completed'
@@ -264,7 +264,7 @@ export const getRecentTransactions = async (req: Request, res: Response) => {
   try {
     const { limit = 10 } = req.query;
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       include: {
         users: {
           select: {

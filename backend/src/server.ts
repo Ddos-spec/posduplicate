@@ -43,6 +43,13 @@ import salesAnalyticsRoutes from './routes/sales-analytics.routes';
 import reportRoutes from './routes/report.routes';
 import integrationRoutes from './routes/integration.routes';
 import webhookRoutes from './routes/webhook.routes';
+import accountingCoaRoutes from './routes/accounting.coa.routes';
+import accountingJournalRoutes from './routes/accounting.journal.routes';
+import accountingReportRoutes from './routes/accounting.report.routes';
+import accountingAparRoutes from './routes/accounting.apar.routes';
+import accountingPeriodRoutes from './routes/accounting.period.routes';
+import accountingDashboardRoutes from './routes/accounting.dashboard.routes';
+import accountingUserRoutes from './routes/accounting.user.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -162,6 +169,13 @@ app.use('/api/sales-analytics', salesAnalyticsRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/accounting/coa', accountingCoaRoutes);
+app.use('/api/accounting/journal', accountingJournalRoutes);
+app.use('/api/accounting/reports', accountingReportRoutes);
+app.use('/api/accounting', accountingAparRoutes); // Mounts at /api/accounting/ap and /api/accounting/ar
+app.use('/api/accounting/periods', accountingPeriodRoutes);
+app.use('/api/accounting/dashboard', accountingDashboardRoutes);
+app.use('/api/accounting/users', accountingUserRoutes);
 
 // DEBUG endpoints removed for security
 // Use proper logging and monitoring service in production

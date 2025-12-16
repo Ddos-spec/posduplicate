@@ -34,7 +34,7 @@ export const getStockMovements = async (req: Request, res: Response, _next: Next
       if (date_to) where.createdAt.lte = new Date(date_to as string);
     }
 
-    const movements = await prisma.stockMovement.findMany({
+    const movements = await prisma.stock_movements.findMany({
       where,
       include: {
         user: { select: { id: true, name: true } },
@@ -57,7 +57,7 @@ export const getStockMovement = async (req: Request, res: Response, _next: NextF
   try {
     const { id } = req.params;
 
-    const movement = await prisma.stockMovement.findUnique({
+    const movement = await prisma.stock_movements.findUnique({
       where: { id: parseInt(id) },
       include: {
         user: { select: { id: true, name: true } },
@@ -142,7 +142,7 @@ export const createStockMovement = async (req: Request, res: Response, _next: Ne
           error: { code: 'INVENTORY_NOT_FOUND', message: 'Inventory not found' }
         });
       }
-      currentStock = parseFloat((inventory.currentStock || 0).toString());
+      currentStock = parseFloat((inventory.current_stock || 0).toString());
       targetName = inventory.name;
       targetUnit = inventory.unit;
     }
@@ -172,7 +172,7 @@ export const createStockMovement = async (req: Request, res: Response, _next: Ne
     const totalCost = qty * price;
 
     // Create stock movement record
-    const movement = await prisma.stockMovement.create({
+    const movement = await prisma.stock_movements.create({
       data: {
         outletId: parseInt(outletId),
         ingredientId: ingredientId ? parseInt(ingredientId) : null,
@@ -210,7 +210,7 @@ export const createStockMovement = async (req: Request, res: Response, _next: Ne
       await prisma.inventory.update({
         where: { id: inventoryId },
         data: {
-          currentStock: newStock,
+          current_stock: newStock,
           ...(type === 'IN' && price > 0 && { costAmount: price }) // Update cost when stock IN
         }
       });
@@ -278,7 +278,7 @@ export const deleteStockMovement = async (req: Request, res: Response, _next: Ne
       });
     }
 
-    const movement = await prisma.stockMovement.findUnique({ where: { id: parseInt(id) } });
+    const movement = await prisma.stock_movements.findUnique({ where: { id: parseInt(id) } });
 
     if (!movement) {
       return res.status(404).json({
@@ -301,13 +301,13 @@ export const deleteStockMovement = async (req: Request, res: Response, _next: Ne
       if (inventory) {
         await prisma.inventory.update({
           where: { id: movement.inventoryId },
-          data: { currentStock: movement.stockBefore }
+          data: { current_stock: movement.stockBefore }
         });
       }
     }
 
     // Delete movement
-    await prisma.stockMovement.delete({ where: { id: parseInt(id) } });
+    await prisma.stock_movements.delete({ where: { id: parseInt(id) } });
 
     // Create activity log
     try {
@@ -351,19 +351,19 @@ export const getStockMovementSummary = async (req: Request, res: Response, _next
     }
 
     // Get total expenses by type
-    const inMovements = await prisma.stockMovement.aggregate({
+    const inMovements = await prisma.stock_movements.aggregate({
       where: { ...where, type: 'IN' },
       _sum: { totalCost: true },
       _count: true
     });
 
-    const outMovements = await prisma.stockMovement.aggregate({
+    const outMovements = await prisma.stock_movements.aggregate({
       where: { ...where, type: 'OUT' },
       _sum: { totalCost: true },
       _count: true
     });
 
-    const adjustMovements = await prisma.stockMovement.aggregate({
+    const adjustMovements = await prisma.stock_movements.aggregate({
       where: { ...where, type: 'ADJUST' },
       _count: true
     });

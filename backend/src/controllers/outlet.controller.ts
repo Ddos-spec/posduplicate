@@ -22,7 +22,7 @@ export const getOutlets = async (
       where.isActive = is_active === 'true';
     }
 
-    const outlets = await prisma.outlet.findMany({
+    const outlets = await prisma.outlets.findMany({
       where,
       include: {
         tenants: {
@@ -64,7 +64,7 @@ export const getOutletById = async (
   try {
     const { id } = req.params;
 
-    const outlet = await prisma.outlet.findUnique({
+    const outlet = await prisma.outlets.findUnique({
       where: { id: parseInt(id) },
       include: {
         tenants: {
@@ -159,7 +159,7 @@ export const createOutlet = async (
       }
     }
 
-    const outlet = await prisma.outlet.create({
+    const outlet = await prisma.outlets.create({
       data: {
         tenantId: req.tenantId,
         name,
@@ -209,7 +209,7 @@ export const updateOutlet = async (
     const { name, address, phone, email, npwp, settings, isActive } = req.body;
 
     // Check if outlet exists and belongs to tenant
-    const existing = await prisma.outlet.findUnique({
+    const existing = await prisma.outlets.findUnique({
       where: { id: parseInt(id) }
     });
 
@@ -242,7 +242,7 @@ export const updateOutlet = async (
     if (settings !== undefined) data.settings = settings;
     if (isActive !== undefined) data.isActive = isActive;
 
-    const outlet = await prisma.outlet.update({
+    const outlet = await prisma.outlets.update({
       where: { id: parseInt(id) },
       data,
       include: {
@@ -277,7 +277,7 @@ export const deleteOutlet = async (
     const { id } = req.params;
 
     // Check if outlet exists and belongs to tenant
-    const existing = await prisma.outlet.findUnique({
+    const existing = await prisma.outlets.findUnique({
       where: { id: parseInt(id) }
     });
 
@@ -301,7 +301,7 @@ export const deleteOutlet = async (
       });
     }
 
-    await prisma.outlet.update({
+    await prisma.outlets.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });
@@ -326,7 +326,7 @@ export const getOutletSettings = async (
   try {
     const { id } = req.params;
 
-    const outlet = await prisma.outlet.findUnique({
+    const outlet = await prisma.outlets.findUnique({
       where: { id: parseInt(id) },
       select: {
         id: true,
@@ -366,7 +366,7 @@ export const updateOutletSettings = async (
     const { id } = req.params;
     const settings = req.body;
 
-    const outlet = await prisma.outlet.update({
+    const outlet = await prisma.outlets.update({
       where: { id: parseInt(id) },
       data: { settings }
     });

@@ -21,7 +21,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
       not: 1
     };
 
-    const users = await prisma.user.findMany({
+    const users = await prisma.users.findMany({
       where,
       select: {
         id: true,
@@ -53,7 +53,7 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
   try {
     const { id } = req.params;
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: parseInt(id) },
       select: {
         id: true,
@@ -99,7 +99,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     }
 
     // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { email }
     });
 
@@ -114,7 +114,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Create user
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         name,
         email,
@@ -163,7 +163,7 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
     if (outletId !== undefined) data.outletId = outletId;
     if (isActive !== undefined) data.isActive = isActive;
 
-    const user = await prisma.user.update({
+    const user = await prisma.users.update({
       where: { id: parseInt(id) },
       data,
       select: {
@@ -203,7 +203,7 @@ export const resetUserPassword = async (req: Request, res: Response, next: NextF
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: parseInt(id) },
       data: { passwordHash }
     });
@@ -219,7 +219,7 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
   try {
     const { id } = req.params;
 
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: parseInt(id) },
       data: { isActive: false }
     });

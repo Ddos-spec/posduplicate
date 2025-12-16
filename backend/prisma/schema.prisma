@@ -1,231 +1,710 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["accounting", "public"]
 }
 
-model Role {
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model accounting_periods {
+  id                     Int                      @id @default(autoincrement())
+  tenant_id              Int
+  period_name            String                   @db.VarChar(50)
+  start_date             DateTime                 @db.Date
+  end_date               DateTime                 @db.Date
+  status                 String                   @default("open") @db.VarChar(20)
+  closed_at              DateTime?                @db.Timestamptz(6)
+  closed_by              Int?
+  notes                  String?
+  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  users                  users?                   @relation(fields: [closed_by], references: [id], onUpdate: NoAction)
+  tenants                tenants                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  budgets                budgets[]
+  depreciation_logs      depreciation_logs[]
+  financial_report_cache financial_report_cache[]
+  journal_entries        journal_entries[]
+
+  @@unique([tenant_id, period_name], map: "unique_period")
+  @@index([status], map: "idx_period_status")
+  @@index([tenant_id], map: "idx_period_tenant")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model accounts_payable {
+  id             Int           @id @default(autoincrement())
+  tenant_id      Int
+  outlet_id      Int?
+  supplier_id    Int
+  invoice_number String        @db.VarChar(100)
+  invoice_date   DateTime      @db.Date
+  due_date       DateTime      @db.Date
+  amount         Decimal       @db.Decimal(15, 2)
+  paid_amount    Decimal       @default(0) @db.Decimal(15, 2)
+  balance        Decimal       @db.Decimal(15, 2)
+  status         String        @default("unpaid") @db.VarChar(20)
+  reference_type String?       @db.VarChar(50)
+  reference_id   Int?
+  notes          String?
+  created_by     Int
+  created_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?     @default(now()) @db.Timestamptz(6)
+  users          users         @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  outlets        outlets?      @relation(fields: [outlet_id], references: [id], onUpdate: NoAction)
+  suppliers      suppliers     @relation(fields: [supplier_id], references: [id], onUpdate: NoAction)
+  tenants        tenants       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ap_payments    ap_payments[]
+
+  @@index([due_date], map: "idx_ap_due_date")
+  @@index([status], map: "idx_ap_status")
+  @@index([supplier_id], map: "idx_ap_supplier")
+  @@index([tenant_id], map: "idx_ap_tenant")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model accounts_receivable {
+  id              Int              @id @default(autoincrement())
+  tenant_id       Int
+  outlet_id       Int?
+  customer_id     Int?
+  customer_name   String           @db.VarChar(255)
+  invoice_number  String           @db.VarChar(100)
+  invoice_date    DateTime         @db.Date
+  due_date        DateTime         @db.Date
+  amount          Decimal          @db.Decimal(15, 2)
+  received_amount Decimal          @default(0) @db.Decimal(15, 2)
+  balance         Decimal          @db.Decimal(15, 2)
+  status          String           @default("unpaid") @db.VarChar(20)
+  reference_type  String?          @db.VarChar(50)
+  reference_id    Int?
+  notes           String?
+  created_by      Int
+  created_at      DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?        @default(now()) @db.Timestamptz(6)
+  users           users            @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  customers       customers?       @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  outlets         outlets?         @relation(fields: [outlet_id], references: [id], onUpdate: NoAction)
+  tenants         tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ar_collections  ar_collections[]
+
+  @@index([customer_id], map: "idx_ar_customer")
+  @@index([due_date], map: "idx_ar_due_date")
+  @@index([status], map: "idx_ar_status")
+  @@index([tenant_id], map: "idx_ar_tenant")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ai_forecast_data {
+  id                Int                @id @default(autoincrement())
+  tenant_id         Int
+  outlet_id         Int?
+  account_id        Int?
+  forecast_type     String             @db.VarChar(50)
+  forecast_date     DateTime           @db.Date
+  forecast_amount   Decimal            @db.Decimal(15, 2)
+  actual_amount     Decimal?           @db.Decimal(15, 2)
+  confidence_level  Decimal?           @db.Decimal(5, 2)
+  model_version     String?            @db.VarChar(20)
+  notes             String?
+  created_at        DateTime?          @default(now()) @db.Timestamptz(6)
+  chart_of_accounts chart_of_accounts? @relation(fields: [account_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  outlets           outlets?           @relation(fields: [outlet_id], references: [id], onUpdate: NoAction)
+  tenants           tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([account_id], map: "idx_forecast_account")
+  @@index([forecast_date], map: "idx_forecast_date")
+  @@index([tenant_id], map: "idx_forecast_tenant")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ap_payments {
+  id               Int              @id @default(autoincrement())
+  tenant_id        Int
+  ap_id            Int
+  payment_date     DateTime         @db.Date
+  payment_amount   Decimal          @db.Decimal(15, 2)
+  payment_method   String           @db.VarChar(50)
+  reference_number String?          @db.VarChar(100)
+  notes            String?
+  created_by       Int
+  created_at       DateTime?        @default(now()) @db.Timestamptz(6)
+  accounts_payable accounts_payable @relation(fields: [ap_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users            users            @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  tenants          tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([ap_id], map: "idx_ap_payment_ap")
+  @@index([payment_date], map: "idx_ap_payment_date")
+  @@index([tenant_id], map: "idx_ap_payment_tenant")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ar_collections {
+  id                  Int                 @id @default(autoincrement())
+  tenant_id           Int
+  ar_id               Int
+  collection_date     DateTime            @db.Date
+  collection_amount   Decimal             @db.Decimal(15, 2)
+  payment_method      String              @db.VarChar(50)
+  reference_number    String?             @db.VarChar(100)
+  notes               String?
+  created_by          Int
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  accounts_receivable accounts_receivable @relation(fields: [ar_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users               users               @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  tenants             tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([ar_id], map: "idx_ar_collection_ar")
+  @@index([collection_date], map: "idx_ar_collection_date")
+  @@index([tenant_id], map: "idx_ar_collection_tenant")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model audit_logs {
   id          Int       @id @default(autoincrement())
-  name        String    @unique @db.VarChar(50)
-  permissions Json?     @default("{}")
-  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  users       User[]
+  tenant_id   Int
+  user_id     Int
+  action_type String    @db.VarChar(50)
+  entity_type String    @db.VarChar(50)
+  entity_id   Int
+  old_values  Json?
+  new_values  Json?
+  ip_address  String?   @db.VarChar(45)
+  user_agent  String?
+  reason      String?
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  tenants     tenants   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users       users     @relation(fields: [user_id], references: [id], onUpdate: NoAction)
 
-  @@map("roles")
+  @@index([created_at], map: "idx_audit_date")
+  @@index([entity_type, entity_id], map: "idx_audit_entity")
+  @@index([tenant_id], map: "idx_audit_tenant")
+  @@index([user_id], map: "idx_audit_user")
+  @@schema("accounting")
 }
 
-model Tenant {
-  id                    Int       @id @default(autoincrement())
-  businessName          String    @map("business_name") @db.VarChar(255)
-  ownerName             String    @map("owner_name") @db.VarChar(255)
-  email                 String    @unique @db.VarChar(255)
-  phone                 String?   @db.VarChar(50)
-  address               String?
-  subscriptionPlan      String?   @default("basic") @map("subscription_plan") @db.VarChar(50)
-  subscriptionStatus    String?   @default("trial") @map("subscription_status") @db.VarChar(50)
-  subscriptionStartsAt  DateTime? @map("subscription_starts_at") @db.Timestamp(6)
-  subscriptionExpiresAt DateTime? @map("subscription_expires_at") @db.Timestamp(6)
-  maxOutlets            Int?      @default(1) @map("max_outlets")
-  maxUsers              Int?      @default(5) @map("max_users")
-  billingEmail          String?   @map("billing_email") @db.VarChar(255)
-  paymentMethod         String?   @map("payment_method") @db.VarChar(50)
-  lastPaymentAt         DateTime? @map("last_payment_at") @db.Timestamp(6)
-  nextBillingDate       DateTime? @map("next_billing_date") @db.Date
-  settings              Json?     @default("{}")
-  features              Json?     @default("{}")
-  isActive              Boolean?  @default(true) @map("is_active")
-  createdAt             DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt             DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  deletedAt             DateTime? @map("deleted_at") @db.Timestamp(6)
-  outlets               Outlet[]
-  users                 User[]
-  apiKeys               ApiKey[]
-  integrations          Integration[]
+model bank_reconciliation_details {
+  id                    Int                  @id @default(autoincrement())
+  reconciliation_id     Int
+  transaction_type      String               @db.VarChar(20)
+  transaction_amount    Decimal              @db.Decimal(15, 2)
+  transaction_date      DateTime             @db.Date
+  description           String?
+  reference_number      String?              @db.VarChar(100)
+  matched_to_journal_id Int?
+  is_matched            Boolean?             @default(false)
+  journal_entries       journal_entries?     @relation(fields: [matched_to_journal_id], references: [id], onUpdate: NoAction)
+  bank_reconciliations  bank_reconciliations @relation(fields: [reconciliation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([subscriptionStatus], map: "idx_tenants_status")
-  @@index([isActive], map: "idx_tenants_active")
-  @@index([email], map: "idx_tenants_email")
-  @@map("tenants")
+  @@index([reconciliation_id], map: "idx_bank_recon_detail_recon")
+  @@schema("accounting")
 }
 
-model Outlet {
-  id           Int           @id @default(autoincrement())
-  tenantId     Int?          @map("tenant_id")
-  name         String        @db.VarChar(255)
-  address      String?
-  phone        String?       @db.VarChar(50)
-  email        String?       @db.VarChar(255)
-  npwp         String?       @db.VarChar(50)
-  settings     Json?         @default("{}")
-  isActive     Boolean?      @default(true) @map("is_active")
-  createdAt    DateTime?     @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt    DateTime?     @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  categories   categories[]
-  customers    customers[]
-  ingredients  ingredients[]
-  items        items[]
-  modifiers    modifiers[]
-  tenants      Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  promotions   promotions[]
-  tables       tables[]
-  transactions Transaction[]
-  users        User[]
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model bank_reconciliations {
+  id                                              Int                           @id @default(autoincrement())
+  tenant_id                                       Int
+  outlet_id                                       Int?
+  account_id                                      Int
+  reconciliation_date                             DateTime                      @db.Date
+  book_balance                                    Decimal                       @db.Decimal(15, 2)
+  bank_statement_balance                          Decimal                       @db.Decimal(15, 2)
+  difference                                      Decimal                       @db.Decimal(15, 2)
+  status                                          String                        @default("reconciled") @db.VarChar(20)
+  notes                                           String?
+  reconciled_by                                   Int?
+  reconciled_at                                   DateTime?                     @db.Timestamptz(6)
+  created_by                                      Int
+  created_at                                      DateTime?                     @default(now()) @db.Timestamptz(6)
+  bank_reconciliation_details                     bank_reconciliation_details[]
+  chart_of_accounts                               chart_of_accounts             @relation(fields: [account_id], references: [id], onUpdate: NoAction)
+  users_bank_reconciliations_created_byTousers    users                         @relation("bank_reconciliations_created_byTousers", fields: [created_by], references: [id], onUpdate: NoAction)
+  outlets                                         outlets?                      @relation(fields: [outlet_id], references: [id], onUpdate: NoAction)
+  users_bank_reconciliations_reconciled_byTousers users?                        @relation("bank_reconciliations_reconciled_byTousers", fields: [reconciled_by], references: [id], onUpdate: NoAction)
+  tenants                                         tenants                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([tenantId], map: "idx_outlets_tenant")
-  @@map("outlets")
+  @@index([account_id], map: "idx_bank_recon_account")
+  @@index([reconciliation_date], map: "idx_bank_recon_date")
+  @@index([tenant_id], map: "idx_bank_recon_tenant")
+  @@schema("accounting")
 }
 
-model User {
-  id             Int             @id @default(autoincrement())
-  tenantId       Int?            @map("tenant_id")
-  email          String          @unique @db.VarChar(255)
-  passwordHash   String          @map("password_hash") @db.VarChar(255)
-  name           String          @db.VarChar(255)
-  roleId         Int             @map("role_id")
-  outletId       Int?            @map("outlet_id")
-  isActive       Boolean?        @default(true) @map("is_active")
-  lastLogin      DateTime?       @map("last_login") @db.Timestamp(6)
-  createdAt      DateTime?       @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt      DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  transactions   Transaction[]
-  activityLogs   ActivityLog[]
-  stockMovements StockMovement[]
-  expenses       Expense[]
-  outlets        Outlet?         @relation(fields: [outletId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  roles          Role            @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  tenants        Tenant?         @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([tenantId], map: "idx_users_tenant")
-  @@index([email], map: "idx_users_email")
-  @@index([outletId], map: "idx_users_outlet")
-  @@map("users")
-}
-
-model Transaction {
-  id                 Int               @id @default(autoincrement())
-  transaction_number String            @unique @db.VarChar(100)
-  order_type         String            @db.VarChar(50)
-  table_id           Int?
-  customer_name      String?           @db.VarChar(255)
-  customer_phone     String?           @db.VarChar(50)
-  subtotal           Decimal?          @default(0) @db.Decimal(12, 2)
-  discountAmount     Decimal?          @default(0) @map("discount_amount") @db.Decimal(12, 2)
-  taxAmount          Decimal?          @default(0) @map("tax_amount") @db.Decimal(12, 2)
-  service_charge     Decimal?          @default(0) @db.Decimal(12, 2)
-  total              Decimal?          @default(0) @db.Decimal(12, 2)
-  status             String?           @default("pending") @db.VarChar(50)
+model budgets {
+  id                 Int                @id @default(autoincrement())
+  tenant_id          Int
+  outlet_id          Int?
+  budget_name        String             @db.VarChar(255)
+  period_id          Int
+  account_id         Int
+  budgeted_amount    Decimal            @db.Decimal(15, 2)
   notes              String?
-  outletId           Int?              @map("outlet_id")
-  cashier_id         Int?
-  createdAt          DateTime?         @default(now()) @map("created_at") @db.Timestamp(6)
-  updated_at         DateTime?         @default(now()) @db.Timestamp(6)
-  completed_at       DateTime?         @db.Timestamp(6)
-  promotion_id       Int?
-  discount_usage     discount_usage[]
-  payments           payments[]
-  transaction_items  TransactionItem[]
-  users              User?             @relation(fields: [cashier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  outlets            Outlet?           @relation(fields: [outletId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  promotions         promotions?       @relation(fields: [promotion_id], references: [id], onUpdate: NoAction)
-  tables             tables?           @relation(fields: [table_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  created_by         Int
+  created_at         DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?          @default(now()) @db.Timestamptz(6)
+  chart_of_accounts  chart_of_accounts  @relation(fields: [account_id], references: [id], onUpdate: NoAction)
+  users              users              @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  outlets            outlets?           @relation(fields: [outlet_id], references: [id], onUpdate: NoAction)
+  accounting_periods accounting_periods @relation(fields: [period_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tenants            tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([outletId], map: "idx_transactions_outlet")
-  @@index([cashier_id], map: "idx_transactions_cashier")
-  @@index([createdAt], map: "idx_transactions_created")
-  @@index([transaction_number], map: "idx_transactions_number")
-  @@index([status], map: "idx_transactions_status")
-  @@map("transactions")
+  @@index([account_id], map: "idx_budget_account")
+  @@index([period_id], map: "idx_budget_period")
+  @@index([tenant_id], map: "idx_budget_tenant")
+  @@schema("accounting")
 }
 
-model TransactionItem {
-  id                    Int                     @id @default(autoincrement())
-  transactionId         Int                     @map("transaction_id")
-  item_id               Int
-  variant_id            Int?
-  item_name             String                  @db.VarChar(255)
-  quantity              Decimal                 @db.Decimal(12, 2)
-  unit_price            Decimal                 @db.Decimal(12, 2)
-  subtotal              Decimal                 @db.Decimal(12, 2)
-  discount_amount       Decimal?                @default(0) @db.Decimal(12, 2)
-  notes                 String?
-  createdAt             DateTime?               @default(now()) @map("created_at") @db.Timestamp(6)
-  items                 items                   @relation(fields: [item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  transactions          Transaction             @relation(fields: [transactionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  variants              variants?               @relation(fields: [variant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  transaction_modifiers transaction_modifiers[]
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model chart_of_accounts {
+  id                                                                   Int                    @id @default(autoincrement())
+  tenant_id                                                            Int
+  account_code                                                         String                 @db.VarChar(20)
+  account_name                                                         String                 @db.VarChar(255)
+  account_type                                                         String                 @db.VarChar(50)
+  category                                                             String?                @db.VarChar(100)
+  parent_id                                                            Int?
+  normal_balance                                                       String                 @default("DEBIT") @db.VarChar(10)
+  description                                                          String?
+  is_system                                                            Boolean?               @default(false)
+  is_active                                                            Boolean?               @default(true)
+  created_at                                                           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at                                                           DateTime?              @default(now()) @db.Timestamptz(6)
+  ai_forecast_data                                                     ai_forecast_data[]
+  bank_reconciliations                                                 bank_reconciliations[]
+  budgets                                                              budgets[]
+  chart_of_accounts                                                    chart_of_accounts?     @relation("chart_of_accountsTochart_of_accounts", fields: [parent_id], references: [id], onUpdate: NoAction)
+  other_chart_of_accounts                                              chart_of_accounts[]    @relation("chart_of_accountsTochart_of_accounts")
+  tenants                                                              tenants                @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  fixed_assets_fixed_assets_account_id_assetTochart_of_accounts        fixed_assets[]         @relation("fixed_assets_account_id_assetTochart_of_accounts")
+  fixed_assets_fixed_assets_account_id_depreciationTochart_of_accounts fixed_assets[]         @relation("fixed_assets_account_id_depreciationTochart_of_accounts")
+  fixed_assets_fixed_assets_account_id_expenseTochart_of_accounts      fixed_assets[]         @relation("fixed_assets_account_id_expenseTochart_of_accounts")
+  general_ledger                                                       general_ledger[]
+  journal_entry_lines                                                  journal_entry_lines[]
+  tax_configurations                                                   tax_configurations[]
 
-  @@index([transactionId], map: "idx_transaction_items_transaction")
-  @@map("transaction_items")
+  @@unique([tenant_id, account_code], map: "unique_account_code")
+  @@index([is_active], map: "idx_coa_active")
+  @@index([parent_id], map: "idx_coa_parent")
+  @@index([tenant_id], map: "idx_coa_tenant")
+  @@index([account_type], map: "idx_coa_type")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model depreciation_logs {
+  id                       Int                 @id @default(autoincrement())
+  tenant_id                Int
+  asset_id                 Int
+  period_id                Int?
+  depreciation_date        DateTime            @db.Date
+  depreciation_amount      Decimal             @db.Decimal(15, 2)
+  accumulated_depreciation Decimal             @db.Decimal(15, 2)
+  book_value               Decimal             @db.Decimal(15, 2)
+  journal_entry_id         Int?
+  notes                    String?
+  created_at               DateTime?           @default(now()) @db.Timestamptz(6)
+  fixed_assets             fixed_assets        @relation(fields: [asset_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  journal_entries          journal_entries?    @relation(fields: [journal_entry_id], references: [id], onUpdate: NoAction)
+  accounting_periods       accounting_periods? @relation(fields: [period_id], references: [id], onUpdate: NoAction)
+  tenants                  tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([asset_id], map: "idx_depr_log_asset")
+  @@index([depreciation_date], map: "idx_depr_log_date")
+  @@index([journal_entry_id], map: "idx_depr_log_journal")
+  @@index([tenant_id], map: "idx_depr_log_tenant")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model financial_report_cache {
+  id                 Int                @id @default(autoincrement())
+  tenant_id          Int
+  outlet_id          Int?
+  report_type        String             @db.VarChar(50)
+  period_id          Int
+  report_data        Json
+  generated_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  expires_at         DateTime?          @db.Timestamptz(6)
+  outlets            outlets?           @relation(fields: [outlet_id], references: [id], onUpdate: NoAction)
+  accounting_periods accounting_periods @relation(fields: [period_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tenants            tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, outlet_id, report_type, period_id], map: "unique_report_cache")
+  @@index([period_id], map: "idx_report_cache_period")
+  @@index([tenant_id], map: "idx_report_cache_tenant")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fixed_assets {
+  id                                                                        Int                 @id @default(autoincrement())
+  tenant_id                                                                 Int
+  outlet_id                                                                 Int?
+  asset_code                                                                String              @db.VarChar(50)
+  asset_name                                                                String              @db.VarChar(255)
+  category                                                                  String              @db.VarChar(100)
+  purchase_date                                                             DateTime            @db.Date
+  purchase_price                                                            Decimal             @db.Decimal(15, 2)
+  salvage_value                                                             Decimal             @default(0) @db.Decimal(15, 2)
+  useful_life_months                                                        Int
+  depreciation_method                                                       String              @default("STRAIGHT_LINE") @db.VarChar(50)
+  accumulated_depreciation                                                  Decimal             @default(0) @db.Decimal(15, 2)
+  book_value                                                                Decimal             @db.Decimal(15, 2)
+  account_id_asset                                                          Int
+  account_id_depreciation                                                   Int
+  account_id_expense                                                        Int
+  location                                                                  String?             @db.VarChar(255)
+  status                                                                    String              @default("active") @db.VarChar(20)
+  disposal_date                                                             DateTime?           @db.Date
+  disposal_value                                                            Decimal?            @db.Decimal(15, 2)
+  notes                                                                     String?
+  created_by                                                                Int
+  created_at                                                                DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at                                                                DateTime?           @default(now()) @db.Timestamptz(6)
+  depreciation_logs                                                         depreciation_logs[]
+  chart_of_accounts_fixed_assets_account_id_assetTochart_of_accounts        chart_of_accounts   @relation("fixed_assets_account_id_assetTochart_of_accounts", fields: [account_id_asset], references: [id], onUpdate: NoAction)
+  chart_of_accounts_fixed_assets_account_id_depreciationTochart_of_accounts chart_of_accounts   @relation("fixed_assets_account_id_depreciationTochart_of_accounts", fields: [account_id_depreciation], references: [id], onUpdate: NoAction)
+  chart_of_accounts_fixed_assets_account_id_expenseTochart_of_accounts      chart_of_accounts   @relation("fixed_assets_account_id_expenseTochart_of_accounts", fields: [account_id_expense], references: [id], onUpdate: NoAction)
+  users                                                                     users               @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  outlets                                                                   outlets?            @relation(fields: [outlet_id], references: [id], onUpdate: NoAction)
+  tenants                                                                   tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenant_id, asset_code], map: "unique_asset_code")
+  @@index([category], map: "idx_asset_category")
+  @@index([status], map: "idx_asset_status")
+  @@index([tenant_id], map: "idx_asset_tenant")
+  @@schema("accounting")
+}
+
+model general_ledger {
+  id                Int               @id @default(autoincrement())
+  tenant_id         Int
+  outlet_id         Int?
+  account_id        Int
+  journal_entry_id  Int
+  transaction_date  DateTime          @db.Timestamptz(6)
+  description       String?
+  debit_amount      Decimal           @default(0) @db.Decimal(15, 2)
+  credit_amount     Decimal           @default(0) @db.Decimal(15, 2)
+  balance           Decimal           @default(0) @db.Decimal(15, 2)
+  balance_type      String?           @db.VarChar(10)
+  created_at        DateTime?         @default(now()) @db.Timestamptz(6)
+  chart_of_accounts chart_of_accounts @relation(fields: [account_id], references: [id], onUpdate: NoAction)
+  journal_entries   journal_entries   @relation(fields: [journal_entry_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  outlets           outlets?          @relation(fields: [outlet_id], references: [id], onUpdate: NoAction)
+  tenants           tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([account_id], map: "idx_gl_account")
+  @@index([transaction_date], map: "idx_gl_date")
+  @@index([journal_entry_id], map: "idx_gl_journal")
+  @@index([tenant_id], map: "idx_gl_tenant")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model journal_entries {
+  id                                      Int                           @id @default(autoincrement())
+  tenant_id                               Int
+  outlet_id                               Int?
+  journal_number                          String                        @db.VarChar(100)
+  journal_type                            String                        @db.VarChar(50)
+  transaction_date                        DateTime                      @db.Timestamptz(6)
+  period_id                               Int?
+  description                             String?
+  reference_type                          String?                       @db.VarChar(50)
+  reference_id                            Int?
+  total_debit                             Decimal                       @default(0) @db.Decimal(15, 2)
+  total_credit                            Decimal                       @default(0) @db.Decimal(15, 2)
+  status                                  String                        @default("posted") @db.VarChar(20)
+  posted_by                               Int?
+  posted_at                               DateTime?                     @db.Timestamptz(6)
+  voided_by                               Int?
+  voided_at                               DateTime?                     @db.Timestamptz(6)
+  void_reason                             String?
+  created_by                              Int
+  created_at                              DateTime?                     @default(now()) @db.Timestamptz(6)
+  updated_at                              DateTime?                     @default(now()) @db.Timestamptz(6)
+  bank_reconciliation_details             bank_reconciliation_details[]
+  depreciation_logs                       depreciation_logs[]
+  general_ledger                          general_ledger[]
+  users_journal_entries_created_byTousers users                         @relation("journal_entries_created_byTousers", fields: [created_by], references: [id], onUpdate: NoAction)
+  outlets                                 outlets?                      @relation(fields: [outlet_id], references: [id], onUpdate: NoAction)
+  accounting_periods                      accounting_periods?           @relation(fields: [period_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  users_journal_entries_posted_byTousers  users?                        @relation("journal_entries_posted_byTousers", fields: [posted_by], references: [id], onUpdate: NoAction)
+  tenants                                 tenants                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_journal_entries_voided_byTousers  users?                        @relation("journal_entries_voided_byTousers", fields: [voided_by], references: [id], onUpdate: NoAction)
+  journal_entry_lines                     journal_entry_lines[]
+  tax_transactions                        tax_transactions[]
+
+  @@unique([tenant_id, journal_number], map: "unique_journal_number")
+  @@index([transaction_date], map: "idx_journal_date")
+  @@index([outlet_id], map: "idx_journal_outlet")
+  @@index([reference_type, reference_id], map: "idx_journal_reference")
+  @@index([status], map: "idx_journal_status")
+  @@index([tenant_id], map: "idx_journal_tenant")
+  @@index([journal_type], map: "idx_journal_type")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model journal_entry_lines {
+  id                Int               @id @default(autoincrement())
+  journal_entry_id  Int
+  account_id        Int
+  description       String?
+  debit_amount      Decimal           @default(0) @db.Decimal(15, 2)
+  credit_amount     Decimal           @default(0) @db.Decimal(15, 2)
+  created_at        DateTime?         @default(now()) @db.Timestamptz(6)
+  chart_of_accounts chart_of_accounts @relation(fields: [account_id], references: [id], onUpdate: NoAction)
+  journal_entries   journal_entries   @relation(fields: [journal_entry_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([account_id], map: "idx_journal_line_account")
+  @@index([journal_entry_id], map: "idx_journal_line_entry")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tax_configurations {
+  id                Int                @id @default(autoincrement())
+  tenant_id         Int
+  tax_type          String             @db.VarChar(50)
+  tax_code          String?            @db.VarChar(20)
+  tax_rate          Decimal            @db.Decimal(5, 2)
+  account_id        Int
+  is_active         Boolean?           @default(true)
+  effective_date    DateTime           @db.Date
+  expiration_date   DateTime?          @db.Date
+  notes             String?
+  created_at        DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?          @default(now()) @db.Timestamptz(6)
+  chart_of_accounts chart_of_accounts  @relation(fields: [account_id], references: [id], onUpdate: NoAction)
+  tenants           tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tax_transactions  tax_transactions[]
+
+  @@index([is_active], map: "idx_tax_active")
+  @@index([tenant_id], map: "idx_tax_tenant")
+  @@index([tax_type], map: "idx_tax_type")
+  @@schema("accounting")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tax_transactions {
+  id                 Int                @id @default(autoincrement())
+  tenant_id          Int
+  outlet_id          Int?
+  tax_config_id      Int
+  transaction_type   String             @db.VarChar(50)
+  transaction_date   DateTime           @db.Date
+  amount             Decimal            @db.Decimal(15, 2)
+  tax_amount         Decimal            @db.Decimal(15, 2)
+  reference_type     String?            @db.VarChar(50)
+  reference_id       Int?
+  journal_entry_id   Int?
+  status             String             @default("recorded") @db.VarChar(20)
+  notes              String?
+  created_by         Int
+  created_at         DateTime?          @default(now()) @db.Timestamptz(6)
+  users              users              @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  journal_entries    journal_entries?   @relation(fields: [journal_entry_id], references: [id], onUpdate: NoAction)
+  outlets            outlets?           @relation(fields: [outlet_id], references: [id], onUpdate: NoAction)
+  tax_configurations tax_configurations @relation(fields: [tax_config_id], references: [id], onUpdate: NoAction)
+  tenants            tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([transaction_date], map: "idx_tax_trans_date")
+  @@index([tenant_id], map: "idx_tax_trans_tenant")
+  @@index([transaction_type], map: "idx_tax_trans_type")
+  @@schema("accounting")
+}
+
+model activity_logs {
+  id          Int       @id @default(autoincrement())
+  user_id     Int
+  outlet_id   Int?
+  action_type String    @db.VarChar(100)
+  entity_type String    @db.VarChar(100)
+  entity_id   Int?
+  old_value   Json?     @db.Json
+  new_value   Json?     @db.Json
+  reason      String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  users       users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([action_type], map: "idx_activity_logs_action")
+  @@index([created_at], map: "idx_activity_logs_created")
+  @@index([outlet_id], map: "idx_activity_logs_outlet")
+  @@index([user_id], map: "idx_activity_logs_user")
+  @@schema("public")
+}
+
+model api_keys {
+  id         Int       @id @default(autoincrement())
+  tenant_id  Int
+  key_name   String    @db.VarChar(255)
+  api_key    String    @unique @db.VarChar(255)
+  is_active  Boolean   @default(true)
+  last_used  DateTime? @db.Timestamp(6)
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  expires_at DateTime? @db.Timestamp(6)
+  tenants    tenants   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([api_key], map: "idx_api_keys_key")
+  @@index([tenant_id], map: "idx_api_keys_tenant")
+  @@schema("public")
 }
 
 model categories {
   id          Int           @id @default(autoincrement())
   name        String        @db.VarChar(255)
   type        String?       @default("item") @db.VarChar(50)
-  outletId    Int?          @map("outlet_id")
-  isActive    Boolean?      @default(true) @map("is_active")
-  createdAt   DateTime?     @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt   DateTime?     @default(now()) @map("updated_at") @db.Timestamp(6)
-  outlets     Outlet?       @relation(fields: [outletId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  outlet_id   Int?
+  is_active   Boolean?      @default(true)
+  created_at  DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at  DateTime?     @default(now()) @db.Timestamp(6)
+  outlets     outlets?      @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   ingredients ingredients[]
   items       items[]
-}
 
-model recipes {
-  id            Int         @id @default(autoincrement())
-  item_id       Int
-  ingredient_id Int
-  quantity      Decimal     @db.Decimal(12, 2)
-  unit          String?     @db.VarChar(50)
-  items         items       @relation(fields: [item_id], references: [id], onDelete: Cascade)
-  ingredients   ingredients @relation(fields: [ingredient_id], references: [id], onDelete: Cascade)
-
-  @@map("recipes")
+  @@schema("public")
 }
 
 model customers {
-  id            Int       @id @default(autoincrement())
-  name          String    @db.VarChar(255)
-  phone         String?   @db.VarChar(50)
-  email         String?   @db.VarChar(255)
-  address       String?
-  date_of_birth DateTime? @db.Date
-  outlet_id     Int?
-  total_spent   Decimal?  @default(0) @db.Decimal(12, 2)
-  total_visits  Int?      @default(0)
-  last_visit    DateTime? @db.Timestamp(6)
-  created_at    DateTime? @default(now()) @db.Timestamp(6)
-  updated_at    DateTime? @default(now()) @db.Timestamp(6)
-  outlets       Outlet?   @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                  Int                   @id @default(autoincrement())
+  name                String                @db.VarChar(255)
+  phone               String?               @db.VarChar(50)
+  email               String?               @db.VarChar(255)
+  address             String?
+  date_of_birth       DateTime?             @db.Date
+  outlet_id           Int?
+  total_spent         Decimal?              @default(0) @db.Decimal(12, 2)
+  total_visits        Int?                  @default(0)
+  last_visit          DateTime?             @db.Timestamp(6)
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?             @default(now()) @db.Timestamp(6)
+  accounts_receivable accounts_receivable[]
+  outlets             outlets?              @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([email], map: "idx_customers_email")
   @@index([outlet_id], map: "idx_customers_outlet")
   @@index([phone], map: "idx_customers_phone")
+  @@schema("public")
 }
 
+model discount_usage {
+  id              Int           @id @default(autoincrement())
+  promotion_id    Int?
+  transaction_id  Int?
+  discount_amount Decimal       @db.Decimal(12, 2)
+  created_at      DateTime?     @default(now()) @db.Timestamp(6)
+  promotions      promotions?   @relation(fields: [promotion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transactions    transactions? @relation(fields: [transaction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([promotion_id], map: "idx_discount_usage_promotion")
+  @@index([transaction_id], map: "idx_discount_usage_transaction")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model expenses {
+  id              Int              @id @default(autoincrement())
+  outlet_id       Int
+  expense_type    String           @db.VarChar(50)
+  category        String           @db.VarChar(100)
+  amount          Decimal          @db.Decimal(12, 2)
+  description     String?
+  payment_method  String?          @db.VarChar(50)
+  receipt_image   String?          @db.VarChar(500)
+  reference_id    Int?
+  supplier_id     Int?
+  invoice_number  String?          @db.VarChar(100)
+  due_date        DateTime?        @db.Timestamp(6)
+  paid_at         DateTime?        @db.Timestamp(6)
+  user_id         Int
+  created_at      DateTime         @default(now()) @db.Timestamp(6)
+  updated_at      DateTime         @default(now()) @db.Timestamp(6)
+  outlets         outlets          @relation(fields: [outlet_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_expenses_outlet")
+  stock_movements stock_movements? @relation(fields: [reference_id], references: [id], onUpdate: NoAction, map: "fk_expenses_reference")
+  suppliers       suppliers?       @relation(fields: [supplier_id], references: [id], onUpdate: NoAction, map: "fk_expenses_supplier")
+  users           users            @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_expenses_user")
+
+  @@index([category], map: "idx_expenses_category")
+  @@index([created_at], map: "idx_expenses_created")
+  @@index([outlet_id], map: "idx_expenses_outlet")
+  @@index([supplier_id], map: "idx_expenses_supplier")
+  @@index([expense_type], map: "idx_expenses_type")
+  @@index([user_id], map: "idx_expenses_user")
+  @@schema("public")
+}
 
 model ingredients {
-  id             Int             @id @default(autoincrement())
-  name           String          @db.VarChar(255)
-  category_id    Int?
-  unit           String          @db.VarChar(50)
-  stock          Decimal?        @default(0) @db.Decimal(12, 2)
-  min_stock      Decimal?        @default(0) @db.Decimal(12, 2)
-  cost_per_unit  Decimal?        @default(0) @db.Decimal(12, 2)
-  outlet_id      Int?
-  is_active      Boolean?        @default(true)
-  created_at     DateTime?       @default(now()) @db.Timestamp(6)
-  updated_at     DateTime?       @default(now()) @db.Timestamp(6)
-  categories     categories?     @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  outlets        Outlet?         @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  recipes        recipes[]
-  stockMovements StockMovement[]
+  id              Int               @id @default(autoincrement())
+  name            String            @db.VarChar(255)
+  category_id     Int?
+  unit            String            @db.VarChar(50)
+  stock           Decimal?          @default(0) @db.Decimal(12, 2)
+  min_stock       Decimal?          @default(0) @db.Decimal(12, 2)
+  cost_per_unit   Decimal?          @default(0) @db.Decimal(12, 2)
+  outlet_id       Int?
+  is_active       Boolean?          @default(true)
+  created_at      DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?         @default(now()) @db.Timestamp(6)
+  categories      categories?       @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  outlets         outlets?          @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  recipes         recipes[]
+  stock_movements stock_movements[]
 
   @@index([outlet_id], map: "idx_ingredients_outlet")
+  @@schema("public")
+}
+
+model integrations {
+  id               Int       @id @default(autoincrement())
+  tenant_id        Int
+  integration_type String    @db.VarChar(50)
+  status           String    @default("inactive") @db.VarChar(20)
+  configuration    Json?     @default("{}")
+  credentials      Json?     @default("{}")
+  metadata         Json?     @default("{}")
+  is_active        Boolean   @default(false)
+  activated_at     DateTime? @db.Timestamp(6)
+  last_sync_at     DateTime? @db.Timestamp(6)
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @default(now()) @db.Timestamp(6)
+  tenants          tenants   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, integration_type], map: "unique_tenant_integration")
+  @@index([status], map: "idx_integrations_status")
+  @@index([tenant_id], map: "idx_integrations_tenant")
+  @@index([integration_type], map: "idx_integrations_type")
+  @@schema("public")
+}
+
+model inventory {
+  id              Int               @id @default(autoincrement())
+  name            String            @db.VarChar(255)
+  category        String            @db.VarChar(100)
+  unit            String            @db.VarChar(50)
+  current_stock   Decimal           @default(0) @db.Decimal(12, 2)
+  alert           Boolean           @default(false)
+  stock_alert     Decimal           @default(0) @db.Decimal(12, 2)
+  track_cost      Boolean           @default(false)
+  cost_amount     Decimal           @default(0) @db.Decimal(12, 2)
+  outlet_id       Int?
+  is_active       Boolean           @default(true)
+  created_at      DateTime          @default(now()) @db.Timestamp(6)
+  updated_at      DateTime          @default(now()) @db.Timestamp(6)
+  stock_movements stock_movements[]
+
+  @@index([category], map: "idx_inventory_category")
+  @@index([outlet_id], map: "idx_inventory_outlet")
+  @@schema("public")
 }
 
 model item_modifiers {
@@ -235,37 +714,40 @@ model item_modifiers {
   modifiers   modifiers @relation(fields: [modifier_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([item_id, modifier_id])
+  @@schema("public")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model items {
-  id                Int               @id @default(autoincrement())
-  name              String            @db.VarChar(255)
-  categoryId        Int?              @map("category_id")
-  price             Decimal           @default(0) @db.Decimal(12, 2)
-  priceGofood       Decimal?          @map("price_gofood") @db.Decimal(12, 2)
-  priceGrabfood     Decimal?          @map("price_grabfood") @db.Decimal(12, 2)
-  priceShopeefood   Decimal?          @map("price_shopeefood") @db.Decimal(12, 2)
-  cost              Decimal?          @default(0) @db.Decimal(12, 2)
-  image             String?           @db.VarChar(500)
+  id                Int                 @id @default(autoincrement())
+  name              String              @db.VarChar(255)
+  category_id       Int?
+  price             Decimal             @default(0) @db.Decimal(12, 2)
+  cost              Decimal?            @default(0) @db.Decimal(12, 2)
+  image             String?             @db.VarChar(500)
   description       String?
-  sku               String?           @db.VarChar(100)
-  stock             Decimal?          @default(0) @db.Decimal(12, 2)
-  trackStock        Boolean?          @default(false) @map("track_stock")
-  minStock          Decimal?          @default(0) @map("min_stock") @db.Decimal(12, 2)
-  outletId          Int?              @map("outlet_id")
-  isActive          Boolean?          @default(true) @map("is_active")
-  createdAt         DateTime?         @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt         DateTime?         @default(now()) @map("updated_at") @db.Timestamp(6)
+  sku               String?             @db.VarChar(100)
+  stock             Decimal?            @default(0) @db.Decimal(12, 2)
+  track_stock       Boolean?            @default(false)
+  min_stock         Decimal?            @default(0) @db.Decimal(12, 2)
+  outlet_id         Int?
+  is_active         Boolean?            @default(true)
+  created_at        DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?           @default(now()) @db.Timestamp(6)
+  price_gofood      Decimal?            @db.Decimal(12, 2)
+  price_grabfood    Decimal?            @db.Decimal(12, 2)
+  price_shopeefood  Decimal?            @db.Decimal(12, 2)
   item_modifiers    item_modifiers[]
-  categories        categories?       @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  outlets           Outlet?           @relation(fields: [outletId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  transaction_items TransactionItem[]
-  variants          variants[]
+  categories        categories?         @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  outlets           outlets?            @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   recipes           recipes[]
+  transaction_items transaction_items[]
+  variants          variants[]
 
-  @@index([isActive], map: "idx_items_active")
-  @@index([categoryId], map: "idx_items_category")
-  @@index([outletId], map: "idx_items_outlet")
+  @@index([is_active], map: "idx_items_active")
+  @@index([category_id], map: "idx_items_category")
+  @@index([outlet_id], map: "idx_items_outlet")
+  @@schema("public")
 }
 
 model modifiers {
@@ -277,69 +759,84 @@ model modifiers {
   created_at            DateTime?               @default(now()) @db.Timestamp(6)
   updated_at            DateTime?               @default(now()) @db.Timestamp(6)
   item_modifiers        item_modifiers[]
-  outlets               Outlet?                 @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  outlets               outlets?                @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   transaction_modifiers transaction_modifiers[]
+
+  @@schema("public")
+}
+
+model outlets {
+  id                     Int                      @id @default(autoincrement())
+  tenant_id              Int?
+  name                   String                   @db.VarChar(255)
+  address                String?
+  phone                  String?                  @db.VarChar(50)
+  email                  String?                  @db.VarChar(255)
+  npwp                   String?                  @db.VarChar(50)
+  settings               Json?                    @default("{}")
+  is_active              Boolean?                 @default(true)
+  created_at             DateTime?                @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamp(6)
+  accounts_payable       accounts_payable[]
+  accounts_receivable    accounts_receivable[]
+  ai_forecast_data       ai_forecast_data[]
+  bank_reconciliations   bank_reconciliations[]
+  budgets                budgets[]
+  financial_report_cache financial_report_cache[]
+  fixed_assets           fixed_assets[]
+  general_ledger         general_ledger[]
+  journal_entries        journal_entries[]
+  tax_transactions       tax_transactions[]
+  categories             categories[]
+  customers              customers[]
+  expenses               expenses[]
+  ingredients            ingredients[]
+  items                  items[]
+  modifiers              modifiers[]
+  tenants                tenants?                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  promotions             promotions[]
+  stock_movements        stock_movements[]
+  suppliers              suppliers[]
+  tables                 tables[]
+  transactions           transactions[]
+  users                  users[]
+
+  @@index([tenant_id], map: "idx_outlets_tenant")
+  @@schema("public")
+}
+
+model owner_invitations {
+  id               Int       @id @default(autoincrement())
+  email            String    @db.VarChar(255)
+  business_name    String    @db.VarChar(255)
+  owner_name       String    @db.VarChar(255)
+  invitation_token String    @unique @db.VarChar(255)
+  status           String    @default("pending") @db.VarChar(20)
+  invited_by       Int
+  expires_at       DateTime  @db.Timestamptz(6)
+  accepted_at      DateTime? @db.Timestamptz(6)
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime? @default(now()) @db.Timestamptz(6)
+  users            users     @relation(fields: [invited_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([email], map: "idx_owner_invitations_email")
+  @@index([status], map: "idx_owner_invitations_status")
+  @@index([invitation_token], map: "idx_owner_invitations_token")
+  @@schema("public")
 }
 
 model payments {
-  id               Int         @id @default(autoincrement())
+  id               Int          @id @default(autoincrement())
   transaction_id   Int
-  method           String      @db.VarChar(50)
-  amount           Decimal     @db.Decimal(12, 2)
-  change_amount    Decimal?    @default(0) @db.Decimal(12, 2)
-  reference_number String?     @db.VarChar(255)
-  status           String?     @default("completed") @db.VarChar(50)
-  created_at       DateTime?   @default(now()) @db.Timestamp(6)
-  transactions     Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
+  method           String       @db.VarChar(50)
+  amount           Decimal      @db.Decimal(12, 2)
+  change_amount    Decimal?     @default(0) @db.Decimal(12, 2)
+  reference_number String?      @db.VarChar(255)
+  status           String?      @default("completed") @db.VarChar(50)
+  created_at       DateTime?    @default(now()) @db.Timestamp(6)
+  transactions     transactions @relation(fields: [transaction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-model tables {
-  id           Int           @id @default(autoincrement())
-  name         String        @db.VarChar(100)
-  capacity     Int?          @default(4)
-  status       String?       @default("available") @db.VarChar(50)
-  outlet_id    Int?
-  is_active    Boolean?      @default(true)
-  created_at   DateTime?     @default(now()) @db.Timestamp(6)
-  updated_at   DateTime?     @default(now()) @db.Timestamp(6)
-  outlets      Outlet?       @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  transactions Transaction[]
-}
-
-model transaction_modifiers {
-  id                  Int             @id @default(autoincrement())
-  transaction_item_id Int
-  modifier_id         Int
-  modifier_name       String          @db.VarChar(255)
-  price               Decimal         @db.Decimal(12, 2)
-  modifiers           modifiers       @relation(fields: [modifier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  transaction_items   TransactionItem @relation(fields: [transaction_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
-model variants {
-  id                Int               @id @default(autoincrement())
-  item_id           Int
-  name              String            @db.VarChar(255)
-  price_adjust      Decimal?          @default(0) @db.Decimal(12, 2)
-  sku               String?           @db.VarChar(100)
-  stock             Decimal?          @default(0) @db.Decimal(12, 2)
-  is_active         Boolean?          @default(true)
-  created_at        DateTime?         @default(now()) @db.Timestamp(6)
-  transaction_items TransactionItem[]
-  items             items             @relation(fields: [item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
-model discount_usage {
-  id              Int          @id @default(autoincrement())
-  promotion_id    Int?
-  transaction_id  Int?
-  discount_amount Decimal      @db.Decimal(12, 2)
-  created_at      DateTime?    @default(now()) @db.Timestamp(6)
-  promotions      promotions?  @relation(fields: [promotion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  transactions    Transaction? @relation(fields: [transaction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([promotion_id], map: "idx_discount_usage_promotion")
-  @@index([transaction_id], map: "idx_discount_usage_transaction")
+  @@schema("public")
 }
 
 model promotions {
@@ -361,204 +858,325 @@ model promotions {
   created_at     DateTime?        @default(now()) @db.Timestamp(6)
   updated_at     DateTime?        @default(now()) @db.Timestamp(6)
   discount_usage discount_usage[]
-  outlets        Outlet?          @relation(fields: [outlet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  transactions   Transaction[]
+  outlets        outlets?         @relation(fields: [outlet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transactions   transactions[]
 
   @@index([is_active], map: "idx_promotions_active")
   @@index([start_date, end_date], map: "idx_promotions_dates")
   @@index([outlet_id], map: "idx_promotions_outlet")
+  @@schema("public")
 }
 
-model ActivityLog {
-  id          Int       @id @default(autoincrement())
-  user_id     Int       @map("user_id")
-  outlet_id   Int?      @map("outlet_id")
-  action_type String    @map("action_type") @db.VarChar(100)
-  entity_type String    @map("entity_type") @db.VarChar(100)
-  entity_id   Int?      @map("entity_id")
-  old_value   Json?     @map("old_value") @db.Json
-  new_value   Json?     @map("new_value") @db.Json
-  reason      String?
-  created_at  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  users       User      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([user_id], map: "idx_activity_logs_user")
-  @@index([outlet_id], map: "idx_activity_logs_outlet")
-  @@index([action_type], map: "idx_activity_logs_action")
-  @@index([created_at], map: "idx_activity_logs_created")
-  @@map("activity_logs")
-}
-
-model ApiKey {
-  id          Int       @id @default(autoincrement())
-  tenant_id   Int       @map("tenant_id")
-  key_name    String    @map("key_name") @db.VarChar(255)
-  api_key     String    @unique @map("api_key") @db.VarChar(255)
-  is_active   Boolean   @default(true) @map("is_active")
-  last_used   DateTime? @map("last_used") @db.Timestamp(6)
-  created_at  DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
-  expires_at  DateTime? @map("expires_at") @db.Timestamp(6)
-  tenant      Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([tenant_id], map: "idx_api_keys_tenant")
-  @@index([api_key], map: "idx_api_keys_key")
-  @@map("api_keys")
-}
-
-model Inventory {
-  id             Int             @id @default(autoincrement())
-  name           String          @db.VarChar(255)
-  category       String          @db.VarChar(100)
-  unit           String          @db.VarChar(50)
-  currentStock   Decimal         @default(0) @map("current_stock") @db.Decimal(12, 2)
-  alert          Boolean         @default(false)
-  stockAlert     Decimal         @default(0) @map("stock_alert") @db.Decimal(12, 2)
-  trackCost      Boolean         @default(false) @map("track_cost")
-  costAmount     Decimal         @default(0) @map("cost_amount") @db.Decimal(12, 2)
-  outletId       Int?            @map("outlet_id")
-  isActive       Boolean         @default(true) @map("is_active")
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  stockMovements StockMovement[]
-
-  @@index([outletId], map: "idx_inventory_outlet")
-  @@index([category], map: "idx_inventory_category")
-  @@map("inventory")
-}
-
-model SalesTransaction {
-  id             Int       @id @default(autoincrement())
-  outlet         String    @db.VarChar(255)
-  receiptNumber  String    @map("receipt_number") @db.VarChar(100)
-  date           DateTime  @db.Timestamp(6)
-  time           String    @db.VarChar(20)
-  category       String    @db.VarChar(100)
-  brand          String    @default("Unbranded") @db.VarChar(100)
-  itemName       String    @map("item_name") @db.VarChar(255)
-  variant        String?   @db.VarChar(100)
-  sku            String?   @db.VarChar(100)
-  quantity       Int
-  grossSales     Decimal   @map("gross_sales") @db.Decimal(12, 2)
-  discounts      Decimal   @default(0) @db.Decimal(12, 2)
-  refunds        Decimal   @default(0) @db.Decimal(12, 2)
-  netSales       Decimal   @map("net_sales") @db.Decimal(12, 2)
-  tax            Decimal   @default(0) @db.Decimal(12, 2)
-  gratuity       Decimal   @default(0) @db.Decimal(12, 2)
-  salesType      String    @map("sales_type") @db.VarChar(50)
-  paymentMethod  String    @map("payment_method") @db.VarChar(50)
-  servedBy       String    @map("served_by") @db.VarChar(255)
-  collectedBy    String    @map("collected_by") @db.VarChar(255)
-  outletId       Int?      @map("outlet_id")
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-
-  @@index([outletId], map: "idx_sales_outlet")
-  @@index([date], map: "idx_sales_date")
-  @@index([receiptNumber], map: "idx_sales_receipt")
-  @@index([category], map: "idx_sales_category")
-  @@map("sales_transactions")
-}
-
-model Integration {
-  id                Int       @id @default(autoincrement())
-  tenantId          Int       @map("tenant_id")
-  integrationType   String    @map("integration_type") @db.VarChar(50) // qris, gofood, grabfood, shopeefood
-  status            String    @default("inactive") @db.VarChar(20) // active, inactive, pending
-  configuration     Json?     @default("{}")  // API endpoints, webhook URLs, etc
-  credentials       Json?     @default("{}")  // API keys, OAuth tokens (encrypted)
-  metadata          Json?     @default("{}")  // merchant_id, shop_id, additional info
-  isActive          Boolean   @default(false) @map("is_active")
-  activatedAt       DateTime? @map("activated_at") @db.Timestamp(6)
-  lastSyncAt        DateTime? @map("last_sync_at") @db.Timestamp(6)
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, integrationType], map: "unique_tenant_integration")
-  @@index([tenantId], map: "idx_integrations_tenant")
-  @@index([integrationType], map: "idx_integrations_type")
-  @@index([status], map: "idx_integrations_status")
-  @@map("integrations")
-}
-
-model Supplier {
-  id          Int            @id @default(autoincrement())
-  outletId    Int            @map("outlet_id")
-  name        String         @db.VarChar(255)
-  phone       String?        @db.VarChar(50)
-  email       String?        @db.VarChar(255)
-  address     String?
-  notes       String?
-  isActive    Boolean        @default(true) @map("is_active")
-  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  expenses    Expense[]
-  stockMovements StockMovement[]
-
-  @@index([outletId], map: "idx_suppliers_outlet")
-  @@index([isActive], map: "idx_suppliers_active")
-  @@map("suppliers")
-}
-
-model StockMovement {
+model recipes {
   id            Int         @id @default(autoincrement())
-  outletId      Int         @map("outlet_id")
-  ingredientId  Int?        @map("ingredient_id")
-  inventoryId   Int?        @map("inventory_id")
-  type          String      @db.VarChar(20) // IN, OUT, ADJUST
+  item_id       Int
+  ingredient_id Int
   quantity      Decimal     @db.Decimal(12, 2)
-  unitPrice     Decimal     @default(0) @map("unit_price") @db.Decimal(12, 2)
-  totalCost     Decimal     @default(0) @map("total_cost") @db.Decimal(12, 2)
-  stockBefore   Decimal     @map("stock_before") @db.Decimal(12, 2)
-  stockAfter    Decimal     @map("stock_after") @db.Decimal(12, 2)
-  supplier      String?     @db.VarChar(255)
-  supplierId    Int?        @map("supplier_id")
-  invoiceNumber String?     @map("invoice_number") @db.VarChar(100)
-  notes         String?
-  userId        Int         @map("user_id")
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
-  user          User        @relation(fields: [userId], references: [id], onDelete: NoAction)
-  ingredient    ingredients? @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-  inventory     Inventory?  @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
-  supplierRel   Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  expenses      Expense[]
+  unit          String?     @db.VarChar(50)
+  ingredients   ingredients @relation(fields: [ingredient_id], references: [id], onDelete: Cascade)
+  items         items       @relation(fields: [item_id], references: [id], onDelete: Cascade)
 
-  @@index([outletId], map: "idx_stock_movements_outlet")
-  @@index([ingredientId], map: "idx_stock_movements_ingredient")
-  @@index([inventoryId], map: "idx_stock_movements_inventory")
-  @@index([type], map: "idx_stock_movements_type")
-  @@index([createdAt], map: "idx_stock_movements_created")
-  @@index([userId], map: "idx_stock_movements_user")
-  @@index([supplierId], map: "idx_stock_movements_supplier")
-  @@map("stock_movements")
+  @@schema("public")
 }
 
-model Expense {
-  id              Int            @id @default(autoincrement())
-  outletId        Int            @map("outlet_id")
-  expenseType     String         @map("expense_type") @db.VarChar(50) // STOCK_PURCHASE, SALARY, UTILITIES, RENT, MARKETING, OTHER
-  category        String         @db.VarChar(100)
-  amount          Decimal        @db.Decimal(12, 2)
-  description     String?
-  paymentMethod   String?        @map("payment_method") @db.VarChar(50) // cash, transfer, card, qris
-  receiptImage    String?        @map("receipt_image") @db.VarChar(500)
-  referenceId     Int?           @map("reference_id") // Link to stock_movements.id
-  supplierId      Int?           @map("supplier_id")
-  invoiceNumber   String?        @map("invoice_number") @db.VarChar(100)
-  dueDate         DateTime?      @map("due_date") @db.Timestamp(6)
-  paidAt          DateTime?      @map("paid_at") @db.Timestamp(6)
-  userId          Int            @map("user_id")
-  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt       DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
-  user            User           @relation(fields: [userId], references: [id], onDelete: NoAction)
-  supplier        Supplier?      @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  stockMovement   StockMovement? @relation(fields: [referenceId], references: [id], onDelete: SetNull)
+model roles {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique @db.VarChar(50)
+  permissions Json?     @default("{}")
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  users       users[]
 
-  @@index([outletId], map: "idx_expenses_outlet")
-  @@index([expenseType], map: "idx_expenses_type")
-  @@index([category], map: "idx_expenses_category")
-  @@index([createdAt], map: "idx_expenses_created")
-  @@index([supplierId], map: "idx_expenses_supplier")
-  @@index([userId], map: "idx_expenses_user")
-  @@map("expenses")
+  @@schema("public")
+}
+
+model sales_transactions {
+  id             Int      @id @default(autoincrement())
+  outlet         String   @db.VarChar(255)
+  receipt_number String   @db.VarChar(100)
+  date           DateTime @db.Timestamp(6)
+  time           String   @db.VarChar(20)
+  category       String   @db.VarChar(100)
+  brand          String   @default("Unbranded") @db.VarChar(100)
+  item_name      String   @db.VarChar(255)
+  variant        String?  @db.VarChar(100)
+  sku            String?  @db.VarChar(100)
+  quantity       Int
+  gross_sales    Decimal  @db.Decimal(12, 2)
+  discounts      Decimal  @default(0) @db.Decimal(12, 2)
+  refunds        Decimal  @default(0) @db.Decimal(12, 2)
+  net_sales      Decimal  @db.Decimal(12, 2)
+  tax            Decimal  @default(0) @db.Decimal(12, 2)
+  gratuity       Decimal  @default(0) @db.Decimal(12, 2)
+  sales_type     String   @db.VarChar(50)
+  payment_method String   @db.VarChar(50)
+  served_by      String   @db.VarChar(255)
+  collected_by   String   @db.VarChar(255)
+  outlet_id      Int?
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+  updated_at     DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([category], map: "idx_sales_category")
+  @@index([date], map: "idx_sales_date")
+  @@index([outlet_id], map: "idx_sales_outlet")
+  @@index([receipt_number], map: "idx_sales_receipt")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model stock_movements {
+  id             Int          @id @default(autoincrement())
+  outlet_id      Int
+  ingredient_id  Int?
+  inventory_id   Int?
+  type           String       @db.VarChar(20)
+  quantity       Decimal      @db.Decimal(12, 2)
+  unit_price     Decimal      @default(0) @db.Decimal(12, 2)
+  total_cost     Decimal      @default(0) @db.Decimal(12, 2)
+  stock_before   Decimal      @db.Decimal(12, 2)
+  stock_after    Decimal      @db.Decimal(12, 2)
+  supplier       String?      @db.VarChar(255)
+  invoice_number String?      @db.VarChar(100)
+  notes          String?
+  user_id        Int
+  created_at     DateTime     @default(now()) @db.Timestamp(6)
+  supplier_id    Int?
+  expenses       expenses[]
+  ingredients    ingredients? @relation(fields: [ingredient_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_stock_movements_ingredient")
+  inventory      inventory?   @relation(fields: [inventory_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_stock_movements_inventory")
+  outlets        outlets      @relation(fields: [outlet_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_stock_movements_outlet")
+  users          users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_stock_movements_user")
+
+  @@index([created_at], map: "idx_stock_movements_created")
+  @@index([ingredient_id], map: "idx_stock_movements_ingredient")
+  @@index([inventory_id], map: "idx_stock_movements_inventory")
+  @@index([outlet_id], map: "idx_stock_movements_outlet")
+  @@index([supplier_id], map: "idx_stock_movements_supplier")
+  @@index([type], map: "idx_stock_movements_type")
+  @@index([user_id], map: "idx_stock_movements_user")
+  @@schema("public")
+}
+
+model suppliers {
+  id               Int                @id @default(autoincrement())
+  outlet_id        Int
+  name             String             @db.VarChar(255)
+  phone            String?            @db.VarChar(50)
+  email            String?            @db.VarChar(255)
+  address          String?
+  notes            String?
+  is_active        Boolean?           @default(true)
+  created_at       DateTime           @default(now()) @db.Timestamp(6)
+  updated_at       DateTime           @default(now()) @db.Timestamp(6)
+  accounts_payable accounts_payable[]
+  expenses         expenses[]
+  outlets          outlets            @relation(fields: [outlet_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_suppliers_outlet")
+
+  @@index([is_active], map: "idx_suppliers_active")
+  @@index([outlet_id], map: "idx_suppliers_outlet")
+  @@schema("public")
+}
+
+model tables {
+  id           Int            @id @default(autoincrement())
+  name         String         @db.VarChar(100)
+  capacity     Int?           @default(4)
+  status       String?        @default("available") @db.VarChar(50)
+  outlet_id    Int?
+  is_active    Boolean?       @default(true)
+  created_at   DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at   DateTime?      @default(now()) @db.Timestamp(6)
+  outlets      outlets?       @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transactions transactions[]
+
+  @@schema("public")
+}
+
+model tenants {
+  id                              Int                      @id @default(autoincrement())
+  business_name                   String                   @db.VarChar(255)
+  owner_name                      String                   @db.VarChar(255)
+  email                           String                   @unique @db.VarChar(255)
+  phone                           String?                  @db.VarChar(50)
+  address                         String?
+  subscription_plan               String?                  @default("basic") @db.VarChar(50)
+  subscription_status             String?                  @default("trial") @db.VarChar(50)
+  subscription_starts_at          DateTime?                @db.Timestamp(6)
+  subscription_expires_at         DateTime?                @db.Timestamp(6)
+  max_outlets                     Int?                     @default(1)
+  max_users                       Int?                     @default(5)
+  billing_email                   String?                  @db.VarChar(255)
+  payment_method                  String?                  @db.VarChar(50)
+  last_payment_at                 DateTime?                @db.Timestamp(6)
+  next_billing_date               DateTime?                @db.Date
+  settings                        Json?                    @default("{}")
+  features                        Json?                    @default("{}")
+  is_active                       Boolean?                 @default(true)
+  created_at                      DateTime?                @default(now()) @db.Timestamp(6)
+  updated_at                      DateTime?                @default(now()) @db.Timestamp(6)
+  deleted_at                      DateTime?                @db.Timestamp(6)
+  invited_by                      Int?
+  business_type                   String?                  @db.VarChar(50)
+  onboarding_completed            Boolean?                 @default(false)
+  onboarding_step                 Int?                     @default(1)
+  accounting_periods              accounting_periods[]
+  accounts_payable                accounts_payable[]
+  accounts_receivable             accounts_receivable[]
+  ai_forecast_data                ai_forecast_data[]
+  ap_payments                     ap_payments[]
+  ar_collections                  ar_collections[]
+  audit_logs                      audit_logs[]
+  bank_reconciliations            bank_reconciliations[]
+  budgets                         budgets[]
+  chart_of_accounts               chart_of_accounts[]
+  depreciation_logs               depreciation_logs[]
+  financial_report_cache          financial_report_cache[]
+  fixed_assets                    fixed_assets[]
+  general_ledger                  general_ledger[]
+  journal_entries                 journal_entries[]
+  tax_configurations              tax_configurations[]
+  tax_transactions                tax_transactions[]
+  api_keys                        api_keys[]
+  integrations                    integrations[]
+  outlets                         outlets[]
+  users_tenants_invited_byTousers users?                   @relation("tenants_invited_byTousers", fields: [invited_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_users_tenant_idTotenants  users[]                  @relation("users_tenant_idTotenants")
+
+  @@index([is_active], map: "idx_tenants_active")
+  @@index([email], map: "idx_tenants_email")
+  @@index([subscription_status], map: "idx_tenants_status")
+  @@schema("public")
+}
+
+model transaction_items {
+  id                    Int                     @id @default(autoincrement())
+  transaction_id        Int
+  item_id               Int
+  variant_id            Int?
+  item_name             String                  @db.VarChar(255)
+  quantity              Decimal                 @db.Decimal(12, 2)
+  unit_price            Decimal                 @db.Decimal(12, 2)
+  subtotal              Decimal                 @db.Decimal(12, 2)
+  discount_amount       Decimal?                @default(0) @db.Decimal(12, 2)
+  notes                 String?
+  created_at            DateTime?               @default(now()) @db.Timestamp(6)
+  items                 items                   @relation(fields: [item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transactions          transactions            @relation(fields: [transaction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  variants              variants?               @relation(fields: [variant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transaction_modifiers transaction_modifiers[]
+
+  @@index([transaction_id], map: "idx_transaction_items_transaction")
+  @@schema("public")
+}
+
+model transaction_modifiers {
+  id                  Int               @id @default(autoincrement())
+  transaction_item_id Int
+  modifier_id         Int
+  modifier_name       String            @db.VarChar(255)
+  price               Decimal           @db.Decimal(12, 2)
+  modifiers           modifiers         @relation(fields: [modifier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  transaction_items   transaction_items @relation(fields: [transaction_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+model transactions {
+  id                 Int                 @id @default(autoincrement())
+  transaction_number String              @unique @db.VarChar(100)
+  order_type         String              @db.VarChar(50)
+  table_id           Int?
+  customer_name      String?             @db.VarChar(255)
+  customer_phone     String?             @db.VarChar(50)
+  subtotal           Decimal?            @default(0) @db.Decimal(12, 2)
+  discount_amount    Decimal?            @default(0) @db.Decimal(12, 2)
+  tax_amount         Decimal?            @default(0) @db.Decimal(12, 2)
+  service_charge     Decimal?            @default(0) @db.Decimal(12, 2)
+  total              Decimal?            @default(0) @db.Decimal(12, 2)
+  status             String?             @default("pending") @db.VarChar(50)
+  notes              String?
+  outlet_id          Int?
+  cashier_id         Int?
+  created_at         DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?           @default(now()) @db.Timestamp(6)
+  completed_at       DateTime?           @db.Timestamp(6)
+  promotion_id       Int?
+  discount_usage     discount_usage[]
+  payments           payments[]
+  transaction_items  transaction_items[]
+  users              users?              @relation(fields: [cashier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  outlets            outlets?            @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  promotions         promotions?         @relation(fields: [promotion_id], references: [id], onUpdate: NoAction)
+  tables             tables?             @relation(fields: [table_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([cashier_id], map: "idx_transactions_cashier")
+  @@index([created_at], map: "idx_transactions_created")
+  @@index([transaction_number], map: "idx_transactions_number")
+  @@index([outlet_id], map: "idx_transactions_outlet")
+  @@index([status], map: "idx_transactions_status")
+  @@schema("public")
+}
+
+model users {
+  id                                                             Int                    @id @default(autoincrement())
+  tenant_id                                                      Int?
+  email                                                          String                 @unique @db.VarChar(255)
+  password_hash                                                  String                 @db.VarChar(255)
+  name                                                           String                 @db.VarChar(255)
+  role_id                                                        Int
+  outlet_id                                                      Int?
+  is_active                                                      Boolean?               @default(true)
+  last_login                                                     DateTime?              @db.Timestamp(6)
+  created_at                                                     DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at                                                     DateTime?              @default(now()) @db.Timestamp(6)
+  invited_by                                                     Int?
+  invitation_token                                               String?                @unique @db.VarChar(255)
+  first_login                                                    Boolean?               @default(true)
+  dashboard_preferences                                          Json?                  @default("{}")
+  accounting_periods                                             accounting_periods[]
+  accounts_payable                                               accounts_payable[]
+  accounts_receivable                                            accounts_receivable[]
+  ap_payments                                                    ap_payments[]
+  ar_collections                                                 ar_collections[]
+  audit_logs                                                     audit_logs[]
+  bank_reconciliations_bank_reconciliations_created_byTousers    bank_reconciliations[] @relation("bank_reconciliations_created_byTousers")
+  bank_reconciliations_bank_reconciliations_reconciled_byTousers bank_reconciliations[] @relation("bank_reconciliations_reconciled_byTousers")
+  budgets                                                        budgets[]
+  fixed_assets                                                   fixed_assets[]
+  journal_entries_journal_entries_created_byTousers              journal_entries[]      @relation("journal_entries_created_byTousers")
+  journal_entries_journal_entries_posted_byTousers               journal_entries[]      @relation("journal_entries_posted_byTousers")
+  journal_entries_journal_entries_voided_byTousers               journal_entries[]      @relation("journal_entries_voided_byTousers")
+  tax_transactions                                               tax_transactions[]
+  activity_logs                                                  activity_logs[]
+  expenses                                                       expenses[]
+  owner_invitations                                              owner_invitations[]
+  stock_movements                                                stock_movements[]
+  tenants_tenants_invited_byTousers                              tenants[]              @relation("tenants_invited_byTousers")
+  transactions                                                   transactions[]
+  users                                                          users?                 @relation("usersTousers", fields: [invited_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_users                                                    users[]                @relation("usersTousers")
+  outlets                                                        outlets?               @relation(fields: [outlet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roles                                                          roles                  @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenants_users_tenant_idTotenants                               tenants?               @relation("users_tenant_idTotenants", fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([email], map: "idx_users_email")
+  @@index([invitation_token], map: "idx_users_invitation_token")
+  @@index([outlet_id], map: "idx_users_outlet")
+  @@index([tenant_id], map: "idx_users_tenant")
+  @@schema("public")
+}
+
+model variants {
+  id                Int                 @id @default(autoincrement())
+  item_id           Int
+  name              String              @db.VarChar(255)
+  price_adjust      Decimal?            @default(0) @db.Decimal(12, 2)
+  sku               String?             @db.VarChar(100)
+  stock             Decimal?            @default(0) @db.Decimal(12, 2)
+  is_active         Boolean?            @default(true)
+  created_at        DateTime?           @default(now()) @db.Timestamp(6)
+  transaction_items transaction_items[]
+  items             items               @relation(fields: [item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
 }

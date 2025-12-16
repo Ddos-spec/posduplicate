@@ -22,7 +22,7 @@ export const getPrinterSettings = async (req: Request, res: Response, next: Next
       });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
     });
 
@@ -99,7 +99,7 @@ export const updatePrinterSettings = async (req: Request, res: Response, next: N
     }
 
     // Verify user exists
-    await prisma.user.findUnique({
+    await prisma.users.findUnique({
       where: { id: userId }
     });
 

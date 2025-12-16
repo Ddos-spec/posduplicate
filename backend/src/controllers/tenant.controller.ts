@@ -22,9 +22,9 @@ export const getAllTenants = async (req: Request, res: Response, next: NextFunct
       ];
     }
 
-    const tenants = await prisma.tenant.findMany({
+    const tenants = await prisma.tenants.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
     });
     res.json({ success: true, data: tenants });
   } catch (error) {
@@ -38,7 +38,7 @@ export const getAllTenants = async (req: Request, res: Response, next: NextFunct
 export const getTenantById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        const tenant = await prisma.tenant.findUnique({
+        const tenant = await prisma.tenants.findUnique({
             where: { id: parseInt(id) },
         });
         if (!tenant) {
@@ -65,12 +65,12 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const existingUser = await tx.user.findUnique({ where: { email } });
+      const existingUser = await tx.users.findUnique({ where: { email } });
       if (existingUser) {
         throw new Error('EMAIL_EXISTS');
       }
 
-      const ownerRole = await tx.role.findUnique({ where: { name: 'Owner' } });
+      const ownerRole = await tx.roles.findUnique({ where: { name: 'Owner' } });
       if (!ownerRole) {
         throw new Error('OWNER_ROLE_NOT_FOUND');
       }
@@ -79,9 +79,9 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
       const firstBillingDate = new Date();
       firstBillingDate.setMonth(firstBillingDate.getMonth() + 1);
 
-      const tenant = await tx.tenant.create({
+      const tenant = await tx.tenants.create({
         data: {
-          businessName,
+          business_name: businessName,
           ownerName,
           email,
           phone,
@@ -104,11 +104,11 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
       });
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      await tx.user.create({
+      await tx.users.create({
         data: {
           name: ownerName,
           email: email,
-          passwordHash: hashedPassword,
+          password_hash: hashedPassword,
           tenantId: tenant.id,
           roleId: ownerRole.id,
           isActive: true,
@@ -119,7 +119,7 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
       const apiKey = generateApiKey();
       const hashedApiKey = hashApiKey(apiKey);
 
-      await tx.apiKey.create({
+      await tx.api_keys.create({
         data: {
           tenant_id: tenant.id,
           key_name: 'Default API Key',
@@ -160,7 +160,7 @@ export const updateTenant = async (req: Request, res: Response, next: NextFuncti
     const updateData = req.body;
     delete updateData.email;
 
-    const tenant = await prisma.tenant.update({
+    const tenant = await prisma.tenants.update({
       where: { id: parseInt(id) },
       data: updateData,
     });
@@ -183,9 +183,9 @@ export const toggleTenantStatus = async (req: Request, res: Response, next: Next
     const { id } = req.params;
     const { isActive } = req.body;
 
-    const tenant = await prisma.tenant.update({
+    const tenant = await prisma.tenants.update({
       where: { id: parseInt(id) },
-      data: { isActive },
+      data: { is_active: isActive },
     });
 
     res.json({
@@ -214,7 +214,7 @@ export const updateSubscription = async (req: Request, res: Response, next: Next
       updateData.subscriptionExpiresAt = new Date(expiresAt);
     }
 
-    const tenant = await prisma.tenant.update({
+    const tenant = await prisma.tenants.update({
       where: { id: parseInt(id) },
       data: updateData,
     });
@@ -238,13 +238,13 @@ export const getMyTenant = async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ success: false, error: { code: 'NO_TENANT', message: 'No tenant associated with this user' } });
     }
 
-    const tenant = await prisma.tenant.findUnique({
+    const tenant = await prisma.tenants.findUnique({
       where: { id: req.tenantId },
       include: {
         _count: {
           select: {
             outlets: true,
-            users: true,
+            tenants_users_tenant_idTotenants: true,
           },
         },
       },
@@ -265,10 +265,10 @@ export const deleteTenant = async (req: Request, res: Response, next: NextFuncti
     const tenantId = parseInt(id);
 
     // Perform the soft delete
-    await prisma.tenant.update({
+    await prisma.tenants.update({
       where: { id: tenantId },
       data: {
-        deletedAt: new Date(),
+        deleted_at: new Date(),
         isActive: false,
       },
     });

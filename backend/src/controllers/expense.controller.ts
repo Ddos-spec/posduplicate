@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 import { createActivityLog } from './activity-log.controller';
+import { generateJournalFromExpense } from '../services/autoJournal.service';
 
 // Get all expenses with filters
 export const getExpenses = async (req: Request, res: Response, _next: NextFunction) => {
@@ -39,7 +40,7 @@ export const getExpenses = async (req: Request, res: Response, _next: NextFuncti
       if (date_to) where.createdAt.lte = new Date(date_to as string);
     }
 
-    const expenses = await prisma.expense.findMany({
+    const expenses = await prisma.expenses.findMany({
       where,
       include: {
         user: { select: { id: true, name: true } },
@@ -69,7 +70,7 @@ export const getExpense = async (req: Request, res: Response, _next: NextFunctio
   try {
     const { id } = req.params;
 
-    const expense = await prisma.expense.findUnique({
+    const expense = await prisma.expenses.findUnique({
       where: { id: parseInt(id) },
       include: {
         user: { select: { id: true, name: true } },
@@ -130,7 +131,7 @@ export const createExpense = async (req: Request, res: Response, _next: NextFunc
       });
     }
 
-    const expense = await prisma.expense.create({
+    const expense = await prisma.expenses.create({
       data: {
         outletId: parseInt(outletId),
         expenseType,
@@ -168,6 +169,11 @@ export const createExpense = async (req: Request, res: Response, _next: NextFunc
       console.error('Failed to create activity log:', logError);
     }
 
+    // Auto-Journal Hook
+    generateJournalFromExpense(expense.id).catch(err => {
+        console.error('Auto-journal expense hook failed:', err);
+    });
+
     res.json({
       success: true,
       message: 'Expense created successfully',
@@ -195,7 +201,7 @@ export const updateExpense = async (req: Request, res: Response, _next: NextFunc
       paidAt
     } = req.body;
 
-    const existing = await prisma.expense.findUnique({ where: { id: parseInt(id) } });
+    const existing = await prisma.expenses.findUnique({ where: { id: parseInt(id) } });
 
     if (!existing) {
       return res.status(404).json({
@@ -204,7 +210,7 @@ export const updateExpense = async (req: Request, res: Response, _next: NextFunc
       });
     }
 
-    const expense = await prisma.expense.update({
+    const expense = await prisma.expenses.update({
       where: { id: parseInt(id) },
       data: {
         ...(expenseType && { expenseType }),
@@ -263,7 +269,7 @@ export const deleteExpense = async (req: Request, res: Response, _next: NextFunc
       });
     }
 
-    const existing = await prisma.expense.findUnique({ where: { id: parseInt(id) } });
+    const existing = await prisma.expenses.findUnique({ where: { id: parseInt(id) } });
 
     if (!existing) {
       return res.status(404).json({
@@ -272,7 +278,7 @@ export const deleteExpense = async (req: Request, res: Response, _next: NextFunc
       });
     }
 
-    await prisma.expense.delete({ where: { id: parseInt(id) } });
+    await prisma.expenses.delete({ where: { id: parseInt(id) } });
 
     // Create activity log
     try {
@@ -316,7 +322,7 @@ export const getExpenseSummary = async (req: Request, res: Response, _next: Next
     }
 
     // Get total by type
-    const byType = await prisma.expense.groupBy({
+    const byType = await prisma.expenses.groupBy({
       by: ['expenseType'],
       where,
       _sum: { amount: true },
@@ -324,7 +330,7 @@ export const getExpenseSummary = async (req: Request, res: Response, _next: Next
     });
 
     // Get total by category
-    const byCategory = await prisma.expense.groupBy({
+    const byCategory = await prisma.expenses.groupBy({
       by: ['category'],
       where,
       _sum: { amount: true },
@@ -334,7 +340,7 @@ export const getExpenseSummary = async (req: Request, res: Response, _next: Next
     });
 
     // Get total overall
-    const total = await prisma.expense.aggregate({
+    const total = await prisma.expenses.aggregate({
       where,
       _sum: { amount: true },
       _count: true
@@ -373,7 +379,7 @@ export const getExpenseCategories = async (req: Request, res: Response, _next: N
       where.outletId = parseInt(outlet_id as string);
     }
 
-    const categories = await prisma.expense.groupBy({
+    const categories = await prisma.expenses.groupBy({
       by: ['category'],
       where,
       _count: true,

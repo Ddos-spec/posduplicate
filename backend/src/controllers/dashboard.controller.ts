@@ -26,7 +26,7 @@ export const getDashboardSummary = async (req: Request, res: Response, _next: Ne
     }
 
     // Get total sales
-    const totalSales = await prisma.transaction.aggregate({
+    const totalSales = await prisma.transactions.aggregate({
       where: { ...where, status: 'completed' },
       _sum: { total: true },
       _count: { id: true }
@@ -88,7 +88,7 @@ export const getSalesTrend = async (req: Request, res: Response, _next: NextFunc
     if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
     if (outletId) where.outletId = Number(outletId);
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where,
       select: {
         createdAt: true,
@@ -161,7 +161,7 @@ export const getTopProducts = async (req: Request, res: Response, _next: NextFun
     const { limit = 5 } = req.query;
 
     // Get transaction items grouped by product
-    const transactionItems = await prisma.transactionItem.findMany({
+    const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
           status: 'completed',
@@ -227,7 +227,7 @@ export const getSalesByCategory = async (req: Request, res: Response, _next: Nex
     const { tenantId } = req;
 
     // Get all transaction items for completed transactions
-    const transactionItems = await prisma.transactionItem.findMany({
+    const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
           status: 'completed',
@@ -302,7 +302,7 @@ export const getRecentTransactions = async (req: Request, res: Response, _next: 
     };
     if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where,
       take: Number(limit),
       orderBy: { createdAt: 'desc' },
