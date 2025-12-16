@@ -13,13 +13,14 @@ export default function TenantManagementPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
-  const [formData, setFormData] = useState<CreateTenantData>({
+  const [formData, setFormData] = useState<CreateTenantData & { moduleType: 'fnb' | 'accounting' }>({
     businessName: '',
     ownerName: '',
     email: '',
     password: '',
     phone: '',
-    address: ''
+    address: '',
+    moduleType: 'fnb'
   });
 
   // Fetch tenants
@@ -60,7 +61,8 @@ export default function TenantManagementPage() {
       email: '',
       password: '',
       phone: '',
-      address: ''
+      address: '',
+      moduleType: 'fnb'
     });
     setShowModal(true);
   };
@@ -399,6 +401,69 @@ export default function TenantManagementPage() {
                     />
                   </div>
                 </div>
+
+                {/* Module Type Selection */}
+                {!editingTenant && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Module Type *
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, moduleType: 'fnb' })}
+                        className={`p-4 border-2 rounded-xl text-left transition-all ${
+                          formData.moduleType === 'fnb'
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            formData.moduleType === 'fnb' ? 'bg-blue-500' : 'bg-gray-200'
+                          }`}>
+                            <span className="text-white text-lg">🍽️</span>
+                          </div>
+                          <div>
+                            <p className={`font-semibold ${formData.moduleType === 'fnb' ? 'text-blue-700' : 'text-gray-700'}`}>
+                              FNB / POS
+                            </p>
+                            <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-600">Complete</span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          Point of Sale, inventory, and food delivery integrations
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, moduleType: 'accounting' })}
+                        className={`p-4 border-2 rounded-xl text-left transition-all ${
+                          formData.moduleType === 'accounting'
+                            ? 'border-purple-500 bg-purple-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            formData.moduleType === 'accounting' ? 'bg-purple-500' : 'bg-gray-200'
+                          }`}>
+                            <span className="text-white text-lg">📊</span>
+                          </div>
+                          <div>
+                            <p className={`font-semibold ${formData.moduleType === 'accounting' ? 'text-purple-700' : 'text-gray-700'}`}>
+                              Akuntansi
+                            </p>
+                            <span className="text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-600">New</span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          General ledger, financial reports, and bookkeeping
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
               </div>
 
