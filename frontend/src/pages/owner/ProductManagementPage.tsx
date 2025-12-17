@@ -84,8 +84,16 @@ export default function ProductManagementPage() {
       setLoading(true);
       const response = await api.get('/products');
       // API returns wrapped object { success: true, data: [...] }
-      // Ensure we are setting the array, defaulting to empty array if undefined
-      setProducts(Array.isArray(response.data.data) ? response.data.data : []);
+      // Map snake_case from API to camelCase for frontend
+      const rawProducts = Array.isArray(response.data.data) ? response.data.data : [];
+      const mappedProducts = rawProducts.map((p: any) => ({
+        ...p,
+        categoryId: p.category_id ?? p.categoryId,
+        priceGofood: p.price_gofood ?? p.priceGofood,
+        priceGrabfood: p.price_grabfood ?? p.priceGrabfood,
+        priceShopeefood: p.price_shopeefood ?? p.priceShopeefood,
+      }));
+      setProducts(mappedProducts);
     } catch (error) {
       console.error('Error loading products:', error);
       toast.error('Failed to load products');
