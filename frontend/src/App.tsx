@@ -41,6 +41,8 @@ const DemoReports = lazy(() => import('./pages/demo/accounting/DemoReports'));
 const DemoAcctDistributor = lazy(() => import('./pages/demo/accounting/DemoAcctDistributor'));
 const DemoAcctProducer = lazy(() => import('./pages/demo/accounting/DemoAcctProducer'));
 const DemoAcctRetail = lazy(() => import('./pages/demo/accounting/DemoAcctRetail'));
+const DemoForecastPage = lazy(() => import('./pages/demo/accounting/DemoForecastPage'));
+const DemoAccountingReadOnlyPage = lazy(() => import('./pages/demo/accounting/DemoAccountingReadOnlyPage'));
 
 // Module Selector
 const ModuleSelectorPage = lazy(() => import('./pages/ModuleSelectorPage'));
@@ -177,11 +179,36 @@ function App() {
         <Route path="/demo/fnb/owner/users" element={<DemoFnbUsers />} />
         <Route path="/demo/fnb/cashier" element={<DemoCashier />} />
         <Route path="/demo/accounting/owner" element={<DemoAcctOwner />} />
+        <Route path="/demo/accounting/owner/forecast" element={<DemoForecastPage variant="owner" />} />
         <Route path="/demo/accounting/owner/coa" element={<DemoCoA />} />
         <Route path="/demo/accounting/owner/journal" element={<DemoJournal />} />
         <Route path="/demo/accounting/owner/ledger" element={<DemoLedger />} />
         <Route path="/demo/accounting/owner/reports" element={<DemoReports />} />
+        
+        {/* Demo Distributor */}
         <Route path="/demo/accounting/distributor" element={<DemoAcctDistributor />} />
+        <Route path="/demo/accounting/distributor/forecast" element={<DemoForecastPage variant="distributor" />} />
+        <Route path="/demo/accounting/distributor/pembelian" element={<DemoAccountingReadOnlyPage variant="distributor" section="pembelian" />} />
+        <Route path="/demo/accounting/distributor/supplier" element={<DemoAccountingReadOnlyPage variant="distributor" section="supplier" />} />
+        <Route path="/demo/accounting/distributor/stok" element={<DemoAccountingReadOnlyPage variant="distributor" section="stok" />} />
+        <Route path="/demo/accounting/distributor/keuangan" element={<DemoAccountingReadOnlyPage variant="distributor" section="keuangan" />} />
+        <Route path="/demo/accounting/distributor/laporan" element={<DemoAccountingReadOnlyPage variant="distributor" section="laporan" />} />
+
+        {/* Demo Producer */}
+        <Route path="/demo/accounting/producer" element={<DemoAcctProducer />} />
+        <Route path="/demo/accounting/producer/forecast" element={<DemoForecastPage variant="produsen" />} />
+        <Route path="/demo/accounting/producer/produksi" element={<DemoAccountingReadOnlyPage variant="produsen" section="produksi" />} />
+        <Route path="/demo/accounting/producer/inventori" element={<DemoAccountingReadOnlyPage variant="produsen" section="inventori" />} />
+        <Route path="/demo/accounting/producer/laporan" element={<DemoAccountingReadOnlyPage variant="produsen" section="laporan" />} />
+
+        {/* Demo Retail */}
+        <Route path="/demo/accounting/retail" element={<DemoAcctRetail />} />
+        <Route path="/demo/accounting/retail/forecast" element={<DemoForecastPage variant="retail" />} />
+        <Route path="/demo/accounting/retail/sales" element={<DemoAccountingReadOnlyPage variant="retail" section="sales" />} />
+        <Route path="/demo/accounting/retail/customers" element={<DemoAccountingReadOnlyPage variant="retail" section="customers" />} />
+        <Route path="/demo/accounting/retail/products" element={<DemoAccountingReadOnlyPage variant="retail" section="products" />} />
+        <Route path="/demo/accounting/retail/inventory" element={<DemoAccountingReadOnlyPage variant="retail" section="inventory" />} />
+        <Route path="/demo/accounting/retail/reports" element={<DemoAccountingReadOnlyPage variant="retail" section="reports" />} />
         <Route path="/demo/accounting/producer" element={<DemoAcctProducer />} />
         <Route path="/demo/accounting/retail" element={<DemoAcctRetail />} />
 
