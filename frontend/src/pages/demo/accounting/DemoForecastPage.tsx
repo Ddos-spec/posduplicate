@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useThemeStore } from '../../../store/themeStore';
 import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Info, ArrowRight } from 'lucide-react';
 import DemoLayout from '../DemoLayout';
@@ -110,11 +110,33 @@ export default function DemoForecastPage({ variant = 'owner' }: { variant: Forec
   const [scenario, setScenario] = useState('Realistic');
 
   const insights = INSIGHTS[variant];
-  const chartData = DATA_BY_VARIANT[variant];
   const chartTitle = CHART_TITLES[variant];
   
   // Map internal variant to layout variant
   const layoutVariant = variant === 'owner' ? 'accounting' : variant === 'produsen' ? 'producer' : variant;
+
+  // Calculate dynamic data based on scenario
+  const processedData = useMemo(() => {
+    const baseData = DATA_BY_VARIANT[variant];
+    const multiplier = 
+      scenario === 'Optimistic' ? 1.2 : 
+      scenario === 'Pessimistic' ? 0.9 : 
+      1.0;
+
+    return baseData.map(item => {
+      // Only adjust forecast values (future), keep actuals as is unless you want to shift history too (usually history is fixed)
+      // For visual effect, let's adjust the future forecast part.
+      // But for simplicity in this structure where forecast exists for all months, we'll scale the forecast line.
+      return {
+        ...item,
+        forecast: Math.round(item.forecast * multiplier),
+        upper: Math.round(item.upper * multiplier),
+        lower: Math.round(item.lower * multiplier),
+        // Keep actual same so we see divergence
+        actual: item.actual 
+      };
+    });
+  }, [variant, scenario]);
 
   return (
     <DemoLayout variant={layoutVariant as any} title="AI Financial Forecast">
