@@ -8,49 +8,11 @@ import fs from 'fs';
 // Load environment variables
 dotenv.config();
 
-// Import routes
-import authRoutes from './routes/auth.routes';
-import tenantRoutes from './routes/tenant.routes';
-import productRoutes from './routes/product.routes';
-import categoryRoutes from './routes/category.routes';
-import transactionRoutes from './routes/transaction.routes';
-import tableRoutes from './routes/table.routes';
-import inventoryRoutes from './routes/inventory.routes';
-import customerRoutes from './routes/customer.routes';
-import modifierRoutes from './routes/modifier.routes';
-import variantRoutes from './routes/variant.routes';
-import recipeRoutes from './routes/recipe.routes';
-import ingredientRoutes from './routes/ingredient.routes';
-import supplierRoutes from './routes/supplier.routes';
-import stockMovementRoutes from './routes/stockMovement.routes';
-import expenseRoutes from './routes/expense.routes';
-import analyticsRoutes from './routes/analytics.routes';
-import userRoutes from './routes/user.routes';
-import promotionRoutes from './routes/promotion.routes';
-import dashboardRoutes from './routes/dashboard.routes';
-import outletRoutes from './routes/outlet.routes';
-import adminAnalyticsRoutes from './routes/admin.analytics.routes';
-import billingRoutes from './routes/billing.routes';
-import settingsRoutes from './routes/settings.routes';
-import uploadRoutes from './routes/upload.routes';
-import notificationRoutes from './routes/notification.routes';
-import activityLogRoutes from './routes/activity-log.routes';
-import ownerApiRoutes from './routes/ownerApi.routes';
-import printerSettingsRoutes from './routes/printerSettings.routes';
-import apiKeyRoutes from './routes/apiKey.routes';
-import inventoryModuleRoutes from './routes/inventory-module.routes';
-import salesAnalyticsRoutes from './routes/sales-analytics.routes';
-import reportRoutes from './routes/report.routes';
-import integrationRoutes from './routes/integration.routes';
-import webhookRoutes from './routes/webhook.routes';
-import accountingCoaRoutes from './routes/accounting.coa.routes';
-import accountingJournalRoutes from './routes/accounting.journal.routes';
-import accountingReportRoutes from './routes/accounting.report.routes';
-import accountingAparRoutes from './routes/accounting.apar.routes';
-import accountingPeriodRoutes from './routes/accounting.period.routes';
-import accountingDashboardRoutes from './routes/accounting.dashboard.routes';
-import accountingUserRoutes from './routes/accounting.user.routes';
-import accountingLedgerRoutes from './routes/accounting.ledger.routes';
+// Import module routers
+import fnbRoutes from './modules/fnb';
+import accountingRoutes from './modules/accounting';
+import sharedRoutes from './modules/shared';
+import adminRoutes from './modules/admin';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -114,13 +76,21 @@ app.get('/', (_req: Request, res: Response) => {
     success: true,
     message: 'MyPOS API Server',
     version: '1.0.0',
+    modules: {
+      fnb: 'Food & Beverage / POS Module',
+      accounting: 'Accounting Module',
+      shared: 'Shared Services (Auth, Users, Tenants, etc.)',
+      admin: 'Admin & Analytics'
+    },
     endpoints: {
       health: '/health',
       api: '/api',
       auth: '/api/auth/login',
       products: '/api/products',
       categories: '/api/categories',
-      transactions: '/api/transactions'
+      transactions: '/api/transactions',
+      accounting: '/api/accounting',
+      admin: '/api/admin'
     },
     timestamp: new Date().toISOString()
   });
@@ -135,49 +105,18 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/tenants', tenantRoutes);
-app.use('/api/outlets', outletRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/tables', tableRoutes);
-app.use('/api/inventory', inventoryRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/modifiers', modifierRoutes);
-app.use('/api/variants', variantRoutes);
-app.use('/api/recipes', recipeRoutes);
-app.use('/api/ingredients', ingredientRoutes);
-app.use('/api/suppliers', supplierRoutes);
-app.use('/api/stock-movements', stockMovementRoutes);
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/promotions', promotionRoutes);
-app.use('/api/admin/analytics', adminAnalyticsRoutes);
-app.use('/api/admin/billing', billingRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/activity-logs', activityLogRoutes);
-app.use('/api/owner', ownerApiRoutes);
-app.use('/api/printer-settings', printerSettingsRoutes);
-app.use('/api/api-keys', apiKeyRoutes);
-app.use('/api/inventory-module', inventoryModuleRoutes);
-app.use('/api/sales-analytics', salesAnalyticsRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/integrations', integrationRoutes);
-app.use('/api/webhooks', webhookRoutes);
-app.use('/api/accounting/coa', accountingCoaRoutes);
-app.use('/api/accounting/journal', accountingJournalRoutes);
-app.use('/api/accounting/reports', accountingReportRoutes);
-app.use('/api/accounting', accountingAparRoutes); // Mounts at /api/accounting/ap and /api/accounting/ar
-app.use('/api/accounting/periods', accountingPeriodRoutes);
-app.use('/api/accounting/dashboard', accountingDashboardRoutes);
-app.use('/api/accounting/users', accountingUserRoutes);
-app.use('/api/accounting/ledger', accountingLedgerRoutes);
+// API Routes - Organized by Module
+// Shared/Common Routes (Auth, Users, Tenants, Settings, etc.)
+app.use('/api', sharedRoutes);
+
+// FnB/POS Module Routes
+app.use('/api', fnbRoutes);
+
+// Accounting Module Routes
+app.use('/api/accounting', accountingRoutes);
+
+// Admin Module Routes
+app.use('/api/admin', adminRoutes);
 
 // DEBUG endpoints removed for security
 // Use proper logging and monitoring service in production
@@ -219,8 +158,13 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
 app.listen(PORT, () => {
   console.log(`🚀 MyPOS API Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔄 Server Restart Triggered at: ${new Date().toISOString()}`); // Trigger restart
+  console.log(`🔄 Server Restart Triggered at: ${new Date().toISOString()}`);
   console.log(`🔗 Internal health check: http://localhost:${PORT}/health`);
+  console.log(`📦 Modular Structure:`);
+  console.log(`   ├─ FnB/POS Module`);
+  console.log(`   ├─ Accounting Module`);
+  console.log(`   ├─ Shared Services`);
+  console.log(`   └─ Admin Module`);
 
   if (process.env.NODE_ENV === 'production') {
     console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'Not set'}`);

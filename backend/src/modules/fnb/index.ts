@@ -1,0 +1,45 @@
+import { Router } from 'express';
+import dashboardRoutes from './routes/dashboard.routes';
+import analyticsRoutes from './routes/analytics.routes';
+import reportRoutes from './routes/report.routes';
+import productRoutes from './routes/product.routes';
+import categoryRoutes from './routes/category.routes';
+import customerRoutes from './routes/customer.routes';
+import tableRoutes from './routes/table.routes';
+import modifierRoutes from './routes/modifier.routes';
+import variantRoutes from './routes/variant.routes';
+import promotionRoutes from './routes/promotion.routes';
+import recipeRoutes from './routes/recipe.routes';
+import ingredientRoutes from './routes/ingredient.routes';
+import inventoryRoutes from './routes/inventory.routes';
+import inventoryModuleRoutes from './routes/inventory-module.routes';
+import expenseRoutes from './routes/expense.routes';
+import supplierRoutes from './routes/supplier.routes';
+import stockMovementRoutes from './routes/stockMovement.routes';
+import transactionRoutes from './routes/transaction.routes';
+import salesAnalyticsRoutes from './routes/sales-analytics.routes';
+
+const router = Router();
+
+// FnB/POS Routes
+router.use('/dashboard', dashboardRoutes);
+router.use('/analytics', analyticsRoutes);
+router.use('/reports', reportRoutes);
+router.use('/products', productRoutes);
+router.use('/categories', categoryRoutes);
+router.use('/customers', customerRoutes);
+router.use('/tables', tableRoutes);
+router.use('/modifiers', modifierRoutes);
+router.use('/variants', variantRoutes);
+router.use('/promotions', promotionRoutes);
+router.use('/recipes', recipeRoutes);
+router.use('/ingredients', ingredientRoutes);
+router.use('/inventory', inventoryRoutes);
+router.use('/inventory-module', inventoryModuleRoutes);
+router.use('/expenses', expenseRoutes);
+router.use('/suppliers', supplierRoutes);
+router.use('/stock-movements', stockMovementRoutes);
+router.use('/transactions', transactionRoutes);
+router.use('/sales-analytics', salesAnalyticsRoutes);
+
+export default router;
