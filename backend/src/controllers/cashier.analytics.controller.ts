@@ -29,12 +29,12 @@ export const getCashierPerformance = async (req: AuthRequest, res: Response, _ne
     startDate.setDate(startDate.getDate() - daysInt);
 
     // Get transactions with cashier info
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where: {
         outlets: {
-          tenantId: tenantId
+          tenant_id: tenantId
         },
-        createdAt: {
+        created_at: {
           gte: startDate
         },
         cashier_id: {
@@ -44,7 +44,7 @@ export const getCashierPerformance = async (req: AuthRequest, res: Response, _ne
       select: {
         id: true,
         total: true,
-        createdAt: true,
+        created_at: true,
         cashier_id: true,
         users: {
           select: {

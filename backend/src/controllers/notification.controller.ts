@@ -9,32 +9,32 @@ export const getAdminNotifications = async (_req: Request, res: Response, next: 
 
     const expiringSoonTenants = await prisma.tenants.findMany({
       where: {
-        isActive: true,
-        subscriptionStatus: 'active',
-        subscriptionExpiresAt: {
+        is_active: true,
+        subscription_status: 'active',
+        subscription_expires_at: {
           lte: thirtyDaysFromNow,
           gte: now,
         },
       },
       select: {
         id: true,
-        businessName: true,
-        subscriptionExpiresAt: true,
+        business_name: true,
+        subscription_expires_at: true,
       },
     });
 
     const overdueTenants = await prisma.tenants.findMany({
       where: {
-        isActive: true,
-        subscriptionStatus: { not: 'active' },
-        subscriptionExpiresAt: {
+        is_active: true,
+        subscription_status: { not: 'active' },
+        subscription_expires_at: {
           lt: now,
         },
       },
       select: {
         id: true,
-        businessName: true,
-        subscriptionExpiresAt: true,
+        business_name: true,
+        subscription_expires_at: true,
       },
     });
 
@@ -42,18 +42,18 @@ export const getAdminNotifications = async (_req: Request, res: Response, next: 
       ...expiringSoonTenants.map(tenant => ({
         id: `expiring-${tenant.id}`,
         type: 'expiring',
-        message: `Tenant "${tenant.businessName}" subscription is expiring soon.`,
-        details: `Expires on ${new Date(tenant.subscriptionExpiresAt!).toLocaleDateString('id-ID')}`,
+        message: `Tenant "${tenant.business_name}" subscription is expiring soon.`,
+        details: `Expires on ${new Date(tenant.subscription_expires_at!).toLocaleDateString('id-ID')}`,
         tenantId: tenant.id,
-        createdAt: tenant.subscriptionExpiresAt?.toISOString(),
+        createdAt: tenant.subscription_expires_at?.toISOString(),
       })),
       ...overdueTenants.map(tenant => ({
         id: `overdue-${tenant.id}`,
         type: 'overdue',
-        message: `Tenant "${tenant.businessName}" subscription is overdue.`,
-        details: `Expired on ${new Date(tenant.subscriptionExpiresAt!).toLocaleDateString('id-ID')}`,
+        message: `Tenant "${tenant.business_name}" subscription is overdue.`,
+        details: `Expired on ${new Date(tenant.subscription_expires_at!).toLocaleDateString('id-ID')}`,
         tenantId: tenant.id,
-        createdAt: tenant.subscriptionExpiresAt?.toISOString(),
+        createdAt: tenant.subscription_expires_at?.toISOString(),
       })),
     ];
 
@@ -93,10 +93,10 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
       where: { id: tenantId },
       select: {
         id: true,
-        businessName: true,
-        subscriptionExpiresAt: true,
-        subscriptionStatus: true,
-        nextBillingDate: true,
+        business_name: true,
+        subscription_expires_at: true,
+        subscription_status: true,
+        next_billing_date: true,
       },
     });
 
@@ -114,36 +114,36 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
     const notifications = [];
 
     // Check subscription expiration
-    if (tenant.subscriptionExpiresAt) {
+    if (tenant.subscription_expires_at) {
       const daysUntilExpiry = Math.ceil(
-        (new Date(tenant.subscriptionExpiresAt).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        (new Date(tenant.subscription_expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      if (tenant.subscriptionStatus === 'active' && daysUntilExpiry <= 7 && daysUntilExpiry >= 0) {
+      if (tenant.subscription_status === 'active' && daysUntilExpiry <= 7 && daysUntilExpiry >= 0) {
         notifications.push({
           id: `subscription-expiring-${tenant.id}`,
           type: 'expiring',
           message: `Your subscription is expiring in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}.`,
-          details: `Current subscription expires on ${new Date(tenant.subscriptionExpiresAt).toLocaleDateString('id-ID')}`,
+          details: `Current subscription expires on ${new Date(tenant.subscription_expires_at).toLocaleDateString('id-ID')}`,
           tenantId: tenant.id,
-          createdAt: tenant.subscriptionExpiresAt?.toISOString(),
+          createdAt: tenant.subscription_expires_at?.toISOString(),
         });
-      } else if (tenant.subscriptionStatus !== 'active' && new Date(tenant.subscriptionExpiresAt) < now) {
+      } else if (tenant.subscription_status !== 'active' && new Date(tenant.subscription_expires_at) < now) {
         notifications.push({
           id: `subscription-overdue-${tenant.id}`,
           type: 'overdue',
           message: `Your subscription has expired.`,
-          details: `Expired on ${new Date(tenant.subscriptionExpiresAt).toLocaleDateString('id-ID')}`,
+          details: `Expired on ${new Date(tenant.subscription_expires_at).toLocaleDateString('id-ID')}`,
           tenantId: tenant.id,
-          createdAt: tenant.subscriptionExpiresAt?.toISOString(),
+          createdAt: tenant.subscription_expires_at?.toISOString(),
         });
       }
     }
 
     // Check for next billing date (if within 7 days)
-    if (tenant.nextBillingDate) {
+    if (tenant.next_billing_date) {
       const daysUntilBilling = Math.ceil(
-        (new Date(tenant.nextBillingDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        (new Date(tenant.next_billing_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
       );
 
       if (daysUntilBilling <= 7 && daysUntilBilling >= 0) {
@@ -151,9 +151,9 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
           id: `billing-reminder-${tenant.id}`,
           type: 'billing',
           message: `Next billing is due in ${daysUntilBilling} day${daysUntilBilling !== 1 ? 's' : ''}.`,
-          details: `Billing date: ${new Date(tenant.nextBillingDate).toLocaleDateString('id-ID')}`,
+          details: `Billing date: ${new Date(tenant.next_billing_date).toLocaleDateString('id-ID')}`,
           tenantId: tenant.id,
-          createdAt: tenant.nextBillingDate?.toISOString(),
+          createdAt: tenant.next_billing_date?.toISOString(),
         });
       }
     }

@@ -12,11 +12,11 @@ export const getCategories = async (
   try {
     const { type, outlet_id } = req.query;
 
-    const where: any = { isActive: true };
+    const where: any = { is_active: true };
 
     // Tenant isolation (except Super Admin)
     if (req.tenantId) {
-      where.outlets = { tenantId: req.tenantId };
+      where.outlets = { tenant_id: req.tenantId };
     }
 
     if (type) {
@@ -24,7 +24,7 @@ export const getCategories = async (
     }
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     const categories = await prisma.categories.findMany({
@@ -87,12 +87,13 @@ export const getCategoryById = async (
     }
 
     // Tenant isolation check
-    if (req.tenantId && category.outletId) {
+    const categoryOutletId = category.outlet_id;
+    if (req.tenantId && categoryOutletId !== null) {
       const outlet = await prisma.outlets.findUnique({
-        where: { id: category.outlet_id }
+        where: { id: categoryOutletId }
       });
 
-      if (!outlet || outlet.tenantId !== req.tenantId) {
+      if (!outlet || outlet.tenant_id !== req.tenantId) {
         return res.status(403).json({
           success: false,
           error: {
@@ -140,7 +141,7 @@ export const createCategory = async (
         where: { id: outletId }
       });
 
-      if (!outlet || outlet.tenantId !== tenantId) {
+      if (!outlet || outlet.tenant_id !== tenantId) {
         return res.status(403).json({
           success: false,
           error: {
@@ -199,12 +200,13 @@ export const updateCategory = async (
     }
 
     // Check if the category's outlet belongs to the current tenant
-    if (category.outletId) {
+    const existingOutletId = category.outlet_id;
+    if (existingOutletId !== null) {
       const outlet = await prisma.outlets.findUnique({
-        where: { id: category.outlet_id }
+        where: { id: existingOutletId }
       });
 
-      if (!outlet || outlet.tenantId !== tenantId) {
+      if (!outlet || outlet.tenant_id !== tenantId) {
         res.status(403).json({
           success: false,
           error: {
@@ -222,7 +224,7 @@ export const updateCategory = async (
         where: { id: outletId }
       });
 
-      if (!newOutlet || newOutlet.tenantId !== tenantId) {
+      if (!newOutlet || newOutlet.tenant_id !== tenantId) {
         res.status(403).json({
           success: false,
           error: {
@@ -239,8 +241,8 @@ export const updateCategory = async (
       data: {
         ...(name && { name }),
         ...(type && { type }),
-        ...(isActive !== undefined && { isActive }),
-        ...(outletId !== undefined && { outletId })
+        ...(isActive !== undefined && { is_active: isActive }),
+        ...(outletId !== undefined && { outlet_id: outletId })
       }
     });
 
@@ -284,12 +286,13 @@ export const deleteCategory = async (
     }
 
     // Check if the category's outlet belongs to the current tenant
-    if (category.outletId) {
+    const deleteOutletId = category.outlet_id;
+    if (deleteOutletId !== null) {
       const outlet = await prisma.outlets.findUnique({
-        where: { id: category.outlet_id }
+        where: { id: deleteOutletId }
       });
 
-      if (!outlet || outlet.tenantId !== tenantId) {
+      if (!outlet || outlet.tenant_id !== tenantId) {
         res.status(403).json({
           success: false,
           error: {

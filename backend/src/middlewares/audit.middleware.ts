@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 
 /**
@@ -50,7 +51,7 @@ export const auditLogger = async (req: Request, res: Response, next: NextFunctio
             action_type: req.method,
             entity_type: entityType,
             entity_id: entityId,
-            old_values: null, // Would require fetching before update
+            old_values: Prisma.JsonNull, // Would require fetching before update
             new_values: req.body ? (req.body as any) : {},
             ip_address: req.ip || req.socket.remoteAddress || '',
             user_agent: req.get('User-Agent') || '',

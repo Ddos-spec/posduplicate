@@ -9,15 +9,15 @@ import { generateApiKey, hashApiKey } from '../utils/apiKeyGenerator';
 export const getAllTenants = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { status, search } = req.query;
-    const where: any = { deletedAt: null };
+    const where: any = { deleted_at: null };
 
     if (status && status !== 'all') {
-      where.subscriptionStatus = status as string;
+      where.subscription_status = status as string;
     }
     if (search) {
       where.OR = [
-        { businessName: { contains: search as string, mode: 'insensitive' } },
-        { ownerName: { contains: search as string, mode: 'insensitive' } },
+        { business_name: { contains: search as string, mode: 'insensitive' } },
+        { owner_name: { contains: search as string, mode: 'insensitive' } },
         { email: { contains: search as string, mode: 'insensitive' } },
       ];
     }
@@ -82,17 +82,17 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
       const tenant = await tx.tenants.create({
         data: {
           business_name: businessName,
-          ownerName,
+          owner_name: ownerName,
           email,
           phone,
           address,
-          subscriptionPlan: 'standard',
-          subscriptionStatus: 'active',
-          subscriptionStartsAt: now,
-          subscriptionExpiresAt: firstBillingDate,
-          nextBillingDate: firstBillingDate,
-          maxOutlets: 999,
-          maxUsers: 999,
+          subscription_plan: 'standard',
+          subscription_status: 'active',
+          subscription_starts_at: now,
+          subscription_expires_at: firstBillingDate,
+          next_billing_date: firstBillingDate,
+          max_outlets: 999,
+          max_users: 999,
           features: {
             pos: true,
             inventory: true,
@@ -109,9 +109,9 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
           name: ownerName,
           email: email,
           password_hash: hashedPassword,
-          tenantId: tenant.id,
-          roleId: ownerRole.id,
-          isActive: true,
+          tenant_id: tenant.id,
+          role_id: ownerRole.id,
+          is_active: true,
         },
       });
 
@@ -160,9 +160,31 @@ export const updateTenant = async (req: Request, res: Response, next: NextFuncti
     const updateData = req.body;
     delete updateData.email;
 
+    const fieldMap: Record<string, string> = {
+      businessName: 'business_name',
+      ownerName: 'owner_name',
+      subscriptionPlan: 'subscription_plan',
+      subscriptionStatus: 'subscription_status',
+      subscriptionStartsAt: 'subscription_starts_at',
+      subscriptionExpiresAt: 'subscription_expires_at',
+      nextBillingDate: 'next_billing_date',
+      lastPaymentAt: 'last_payment_at',
+      maxOutlets: 'max_outlets',
+      maxUsers: 'max_users',
+      billingEmail: 'billing_email',
+      paymentMethod: 'payment_method',
+      isActive: 'is_active',
+      onboardingCompleted: 'onboarding_completed',
+      onboardingStep: 'onboarding_step'
+    };
+    const mappedUpdate: any = {};
+    Object.entries(updateData).forEach(([key, value]) => {
+      mappedUpdate[fieldMap[key] || key] = value;
+    });
+
     const tenant = await prisma.tenants.update({
       where: { id: parseInt(id) },
-      data: updateData,
+      data: mappedUpdate,
     });
 
     res.json({
@@ -208,10 +230,10 @@ export const updateSubscription = async (req: Request, res: Response, next: Next
     const updateData: any = {};
 
     if (status) {
-      updateData.subscriptionStatus = status;
+      updateData.subscription_status = status;
     }
     if (expiresAt) {
-      updateData.subscriptionExpiresAt = new Date(expiresAt);
+      updateData.subscription_expires_at = new Date(expiresAt);
     }
 
     const tenant = await prisma.tenants.update({
@@ -244,7 +266,7 @@ export const getMyTenant = async (req: Request, res: Response, next: NextFunctio
         _count: {
           select: {
             outlets: true,
-            tenants_users_tenant_idTotenants: true,
+            users_users_tenant_idTotenants: true,
           },
         },
       },
@@ -269,7 +291,7 @@ export const deleteTenant = async (req: Request, res: Response, next: NextFuncti
       where: { id: tenantId },
       data: {
         deleted_at: new Date(),
-        isActive: false,
+        is_active: false,
       },
     });
 

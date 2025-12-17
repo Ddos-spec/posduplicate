@@ -23,12 +23,12 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
       });
     }
 
-    const tenant = await prisma.tenant.findUnique({
+    const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
       select: {
         id: true,
-        businessName: true,
-        ownerName: true,
+        business_name: true,
+        owner_name: true,
         email: true,
         phone: true,
         address: true,
@@ -54,8 +54,8 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
       success: true,
       data: {
         id: tenant.id,
-        businessName: tenant.businessName,
-        ownerName: tenant.ownerName,
+        businessName: tenant.business_name,
+        ownerName: tenant.owner_name,
         email: tenant.email,
         phone: tenant.phone,
         address: tenant.address,
@@ -84,32 +84,39 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
     }
 
     // Get current tenant data
-    const currentTenant = await prisma.tenant.findUnique({
+    const currentTenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
       select: { settings: true }
     });
 
     // Fields that go directly to tenant table
-    const tenantFields = ['businessName', 'ownerName', 'email', 'phone', 'address'];
+    const tenantFieldMap: Record<string, string> = {
+      businessName: 'business_name',
+      ownerName: 'owner_name',
+      email: 'email',
+      phone: 'phone',
+      address: 'address'
+    };
     const tenantData: any = {};
     const settingsData: any = typeof currentTenant?.settings === 'object' ? { ...currentTenant.settings } : {};
 
     // Separate tenant fields from settings fields
     Object.keys(updateData).forEach(key => {
-      if (tenantFields.includes(key)) {
-        tenantData[key] = updateData[key];
+      const mappedKey = tenantFieldMap[key];
+      if (mappedKey) {
+        tenantData[mappedKey] = updateData[key];
       } else {
         settingsData[key] = updateData[key];
       }
     });
 
     // Update tenant with both direct fields and merged settings
-    const updatedTenant = await prisma.tenant.update({
+    const updatedTenant = await prisma.tenants.update({
       where: { id: tenantId },
       data: {
         ...tenantData,
         settings: settingsData,
-        updatedAt: new Date()
+        updated_at: new Date()
       }
     });
 
@@ -118,8 +125,8 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
       message: 'Settings updated successfully',
       data: {
         id: updatedTenant.id,
-        businessName: updatedTenant.businessName,
-        ownerName: updatedTenant.ownerName,
+        businessName: updatedTenant.business_name,
+        ownerName: updatedTenant.owner_name,
         email: updatedTenant.email,
         phone: updatedTenant.phone,
         address: updatedTenant.address,
@@ -158,9 +165,9 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
     }
 
     // Get user with password
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
-      select: { id: true, passwordHash: true }
+      select: { id: true, password_hash: true }
     });
 
     if (!user) {
@@ -174,7 +181,7 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
     }
 
     // Verify current password
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
 
     if (!isPasswordValid) {
       return res.status(400).json({
@@ -190,9 +197,9 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update password
-    await prisma.user.update({
+    await prisma.users.update({
       where: { id: userId },
-      data: { passwordHash: hashedPassword }
+      data: { password_hash: hashedPassword }
     });
 
     res.json({

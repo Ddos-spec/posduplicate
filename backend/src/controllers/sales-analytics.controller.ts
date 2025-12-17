@@ -19,7 +19,7 @@ export const getAllSalesTransactions = async (req: Request, res: Response, _next
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (outlet) {
@@ -31,11 +31,11 @@ export const getAllSalesTransactions = async (req: Request, res: Response, _next
     }
 
     if (sales_type) {
-      where.salesType = sales_type;
+      where.sales_type = sales_type;
     }
 
     if (payment_method) {
-      where.paymentMethod = payment_method;
+      where.payment_method = payment_method;
     }
 
     if (date_from || date_to) {
@@ -44,14 +44,14 @@ export const getAllSalesTransactions = async (req: Request, res: Response, _next
       if (date_to) where.date.lte = new Date(date_to as string);
     }
 
-    const transactions = await prisma.salesTransaction.findMany({
+    const transactions = await prisma.sales_transactions.findMany({
       where,
       orderBy: { date: 'desc' },
       take: parseInt(limit as string),
       skip: parseInt(offset as string)
     });
 
-    const total = await prisma.salesTransaction.count({ where });
+    const total = await prisma.sales_transactions.count({ where });
 
     res.json({
       success: true,
@@ -71,7 +71,7 @@ export const getSalesTransactionById = async (req: Request, res: Response, _next
   try {
     const { id } = req.params;
 
-    const transaction = await prisma.salesTransaction.findUnique({
+    const transaction = await prisma.sales_transactions.findUnique({
       where: { id: parseInt(id) }
     });
 
@@ -123,29 +123,29 @@ export const createSalesTransaction = async (req: Request, res: Response, _next:
       });
     }
 
-    const newTransaction = await prisma.salesTransaction.create({
+    const newTransaction = await prisma.sales_transactions.create({
       data: {
         outlet,
-        receiptNumber,
+        receipt_number: receiptNumber,
         date: new Date(date),
         time,
         category,
         brand,
-        itemName,
+        item_name: itemName,
         variant,
         sku,
         quantity: parseInt(quantity),
-        grossSales: parseFloat(grossSales),
+        gross_sales: parseFloat(grossSales),
         discounts: parseFloat(discounts),
         refunds: parseFloat(refunds),
-        netSales: parseFloat(netSales),
+        net_sales: parseFloat(netSales),
         tax: parseFloat(tax),
         gratuity: parseFloat(gratuity),
-        salesType,
-        paymentMethod,
-        servedBy,
-        collectedBy,
-        outletId: outletId ? parseInt(outletId) : null
+        sales_type: salesType,
+        payment_method: paymentMethod,
+        served_by: servedBy,
+        collected_by: collectedBy,
+        outlet_id: outletId ? parseInt(outletId) : null
       }
     });
 
@@ -171,29 +171,29 @@ export const bulkCreateSalesTransactions = async (req: Request, res: Response, _
       });
     }
 
-    const created = await prisma.salesTransaction.createMany({
+    const created = await prisma.sales_transactions.createMany({
       data: transactions.map((t: any) => ({
         outlet: t.outlet,
-        receiptNumber: t.receiptNumber,
+        receipt_number: t.receiptNumber,
         date: new Date(t.date),
         time: t.time,
         category: t.category,
         brand: t.brand || 'Unbranded',
-        itemName: t.itemName,
+        item_name: t.itemName,
         variant: t.variant,
         sku: t.sku,
         quantity: parseInt(t.quantity),
-        grossSales: parseFloat(t.grossSales),
+        gross_sales: parseFloat(t.grossSales),
         discounts: parseFloat(t.discounts || 0),
         refunds: parseFloat(t.refunds || 0),
-        netSales: parseFloat(t.netSales),
+        net_sales: parseFloat(t.netSales),
         tax: parseFloat(t.tax || 0),
         gratuity: parseFloat(t.gratuity || 0),
-        salesType: t.salesType,
-        paymentMethod: t.paymentMethod,
-        servedBy: t.servedBy,
-        collectedBy: t.collectedBy,
-        outletId: t.outletId ? parseInt(t.outletId) : null
+        sales_type: t.salesType,
+        payment_method: t.paymentMethod,
+        served_by: t.servedBy,
+        collected_by: t.collectedBy,
+        outlet_id: t.outletId ? parseInt(t.outletId) : null
       })),
       skipDuplicates: true
     });
@@ -216,7 +216,7 @@ export const getAnalyticsSummary = async (req: Request, res: Response, _next: Ne
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (date_from || date_to) {
@@ -225,13 +225,13 @@ export const getAnalyticsSummary = async (req: Request, res: Response, _next: Ne
       if (date_to) where.date.lte = new Date(date_to as string);
     }
 
-    const summary = await prisma.salesTransaction.aggregate({
+    const summary = await prisma.sales_transactions.aggregate({
       where,
       _sum: {
-        grossSales: true,
+        gross_sales: true,
         discounts: true,
         refunds: true,
-        netSales: true,
+        net_sales: true,
         tax: true,
         gratuity: true,
         quantity: true
@@ -246,10 +246,10 @@ export const getAnalyticsSummary = async (req: Request, res: Response, _next: Ne
       data: {
         totalTransactions: summary._count.id,
         totalQuantity: summary._sum.quantity || 0,
-        totalGrossSales: summary._sum.grossSales || 0,
+        totalGrossSales: summary._sum.gross_sales || 0,
         totalDiscounts: summary._sum.discounts || 0,
         totalRefunds: summary._sum.refunds || 0,
-        totalNetSales: summary._sum.netSales || 0,
+        totalNetSales: summary._sum.net_sales || 0,
         totalTax: summary._sum.tax || 0,
         totalGratuity: summary._sum.gratuity || 0
       }
@@ -267,7 +267,7 @@ export const getNetSalesTrend = async (req: Request, res: Response, _next: NextF
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (date_from || date_to) {
@@ -277,11 +277,11 @@ export const getNetSalesTrend = async (req: Request, res: Response, _next: NextF
     }
 
     // Get all transactions
-    const transactions = await prisma.salesTransaction.findMany({
+    const transactions = await prisma.sales_transactions.findMany({
       where,
       select: {
         date: true,
-        netSales: true
+        net_sales: true
       },
       orderBy: { date: 'asc' }
     });
@@ -294,7 +294,7 @@ export const getNetSalesTrend = async (req: Request, res: Response, _next: NextF
       if (!groupedData[dateKey]) {
         groupedData[dateKey] = 0;
       }
-      groupedData[dateKey] += parseFloat(t.netSales.toString());
+      groupedData[dateKey] += parseFloat(t.net_sales.toString());
     });
 
     // Convert to array format for chart
@@ -327,7 +327,7 @@ export const getTopSellingItems = async (req: Request, res: Response, _next: Nex
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (date_from || date_to) {
@@ -336,16 +336,16 @@ export const getTopSellingItems = async (req: Request, res: Response, _next: Nex
       if (date_to) where.date.lte = new Date(date_to as string);
     }
 
-    const topItems = await prisma.salesTransaction.groupBy({
-      by: ['itemName', 'category'],
+    const topItems = await prisma.sales_transactions.groupBy({
+      by: ['item_name', 'category'],
       where,
       _sum: {
         quantity: true,
-        netSales: true
+        net_sales: true
       },
       orderBy: {
         _sum: {
-          netSales: 'desc'
+          net_sales: 'desc'
         }
       },
       take: parseInt(limit as string)
@@ -354,10 +354,10 @@ export const getTopSellingItems = async (req: Request, res: Response, _next: Nex
     res.json({
       success: true,
       data: topItems.map(item => ({
-        itemName: item.itemName,
+        itemName: item.item_name,
         category: item.category,
         totalQuantity: item._sum.quantity || 0,
-        totalNetSales: item._sum.netSales || 0
+        totalNetSales: item._sum.net_sales || 0
       }))
     });
   } catch (error) {
@@ -373,7 +373,7 @@ export const getSalesByCategory = async (req: Request, res: Response, _next: Nex
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (date_from || date_to) {
@@ -382,16 +382,16 @@ export const getSalesByCategory = async (req: Request, res: Response, _next: Nex
       if (date_to) where.date.lte = new Date(date_to as string);
     }
 
-    const salesByCategory = await prisma.salesTransaction.groupBy({
+    const salesByCategory = await prisma.sales_transactions.groupBy({
       by: ['category'],
       where,
       _sum: {
         quantity: true,
-        netSales: true
+        net_sales: true
       },
       orderBy: {
         _sum: {
-          netSales: 'desc'
+          net_sales: 'desc'
         }
       }
     });
@@ -401,7 +401,7 @@ export const getSalesByCategory = async (req: Request, res: Response, _next: Nex
       data: salesByCategory.map(cat => ({
         category: cat.category,
         totalQuantity: cat._sum.quantity || 0,
-        totalNetSales: cat._sum.netSales || 0
+        totalNetSales: cat._sum.net_sales || 0
       }))
     });
   } catch (error) {
@@ -417,7 +417,7 @@ export const getSalesByPaymentMethod = async (req: Request, res: Response, _next
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (date_from || date_to) {
@@ -426,18 +426,18 @@ export const getSalesByPaymentMethod = async (req: Request, res: Response, _next
       if (date_to) where.date.lte = new Date(date_to as string);
     }
 
-    const salesByPayment = await prisma.salesTransaction.groupBy({
-      by: ['paymentMethod'],
+    const salesByPayment = await prisma.sales_transactions.groupBy({
+      by: ['payment_method'],
       where,
       _sum: {
-        netSales: true
+        net_sales: true
       },
       _count: {
         id: true
       },
       orderBy: {
         _sum: {
-          netSales: 'desc'
+          net_sales: 'desc'
         }
       }
     });
@@ -445,9 +445,9 @@ export const getSalesByPaymentMethod = async (req: Request, res: Response, _next
     res.json({
       success: true,
       data: salesByPayment.map(payment => ({
-        paymentMethod: payment.paymentMethod,
+        paymentMethod: payment.payment_method,
         transactionCount: payment._count.id,
-        totalNetSales: payment._sum.netSales || 0
+        totalNetSales: payment._sum.net_sales || 0
       }))
     });
   } catch (error) {

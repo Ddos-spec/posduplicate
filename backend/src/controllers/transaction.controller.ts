@@ -16,8 +16,8 @@ export const getTransactions = async (
     // Get tenant's outlets for isolation
     let outletIds: number[] = [];
     if (req.tenantId) {
-      const tenantOutlets = await prisma.outlet.findMany({
-        where: { tenantId: req.tenantId },
+      const tenantOutlets = await prisma.outlets.findMany({
+        where: { tenant_id: req.tenantId },
         select: { id: true }
       });
       outletIds = tenantOutlets.map(outlet => outlet.id);
@@ -31,26 +31,26 @@ export const getTransactions = async (
 
     // 2. Apply Tenant Isolation via Outlet IDs
     if (outletIds.length > 0) {
-      where.outletId = { in: outletIds };
+      where.outlet_id = { in: outletIds };
     }
 
     // 3. Apply Date Filter if provided
     if (date_from || date_to) {
-      where.createdAt = {};
+      where.created_at = {};
       if (date_from) {
         const fromDate = new Date(date_from as string);
         fromDate.setHours(0, 0, 0, 0);
         // Adjust for Timezone (assuming UTC+7 / WIB):
         // 00:00 WIB is 17:00 UTC previous day.
         fromDate.setHours(fromDate.getHours() - 7);
-        where.createdAt.gte = fromDate;
+        where.created_at.gte = fromDate;
       }
       if (date_to) {
         const toDate = new Date(date_to as string);
         // Safety buffer: +1 day to handle timezone differences
         toDate.setDate(toDate.getDate() + 1);
         toDate.setHours(23, 59, 59, 999);
-        where.createdAt.lte = toDate;
+        where.created_at.lte = toDate;
       }
     }
 
@@ -74,7 +74,7 @@ export const getTransactions = async (
         },
         payments: true
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       take: parseInt(limit as string)
     });
 
@@ -144,7 +144,7 @@ export const getTransactionById = async (
 
     if (tenantId) {
       // Check if the transaction's outlet belongs to the current tenant
-      if (!transaction.outletId) {
+      if (!transaction.outlet_id) {
         return res.status(404).json({
           success: false,
           error: {
@@ -154,11 +154,11 @@ export const getTransactionById = async (
         });
       }
 
-      const outlet = await prisma.outlet.findUnique({
-        where: { id: transaction.outletId }
+      const outlet = await prisma.outlets.findUnique({
+        where: { id: transaction.outlet_id }
       });
 
-      if (!outlet || outlet.tenantId !== tenantId) {
+      if (!outlet || outlet.tenant_id !== tenantId) {
         return res.status(403).json({
           success: false,
           error: {
@@ -224,10 +224,10 @@ export const createTransaction = async (
 
     // Validate Outlet Ownership (Tenant Isolation)
     if (req.tenantId) {
-      const outlet = await prisma.outlet.findFirst({
+      const outlet = await prisma.outlets.findFirst({
         where: {
           id: parseInt(outletId),
-          tenantId: req.tenantId
+          tenant_id: req.tenantId
         }
       });
 
@@ -293,12 +293,12 @@ export const createTransaction = async (
         let itemPrice = parseFloat(itemData.price.toString()); // Default to standard price
         
         // Override with platform specific price if available
-        if (primaryPaymentMethod === 'gofood' && itemData.priceGofood) {
-          itemPrice = parseFloat(itemData.priceGofood.toString());
-        } else if (primaryPaymentMethod === 'grabfood' && itemData.priceGrabfood) {
-          itemPrice = parseFloat(itemData.priceGrabfood.toString());
-        } else if (primaryPaymentMethod === 'shopeefood' && itemData.priceShopeefood) {
-          itemPrice = parseFloat(itemData.priceShopeefood.toString());
+        if (primaryPaymentMethod === 'gofood' && itemData.price_gofood) {
+          itemPrice = parseFloat(itemData.price_gofood.toString());
+        } else if (primaryPaymentMethod === 'grabfood' && itemData.price_grabfood) {
+          itemPrice = parseFloat(itemData.price_grabfood.toString());
+        } else if (primaryPaymentMethod === 'shopeefood' && itemData.price_shopeefood) {
+          itemPrice = parseFloat(itemData.price_shopeefood.toString());
         }
 
         const modifiersData: any[] = [];
@@ -340,7 +340,7 @@ export const createTransaction = async (
           unitPrice: itemPrice,
           subtotal: itemSubtotal,
           modifiersData,
-          trackStock: itemData.trackStock,
+          trackStock: itemData.track_stock,
         });
       }
 
@@ -366,12 +366,12 @@ export const createTransaction = async (
           customer_name: customerName,
           customer_phone: customerPhone,
           subtotal,
-          discountAmount,
-          taxAmount,
+          discount_amount: discountAmount,
+          tax_amount: taxAmount,
           service_charge: serviceCharge,
           total,
           status: 'completed',
-          outletId: parseInt(outletId),
+          outlet_id: parseInt(outletId),
           cashier_id: req.userId,
           notes,
           completed_at: new Date(),
@@ -414,7 +414,7 @@ export const createTransaction = async (
         }
       });
 
-      console.log(`[CreateTransaction] Transaction ${transaction.id} created successfully. Number: ${transaction.transaction_number}, CreatedAt: ${transaction.createdAt}, OutletId: ${transaction.outletId}`);
+      console.log(`[CreateTransaction] Transaction ${transaction.id} created successfully. Number: ${transaction.transaction_number}, CreatedAt: ${transaction.created_at}, OutletId: ${transaction.outlet_id}`);
 
       // Update stock for items with tracking enabled
       for (const item of itemsWithPrices) {
@@ -489,7 +489,8 @@ export const holdOrder = async (
   try {
     const { orderData } = req.body;
 
-    if (!orderData || !orderData.outletId) {
+    const orderOutletId = orderData?.outletId ?? orderData?.outlet_id;
+    if (!orderData || !orderOutletId) {
       return res.status(400).json({
         success: false,
         error: {
@@ -521,12 +522,12 @@ export const holdOrder = async (
         customer_name: orderData.customerName,
         customer_phone: orderData.customerPhone,
         subtotal: orderData.subtotal || 0,
-        discountAmount: orderData.discountAmount || 0,
-        taxAmount: orderData.taxAmount || 0,
+        discount_amount: orderData.discountAmount || 0,
+        tax_amount: orderData.taxAmount || 0,
         service_charge: orderData.serviceCharge || 0,
         total: orderData.total || 0,
         status: 'pending',
-        outletId: orderData.outletId,
+        outlet_id: orderOutletId,
         cashier_id: req.userId,
         notes: 'Held order - ' + (orderData.notes || '')
       }
@@ -556,7 +557,7 @@ export const getHeldOrders = async (
         cashier_id: req.userId,
         status: 'pending'
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
 
     res.json({
@@ -607,7 +608,7 @@ export const updateTransactionStatus = async (
         const quantity = parseFloat(transactionItem.quantity.toString());
 
         // Restore product stock if tracking
-        if (item.trackStock) {
+        if (item.track_stock) {
           await prisma.items.update({
             where: { id: item.id },
             data: {
@@ -675,7 +676,7 @@ export const deleteTransaction = async (
 
     // Verify tenant ownership
     if (tenantId && transaction.outlets) {
-      if (transaction.outlets.tenantId !== tenantId) {
+      if (transaction.outlets.tenant_id !== tenantId) {
         return res.status(403).json({
           success: false,
           error: {
@@ -693,7 +694,7 @@ export const deleteTransaction = async (
         const quantity = parseFloat(transactionItem.quantity.toString());
 
         // Restore product stock if tracking
-        if (item.trackStock) {
+        if (item.track_stock) {
           await prisma.items.update({
             where: { id: item.id },
             data: {
@@ -744,8 +745,8 @@ export const getTodayReport = async (
     // Get outlet IDs for this tenant
     let outletIds: number[] = [];
     if (tenantId) {
-      const tenantOutlets = await prisma.outlet.findMany({
-        where: { tenantId: tenantId },
+      const tenantOutlets = await prisma.outlets.findMany({
+        where: { tenant_id: tenantId },
         select: { id: true }
       });
       outletIds = tenantOutlets.map(outlet => outlet.id);
@@ -756,12 +757,12 @@ export const getTodayReport = async (
       where: {
         cashier_id: userId,
         status: 'completed',
-        createdAt: {
+        created_at: {
           gte: startOfDay,
           lte: endOfDay
         },
         ...(outletIds.length > 0 && {
-          outletId: {
+          outlet_id: {
             in: outletIds
           }
         })
@@ -783,7 +784,7 @@ export const getTodayReport = async (
         }
       },
       orderBy: {
-        createdAt: 'asc'
+        created_at: 'asc'
       }
     });
 

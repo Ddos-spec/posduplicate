@@ -22,12 +22,12 @@ export const getTransactionAnalytics = async (req: Request, res: Response, _next
     // Filter by tenant
     if (tenantId) {
       const outletIds = await getOutletIdsByTenant(tenantId);
-      where.outletId = { in: outletIds };
+      where.outlet_id = { in: outletIds };
     }
 
     // Filter by specific outlet
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     // Filter by date range
@@ -129,12 +129,12 @@ export const getTransactionAnalyticsSummary = async (req: Request, res: Response
     // Filter by tenant
     if (tenantId) {
       const outletIds = await getOutletIdsByTenant(tenantId);
-      where.outletId = { in: outletIds };
+      where.outlet_id = { in: outletIds };
     }
 
     // Filter by outlet
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     // Filter by date range
@@ -212,12 +212,12 @@ export const getTransactionAnalyticsTrend = async (req: Request, res: Response, 
     // Filter by tenant
     if (tenantId) {
       const outletIds = await getOutletIdsByTenant(tenantId);
-      where.outletId = { in: outletIds };
+      where.outlet_id = { in: outletIds };
     }
 
     // Filter by outlet
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     // Filter by date range
@@ -314,8 +314,8 @@ export const getTransactionAnalyticsTrend = async (req: Request, res: Response, 
 
 // Helper function
 async function getOutletIdsByTenant(tenantId: number): Promise<number[]> {
-  const outlets = await prisma.outlet.findMany({
-    where: { tenantId },
+  const outlets = await prisma.outlets.findMany({
+    where: { tenant_id: tenantId },
     select: { id: true }
   });
   return outlets.map(o => o.id);

@@ -10,7 +10,7 @@ export const getPromotions = async (req: Request, res: Response, next: NextFunct
     // Filter by outlet if tenant middleware is active
     if (req.tenantId) {
       where.outlets = {
-        tenantId: req.tenantId
+        tenant_id: req.tenantId
       };
     }
 
@@ -70,7 +70,7 @@ export const getPromotionById = async (req: Request, res: Response, next: NextFu
                 id: true,
                 transaction_number: true,
                 total: true,
-                createdAt: true
+                created_at: true
               }
             }
           },

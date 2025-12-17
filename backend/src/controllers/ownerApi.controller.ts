@@ -38,22 +38,22 @@ export const getSalesReport = async (req: Request, res: Response, next: NextFunc
     }
 
     // Build where clause
-    const where: Prisma.TransactionWhereInput = {
+    const where: Prisma.transactionsWhereInput = {
       outlets: {
-        tenantId: tenantId,
+        tenant_id: tenantId,
       },
     };
 
     if (Object.keys(dateFilter).length > 0) {
-      where.createdAt = dateFilter;
+      where.created_at = dateFilter;
     }
 
     if (outletId) {
-      where.outletId = parseInt(outletId as string);
+      where.outlet_id = parseInt(outletId as string);
     }
 
     // Fetch transactions with details
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where,
       include: {
         transaction_items: {
@@ -77,7 +77,7 @@ export const getSalesReport = async (req: Request, res: Response, next: NextFunc
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        created_at: 'desc',
       },
     });
 
@@ -85,8 +85,8 @@ export const getSalesReport = async (req: Request, res: Response, next: NextFunc
     const summary = {
       totalTransactions: transactions.length,
       totalRevenue: transactions.reduce((sum, t) => sum + (Number(t.total) || 0), 0),
-      totalDiscount: transactions.reduce((sum, t) => sum + (Number(t.discountAmount) || 0), 0),
-      totalTax: transactions.reduce((sum, t) => sum + (Number(t.taxAmount) || 0), 0),
+      totalDiscount: transactions.reduce((sum, t) => sum + (Number(t.discount_amount) || 0), 0),
+      totalTax: transactions.reduce((sum, t) => sum + (Number(t.tax_amount) || 0), 0),
       totalItems: transactions.reduce(
         (sum, t) => sum + t.transaction_items.reduce((itemSum, item) => itemSum + Number(item.quantity), 0),
         0
@@ -101,12 +101,12 @@ export const getSalesReport = async (req: Request, res: Response, next: NextFunc
           transactionNumber: t.transaction_number,
           orderType: t.order_type,
           subtotal: Number(t.subtotal),
-          discountAmount: Number(t.discountAmount),
-          taxAmount: Number(t.taxAmount),
+          discountAmount: Number(t.discount_amount),
+          taxAmount: Number(t.tax_amount),
           total: Number(t.total),
           cashier: t.users?.name,
           outlet: t.outlets?.name,
-          createdAt: t.createdAt,
+          createdAt: t.created_at,
           items: t.transaction_items.map((item) => ({
             itemName: item.item_name,
             variant: item.variants?.name,
@@ -137,18 +137,18 @@ export const getStockReport = async (req: Request, res: Response, next: NextFunc
 
     const where: Prisma.itemsWhereInput = {
       outlets: {
-        tenantId: tenantId,
+        tenant_id: tenantId,
       },
-      isActive: true,
+      is_active: true,
     };
 
     if (outletId) {
-      where.outletId = parseInt(outletId as string);
+      where.outlet_id = parseInt(outletId as string);
     }
 
     if (lowStock === 'true') {
       where.stock = {
-        lte: prisma.items.fields.minStock,
+        lte: prisma.items.fields.min_stock,
       };
     }
 
@@ -175,7 +175,7 @@ export const getStockReport = async (req: Request, res: Response, next: NextFunc
 
     const summary = {
       totalItems: items.length,
-      lowStockItems: items.filter((item) => Number(item.stock) <= Number(item.minStock)).length,
+      lowStockItems: items.filter((item) => Number(item.stock) <= Number(item.min_stock)).length,
       totalStockValue: items.reduce((sum, item) => sum + Number(item.price) * Number(item.stock || 0), 0),
     };
 
@@ -189,10 +189,10 @@ export const getStockReport = async (req: Request, res: Response, next: NextFunc
           name: item.name,
           category: item.categories?.name,
           stock: Number(item.stock || 0),
-          minStock: Number(item.minStock || 0),
+          minStock: Number(item.min_stock || 0),
           price: Number(item.price),
           outlet: item.outlets?.name,
-          isLowStock: Number(item.stock || 0) <= Number(item.minStock || 0),
+          isLowStock: Number(item.stock || 0) <= Number(item.min_stock || 0),
         })),
       },
     });

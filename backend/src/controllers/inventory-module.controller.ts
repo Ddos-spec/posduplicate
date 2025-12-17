@@ -5,10 +5,10 @@ import prisma from '../utils/prisma';
 export const getAllInventory = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, category, low_stock } = req.query;
-    const where: any = { isActive: true };
+    const where: any = { is_active: true };
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (category) {
@@ -90,11 +90,11 @@ export const createInventory = async (req: Request, res: Response, _next: NextFu
         unit,
         current_stock: parseFloat(currentStock),
         alert,
-        stockAlert: parseFloat(stockAlert),
-        trackCost,
-        costAmount: parseFloat(costAmount),
-        outletId: outletId ? parseInt(outletId) : null,
-        isActive: true
+        stock_alert: parseFloat(stockAlert),
+        track_cost: trackCost,
+        cost_amount: parseFloat(costAmount),
+        outlet_id: outletId ? parseInt(outletId) : null,
+        is_active: true
       }
     });
 
@@ -143,13 +143,13 @@ export const updateInventory = async (req: Request, res: Response, _next: NextFu
         ...(name !== undefined && { name }),
         ...(category !== undefined && { category }),
         ...(unit !== undefined && { unit }),
-        ...(currentStock !== undefined && { currentStock: parseFloat(currentStock) }),
+        ...(currentStock !== undefined && { current_stock: parseFloat(currentStock) }),
         ...(alert !== undefined && { alert }),
-        ...(stockAlert !== undefined && { stockAlert: parseFloat(stockAlert) }),
-        ...(trackCost !== undefined && { trackCost }),
-        ...(costAmount !== undefined && { costAmount: parseFloat(costAmount) }),
-        ...(outletId !== undefined && { outletId: outletId ? parseInt(outletId) : null }),
-        ...(isActive !== undefined && { isActive })
+        ...(stockAlert !== undefined && { stock_alert: parseFloat(stockAlert) }),
+        ...(trackCost !== undefined && { track_cost: trackCost }),
+        ...(costAmount !== undefined && { cost_amount: parseFloat(costAmount) }),
+        ...(outletId !== undefined && { outlet_id: outletId ? parseInt(outletId) : null }),
+        ...(isActive !== undefined && { is_active: isActive })
       }
     });
 
@@ -198,12 +198,12 @@ export const getLowStockItems = async (req: Request, res: Response, _next: NextF
   try {
     const { outlet_id } = req.query;
     const where: any = {
-      isActive: true,
+      is_active: true,
       alert: true
     };
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     const items = await prisma.inventory.findMany({

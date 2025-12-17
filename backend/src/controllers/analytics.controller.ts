@@ -18,7 +18,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const transactions = await prisma.transactions.findMany({
       where: {
         status: 'completed',
-        ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter })
+        ...(Object.keys(dateFilter).length > 0 && { created_at: dateFilter })
       },
       include: {
         transaction_items: true,
@@ -39,7 +39,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     // Get today's stats
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayTransactions = transactions.filter(t => t.createdAt && new Date(t.createdAt) >= today);
+    const todayTransactions = transactions.filter(t => t.created_at && new Date(t.created_at) >= today);
     const todayRevenue = todayTransactions.reduce((sum, t) => sum + parseFloat((t.total ?? 0).toString()), 0);
 
     // Get yesterday's revenue for comparison
@@ -48,7 +48,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const yesterdayTransactions = await prisma.transactions.findMany({
       where: {
         status: 'completed',
-        createdAt: {
+        created_at: {
           gte: yesterday,
           lt: today
         }
@@ -101,19 +101,19 @@ export const getSalesChart = async (req: Request, res: Response) => {
     const transactions = await prisma.transactions.findMany({
       where: {
         status: 'completed',
-        createdAt: {
+        created_at: {
           gte: startDate
         }
       },
       orderBy: {
-        createdAt: 'asc'
+        created_at: 'asc'
       }
     });
 
     // Group by date
     const salesByDate: any = {};
     transactions.forEach(t => {
-      const date = new Date(t.createdAt!);
+      const date = new Date(t.created_at!);
       let key: string;
 
       if (groupBy === 'day') {
@@ -280,7 +280,7 @@ export const getRecentTransactions = async (req: Request, res: Response) => {
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        created_at: 'desc'
       },
       take: parseInt(limit as string)
     });

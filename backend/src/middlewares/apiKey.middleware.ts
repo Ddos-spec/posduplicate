@@ -31,15 +31,15 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
 
     // Find the API key in database (Comparing PLAIN TEXT for simplicity per user request, 
     // normally hashing is preferred but requires more complex management UI for "show once")
-    const apiKeyRecord = await prisma.apiKey.findUnique({
+    const apiKeyRecord = await prisma.api_keys.findUnique({
       where: { api_key: apiKey },
       include: {
-        tenant: {
+        tenants: {
           select: {
             id: true,
-            isActive: true,
-            subscriptionStatus: true,
-            businessName: true,
+            is_active: true,
+            subscription_status: true,
+            business_name: true,
           },
         },
       },
@@ -78,7 +78,7 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
     }
 
     // Check if tenant is active
-    if (!apiKeyRecord.tenant.isActive) {
+    if (!apiKeyRecord.tenants.is_active) {
       return res.status(403).json({
         success: false,
         error: {
@@ -89,10 +89,10 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
     }
 
     // Update last used timestamp (Async - don't await to keep response fast)
-    prisma.apiKey.update({
+    prisma.api_keys.update({
       where: { id: apiKeyRecord.id },
       data: { last_used: new Date() },
-    }).catch(err => console.error('Failed to update last_used:', err));
+    }).catch((err: unknown) => console.error('Failed to update last_used:', err));
 
     // Attach tenant ID to request
     req.apiKeyTenantId = apiKeyRecord.tenant_id;
