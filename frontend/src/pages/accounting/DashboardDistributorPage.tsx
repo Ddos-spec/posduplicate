@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
+import toast from 'react-hot-toast';
 import {
   ShoppingCart, CreditCard, FileText, Package, TrendingDown, TrendingUp,
   Plus, Calendar, Building2, AlertTriangle, CheckCircle
@@ -7,6 +9,7 @@ import {
 
 export default function DashboardDistributorPage() {
   const { isDark } = useThemeStore();
+  const navigate = useNavigate();
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'delivered'>('all');
 
@@ -45,12 +48,30 @@ export default function DashboardDistributorPage() {
     }
   ];
 
-  const purchaseOrders = [
+  const allPurchaseOrders = [
     { id: 'PO-2025-001', supplier: 'PT Supplier A', items: 12, total: 15500000, status: 'Pending' },
     { id: 'PO-2025-002', supplier: 'PT Berkah Jaya', items: 8, total: 4200000, status: 'Approved' },
     { id: 'PO-2025-003', supplier: 'CV Maju Terus', items: 25, total: 22100000, status: 'Delivered' },
     { id: 'PO-2025-004', supplier: 'PT Supplier A', items: 5, total: 2500000, status: 'Pending' },
+    { id: 'PO-2025-005', supplier: 'PT Jaya Makmur', items: 10, total: 8500000, status: 'Approved' },
+    { id: 'PO-2025-006', supplier: 'CV Sentosa', items: 15, total: 12000000, status: 'Delivered' },
   ];
+
+  const purchaseOrders = useMemo(() => {
+    if (activeTab === 'all') return allPurchaseOrders;
+    return allPurchaseOrders.filter(order =>
+      order.status.toLowerCase() === activeTab
+    );
+  }, [activeTab]);
+
+  const handleCreatePO = () => {
+    toast.success('Fitur Buat PO akan segera tersedia');
+    // navigate('/accounting/distributor/pembelian/create');
+  };
+
+  const handlePayment = (supplier: string, amount: number) => {
+    toast.success(`Pembayaran ke ${supplier} sebesar Rp ${amount.toLocaleString('id-ID')} diproses`);
+  };
 
   const topSuppliers = [
     { name: 'PT Supplier A', items: 45, amount: 25500000 },
@@ -169,7 +190,10 @@ export default function DashboardDistributorPage() {
                   </button>
                 ))}
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600">
+              <button
+                onClick={handleCreatePO}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600"
+              >
                 <Plus className="w-4 h-4" />
                 Buat PO
               </button>
@@ -282,9 +306,19 @@ export default function DashboardDistributorPage() {
                           Rp {payment.amount.toLocaleString('id-ID')}
                         </p>
                         {payment.urgent ? (
-                          <button className="px-3 py-1 rounded-lg bg-blue-500 text-white text-sm font-medium">Pay</button>
+                          <button
+                            onClick={() => handlePayment(payment.supplier, payment.amount)}
+                            className="px-3 py-1 rounded-lg bg-blue-500 text-white text-sm font-medium"
+                          >
+                            Pay
+                          </button>
                         ) : (
-                          <button className={`px-3 py-1 rounded-lg border text-sm font-medium ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}>Detail</button>
+                          <button
+                            onClick={() => navigate('/accounting/distributor/keuangan')}
+                            className={`px-3 py-1 rounded-lg border text-sm font-medium ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}
+                          >
+                            Detail
+                          </button>
                         )}
                       </div>
                     </div>
