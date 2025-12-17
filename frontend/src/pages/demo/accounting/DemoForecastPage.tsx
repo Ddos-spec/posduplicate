@@ -188,7 +188,7 @@ export default function DemoForecastPage({ variant = 'owner' }: { variant: Forec
 
           <div className="h-[400px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+              <ComposedChart data={processedData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <defs>
                   <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
