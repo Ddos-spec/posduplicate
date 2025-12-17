@@ -1,7 +1,7 @@
 import { DEMO_STATS, DEMO_CHART_DATA, DEMO_TRANSACTIONS } from '../dummyData';
 import DemoLayout from '../DemoLayout';
 import { DollarSign, TrendingUp, Users, ShoppingBag } from 'lucide-react';
-import { useThemeStore } from '../../store/themeStore';
+import { useThemeStore } from '../../../store/themeStore';
 
 export default function DemoFnbOwner() {
   const { isDark } = useThemeStore();
