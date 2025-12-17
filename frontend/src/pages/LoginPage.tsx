@@ -191,13 +191,24 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Contact Admin */}
-          <p className={`text-center text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Don't have an account?{' '}
-            <button className="text-indigo-500 hover:text-indigo-400 font-semibold transition-colors">
-              Contact administrator
+          {/* View Demo Button */}
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => navigate('/demo')}
+              className={`w-full py-3 rounded-xl border-2 font-semibold flex items-center justify-center gap-2 transition-all ${
+                isDark 
+                  ? 'border-indigo-500 text-indigo-400 hover:bg-indigo-500/10' 
+                  : 'border-indigo-600 text-indigo-600 hover:bg-indigo-50'
+              }`}
+            >
+              <Zap className="w-5 h-5" />
+              View Live Demo (No Login)
             </button>
-          </p>
+            <p className={`text-xs mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              Explore all features in a simulated environment.
+            </p>
+          </div>
 
           {/* Feature Badges */}
           <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">

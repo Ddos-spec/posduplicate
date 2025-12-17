@@ -27,6 +27,15 @@ const ProductManagementPage = lazy(() => import('./pages/owner/ProductManagement
 const TransactionDetailPage = lazy(() => import('./pages/owner/TransactionDetailPage'));
 const IntegrationsPage = lazy(() => import('./pages/owner/IntegrationsPage'));
 
+// DEMO PAGES
+const DemoLandingPage = lazy(() => import('./pages/demo/DemoLandingPage'));
+const DemoFnbOwner = lazy(() => import('./pages/demo/fnb/DemoFnbOwner'));
+const DemoCashier = lazy(() => import('./pages/demo/fnb/DemoCashier'));
+const DemoAcctOwner = lazy(() => import('./pages/demo/accounting/DemoAcctOwner'));
+const DemoAcctDistributor = lazy(() => import('./pages/demo/accounting/DemoAcctDistributor'));
+const DemoAcctProducer = lazy(() => import('./pages/demo/accounting/DemoAcctProducer'));
+const DemoAcctRetail = lazy(() => import('./pages/demo/accounting/DemoAcctRetail'));
+
 // Module Selector
 const ModuleSelectorPage = lazy(() => import('./pages/ModuleSelectorPage'));
 
@@ -154,6 +163,15 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
+
+        {/* DEMO ROUTES (PUBLIC ACCESS) */}
+        <Route path="/demo" element={<DemoLandingPage />} />
+        <Route path="/demo/fnb/owner" element={<DemoFnbOwner />} />
+        <Route path="/demo/fnb/cashier" element={<DemoCashier />} />
+        <Route path="/demo/accounting/owner" element={<DemoAcctOwner />} />
+        <Route path="/demo/accounting/distributor" element={<DemoAcctDistributor />} />
+        <Route path="/demo/accounting/producer" element={<DemoAcctProducer />} />
+        <Route path="/demo/accounting/retail" element={<DemoAcctRetail />} />
 
         {/* Module Selector Route */}
         <Route
