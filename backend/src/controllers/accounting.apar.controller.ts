@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 import { generateJournalNumber } from '../utils/journal.utils';
-import { postJournalToLedger } from '../services/ledger.service';
 
 /**
  * Get AP List
@@ -40,7 +39,7 @@ export const getAP = async (req: Request, res: Response, next: NextFunction) => 
     // Fetch supplier names manually if relation is missing or tricky
     // (Optimization: can be done via relation if set up)
     
-    res.json({
+    return res.json({
       success: true,
       data: {
         payables,
@@ -54,7 +53,7 @@ export const getAP = async (req: Request, res: Response, next: NextFunction) => 
     });
 
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -85,7 +84,7 @@ export const payAP = async (req: Request, res: Response, next: NextFunction) => 
          return res.status(400).json({ success: false, error: { code: 'OVERPAYMENT', message: 'Payment amount exceeds balance' } });
     }
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
         // 1. Create Payment Record
         await tx.ap_payments.create({
             data: {
@@ -215,10 +214,10 @@ export const payAP = async (req: Request, res: Response, next: NextFunction) => 
 
     });
 
-    res.json({ success: true, message: 'Payment recorded successfully' });
+    return res.json({ success: true, message: 'Payment recorded successfully' });
 
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -246,7 +245,7 @@ export const getAR = async (req: Request, res: Response, next: NextFunction) => 
         prisma.accounts_receivable.count({ where })
       ]);
   
-      res.json({
+      return res.json({
         success: true,
         data: {
           receivables,
@@ -258,9 +257,9 @@ export const getAR = async (req: Request, res: Response, next: NextFunction) => 
           }
         }
       });
-  
+
     } catch (error) {
-      next(error);
+      return next(error);
     }
 };
 
@@ -291,7 +290,7 @@ export const collectAR = async (req: Request, res: Response, next: NextFunction)
            return res.status(400).json({ success: false, error: { code: 'OVERPAYMENT', message: 'Collection amount exceeds balance' } });
       }
   
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
           // 1. Create Collection Record
           await tx.ar_collections.create({
               data: {
@@ -398,9 +397,9 @@ export const collectAR = async (req: Request, res: Response, next: NextFunction)
           }
       });
   
-      res.json({ success: true, message: 'Collection recorded successfully' });
-  
+      return res.json({ success: true, message: 'Collection recorded successfully' });
+
     } catch (error) {
-      next(error);
+      return next(error);
     }
 };
