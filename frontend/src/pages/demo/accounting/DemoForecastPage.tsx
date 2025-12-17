@@ -112,7 +112,9 @@ export default function DemoForecastPage({ variant = 'owner' }: { variant: Forec
   const insights = INSIGHTS[variant];
   const chartData = DATA_BY_VARIANT[variant];
   const chartTitle = CHART_TITLES[variant];
-  const layoutVariant = variant === 'owner' ? 'accounting' : variant;
+  
+  // Map internal variant to layout variant
+  const layoutVariant = variant === 'owner' ? 'accounting' : variant === 'produsen' ? 'producer' : variant;
 
   return (
     <DemoLayout variant={layoutVariant as any} title="AI Financial Forecast">
