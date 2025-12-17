@@ -10,16 +10,16 @@ async function diagnose() {
   try {
     // 1. Check Connection and Transaction Count
     console.log('\nChecking Transaction Counts...');
-    const count = await prisma.transaction.count();
+    const count = await prisma.transactions.count();
     console.log(`Total Transactions in DB: ${count}`);
 
     // 2. Check Last 5 Transactions
     console.log('\nLast 5 Transactions:');
-    const lastTransactions = await prisma.transaction.findMany({
+    const lastTransactions = await prisma.transactions.findMany({
       take: 5,
       orderBy: { id: 'desc' },
       include: {
-        outlets: { select: { id: true, name: true, tenantId: true } }
+        outlets: { select: { id: true, name: true, tenant_id: true } }
       }
     });
 
@@ -27,7 +27,7 @@ async function diagnose() {
       console.log('No transactions found.');
     } else {
       lastTransactions.forEach(t => {
-        console.log(`- ID: ${t.id}, Number: ${t.transaction_number}, Outlet: ${t.outletId} (${t.outlets?.name}), Tenant: ${t.outlets?.tenantId}, CreatedAt: ${t.createdAt}`);
+        console.log(`- ID: ${t.id}, Number: ${t.transaction_number}, Outlet: ${t.outlet_id} (${t.outlets?.name}), Tenant: ${t.outlets?.tenant_id}, CreatedAt: ${t.created_at}`);
       });
     }
 
@@ -37,11 +37,11 @@ async function diagnose() {
 
     // 4. Check Outlets
     console.log('\nOutlets:');
-    const outlets = await prisma.outlet.findMany({
-      select: { id: true, name: true, tenantId: true }
+    const outlets = await prisma.outlets.findMany({
+      select: { id: true, name: true, tenant_id: true }
     });
     outlets.forEach(o => {
-      console.log(`- ID: ${o.id}, Name: ${o.name}, Tenant: ${o.tenantId}`);
+      console.log(`- ID: ${o.id}, Name: ${o.name}, Tenant: ${o.tenant_id}`);
     });
 
   } catch (error) {

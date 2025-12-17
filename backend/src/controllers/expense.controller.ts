@@ -19,11 +19,11 @@ export const getExpenses = async (req: Request, res: Response, _next: NextFuncti
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (expense_type) {
-      where.expenseType = expense_type as string;
+      where.expense_type = expense_type as string;
     }
 
     if (category) {
@@ -31,31 +31,31 @@ export const getExpenses = async (req: Request, res: Response, _next: NextFuncti
     }
 
     if (supplier_id) {
-      where.supplierId = parseInt(supplier_id as string);
+      where.supplier_id = parseInt(supplier_id as string);
     }
 
     if (date_from || date_to) {
-      where.createdAt = {};
-      if (date_from) where.createdAt.gte = new Date(date_from as string);
-      if (date_to) where.createdAt.lte = new Date(date_to as string);
+      where.created_at = {};
+      if (date_from) where.created_at.gte = new Date(date_from as string);
+      if (date_to) where.created_at.lte = new Date(date_to as string);
     }
 
     const expenses = await prisma.expenses.findMany({
       where,
       include: {
-        user: { select: { id: true, name: true } },
-        supplier: { select: { id: true, name: true } },
-        stockMovement: {
+        users: { select: { id: true, name: true } },
+        suppliers: { select: { id: true, name: true } },
+        stock_movements: {
           select: {
             id: true,
             type: true,
             quantity: true,
-            ingredient: { select: { name: true } },
+            ingredients: { select: { name: true } },
             inventory: { select: { name: true } }
           }
         }
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       take: parseInt(limit as string)
     });
 
@@ -73,11 +73,11 @@ export const getExpense = async (req: Request, res: Response, _next: NextFunctio
     const expense = await prisma.expenses.findUnique({
       where: { id: parseInt(id) },
       include: {
-        user: { select: { id: true, name: true } },
-        supplier: { select: { id: true, name: true, phone: true, email: true } },
-        stockMovement: {
+        users: { select: { id: true, name: true } },
+        suppliers: { select: { id: true, name: true, phone: true, email: true } },
+        stock_movements: {
           include: {
-            ingredient: { select: { name: true, unit: true } },
+            ingredients: { select: { name: true, unit: true } },
             inventory: { select: { name: true, unit: true } }
           }
         }
@@ -133,23 +133,23 @@ export const createExpense = async (req: Request, res: Response, _next: NextFunc
 
     const expense = await prisma.expenses.create({
       data: {
-        outletId: parseInt(outletId),
-        expenseType,
+        outlet_id: parseInt(outletId),
+        expense_type: expenseType,
         category,
         amount: parseFloat(amount),
         description: description || null,
-        paymentMethod: paymentMethod || null,
-        receiptImage: receiptImage || null,
-        referenceId: referenceId ? parseInt(referenceId) : null,
-        supplierId: supplierId ? parseInt(supplierId) : null,
-        invoiceNumber: invoiceNumber || null,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        paidAt: paidAt ? new Date(paidAt) : null,
-        userId: req.userId || 0
+        payment_method: paymentMethod || null,
+        receipt_image: receiptImage || null,
+        reference_id: referenceId ? parseInt(referenceId) : null,
+        supplier_id: supplierId ? parseInt(supplierId) : null,
+        invoice_number: invoiceNumber || null,
+        due_date: dueDate ? new Date(dueDate) : null,
+        paid_at: paidAt ? new Date(paidAt) : null,
+        user_id: req.userId || 0
       },
       include: {
-        user: { select: { id: true, name: true } },
-        supplier: { select: { id: true, name: true } }
+        users: { select: { id: true, name: true } },
+        suppliers: { select: { id: true, name: true } }
       }
     });
 
@@ -170,7 +170,7 @@ export const createExpense = async (req: Request, res: Response, _next: NextFunc
     }
 
     // Auto-Journal Hook
-    generateJournalFromExpense(expense.id).catch(err => {
+    generateJournalFromExpense(expense.id).catch((err: unknown) => {
         console.error('Auto-journal expense hook failed:', err);
     });
 
@@ -213,20 +213,20 @@ export const updateExpense = async (req: Request, res: Response, _next: NextFunc
     const expense = await prisma.expenses.update({
       where: { id: parseInt(id) },
       data: {
-        ...(expenseType && { expenseType }),
+        ...(expenseType && { expense_type: expenseType }),
         ...(category && { category }),
         ...(amount !== undefined && { amount: parseFloat(amount) }),
         ...(description !== undefined && { description }),
-        ...(paymentMethod !== undefined && { paymentMethod }),
-        ...(receiptImage !== undefined && { receiptImage }),
-        ...(supplierId !== undefined && { supplierId: supplierId ? parseInt(supplierId) : null }),
-        ...(invoiceNumber !== undefined && { invoiceNumber }),
-        ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
-        ...(paidAt !== undefined && { paidAt: paidAt ? new Date(paidAt) : null })
+        ...(paymentMethod !== undefined && { payment_method: paymentMethod }),
+        ...(receiptImage !== undefined && { receipt_image: receiptImage }),
+        ...(supplierId !== undefined && { supplier_id: supplierId ? parseInt(supplierId) : null }),
+        ...(invoiceNumber !== undefined && { invoice_number: invoiceNumber }),
+        ...(dueDate !== undefined && { due_date: dueDate ? new Date(dueDate) : null }),
+        ...(paidAt !== undefined && { paid_at: paidAt ? new Date(paidAt) : null })
       },
       include: {
-        user: { select: { id: true, name: true } },
-        supplier: { select: { id: true, name: true } }
+        users: { select: { id: true, name: true } },
+        suppliers: { select: { id: true, name: true } }
       }
     });
 
@@ -240,7 +240,7 @@ export const updateExpense = async (req: Request, res: Response, _next: NextFunc
         existing,
         expense,
         'Updated expense',
-        existing.outletId
+        existing.outlet_id
       );
     } catch (logError) {
       console.error('Failed to create activity log:', logError);
@@ -290,7 +290,7 @@ export const deleteExpense = async (req: Request, res: Response, _next: NextFunc
         existing,
         null,
         reason,
-        existing.outletId
+        existing.outlet_id
       );
     } catch (logError) {
       console.error('Failed to create activity log:', logError);
@@ -312,18 +312,18 @@ export const getExpenseSummary = async (req: Request, res: Response, _next: Next
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (date_from || date_to) {
-      where.createdAt = {};
-      if (date_from) where.createdAt.gte = new Date(date_from as string);
-      if (date_to) where.createdAt.lte = new Date(date_to as string);
+      where.created_at = {};
+      if (date_from) where.created_at.gte = new Date(date_from as string);
+      if (date_to) where.created_at.lte = new Date(date_to as string);
     }
 
     // Get total by type
     const byType = await prisma.expenses.groupBy({
-      by: ['expenseType'],
+      by: ['expense_type'],
       where,
       _sum: { amount: true },
       _count: true
@@ -352,7 +352,7 @@ export const getExpenseSummary = async (req: Request, res: Response, _next: Next
         count: total._count || 0
       },
       byType: byType.map((t: any) => ({
-        type: t.expenseType,
+        type: t.expense_type,
         amount: parseFloat((t._sum.amount || 0).toString()),
         count: t._count
       })),
@@ -376,7 +376,7 @@ export const getExpenseCategories = async (req: Request, res: Response, _next: N
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     const categories = await prisma.expenses.groupBy({

@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware, roleMiddleware } from '../middlewares/auth.middleware';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import { tenantMiddleware } from '../middlewares/tenant.middleware';
 import * as reportController from '../controllers/accounting.report.controller';
 

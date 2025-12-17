@@ -9,10 +9,10 @@ export const getAllApiKeys = async (_req: Request, res: Response, next: NextFunc
   try {
     const apiKeys = await prisma.api_keys.findMany({
       include: {
-        tenant: {
+        tenants: {
           select: {
             id: true,
-            businessName: true,
+            business_name: true,
             email: true
           }
         }
@@ -24,7 +24,19 @@ export const getAllApiKeys = async (_req: Request, res: Response, next: NextFunc
 
     res.json({
       success: true,
-      data: apiKeys,
+      data: apiKeys.map((apiKey) => {
+        const { tenants, ...rest } = apiKey;
+        return {
+          ...rest,
+          tenant: tenants
+            ? {
+                id: tenants.id,
+                businessName: tenants.business_name,
+                email: tenants.email
+              }
+            : null
+        };
+      }),
     });
   } catch (error) {
     console.error('Error fetching all API keys:', error);

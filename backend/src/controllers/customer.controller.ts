@@ -5,11 +5,11 @@ export const getCustomers = async (req: Request, res: Response, _next: NextFunct
   try {
     const { search, tier } = req.query;
     const tenantId = req.tenantId; // Get tenantId from middleware
-    const where: any = { isActive: true };
+    const where: any = {};
 
     // Get all outlets for this tenant to establish data isolation
-    const tenantOutlets = await prisma.outlet.findMany({
-      where: { tenantId: tenantId },
+    const tenantOutlets = await prisma.outlets.findMany({
+      where: { tenant_id: tenantId },
       select: { id: true }
     });
 
@@ -54,8 +54,8 @@ export const getCustomerById = async (req: Request, res: Response, _next: NextFu
     const tenantId = req.tenantId; // Get tenantId from middleware
 
     // Get all outlets for this tenant to establish data isolation
-    const tenantOutlets = await prisma.outlet.findMany({
-      where: { tenantId: tenantId },
+    const tenantOutlets = await prisma.outlets.findMany({
+      where: { tenant_id: tenantId },
       select: { id: true }
     });
 
@@ -98,11 +98,11 @@ export const createCustomer = async (req: Request, res: Response, _next: NextFun
     // Validate that the outlet belongs to the current tenant if outlet_id is provided
     let finalOutletId = outlet_id;
     if (outlet_id) {
-      const outlet = await prisma.outlet.findUnique({
+      const outlet = await prisma.outlets.findUnique({
         where: { id: outlet_id }
       });
 
-      if (!outlet || outlet.tenantId !== tenantId) {
+      if (!outlet || outlet.tenant_id !== tenantId) {
         return res.status(403).json({
           success: false,
           error: {
@@ -113,8 +113,8 @@ export const createCustomer = async (req: Request, res: Response, _next: NextFun
       }
     } else {
       // If no outlet_id provided, try to use the tenant's default outlet
-      const tenantOutlets = await prisma.outlet.findMany({
-        where: { tenantId: tenantId },
+      const tenantOutlets = await prisma.outlets.findMany({
+        where: { tenant_id: tenantId },
         select: { id: true }
       });
 
@@ -160,11 +160,11 @@ export const updateCustomer = async (req: Request, res: Response, _next: NextFun
 
     // Check if the customer's outlet belongs to the current tenant
     if (customer.outlet_id) {
-      const outlet = await prisma.outlet.findUnique({
+      const outlet = await prisma.outlets.findUnique({
         where: { id: customer.outlet_id }
       });
 
-      if (!outlet || outlet.tenantId !== tenantId) {
+      if (!outlet || outlet.tenant_id !== tenantId) {
         return res.status(403).json({
           success: false,
           error: {
@@ -177,11 +177,11 @@ export const updateCustomer = async (req: Request, res: Response, _next: NextFun
 
     // If updating outletId, validate the new outlet
     if (outlet_id !== undefined) {
-      const newOutlet = await prisma.outlet.findUnique({
+      const newOutlet = await prisma.outlets.findUnique({
         where: { id: outlet_id }
       });
 
-      if (!newOutlet || newOutlet.tenantId !== tenantId) {
+      if (!newOutlet || newOutlet.tenant_id !== tenantId) {
         return res.status(403).json({
           success: false,
           error: {
@@ -229,11 +229,11 @@ export const deleteCustomer = async (req: Request, res: Response, _next: NextFun
 
     // Check if the customer's outlet belongs to the current tenant
     if (customer.outlet_id) {
-      const outlet = await prisma.outlet.findUnique({
+      const outlet = await prisma.outlets.findUnique({
         where: { id: customer.outlet_id }
       });
 
-      if (!outlet || outlet.tenantId !== tenantId) {
+      if (!outlet || outlet.tenant_id !== tenantId) {
         return res.status(403).json({
           success: false,
           error: {
@@ -273,11 +273,11 @@ export const getCustomerTransactions = async (req: Request, res: Response, _next
 
     // Check if the customer's outlet belongs to the current tenant
     if (customer.outlet_id) {
-      const outlet = await prisma.outlet.findUnique({
+      const outlet = await prisma.outlets.findUnique({
         where: { id: customer.outlet_id }
       });
 
-      if (!outlet || outlet.tenantId !== tenantId) {
+      if (!outlet || outlet.tenant_id !== tenantId) {
         return res.status(403).json({
           success: false,
           error: {
@@ -289,16 +289,16 @@ export const getCustomerTransactions = async (req: Request, res: Response, _next
     }
 
     // Get all outlets for this tenant to ensure proper isolation
-    const tenantOutlets = await prisma.outlet.findMany({
-      where: { tenantId: tenantId },
+    const tenantOutlets = await prisma.outlets.findMany({
+      where: { tenant_id: tenantId },
       select: { id: true }
     });
 
     const outletIds = tenantOutlets.map(outlet => outlet.id);
 
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await prisma.transactions.findMany({
       where: {
-        outletId: {
+        outlet_id: {
           in: outletIds
         },
         OR: [
@@ -306,7 +306,7 @@ export const getCustomerTransactions = async (req: Request, res: Response, _next
           { customer_phone: customer.phone }
         ]
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
 
     res.json({ success: true, data: transactions, count: transactions.length });

@@ -12,37 +12,37 @@ export const getBillingHistory = async (req: Request, res: Response, next: NextF
     // In production, you'd have a separate billing/payment table
     const where: any = {};
     if (status) {
-      where.subscriptionStatus = status;
+      where.subscription_status = status;
     }
 
-    const billingRecords = await prisma.tenant.findMany({
+    const billingRecords = await prisma.tenants.findMany({
       where,
       select: {
         id: true,
-        businessName: true,
-        subscriptionPlan: true,
-        subscriptionStatus: true,
-        subscriptionStartsAt: true,
-        subscriptionExpiresAt: true,
-        nextBillingDate: true,
-        lastPaymentAt: true,
-        createdAt: true
+        business_name: true,
+        subscription_plan: true,
+        subscription_status: true,
+        subscription_starts_at: true,
+        subscription_expires_at: true,
+        next_billing_date: true,
+        last_payment_at: true,
+        created_at: true
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       take: parseInt(limit as string)
     });
 
     // Transform to billing format to match frontend's BillingRecord interface
     const result = billingRecords.map(tenant => ({
       id: tenant.id,
-      businessName: tenant.businessName,
-      subscriptionPlan: tenant.subscriptionPlan || 'basic',
-      subscriptionStatus: tenant.subscriptionStatus || 'trial',
-      subscriptionStartsAt: tenant.subscriptionStartsAt,
-      subscriptionExpiresAt: tenant.subscriptionExpiresAt,
-      nextBillingDate: tenant.nextBillingDate,
-      lastPaymentAt: tenant.lastPaymentAt,
-      createdAt: tenant.createdAt
+      businessName: tenant.business_name,
+      subscriptionPlan: tenant.subscription_plan || 'basic',
+      subscriptionStatus: tenant.subscription_status || 'trial',
+      subscriptionStartsAt: tenant.subscription_starts_at,
+      subscriptionExpiresAt: tenant.subscription_expires_at,
+      nextBillingDate: tenant.next_billing_date,
+      lastPaymentAt: tenant.last_payment_at,
+      createdAt: tenant.created_at
     }));
 
     res.json({ success: true, data: result, count: result.length });
@@ -88,14 +88,14 @@ export const recordPayment = async (req: Request, res: Response, next: NextFunct
     }
 
     // Update tenant's payment info
-    const tenant = await prisma.tenant.update({
+    const tenant = await prisma.tenants.update({
       where: { id: tenantId },
       data: {
-        lastPaymentAt: new Date(),
-        subscriptionStatus: 'active',
+        last_payment_at: new Date(),
+        subscription_status: 'active',
         // Extend subscription by 30 days
-        subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       }
     });
 
@@ -108,7 +108,7 @@ export const recordPayment = async (req: Request, res: Response, next: NextFunct
         method,
         referenceNumber,
         paidAt: new Date(),
-        nextBilling: tenant.nextBillingDate
+        nextBilling: tenant.next_billing_date
       }
     });
   } catch (error) {
@@ -131,23 +131,23 @@ export const getBillingStats = async (_req: Request, res: Response, next: NextFu
       expiringSoon,
       overduePayments
     ] = await Promise.all([
-      prisma.tenant.count({ where: { subscriptionStatus: 'active', isActive: true } }),
-      prisma.tenant.count(),
-      prisma.tenant.count({
+      prisma.tenants.count({ where: { subscription_status: 'active', is_active: true } }),
+      prisma.tenants.count(),
+      prisma.tenants.count({
         where: {
-          subscriptionStatus: 'active',
-          isActive: true,
-          subscriptionExpiresAt: {
+          subscription_status: 'active',
+          is_active: true,
+          subscription_expires_at: {
             lte: thirtyDaysFromNow,
             gte: now
           }
         }
       }),
-      prisma.tenant.count({
+      prisma.tenants.count({
         where: {
-          subscriptionStatus: { not: 'active' },
-          isActive: true, // Only consider active tenants that are overdue
-          subscriptionExpiresAt: {
+          subscription_status: { not: 'active' },
+          is_active: true, // Only consider active tenants that are overdue
+          subscription_expires_at: {
             lt: now
           }
         }

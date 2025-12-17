@@ -3,8 +3,8 @@ import prisma from '../utils/prisma';
 
 // Helper to get outlet IDs for a tenant
 async function getOutletIdsByTenant(tenantId: number): Promise<number[]> {
-  const outlets = await prisma.outlet.findMany({
-    where: { tenantId },
+  const outlets = await prisma.outlets.findMany({
+    where: { tenant_id: tenantId },
     select: { id: true }
   });
   return outlets.map((o: any) => o.id);
@@ -22,36 +22,36 @@ export const getFinancialReport = async (req: Request, res: Response, _next: Nex
 
     const whereTransaction: any = {
       status: 'completed',
-      createdAt: { gte: startDate, lte: endDate }
+      created_at: { gte: startDate, lte: endDate }
     };
 
     const whereExpense: any = {
-      createdAt: { gte: startDate, lte: endDate }
+      created_at: { gte: startDate, lte: endDate }
     };
 
     if (outlet_id) {
-      whereTransaction.outletId = parseInt(outlet_id as string);
-      whereExpense.outletId = parseInt(outlet_id as string);
+      whereTransaction.outlet_id = parseInt(outlet_id as string);
+      whereExpense.outlet_id = parseInt(outlet_id as string);
     } else if (tenantId) {
       const outletIds = await getOutletIdsByTenant(tenantId);
-      whereTransaction.outletId = { in: outletIds };
-      whereExpense.outletId = { in: outletIds };
+      whereTransaction.outlet_id = { in: outletIds };
+      whereExpense.outlet_id = { in: outletIds };
     }
 
     // A. Gross & Net Sales
-    const salesAgg = await prisma.transactionsaggregate({
+    const salesAgg = await prisma.transactions.aggregate({
       where: whereTransaction,
       _sum: {
         total: true, // Net Sales
         subtotal: true, // Gross Sales
-        taxAmount: true,
-        discountAmount: true
+        tax_amount: true,
+        discount_amount: true
       }
     });
 
     // B. Calculate COGS (Approximation based on current item cost)
     // We need to fetch all sold items in this period
-    const soldItems = await prisma.transactionItem.findMany({
+    const soldItems = await prisma.transaction_items.findMany({
       where: {
         transactions: whereTransaction
       },
@@ -69,7 +69,7 @@ export const getFinancialReport = async (req: Request, res: Response, _next: Nex
     });
 
     // C. Expenses
-    const expenseAgg = await prisma.expense.aggregate({
+    const expenseAgg = await prisma.expenses.aggregate({
       where: whereExpense,
       _sum: { amount: true }
     });
@@ -125,19 +125,19 @@ export const getOperationalReport = async (req: Request, res: Response, _next: N
     
         const where: any = {
           status: 'completed',
-          createdAt: { gte: startDate, lte: endDate }
+          created_at: { gte: startDate, lte: endDate }
         };
 
         if (outlet_id) {
-            where.outletId = parseInt(outlet_id as string);
+            where.outlet_id = parseInt(outlet_id as string);
         } else if (tenantId) {
             const outletIds = await getOutletIdsByTenant(tenantId);
-            where.outletId = { in: outletIds };
+            where.outlet_id = { in: outletIds };
         }
 
-        const transactions = await prisma.transactionsfindMany({
+        const transactions = await prisma.transactions.findMany({
             where,
-            select: { createdAt: true, total: true }
+            select: { created_at: true, total: true }
         });
 
         // Initialize counters
@@ -146,9 +146,9 @@ export const getOperationalReport = async (req: Request, res: Response, _next: N
         const daysLabel = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
         transactions.forEach(t => {
-            if (!t.createdAt) return;
+            if (!t.created_at) return;
             // Convert to WIB (UTC+7) manually
-            const date = new Date(t.createdAt.getTime() + (7 * 60 * 60 * 1000));
+            const date = new Date(t.created_at.getTime() + (7 * 60 * 60 * 1000));
             
             const hour = date.getUTCHours();
             const day = date.getUTCDay();
@@ -182,12 +182,12 @@ export const getInventoryValuation = async (req: Request, res: Response, _next: 
         const { tenantId } = req;
         const { outlet_id } = req.query;
 
-        const where: any = { isActive: true };
+        const where: any = { is_active: true };
         if (outlet_id) {
-            where.outletId = parseInt(outlet_id as string);
+            where.outlet_id = parseInt(outlet_id as string);
         } else if (tenantId) {
             const outletIds = await getOutletIdsByTenant(tenantId);
-            where.outletId = { in: outletIds };
+            where.outlet_id = { in: outletIds };
         }
 
         // Ingredients Valuation
@@ -198,7 +198,7 @@ export const getInventoryValuation = async (req: Request, res: Response, _next: 
 
         // Items Valuation (if they have stock tracking)
         const items = await prisma.items.findMany({
-            where: { ...where, trackStock: true },
+            where: { ...where, track_stock: true },
             select: { name: true, stock: true, cost: true }
         });
 
@@ -313,18 +313,18 @@ export const getFraudStats = async (req: Request, res: Response, _next: NextFunc
         endDate.setHours(23, 59, 59, 999);
 
         const where: any = {
-            createdAt: { gte: startDate, lte: endDate }
+            created_at: { gte: startDate, lte: endDate }
         };
         
         if (outlet_id) {
-            where.outletId = parseInt(outlet_id as string);
+            where.outlet_id = parseInt(outlet_id as string);
         } else if (tenantId) {
             const outletIds = await getOutletIdsByTenant(tenantId);
-            where.outletId = { in: outletIds };
+            where.outlet_id = { in: outletIds };
         }
 
         // Count Voids/Cancels
-        const voidTransactions = await prisma.transactionsfindMany({
+        const voidTransactions = await prisma.transactions.findMany({
             where: {
                 ...where,
                 status: { in: ['cancelled', 'void'] }
@@ -343,7 +343,7 @@ export const getFraudStats = async (req: Request, res: Response, _next: NextFunc
 
         // Get Activity Logs for sensitive actions
         const riskyActions = ['delete_transaction', 'force_discount', 'open_cash_drawer'];
-        const logs = await prisma.activityLog.findMany({
+        const logs = await prisma.activity_logs.findMany({
             where: {
                 created_at: { gte: startDate, lte: endDate },
                 action_type: { in: riskyActions },
@@ -387,17 +387,17 @@ export const getSalesReport = async (req: Request, res: Response, _next: NextFun
 
         const where: any = {
             status: 'completed',
-            createdAt: { gte: startDate, lte: endDate }
+            created_at: { gte: startDate, lte: endDate }
         };
 
         if (outlet_id) {
-            where.outletId = parseInt(outlet_id as string);
+            where.outlet_id = parseInt(outlet_id as string);
         } else if (tenantId) {
             const outletIds = await getOutletIdsByTenant(tenantId);
-            where.outletId = { in: outletIds };
+            where.outlet_id = { in: outletIds };
         }
 
-        const aggregate = await prisma.transactionsaggregate({
+        const aggregate = await prisma.transactions.aggregate({
             where,
             _sum: { total: true },
             _count: { id: true }

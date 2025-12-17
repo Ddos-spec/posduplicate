@@ -5,18 +5,18 @@ import { createActivityLog } from './activity-log.controller';
 export const getInventory = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, low_stock } = req.query;
-    const where: any = { isActive: true };
+    const where: any = { is_active: true };
 
     if (req.tenantId) {
-      where.outlets = { tenantId: req.tenantId };
+      where.outlets = { tenant_id: req.tenantId };
     }
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (low_stock === 'true') {
-      where.trackStock = true;
+      where.track_stock = true;
       // Correct approach for comparing stock to min_stock
     }
 
@@ -129,21 +129,21 @@ export const getMovements = async (req: Request, res: Response, _next: NextFunct
     const where: any = {};
 
     if (req.tenantId) {
-      where.outlet = { tenantId: req.tenantId };
+      where.outlets = { tenant_id: req.tenantId };
     }
 
     if (item_id) {
-      where.itemId = parseInt(item_id as string);
+      where.item_id = parseInt(item_id as string);
     }
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (date_from || date_to) {
-      where.createdAt = {};
-      if (date_from) where.createdAt.gte = new Date(date_from as string);
-      if (date_to) where.createdAt.lte = new Date(date_to as string);
+      where.created_at = {};
+      if (date_from) where.created_at.gte = new Date(date_from as string);
+      if (date_to) where.created_at.lte = new Date(date_to as string);
     }
 
     // Since inventoryMovement doesn't exist, returning a placeholder
@@ -170,25 +170,25 @@ export const getLowStock = async (req: Request, res: Response, _next: NextFuncti
   try {
     const { outlet_id } = req.query;
     const where: any = {
-      isActive: true,
-      trackStock: true
+      is_active: true,
+      track_stock: true
     };
 
     if (req.tenantId) {
-      where.outlets = { tenantId: req.tenantId };
+      where.outlets = { tenant_id: req.tenantId };
     }
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     try {
       const items = await prisma.$queryRaw`
         SELECT * FROM items
-        WHERE "isActive" = true
-        AND "trackStock" = true
-        AND stock <= "minStock"
-        ${outlet_id ? prisma.$queryRawUnsafe(`AND "outletId" = ${outlet_id}`) : prisma.$queryRawUnsafe('')}
+        WHERE "is_active" = true
+        AND "track_stock" = true
+        AND stock <= "min_stock"
+        ${outlet_id ? prisma.$queryRawUnsafe(`AND "outlet_id" = ${outlet_id}`) : prisma.$queryRawUnsafe('')}
         ORDER BY stock ASC
       `;
 
@@ -198,8 +198,8 @@ export const getLowStock = async (req: Request, res: Response, _next: NextFuncti
       const items = await prisma.items.findMany({
         where: {
           is_active: true,
-          trackStock: true,
-          ...(outlet_id && { outletId: parseInt(outlet_id as string) })
+          track_stock: true,
+          ...(outlet_id && { outlet_id: parseInt(outlet_id as string) })
         },
         orderBy: { stock: 'asc' }
       });

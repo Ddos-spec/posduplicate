@@ -123,14 +123,12 @@ export const getChartData = async (req: Request, res: Response, next: NextFuncti
         const tenantId = req.tenantId!;
         
         // Define range based on period (e.g. last 30 days, last 12 weeks, last 12 months)
-        const query = '';
         if (period === 'monthly') {
              // Last 12 months
              // Group by Month
         }
-        
+
         // Simplified: Last 30 days daily trend
-        const end = new Date();
         const start = new Date();
         start.setDate(start.getDate() - 30);
 
@@ -149,7 +147,6 @@ export const getChartData = async (req: Request, res: Response, next: NextFuncti
         `;
 
         // Process into chart format
-        const chartData: any[] = [];
         const dateMap = new Map();
 
         dailyData.forEach(row => {
@@ -228,7 +225,7 @@ export const getDistributorDashboard = async (req: Request, res: Response, next:
  */
 export const getProdusenDashboard = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const tenantId = req.tenantId!;
+        void req;
         // Logic:
         // 1. Production output (Stock Movement IN for Finished Goods?)
         // 2. Raw Material usage (Stock Movement OUT for Ingredients?)

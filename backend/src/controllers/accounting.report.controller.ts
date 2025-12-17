@@ -6,7 +6,7 @@ import { Decimal } from '@prisma/client/runtime/library';
  * Helper: Get Date Range for Period
  */
 const getDateRange = (query: any) => {
-  const { periodId, startDate, endDate } = query;
+  const { startDate, endDate } = query;
   
   if (startDate && endDate) {
     return {

@@ -40,11 +40,11 @@ export const tenantMiddleware = async (
     }
 
     // Get user with tenant info
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
       include: {
         roles: true,
-        tenants: true,
+        tenants_users_tenant_idTotenants: true,
         outlets: true
       }
     });
@@ -60,7 +60,7 @@ export const tenantMiddleware = async (
     }
 
     // Check if user is active
-    if (!user.isActive) {
+    if (!user.is_active) {
       return res.status(403).json({
         success: false,
         error: {
@@ -78,7 +78,7 @@ export const tenantMiddleware = async (
     }
 
     // Regular users must belong to a tenant
-    if (!user.tenantId) {
+    if (!user.tenant_id) {
       return res.status(403).json({
         success: false,
         error: {
@@ -89,7 +89,7 @@ export const tenantMiddleware = async (
     }
 
     // Check if tenant exists and get tenant data
-    if (!user.tenants) {
+    if (!user.tenants_users_tenant_idTotenants) {
       return res.status(403).json({
         success: false,
         error: {
@@ -100,7 +100,7 @@ export const tenantMiddleware = async (
     }
 
     // Check tenant status
-    if (user.tenants && !user.tenants.isActive) {
+    if (user.tenants_users_tenant_idTotenants && !user.tenants_users_tenant_idTotenants.is_active) {
       return res.status(403).json({
         success: false,
         error: {
@@ -111,7 +111,11 @@ export const tenantMiddleware = async (
     }
 
     // Check subscription status
-    if (user.tenants && user.tenants.subscriptionStatus !== 'active' && user.tenants.subscriptionStatus !== 'trial') {
+    if (
+      user.tenants_users_tenant_idTotenants &&
+      user.tenants_users_tenant_idTotenants.subscription_status !== 'active' &&
+      user.tenants_users_tenant_idTotenants.subscription_status !== 'trial'
+    ) {
       return res.status(403).json({
         success: false,
         error: {
@@ -122,8 +126,8 @@ export const tenantMiddleware = async (
     }
 
     // Attach tenant info to request
-    req.tenantId = user.tenantId;
-    req.tenant = user.tenants;
+    req.tenantId = user.tenant_id || undefined;
+    req.tenant = user.tenants_users_tenant_idTotenants;
     req.userId = user.id;
     req.userRole = user.roles?.name;
 

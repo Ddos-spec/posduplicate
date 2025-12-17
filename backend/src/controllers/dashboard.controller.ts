@@ -11,15 +11,15 @@ export const getDashboardSummary = async (req: Request, res: Response, _next: Ne
 
     // Build where clause
     const where: any = {};
-    if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
-    if (outletId) where.outletId = Number(outletId);
+    if (tenantId) where.outlet_id = { in: await getOutletIdsByTenant(tenantId) };
+    if (outletId) where.outlet_id = Number(outletId);
     if (startDate && endDate) {
       // Add time to make it inclusive of the entire end date
       const start = new Date(startDate as string);
       start.setHours(0, 0, 0, 0);
       const end = new Date(endDate as string);
       end.setHours(23, 59, 59, 999);
-      where.createdAt = {
+      where.created_at = {
         gte: start,
         lte: end
       };
@@ -34,7 +34,7 @@ export const getDashboardSummary = async (req: Request, res: Response, _next: Ne
 
     // Get total products
     const totalProducts = await prisma.items.count({
-      where: tenantId ? { outletId: { in: await getOutletIdsByTenant(tenantId) } } : {}
+      where: tenantId ? { outlet_id: { in: await getOutletIdsByTenant(tenantId) } } : {}
     });
 
     // Get total customers (from transactions)
@@ -82,19 +82,19 @@ export const getSalesTrend = async (req: Request, res: Response, _next: NextFunc
 
     const where: any = {
       status: 'completed',
-      createdAt: { gte: startDate, lte: endDate }
+      created_at: { gte: startDate, lte: endDate }
     };
 
-    if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
-    if (outletId) where.outletId = Number(outletId);
+    if (tenantId) where.outlet_id = { in: await getOutletIdsByTenant(tenantId) };
+    if (outletId) where.outlet_id = Number(outletId);
 
     const transactions = await prisma.transactions.findMany({
       where,
       select: {
-        createdAt: true,
+        created_at: true,
         total: true
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { created_at: 'asc' }
     });
 
     // Determine if "Today" view (or range <= 1 day)
@@ -106,11 +106,11 @@ export const getSalesTrend = async (req: Request, res: Response, _next: NextFunc
     const grouped: { [key: string]: number } = {};
     
     transactions.forEach((t: any) => {
-      if (!t.createdAt) return;
+      if (!t.created_at) return;
 
       // Convert to WIB (UTC+7) for grouping
       // We do this manually because the server is likely UTC
-      const dateObj = new Date(t.createdAt.getTime() + (7 * 60 * 60 * 1000));
+      const dateObj = new Date(t.created_at.getTime() + (7 * 60 * 60 * 1000));
       
       let key: string;
       if (isDailyView) {
@@ -165,7 +165,7 @@ export const getTopProducts = async (req: Request, res: Response, _next: NextFun
       where: {
         transactions: {
           status: 'completed',
-          ...(tenantId ? { outletId: { in: await getOutletIdsByTenant(tenantId) } } : {})
+          ...(tenantId ? { outlet_id: { in: await getOutletIdsByTenant(tenantId) } } : {})
         }
       },
       include: {
@@ -237,7 +237,7 @@ export const getSalesByCategory = async (req: Request, res: Response, _next: Nex
       include: {
         items: {
           select: {
-            categoryId: true,
+            category_id: true,
             categories: {
               select: {
                 id: true,
@@ -255,7 +255,7 @@ export const getSalesByCategory = async (req: Request, res: Response, _next: Nex
     transactionItems.forEach(item => {
       if (!item.items || !item.items.categories) return; // Skip items without category
 
-      const categoryId = item.items.categoryId;
+      const categoryId = item.items.category_id;
       if (!categoryId) return;
 
       if (!categorySales[categoryId]) {
@@ -300,18 +300,18 @@ export const getRecentTransactions = async (req: Request, res: Response, _next: 
     const where: any = {
       status: 'completed' // Only show completed transactions to match Sales Trend and Summary
     };
-    if (tenantId) where.outletId = { in: await getOutletIdsByTenant(tenantId) };
+    if (tenantId) where.outlet_id = { in: await getOutletIdsByTenant(tenantId) };
 
     const transactions = await prisma.transactions.findMany({
       where,
       take: Number(limit),
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       select: {
         id: true,
         transaction_number: true,
         total: true,
         status: true,
-        createdAt: true
+        created_at: true
       }
     });
 
@@ -326,8 +326,8 @@ export const getRecentTransactions = async (req: Request, res: Response, _next: 
 
 // Helper function
 async function getOutletIdsByTenant(tenantId: number): Promise<number[]> {
-  const outlets = await prisma.outlet.findMany({
-    where: { tenantId },
+  const outlets = await prisma.outlets.findMany({
+    where: { tenant_id: tenantId },
     select: { id: true }
   });
   return outlets.map((o: any) => o.id);

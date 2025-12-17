@@ -26,10 +26,10 @@ export const verifyQRISSignature = async (
     }
 
     // Get QRIS configuration from any active integration
-    const qrisIntegration = await prisma.integration.findFirst({
+    const qrisIntegration = await prisma.integrations.findFirst({
       where: {
-        integrationType: 'qris',
-        isActive: true
+        integration_type: 'qris',
+        is_active: true
       }
     });
 

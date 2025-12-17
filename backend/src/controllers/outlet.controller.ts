@@ -15,11 +15,11 @@ export const getOutlets = async (
 
     // Tenant isolation
     if (req.tenantId) {
-      where.tenantId = req.tenantId;
+      where.tenant_id = req.tenantId;
     }
 
     if (is_active !== undefined) {
-      where.isActive = is_active === 'true';
+      where.is_active = is_active === 'true';
     }
 
     const outlets = await prisma.outlets.findMany({
@@ -28,7 +28,7 @@ export const getOutlets = async (
         tenants: {
           select: {
             id: true,
-            businessName: true,
+            business_name: true,
             email: true
           }
         },
@@ -38,14 +38,25 @@ export const getOutlets = async (
             items: true,
             transactions: true
           }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
+      }
+    },
+      orderBy: { created_at: 'desc' }
     });
 
     res.json({
       success: true,
-      data: outlets,
+      data: outlets.map((outlet) => {
+        const { tenants, ...rest } = outlet;
+        return {
+          ...rest,
+          tenants: tenants
+            ? {
+                ...tenants,
+                businessName: tenants.business_name
+              }
+            : null
+        };
+      }),
       count: outlets.length
     });
   } catch (error) {
@@ -70,8 +81,8 @@ export const getOutletById = async (
         tenants: {
           select: {
             id: true,
-            businessName: true,
-            ownerName: true,
+            business_name: true,
+            owner_name: true,
             email: true
           }
         },
@@ -96,7 +107,7 @@ export const getOutletById = async (
     }
 
     // Tenant isolation check
-    if (req.tenantId && outlet.tenantId !== req.tenantId) {
+    if (req.tenantId && outlet.tenant_id !== req.tenantId) {
       return res.status(403).json({
         success: false,
         error: {
@@ -108,7 +119,16 @@ export const getOutletById = async (
 
     res.json({
       success: true,
-      data: outlet
+      data: outlet.tenants
+        ? {
+            ...outlet,
+            tenants: {
+              ...outlet.tenants,
+              businessName: outlet.tenants.business_name,
+              ownerName: outlet.tenants.owner_name
+            }
+          }
+        : outlet
     });
   } catch (error) {
     return _next(error);
@@ -138,22 +158,22 @@ export const createOutlet = async (
 
     // Check tenant limits
     if (req.tenantId) {
-      const tenant = await prisma.tenant.findUnique({
+      const tenant = await prisma.tenants.findUnique({
         where: { id: req.tenantId },
         select: {
-          maxOutlets: true,
+          max_outlets: true,
           _count: {
             select: { outlets: true }
           }
         }
       });
 
-      if (tenant && tenant._count.outlets >= (tenant.maxOutlets || 1)) {
+      if (tenant && tenant._count.outlets >= (tenant.max_outlets || 1)) {
         return res.status(400).json({
           success: false,
           error: {
             code: 'OUTLET_LIMIT_REACHED',
-            message: `Maximum outlet limit (${tenant.maxOutlets}) reached. Please upgrade your plan.`
+            message: `Maximum outlet limit (${tenant.max_outlets}) reached. Please upgrade your plan.`
           }
         });
       }
@@ -161,7 +181,7 @@ export const createOutlet = async (
 
     const outlet = await prisma.outlets.create({
       data: {
-        tenantId: req.tenantId,
+        tenant_id: req.tenantId,
         name,
         address,
         phone,
@@ -174,13 +194,13 @@ export const createOutlet = async (
           currency: 'IDR',
           timezone: 'Asia/Jakarta'
         },
-        isActive: true
+        is_active: true
       },
       include: {
         tenants: {
           select: {
             id: true,
-            businessName: true
+            business_name: true
           }
         }
       }
@@ -188,7 +208,15 @@ export const createOutlet = async (
 
     res.status(201).json({
       success: true,
-      data: outlet,
+      data: outlet.tenants
+        ? {
+            ...outlet,
+            tenants: {
+              ...outlet.tenants,
+              businessName: outlet.tenants.business_name
+            }
+          }
+        : outlet,
       message: 'Outlet created successfully'
     });
   } catch (error) {
@@ -223,7 +251,7 @@ export const updateOutlet = async (
       });
     }
 
-    if (req.tenantId && existing.tenantId !== req.tenantId) {
+    if (req.tenantId && existing.tenant_id !== req.tenantId) {
       return res.status(403).json({
         success: false,
         error: {
@@ -240,7 +268,7 @@ export const updateOutlet = async (
     if (email !== undefined) data.email = email;
     if (npwp !== undefined) data.npwp = npwp;
     if (settings !== undefined) data.settings = settings;
-    if (isActive !== undefined) data.isActive = isActive;
+    if (isActive !== undefined) data.is_active = isActive;
 
     const outlet = await prisma.outlets.update({
       where: { id: parseInt(id) },
@@ -249,7 +277,7 @@ export const updateOutlet = async (
         tenants: {
           select: {
             id: true,
-            businessName: true
+            business_name: true
           }
         }
       }
@@ -257,7 +285,15 @@ export const updateOutlet = async (
 
     res.json({
       success: true,
-      data: outlet,
+      data: outlet.tenants
+        ? {
+            ...outlet,
+            tenants: {
+              ...outlet.tenants,
+              businessName: outlet.tenants.business_name
+            }
+          }
+        : outlet,
       message: 'Outlet updated successfully'
     });
   } catch (error) {
@@ -291,7 +327,7 @@ export const deleteOutlet = async (
       });
     }
 
-    if (req.tenantId && existing.tenantId !== req.tenantId) {
+    if (req.tenantId && existing.tenant_id !== req.tenantId) {
       return res.status(403).json({
         success: false,
         error: {
@@ -303,7 +339,7 @@ export const deleteOutlet = async (
 
     await prisma.outlets.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
 
     res.json({

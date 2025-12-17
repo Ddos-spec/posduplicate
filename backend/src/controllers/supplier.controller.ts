@@ -9,11 +9,11 @@ export const getSuppliers = async (req: Request, res: Response, _next: NextFunct
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (active_only === 'true') {
-      where.isActive = true;
+      where.is_active = true;
     }
 
     const suppliers = await prisma.suppliers.findMany({
@@ -21,7 +21,6 @@ export const getSuppliers = async (req: Request, res: Response, _next: NextFunct
       include: {
         _count: {
           select: {
-            stockMovements: true,
             expenses: true
           }
         }
@@ -43,21 +42,12 @@ export const getSupplier = async (req: Request, res: Response, _next: NextFuncti
     const supplier = await prisma.suppliers.findUnique({
       where: { id: parseInt(id) },
       include: {
-        stockMovements: {
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-          include: {
-            ingredient: { select: { name: true } },
-            inventory: { select: { name: true } }
-          }
-        },
         expenses: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
           take: 10
         },
         _count: {
           select: {
-            stockMovements: true,
             expenses: true
           }
         }
@@ -71,7 +61,23 @@ export const getSupplier = async (req: Request, res: Response, _next: NextFuncti
       });
     }
 
-    res.json({ success: true, data: supplier });
+    const stockMovements = await prisma.stock_movements.findMany({
+      where: { supplier_id: supplier.id },
+      orderBy: { created_at: 'desc' },
+      take: 10,
+      include: {
+        ingredients: { select: { name: true } },
+        inventory: { select: { name: true } }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        ...supplier,
+        stockMovements
+      }
+    });
   } catch (error) {
     return _next(error);
   }
@@ -93,9 +99,9 @@ export const createSupplier = async (req: Request, res: Response, _next: NextFun
     // Check for duplicate name in same outlet
     const existing = await prisma.suppliers.findFirst({
       where: {
-        outletId: parseInt(outletId),
+        outlet_id: parseInt(outletId),
         name: name,
-        isActive: true
+        is_active: true
       }
     });
 
@@ -108,13 +114,13 @@ export const createSupplier = async (req: Request, res: Response, _next: NextFun
 
     const supplier = await prisma.suppliers.create({
       data: {
-        outletId: parseInt(outletId),
+        outlet_id: parseInt(outletId),
         name,
         phone: phone || null,
         email: email || null,
         address: address || null,
         notes: notes || null,
-        isActive: true
+        is_active: true
       }
     });
 
@@ -167,7 +173,7 @@ export const updateSupplier = async (req: Request, res: Response, _next: NextFun
         ...(email !== undefined && { email }),
         ...(address !== undefined && { address }),
         ...(notes !== undefined && { notes }),
-        ...(isActive !== undefined && { isActive })
+        ...(isActive !== undefined && { is_active: isActive })
       }
     });
 
@@ -181,7 +187,7 @@ export const updateSupplier = async (req: Request, res: Response, _next: NextFun
         existing,
         supplier,
         'Updated supplier',
-        existing.outletId
+        existing.outlet_id
       );
     } catch (logError) {
       console.error('Failed to create activity log:', logError);
@@ -214,7 +220,7 @@ export const deleteSupplier = async (req: Request, res: Response, _next: NextFun
     // Soft delete
     await prisma.suppliers.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
 
     // Create activity log
@@ -227,7 +233,7 @@ export const deleteSupplier = async (req: Request, res: Response, _next: NextFun
         existing,
         null,
         'Deleted supplier',
-        existing.outletId
+        existing.outlet_id
       );
     } catch (logError) {
       console.error('Failed to create activity log:', logError);
@@ -249,24 +255,30 @@ export const getSupplierSpending = async (req: Request, res: Response, _next: Ne
     const where: any = {};
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     if (date_from || date_to) {
-      where.createdAt = {};
-      if (date_from) where.createdAt.gte = new Date(date_from as string);
-      if (date_to) where.createdAt.lte = new Date(date_to as string);
+      where.created_at = {};
+      if (date_from) where.created_at.gte = new Date(date_from as string);
+      if (date_to) where.created_at.lte = new Date(date_to as string);
     }
 
+    const stockTotals = await prisma.stock_movements.groupBy({
+      by: ['supplier_id'],
+      where: {
+        ...where,
+        supplier_id: { not: null }
+      },
+      _sum: { total_cost: true }
+    });
+    const stockTotalMap = new Map(
+      stockTotals.map((row) => [row.supplier_id, Number(row._sum.total_cost || 0)])
+    );
+
     const suppliers = await prisma.suppliers.findMany({
-      where: { isActive: true, ...(outlet_id && { outletId: parseInt(outlet_id as string) }) },
+      where: { is_active: true, ...(outlet_id && { outlet_id: parseInt(outlet_id as string) }) },
       include: {
-        stockMovements: {
-          where,
-          select: {
-            totalCost: true
-          }
-        },
         expenses: {
           where,
           select: {
@@ -278,10 +290,7 @@ export const getSupplierSpending = async (req: Request, res: Response, _next: Ne
 
     // Calculate spending per supplier
     const spending = suppliers.map((supplier: any) => {
-      const stockSpending = supplier.stockMovements.reduce(
-        (sum: number, m: any) => sum + parseFloat((m.totalCost || 0).toString()),
-        0
-      );
+      const stockSpending = stockTotalMap.get(supplier.id) || 0;
 
       const expenseSpending = supplier.expenses.reduce(
         (sum: number, e: any) => sum + parseFloat((e.amount || 0).toString()),

@@ -9,15 +9,15 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
     const where: any = {};
 
     if (req.tenantId) {
-      where.tenantId = req.tenantId;
+      where.tenant_id = req.tenantId;
     }
 
     if (outlet_id) {
-      where.outletId = parseInt(outlet_id as string);
+      where.outlet_id = parseInt(outlet_id as string);
     }
 
     // Exclude Super Admin users (roleId = 1) from tenant/owner views
-    where.roleId = {
+    where.role_id = {
       not: 1
     };
 
@@ -27,22 +27,31 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
         id: true,
         name: true,
         email: true,
-        isActive: true,
-        outletId: true,
-        tenantId: true,
+        is_active: true,
+        outlet_id: true,
+        tenant_id: true,
         roles: {
           select: {
             id: true,
             name: true
           }
         },
-        lastLogin: true,
-        createdAt: true
+        last_login: true,
+        created_at: true
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
 
-    res.json({ success: true, data: users });
+    const data = users.map(({ is_active, outlet_id, tenant_id, last_login, created_at, ...rest }) => ({
+      ...rest,
+      isActive: is_active,
+      outletId: outlet_id,
+      tenantId: tenant_id,
+      lastLogin: last_login,
+      createdAt: created_at
+    }));
+
+    res.json({ success: true, data });
   } catch (error) {
     return next(error);
   }
@@ -59,17 +68,17 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
         id: true,
         name: true,
         email: true,
-        isActive: true,
-        outletId: true,
-        tenantId: true,
+        is_active: true,
+        outlet_id: true,
+        tenant_id: true,
         roles: {
           select: {
             id: true,
             name: true
           }
         },
-        lastLogin: true,
-        createdAt: true
+        last_login: true,
+        created_at: true
       }
     });
 
@@ -80,7 +89,18 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    res.json({ success: true, data: user });
+    const data = user
+      ? {
+          ...user,
+          isActive: user.is_active,
+          outletId: user.outlet_id,
+          tenantId: user.tenant_id,
+          lastLogin: user.last_login,
+          createdAt: user.created_at
+        }
+      : user;
+
+    res.json({ success: true, data });
   } catch (error) {
     return next(error);
   }
@@ -118,29 +138,38 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
       data: {
         name,
         email,
-        passwordHash,
-        tenantId: req.tenantId,
-        outletId: outletId || null,
-        roleId: roleId || 3, // Default to Cashier role (assuming ID 3)
-        isActive: true
+        password_hash: passwordHash,
+        tenant_id: req.tenantId,
+        outlet_id: outletId || null,
+        role_id: roleId || 3, // Default to Cashier role (assuming ID 3)
+        is_active: true
       },
       select: {
         id: true,
         name: true,
         email: true,
-        isActive: true,
-        outletId: true,
+        is_active: true,
+        outlet_id: true,
         roles: {
           select: {
             id: true,
             name: true
           }
         },
-        createdAt: true
+        created_at: true
       }
     });
 
-    res.status(201).json({ success: true, data: user, message: 'User created successfully' });
+    res.status(201).json({
+      success: true,
+      data: {
+        ...user,
+        isActive: user.is_active,
+        outletId: user.outlet_id,
+        createdAt: user.created_at
+      },
+      message: 'User created successfully'
+    });
   } catch (error) {
     return next(error);
   }
@@ -157,11 +186,11 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
     if (name) data.name = name;
     if (email) data.email = email;
     if (password) {
-      data.passwordHash = await bcrypt.hash(password, 10);
+      data.password_hash = await bcrypt.hash(password, 10);
     }
-    if (roleId !== undefined) data.roleId = roleId;
-    if (outletId !== undefined) data.outletId = outletId;
-    if (isActive !== undefined) data.isActive = isActive;
+    if (roleId !== undefined) data.role_id = roleId;
+    if (outletId !== undefined) data.outlet_id = outletId;
+    if (isActive !== undefined) data.is_active = isActive;
 
     const user = await prisma.users.update({
       where: { id: parseInt(id) },
@@ -170,19 +199,28 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
         id: true,
         name: true,
         email: true,
-        isActive: true,
-        outletId: true,
+        is_active: true,
+        outlet_id: true,
         roles: {
           select: {
             id: true,
             name: true
           }
         },
-        createdAt: true
+        created_at: true
       }
     });
 
-    res.json({ success: true, data: user, message: 'User updated successfully' });
+    res.json({
+      success: true,
+      data: {
+        ...user,
+        isActive: user.is_active,
+        outletId: user.outlet_id,
+        createdAt: user.created_at
+      },
+      message: 'User updated successfully'
+    });
   } catch (error) {
     return next(error);
   }
@@ -205,7 +243,7 @@ export const resetUserPassword = async (req: Request, res: Response, next: NextF
 
     await prisma.users.update({
       where: { id: parseInt(id) },
-      data: { passwordHash }
+      data: { password_hash: passwordHash }
     });
 
     res.json({ success: true, message: 'Password reset successfully' });
@@ -221,7 +259,7 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
 
     await prisma.users.update({
       where: { id: parseInt(id) },
-      data: { isActive: false }
+      data: { is_active: false }
     });
 
     res.json({ success: true, message: 'User deleted successfully' });
