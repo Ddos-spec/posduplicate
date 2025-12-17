@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useNotificationStore } from '../../store/notificationStore';
+import NotificationPanel from './NotificationPanel';
 import {
-  LayoutDashboard, FileText, BookOpen, BarChart3,
+  LayoutDashboard, BarChart3,
   Users, Settings, LogOut, Bell, Search, Menu, X,
   Sun, Moon, ChevronDown, Calculator, ShoppingCart,
-  Package, HelpCircle, Wallet, Building2
+  Package, Wallet, Building2
 } from 'lucide-react';
 
 interface MenuItem {
@@ -29,17 +31,72 @@ const AiBadgeIcon = ({ className = '' }: { className?: string }) => (
   </span>
 );
 
+const WhatsappIcon = ({ className = '' }: { className?: string }) => (
+  <svg
+    viewBox="0 0 32 32"
+    className={className}
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path
+      fill="currentColor"
+      d="M16 3C9.383 3 4 8.383 4 15c0 2.238.62 4.41 1.79 6.308L4 29l7.905-1.744A12.934 12.934 0 0 0 16 27c6.617 0 12-5.383 12-12S22.617 3 16 3zm0 2c5.514 0 10 4.486 10 10s-4.486 10-10 10a10.94 10.94 0 0 1-3.73-.65l-.65-.243-4.687 1.034 1.02-4.524-.288-.702A10 10 0 0 1 6 15c0-5.514 4.486-10 10-10zm-3.13 5.5c-.31-.64-.636-.653-.93-.665-.24-.01-.52-.01-.8-.01-.28 0-.73.105-1.11.525-.38.42-1.45 1.42-1.45 3.465s1.48 4.02 1.69 4.305c.21.285 2.86 4.59 7.02 6.255 3.46 1.385 4.16 1.11 4.92 1.04.76-.07 2.45-.99 2.8-1.95.35-.96.35-1.78.24-1.95-.11-.17-.38-.27-.8-.48-.42-.21-2.45-1.21-2.83-1.35-.38-.14-.66-.21-.94.21-.28.42-1.08 1.35-1.32 1.62-.24.27-.48.31-.9.105-.42-.21-1.77-.65-3.37-2.07-1.24-1.105-2.07-2.47-2.31-2.89-.24-.42-.025-.65.18-.86.185-.184.42-.48.63-.72.21-.24.28-.42.42-.7.14-.28.07-.52-.035-.73-.105-.21-.92-2.285-1.28-3.03z"
+    />
+  </svg>
+);
+
 export default function AccountingLayout({ variant = 'owner' }: AccountingLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [helpMessage, setHelpMessage] = useState('');
+  const [helpError, setHelpError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
+  const { unreadCount, fetchNotifications, togglePanel } = useNotificationStore();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const roleLabel = (user?.roles?.name || user?.role?.name || '').toString();
+  const tenantName =
+    user?.tenant?.businessName ||
+    (user as any)?.tenants_users_tenant_idTotenants?.business_name ||
+    '';
+
+  const buildHelpMessage = () => {
+    const lines = [
+      'Halo, saya butuh bantuan.',
+      `Nama: ${user?.name || '-'}`,
+      `Email: ${user?.email || '-'}`,
+      `Role: ${roleLabel || '-'}`,
+      `Tenant: ${tenantName || '-'}`,
+      `Halaman: ${location.pathname}`,
+      `Masalah: ${helpMessage || '-'}`
+    ];
+    return lines.join('\n');
+  };
+
+  const handleSendHelp = () => {
+    if (!helpMessage.trim()) {
+      setHelpError('Mohon isi masalah terlebih dahulu.');
+      return;
+    }
+    setHelpError('');
+    const message = encodeURIComponent(buildHelpMessage());
+    const phoneNumber = '6285771518231';
+    const url = `https://wa.me/${phoneNumber}?text=${message}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setHelpMessage('');
+    setIsHelpOpen(false);
   };
 
   // Menu configurations based on variant
@@ -248,8 +305,11 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
         {/* Help & Logout */}
         <div className={`p-4 border-t ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
           {sidebarOpen && (
-            <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-2 transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}>
-              <HelpCircle className="w-5 h-5" />
+            <button
+              onClick={() => setIsHelpOpen(true)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-2 transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <WhatsappIcon className="w-5 h-5 text-emerald-500" />
               <span>Bantuan</span>
             </button>
           )}
@@ -294,7 +354,7 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative">
             {/* Live indicator */}
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${isDark ? 'bg-emerald-500/20' : 'bg-emerald-50'}`}>
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -310,10 +370,16 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
             </button>
 
             {/* Notifications */}
-            <button className={`relative p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+            <button
+              onClick={togglePanel}
+              className={`relative p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+            >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              )}
             </button>
+            <NotificationPanel />
 
             {/* User */}
             <div className="flex items-center gap-3">
@@ -333,6 +399,80 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
           <Outlet />
         </main>
       </div>
+
+      {isHelpOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className={`w-full max-w-lg rounded-2xl p-6 ${isDark ? 'bg-slate-800' : 'bg-white shadow-xl'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
+                <WhatsappIcon className={`${isDark ? 'text-emerald-300' : 'text-emerald-600'} w-6 h-6`} />
+              </div>
+              <div>
+                <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Bantuan WhatsApp</h3>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Kirim masalah kamu ke tim support.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Masalah *
+              </label>
+              <textarea
+                rows={4}
+                value={helpMessage}
+                onChange={(event) => {
+                  setHelpMessage(event.target.value);
+                  if (helpError) {
+                    setHelpError('');
+                  }
+                }}
+                placeholder="Jelaskan masalah yang kamu alami..."
+                className={`w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                }`}
+              />
+              {helpError && (
+                <p className="mt-2 text-sm text-red-400">{helpError}</p>
+              )}
+            </div>
+
+            <div className={`mt-4 rounded-xl border p-4 text-sm ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'}`}>
+              <p className={`text-xs uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Informasi tambahan
+              </p>
+              <div className="mt-2 space-y-1">
+                <p>Nama: {user?.name || '-'}</p>
+                <p>Email: {user?.email || '-'}</p>
+                <p>Role: {roleLabel || '-'}</p>
+                <p>Tenant: {tenantName || '-'}</p>
+                <p>Halaman: {location.pathname}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setIsHelpOpen(false);
+                  setHelpError('');
+                }}
+                className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium ${
+                  isDark ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSendHelp}
+                className="flex-1 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600"
+              >
+                Kirim ke WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
