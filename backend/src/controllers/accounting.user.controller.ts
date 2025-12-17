@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 import bcrypt from 'bcrypt';
 
@@ -211,7 +212,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        const { is_active } = req.body;
+        const { name, email, role, outletId, is_active, password } = req.body;
         const tenantId = req.tenantId!;
 
         const user = await prisma.users.findUnique({ where: { id: Number(id) } });
@@ -220,14 +221,86 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
         }
 
-        // Validate: Cannot deactivate self?
-        if (user.id === req.userId) {
-             return res.status(400).json({ success: false, error: { code: 'SELF_ACTION', message: 'Cannot deactivate your own account' } });
+        if (typeof is_active === 'boolean' && user.id === req.userId && !is_active) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'SELF_ACTION', message: 'Cannot deactivate your own account' }
+            });
+        }
+
+        const updates: Record<string, unknown> = {};
+
+        if (typeof name === 'string' && name.trim()) {
+            updates.name = name.trim();
+        }
+
+        if (typeof email === 'string' && email.trim()) {
+            const trimmedEmail = email.trim();
+            if (trimmedEmail !== user.email) {
+                const existing = await prisma.users.findUnique({ where: { email: trimmedEmail } });
+                if (existing && existing.id !== user.id) {
+                    return res.status(400).json({
+                        success: false,
+                        error: { code: 'EMAIL_EXISTS', message: 'Email already registered' }
+                    });
+                }
+            }
+            updates.email = trimmedEmail;
+        }
+
+        if (typeof role === 'string' && role.trim()) {
+            const rawRole = role.trim();
+            const roleMap: Record<string, string> = {
+                distributor: 'Distributor',
+                produsen: 'Produsen',
+                retail: 'Retail',
+                accountant: 'Accountant'
+            };
+            const resolvedRoleName = roleMap[rawRole.toLowerCase()] || rawRole;
+
+            let roleRecord = await prisma.roles.findFirst({
+                where: { name: { equals: resolvedRoleName, mode: 'insensitive' } }
+            });
+
+            if (!roleRecord) {
+                const autoCreateRoles = new Set(Object.values(roleMap));
+                if (autoCreateRoles.has(resolvedRoleName)) {
+                    roleRecord = await prisma.roles.create({
+                        data: { name: resolvedRoleName }
+                    });
+                } else {
+                    return res.status(400).json({
+                        success: false,
+                        error: { code: 'INVALID_ROLE', message: `Role '${role}' not found` }
+                    });
+                }
+            }
+
+            updates.role_id = roleRecord.id;
+        }
+
+        if ('outletId' in req.body) {
+            updates.outlet_id = outletId ? Number(outletId) : null;
+        }
+
+        if (typeof is_active === 'boolean') {
+            updates.is_active = is_active;
+        }
+
+        if (typeof password === 'string' && password.trim()) {
+            updates.password_hash = await bcrypt.hash(password.trim(), 10);
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'NO_UPDATES', message: 'No changes provided' }
+            });
         }
 
         const updated = await prisma.users.update({
             where: { id: user.id },
-            data: { is_active: is_active }
+            data: updates
         });
 
         return res.json({ success: true, data: updated });
@@ -236,3 +309,44 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
         return next(error);
     }
 }
+
+/**
+ * Delete User
+ */
+export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
+        const tenantId = req.tenantId!;
+
+        const user = await prisma.users.findUnique({ where: { id: Number(id) } });
+
+        if (!user || user.tenant_id !== tenantId) {
+            return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+        }
+
+        if (user.id === req.userId) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'SELF_ACTION', message: 'Cannot delete your own account' }
+            });
+        }
+
+        try {
+            await prisma.users.delete({ where: { id: user.id } });
+            return res.json({ success: true });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'USER_HAS_RELATIONS',
+                        message: 'Tidak bisa menghapus pengguna yang sudah memiliki aktivitas. Silakan nonaktifkan.'
+                    }
+                });
+            }
+            throw error;
+        }
+    } catch (error) {
+        return next(error);
+    }
+};

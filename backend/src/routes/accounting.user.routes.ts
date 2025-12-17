@@ -13,5 +13,6 @@ router.use(auditLogger);
 router.get('/', roleMiddleware(['Owner', 'Super Admin', 'Manager']), userController.getUsers);
 router.post('/create', roleMiddleware(['Owner', 'Super Admin']), userController.createUser);
 router.patch('/:id', roleMiddleware(['Owner', 'Super Admin']), userController.updateUser);
+router.delete('/:id', roleMiddleware(['Owner', 'Super Admin']), userController.deleteUser);
 
 export default router;
