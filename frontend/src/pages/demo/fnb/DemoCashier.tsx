@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DEMO_PRODUCTS } from '../dummyData';
 import DemoLayout from '../DemoLayout';
 import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard } from 'lucide-react';
-import { useThemeStore } from '../../store/themeStore';
+import { useThemeStore } from '../../../store/themeStore';
 import toast from 'react-hot-toast';
 
 export default function DemoCashier() {
