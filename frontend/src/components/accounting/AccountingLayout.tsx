@@ -71,6 +71,23 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
     user?.tenant?.businessName ||
     (user as any)?.tenants_users_tenant_idTotenants?.business_name ||
     '';
+  const headerRoleLabel =
+    roleLabel ||
+    (variant === 'retail'
+      ? 'Retail'
+      : variant === 'distributor'
+        ? 'Distributor'
+        : variant === 'produsen'
+          ? 'Produsen'
+          : 'Owner');
+  const settingsPath =
+    variant === 'retail'
+      ? '/accounting/retail/settings'
+      : variant === 'distributor'
+        ? '/accounting/distributor/settings'
+        : variant === 'produsen'
+          ? '/accounting/produsen/settings'
+          : '/accounting/settings';
 
   const buildHelpMessage = () => {
     const lines = [
@@ -290,7 +307,7 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
               <ul className="space-y-1">
                 <li>
                   <button
-                    onClick={() => navigate('/accounting/settings')}
+                    onClick={() => navigate(settingsPath)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isDark ? 'text-gray-400 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
                   >
                     <Settings className="w-5 h-5" />
@@ -385,7 +402,7 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user?.name || 'User'}</p>
-                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Super Admin</p>
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{headerRoleLabel}</p>
               </div>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium bg-gradient-to-br from-${color}-400 to-${color}-600`}>
                 {user?.name?.charAt(0) || 'U'}
