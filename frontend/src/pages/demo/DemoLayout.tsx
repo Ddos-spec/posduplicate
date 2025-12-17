@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { 
   LayoutDashboard, ShoppingCart, Users, Settings, 
-  LogOut, Menu, X, Sun, Moon, ChefHat, Store, Truck, Factory
+  LogOut, Menu, X, Sun, Moon, ChefHat, Store, Truck, Factory, Package, Activity
 } from 'lucide-react';
 
 interface DemoLayoutProps {
@@ -15,25 +15,48 @@ interface DemoLayoutProps {
 export default function DemoLayout({ children, variant, title }: DemoLayoutProps) {
   const { isDark, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const getMenuItems = () => {
     const baseItems = [
-      { icon: LayoutDashboard, label: 'Dashboard', active: true },
-      { icon: Settings, label: 'Pengaturan', active: false },
+      { icon: Settings, label: 'Pengaturan', path: '#', active: false },
     ];
 
     if (variant === 'cashier') return [
-      { icon: ShoppingCart, label: 'Kasir', active: true },
-      { icon: Activity, label: 'Riwayat', active: false },
+      { icon: ShoppingCart, label: 'Kasir', path: '/demo/fnb/cashier', active: location.pathname === '/demo/fnb/cashier' },
+      { icon: Activity, label: 'Riwayat', path: '#', active: false },
       ...baseItems
     ];
 
     if (variant === 'owner') return [
-      { icon: LayoutDashboard, label: 'Dashboard', active: true },
-      { icon: Users, label: 'Karyawan', active: false },
-      { icon: ShoppingCart, label: 'Laporan', active: false },
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/fnb/owner', active: location.pathname === '/demo/fnb/owner' },
+      { icon: Package, label: 'Produk', path: '/demo/fnb/owner/products', active: location.pathname.includes('products') },
+      { icon: Users, label: 'Karyawan', path: '/demo/fnb/owner/users', active: location.pathname.includes('users') },
+      { icon: ShoppingCart, label: 'Laporan', path: '#', active: false },
       ...baseItems
+    ];
+
+    // Accounting Roles
+    if (variant === 'accounting') return [
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/owner', active: location.pathname === '/demo/accounting/owner' },
+        { icon: Users, label: 'Chart of Accounts', path: '/demo/accounting/owner/coa', active: location.pathname.includes('coa') },
+        { icon: Activity, label: 'Jurnal Umum', path: '/demo/accounting/owner/journal', active: location.pathname.includes('journal') },
+        { icon: Package, label: 'Buku Besar', path: '/demo/accounting/owner/ledger', active: location.pathname.includes('ledger') },
+        { icon: ShoppingCart, label: 'Laporan', path: '/demo/accounting/owner/reports', active: location.pathname.includes('reports') },
+        ...baseItems
+    ];
+    if (variant === 'distributor') return [
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/distributor', active: true },
+        ...baseItems
+    ];
+    if (variant === 'producer') return [
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/producer', active: true },
+        ...baseItems
+    ];
+    if (variant === 'retail') return [
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/retail', active: true },
+        ...baseItems
     ];
 
     return baseItems;
@@ -72,7 +95,9 @@ export default function DemoLayout({ children, variant, title }: DemoLayoutProps
           <ul className="space-y-2 font-medium">
             {getMenuItems().map((item, idx) => (
               <li key={idx}>
-                <button className={`flex items-center w-full p-3 rounded-lg group ${
+                <button 
+                  onClick={() => item.path !== '#' && navigate(item.path)}
+                  className={`flex items-center w-full p-3 rounded-lg group transition-colors ${
                   item.active 
                     ? isDark ? `bg-${color}-500/20 text-${color}-400` : `bg-${color}-50 text-${color}-600`
                     : isDark ? 'text-gray-400 hover:bg-slate-700' : 'text-gray-600 hover:bg-gray-100'

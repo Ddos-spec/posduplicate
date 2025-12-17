@@ -30,8 +30,14 @@ const IntegrationsPage = lazy(() => import('./pages/owner/IntegrationsPage'));
 // DEMO PAGES
 const DemoLandingPage = lazy(() => import('./pages/demo/DemoLandingPage'));
 const DemoFnbOwner = lazy(() => import('./pages/demo/fnb/DemoFnbOwner'));
+const DemoFnbProducts = lazy(() => import('./pages/demo/fnb/DemoFnbProducts'));
+const DemoFnbUsers = lazy(() => import('./pages/demo/fnb/DemoFnbUsers'));
 const DemoCashier = lazy(() => import('./pages/demo/fnb/DemoCashier'));
 const DemoAcctOwner = lazy(() => import('./pages/demo/accounting/DemoAcctOwner'));
+const DemoCoA = lazy(() => import('./pages/demo/accounting/DemoCoA'));
+const DemoJournal = lazy(() => import('./pages/demo/accounting/DemoJournal'));
+const DemoLedger = lazy(() => import('./pages/demo/accounting/DemoLedger'));
+const DemoReports = lazy(() => import('./pages/demo/accounting/DemoReports'));
 const DemoAcctDistributor = lazy(() => import('./pages/demo/accounting/DemoAcctDistributor'));
 const DemoAcctProducer = lazy(() => import('./pages/demo/accounting/DemoAcctProducer'));
 const DemoAcctRetail = lazy(() => import('./pages/demo/accounting/DemoAcctRetail'));
@@ -167,8 +173,14 @@ function App() {
         {/* DEMO ROUTES (PUBLIC ACCESS) */}
         <Route path="/demo" element={<DemoLandingPage />} />
         <Route path="/demo/fnb/owner" element={<DemoFnbOwner />} />
+        <Route path="/demo/fnb/owner/products" element={<DemoFnbProducts />} />
+        <Route path="/demo/fnb/owner/users" element={<DemoFnbUsers />} />
         <Route path="/demo/fnb/cashier" element={<DemoCashier />} />
         <Route path="/demo/accounting/owner" element={<DemoAcctOwner />} />
+        <Route path="/demo/accounting/owner/coa" element={<DemoCoA />} />
+        <Route path="/demo/accounting/owner/journal" element={<DemoJournal />} />
+        <Route path="/demo/accounting/owner/ledger" element={<DemoLedger />} />
+        <Route path="/demo/accounting/owner/reports" element={<DemoReports />} />
         <Route path="/demo/accounting/distributor" element={<DemoAcctDistributor />} />
         <Route path="/demo/accounting/producer" element={<DemoAcctProducer />} />
         <Route path="/demo/accounting/retail" element={<DemoAcctRetail />} />
