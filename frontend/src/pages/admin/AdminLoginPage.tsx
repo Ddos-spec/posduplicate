@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import axios from 'axios';
 import { Shield, LogIn, Eye, EyeOff } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -10,36 +10,31 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
+  const logout = useAuthStore((state) => state.logout);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Mock login for now - check hardcoded admin credentials
-      if (email === 'admin@mypos.com' && password === 'admin123') {
-        // Store mock admin user in localStorage
-        const mockAdminUser = {
-          id: 0,
-          email: 'admin@mypos.com',
-          name: 'Super Admin',
-          role: { name: 'Super Admin' },
-          tenant: null
-        };
-        localStorage.setItem('user', JSON.stringify(mockAdminUser));
-        localStorage.setItem('token', 'mock-admin-token');
+      await login(email, password);
 
-        toast.success('Admin login successful!');
-        navigate('/admin/dashboard');
-      } else {
-        toast.error('Invalid admin credentials');
+      const user = useAuthStore.getState().user;
+      const roleName = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+      const allowedRoles = ['super admin', 'admin'];
+
+      if (!allowedRoles.includes(roleName)) {
+        logout();
+        toast.error('Akun ini tidak memiliki akses admin');
+        return;
       }
+
+      toast.success('Admin login successful!');
+      navigate('/admin/dashboard');
     } catch (error: unknown) {
       console.error('Admin login failed:', error);
-      let errorMessage = 'Login failed';
-      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-        errorMessage = error.response.data.error.message;
-      }
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
