@@ -302,9 +302,12 @@ export default function DemoAccountingReadOnlyPage({ variant, section }: DemoAcc
   const { isDark } = useThemeStore();
   const config = useMemo(() => configMap[variant]?.[section], [section, variant]);
 
+  // Map internal data variant to layout variant
+  const layoutVariant = variant === 'produsen' ? 'producer' : variant;
+
   if (!config) {
     return (
-      <DemoLayout variant={variant} title="Page Not Found">
+      <DemoLayout variant={layoutVariant as any} title="Page Not Found">
         <div className="flex items-center justify-center min-h-[50vh] text-gray-500">
             Data belum tersedia untuk bagian ini.
         </div>
@@ -313,7 +316,7 @@ export default function DemoAccountingReadOnlyPage({ variant, section }: DemoAcc
   }
 
   return (
-    <DemoLayout variant={variant} title={`${variant.charAt(0).toUpperCase() + variant.slice(1)} - ${config.title}`}>
+    <DemoLayout variant={layoutVariant as any} title={`${variant.charAt(0).toUpperCase() + variant.slice(1)} - ${config.title}`}>
         <div className="space-y-6 p-6">
         <div>
             <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>

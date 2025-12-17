@@ -209,8 +209,6 @@ function App() {
         <Route path="/demo/accounting/retail/products" element={<DemoAccountingReadOnlyPage variant="retail" section="products" />} />
         <Route path="/demo/accounting/retail/inventory" element={<DemoAccountingReadOnlyPage variant="retail" section="inventory" />} />
         <Route path="/demo/accounting/retail/reports" element={<DemoAccountingReadOnlyPage variant="retail" section="reports" />} />
-        <Route path="/demo/accounting/producer" element={<DemoAcctProducer />} />
-        <Route path="/demo/accounting/retail" element={<DemoAcctRetail />} />
 
         {/* Module Selector Route */}
         <Route
