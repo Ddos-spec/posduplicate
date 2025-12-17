@@ -82,7 +82,8 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
                 totalUsers,
                 activeUsers,
                 loginToday,
-                slotsRemaining
+                slotsRemaining,
+                maxUsers
             },
             users: formattedUsers,
             pagination: {
