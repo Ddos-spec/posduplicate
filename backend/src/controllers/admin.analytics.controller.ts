@@ -13,24 +13,24 @@ export const getTenantGrowth = async (req: Request, res: Response, next: NextFun
     startDate.setMonth(startDate.getMonth() - monthsInt);
 
     // Get tenants grouped by month
-    const tenants = await prisma.tenant.findMany({
+    const tenants = await prisma.tenants.findMany({
       where: {
-        createdAt: { gte: startDate }
+        created_at: { gte: startDate }
       },
       select: {
-        createdAt: true
+        created_at: true
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { created_at: 'asc' }
     });
 
     // Group by month
     const monthlyData: { [key: string]: number } = {};
-    let cumulativeCount = await prisma.tenant.count({
-      where: { createdAt: { lt: startDate } }
+    let cumulativeCount = await prisma.tenants.count({
+      where: { created_at: { lt: startDate } }
     });
 
     tenants.forEach((tenant: any) => {
-      const monthKey = tenant.createdAt.toISOString().substring(0, 7); // YYYY-MM
+      const monthKey = tenant.created_at.toISOString().substring(0, 7); // YYYY-MM
       monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
     });
 
@@ -61,18 +61,18 @@ export const getSystemRevenue = async (req: Request, res: Response, next: NextFu
     startDate.setMonth(startDate.getMonth() - monthsInt);
 
     // Get transaction items from all tenants
-    const transactionItems = await prisma.transactionItem.findMany({
+    const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
           status: 'completed',
-          createdAt: { gte: startDate }
+          created_at: { gte: startDate }
         }
       },
       select: {
         subtotal: true,
         transactions: {
           select: {
-            createdAt: true
+            created_at: true
           }
         }
       }
@@ -81,7 +81,7 @@ export const getSystemRevenue = async (req: Request, res: Response, next: NextFu
     // Group by month
     const monthlyRevenue: { [key: string]: number } = {};
     transactionItems.forEach((item: any) => {
-      const monthKey = item.transactions.createdAt.toISOString().substring(0, 7);
+      const monthKey = item.transactions.created_at.toISOString().substring(0, 7);
       monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + Number(item.subtotal ?? 0);
     });
 
@@ -101,14 +101,14 @@ export const getSystemRevenue = async (req: Request, res: Response, next: NextFu
  */
 export const getTenantStatusDistribution = async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const statusCounts = await prisma.tenant.groupBy({
-      by: ['subscriptionStatus'],
-      where: { deletedAt: null },
+    const statusCounts = await prisma.tenants.groupBy({
+      by: ['subscription_status'],
+      where: { deleted_at: null },
       _count: { id: true }
     });
 
     const result = statusCounts.map(item => ({
-      name: item.subscriptionStatus || 'Unknown',
+      name: item.subscription_status || 'Unknown',
       value: item._count.id
     }));
 
@@ -127,17 +127,17 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
     const parsedLimit = parseInt(limit as string);
 
     // Step 1: Get all items from completed transactions, including relational data.
-    const items = await prisma.transactionItem.findMany({
+    const items = await prisma.transaction_items.findMany({
       where: { transactions: { status: 'completed' } },
       select: {
         subtotal: true,
-        transactionId: true,
+        transaction_id: true,
         transactions: {
           select: {
             outlets: {
               select: {
-                tenantId: true,
-                tenants: { select: { businessName: true } }
+                tenant_id: true,
+                tenants: { select: { business_name: true } }
               }
             }
           }
@@ -150,18 +150,18 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
 
     items.forEach(item => {
       const outlet = item.transactions?.outlets;
-      if (outlet && outlet.tenantId && outlet.tenants) {
-        const tenantId = outlet.tenantId;
+      if (outlet && outlet.tenant_id && outlet.tenants) {
+        const tenantId = outlet.tenant_id;
         if (!tenantStats[tenantId]) {
           tenantStats[tenantId] = {
-            name: outlet.tenants.businessName || 'Unknown Tenant',
+            name: outlet.tenants.business_name || 'Unknown Tenant',
             revenue: 0,
             transactionIds: new Set()
           };
         }
         tenantStats[tenantId].revenue += Number(item.subtotal);
-        if (item.transactionId) {
-          tenantStats[tenantId].transactionIds.add(item.transactionId);
+        if (item.transaction_id) {
+          tenantStats[tenantId].transactionIds.add(item.transaction_id);
         }
       }
     });
@@ -199,10 +199,10 @@ export const getSystemSummary = async (_req: Request, res: Response, next: NextF
       totalTransactions,
       totalRevenue
     ] = await Promise.all([
-      prisma.tenant.count({ where: { deletedAt: null } }),
-      prisma.tenant.count({ where: { deletedAt: null, isActive: true, subscriptionStatus: 'active' } }),
-      prisma.transaction.count({ where: { status: 'completed' } }),
-      prisma.transactionItem.aggregate({
+      prisma.tenants.count({ where: { deleted_at: null } }),
+      prisma.tenants.count({ where: { deleted_at: null, is_active: true, subscription_status: 'active' } }),
+      prisma.transactions.count({ where: { status: 'completed' } }),
+      prisma.transaction_items.aggregate({
         where: { transactions: { status: 'completed' } },
         _sum: { subtotal: true }
       })

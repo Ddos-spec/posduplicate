@@ -11,31 +11,31 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
     const tenantId = req.tenantId!;
 
     // 1. Get Tenant Stats (Slots)
-    const tenant = await prisma.tenant.findUnique({
+    const tenant = await prisma.tenants.findUnique({
         where: { id: tenantId },
-        select: { maxUsers: true }
+        select: { max_users: true }
     });
-    
-    const maxUsers = tenant?.maxUsers || 5;
 
-    const totalUsers = await prisma.user.count({ where: { tenantId } });
-    const activeUsers = await prisma.user.count({ where: { tenantId, isActive: true } });
-    
+    const maxUsers = tenant?.max_users || 5;
+
+    const totalUsers = await prisma.users.count({ where: { tenant_id: tenantId } });
+    const activeUsers = await prisma.users.count({ where: { tenant_id: tenantId, is_active: true } });
+
     // Login Today (Approximation: lastLogin >= today 00:00)
     const today = new Date();
     today.setHours(0,0,0,0);
-    const loginToday = await prisma.user.count({ 
-        where: { 
-            tenantId, 
-            lastLogin: { gte: today } 
-        } 
+    const loginToday = await prisma.users.count({
+        where: {
+            tenant_id: tenantId,
+            last_login: { gte: today }
+        }
     });
 
     const slotsRemaining = Math.max(0, maxUsers - totalUsers);
 
     // 2. Fetch Users
-    const where: any = { tenantId };
-    
+    const where: any = { tenant_id: tenantId };
+
     if (role) {
          where.roles = { name: String(role) }; // Assume role is role name
     }
@@ -48,34 +48,34 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    
+
     const [users, totalCount] = await Promise.all([
-        prisma.user.findMany({
+        prisma.users.findMany({
             where,
             skip,
             take: Number(limit),
-            orderBy: { createdAt: 'desc' },
+            orderBy: { created_at: 'desc' },
             include: {
                 roles: { select: { id: true, name: true } },
                 outlets: { select: { id: true, name: true } }
             }
         }),
-        prisma.user.count({ where })
+        prisma.users.count({ where })
     ]);
 
     // Format Users
-    const formattedUsers = users.map(u => ({
+    const formattedUsers = users.map((u: any) => ({
         id: u.id,
         name: u.name,
         email: u.email,
         role: u.roles,
         outlet: u.outlets || { id: 0, name: 'All/None' },
-        is_active: u.isActive,
-        created_at: u.createdAt,
-        last_login: u.lastLogin
+        is_active: u.is_active,
+        created_at: u.created_at,
+        last_login: u.last_login
     }));
 
-    res.json({
+    return res.json({
         success: true,
         data: {
             stats: {
@@ -95,7 +95,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
     });
 
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -108,16 +108,16 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     const tenantId = req.tenantId!;
 
     // 1. Validate Slots
-    const tenant = await prisma.tenant.findUnique({
+    const tenant = await prisma.tenants.findUnique({
         where: { id: tenantId },
-        select: { maxUsers: true }
+        select: { max_users: true }
     });
-    
-    const currentUsers = await prisma.user.count({ where: { tenantId } });
-    if (currentUsers >= (tenant?.maxUsers || 5)) {
-        return res.status(400).json({ 
-            success: false, 
-            error: { code: 'SLOTS_FULL', message: 'User limit reached for this subscription plan' } 
+
+    const currentUsers = await prisma.users.count({ where: { tenant_id: tenantId } });
+    if (currentUsers >= (tenant?.max_users || 5)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'SLOTS_FULL', message: 'User limit reached for this subscription plan' }
         });
     }
 
@@ -126,41 +126,40 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     // Prompt sends "role": "produsen".
     let roleId = 0;
     // Standardize role names: 'distributor', 'produsen', 'retail', 'owner', 'staff'
-    const roleRecord = await prisma.role.findUnique({ where: { name: role } });
+    const roleRecord = await prisma.roles.findUnique({ where: { name: role } });
     if (roleRecord) {
         roleId = roleRecord.id;
     } else {
         // Fallback or Error?
         // Let's create role if it's one of the standard accounting roles and doesn't exist?
         // Or return error.
-        return res.status(400).json({ 
-            success: false, 
-            error: { code: 'INVALID_ROLE', message: `Role '${role}' not found` } 
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_ROLE', message: `Role '${role}' not found` }
         });
     }
 
     // 3. Create User
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.users.findUnique({ where: { email } });
     if (existing) {
-        return res.status(400).json({ 
-            success: false, 
-            error: { code: 'EMAIL_EXISTS', message: 'Email already registered' } 
+        return res.status(400).json({
+            success: false,
+            error: { code: 'EMAIL_EXISTS', message: 'Email already registered' }
         });
     }
 
     const tempPassword = `Temp${Math.floor(Math.random() * 10000)}!`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
         data: {
-            tenantId,
+            tenant_id: tenantId,
             name,
             email,
-            passwordHash,
-            roleId,
-            outletId: outletId ? Number(outletId) : null,
-            isActive: true,
-            // invitation_token? Not using it for now
+            password_hash: passwordHash,
+            role_id: roleId,
+            outlet_id: outletId ? Number(outletId) : null,
+            is_active: true,
         }
     });
 
@@ -169,7 +168,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
         console.log(`[Email Mock] To: ${email}, Subject: Welcome to MyAkuntan, Password: ${tempPassword}`);
     }
 
-    res.status(201).json({
+    return res.status(201).json({
         success: true,
         data: {
             user: {
@@ -183,7 +182,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     });
 
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -193,12 +192,12 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        const { is_active, reason } = req.body;
+        const { is_active } = req.body;
         const tenantId = req.tenantId!;
 
-        const user = await prisma.user.findUnique({ where: { id: Number(id) } });
+        const user = await prisma.users.findUnique({ where: { id: Number(id) } });
 
-        if (!user || user.tenantId !== tenantId) {
+        if (!user || user.tenant_id !== tenantId) {
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
         }
 
@@ -207,19 +206,14 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
              return res.status(400).json({ success: false, error: { code: 'SELF_ACTION', message: 'Cannot deactivate your own account' } });
         }
 
-        const updated = await prisma.user.update({
+        const updated = await prisma.users.update({
             where: { id: user.id },
-            data: { isActive: is_active }
+            data: { is_active: is_active }
         });
 
-        // Audit Log handles the rest via middleware (POST/PATCH) or we can add custom log for 'reason'
-        // If we want to store 'reason' specifically, we might need a custom audit log call here 
-        // because middleware only sees body, not "context" of why unless it's in body.
-        // Middleware captures body.reason if present.
-
-        res.json({ success: true, data: updated });
+        return res.json({ success: true, data: updated });
 
     } catch (error) {
-        next(error);
+        return next(error);
     }
 }
