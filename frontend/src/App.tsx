@@ -42,6 +42,8 @@ const CreateUserPage = lazy(() => import('./pages/accounting/CreateUserPage'));
 const CreateJournalPage = lazy(() => import('./pages/accounting/CreateJournalPage'));
 const IncomeStatementPage = lazy(() => import('./pages/accounting/IncomeStatementPage'));
 const AccountingPlaceholderPage = lazy(() => import('./pages/accounting/PlaceholderPage'));
+const LedgerPage = lazy(() => import('./pages/accounting/LedgerPage'));
+const AccountingSettingsPage = lazy(() => import('./pages/accounting/AccountingSettingsPage'));
 
 // Loading fallback
 const PageLoader = () => (
@@ -184,22 +186,11 @@ function App() {
           <Route path="dashboard" element={<DashboardAkuntansiPage />} />
           <Route path="coa" element={<ChartOfAccountsPage />} />
           <Route path="journal" element={<CreateJournalPage />} />
-          <Route
-            path="ledger"
-            element={<AccountingPlaceholderPage title="Buku Besar" />}
-          />
+          <Route path="ledger" element={<LedgerPage />} />
           <Route path="reports" element={<IncomeStatementPage />} />
           <Route path="users" element={<AccountingUserManagementPage />} />
           <Route path="users/create" element={<CreateUserPage />} />
-          <Route
-            path="settings"
-            element={
-              <AccountingPlaceholderPage
-                title="Pengaturan Akuntansi"
-                backLabel="Kembali ke Dashboard Akuntansi"
-              />
-            }
-          />
+          <Route path="settings" element={<AccountingSettingsPage />} />
           <Route index element={<Navigate to="/accounting/dashboard" />} />
         </Route>
 

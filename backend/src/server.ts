@@ -50,6 +50,7 @@ import accountingAparRoutes from './routes/accounting.apar.routes';
 import accountingPeriodRoutes from './routes/accounting.period.routes';
 import accountingDashboardRoutes from './routes/accounting.dashboard.routes';
 import accountingUserRoutes from './routes/accounting.user.routes';
+import accountingLedgerRoutes from './routes/accounting.ledger.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -176,6 +177,7 @@ app.use('/api/accounting', accountingAparRoutes); // Mounts at /api/accounting/a
 app.use('/api/accounting/periods', accountingPeriodRoutes);
 app.use('/api/accounting/dashboard', accountingDashboardRoutes);
 app.use('/api/accounting/users', accountingUserRoutes);
+app.use('/api/accounting/ledger', accountingLedgerRoutes);
 
 // DEBUG endpoints removed for security
 // Use proper logging and monitoring service in production

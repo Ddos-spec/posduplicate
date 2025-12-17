@@ -25,6 +25,18 @@ export interface TenantSettings {
   lowStockAlerts: boolean | null;
   dailySalesReport: boolean | null;
   whatsappNotifications: boolean | null;
+  accountingSettings?: AccountingSettings;
+}
+
+export interface AccountingSettings {
+  fiscalYearStartMonth: number;
+  autoPostJournal: boolean;
+  defaultCashAccountId: number | null;
+  defaultSalesAccountId: number | null;
+  defaultCogsAccountId: number | null;
+  defaultInventoryAccountId: number | null;
+  defaultReceivableAccountId: number | null;
+  defaultPayableAccountId: number | null;
 }
 
 export interface UpdateSettingsData {
@@ -51,6 +63,7 @@ export interface UpdateSettingsData {
   lowStockAlerts?: boolean;
   dailySalesReport?: boolean;
   whatsappNotifications?: boolean;
+  accountingSettings?: AccountingSettings;
 }
 
 export interface ChangePasswordData {
