@@ -164,8 +164,10 @@ export const getTopProducts = async (req: Request, res: Response, _next: NextFun
     const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
-          status: 'completed',
-          ...(tenantId ? { outlet_id: { in: await getOutletIdsByTenant(tenantId) } } : {})
+          is: {
+            status: 'completed',
+            ...(tenantId ? { outlet_id: { in: await getOutletIdsByTenant(tenantId) } } : {})
+          }
         }
       },
       include: {
@@ -230,8 +232,10 @@ export const getSalesByCategory = async (req: Request, res: Response, _next: Nex
     const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
-          status: 'completed',
-          ...(tenantId ? { outletId: { in: await getOutletIdsByTenant(tenantId) } } : {})
+          is: {
+            status: 'completed',
+            ...(tenantId ? { outlet_id: { in: await getOutletIdsByTenant(tenantId) } } : {})
+          }
         }
       },
       include: {

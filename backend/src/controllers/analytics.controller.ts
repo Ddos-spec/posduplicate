@@ -158,7 +158,9 @@ export const getTopProducts = async (req: Request, res: Response) => {
     const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
-          status: 'completed'
+          is: {
+            status: 'completed'
+          }
         }
       },
       select: {
@@ -219,7 +221,9 @@ export const getSalesByCategory = async (_req: Request, res: Response) => {
     const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
-          status: 'completed'
+          is: {
+            status: 'completed'
+          }
         }
       },
       select: {

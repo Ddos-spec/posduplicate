@@ -64,8 +64,10 @@ export const getSystemRevenue = async (req: Request, res: Response, next: NextFu
     const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
-          status: 'completed',
-          created_at: { gte: startDate }
+          is: {
+            status: 'completed',
+            created_at: { gte: startDate }
+          }
         }
       },
       select: {
@@ -128,7 +130,7 @@ export const getTopTenants = async (req: Request, res: Response, next: NextFunct
 
     // Step 1: Get all items from completed transactions, including relational data.
     const items = await prisma.transaction_items.findMany({
-      where: { transactions: { status: 'completed' } },
+      where: { transactions: { is: { status: 'completed' } } },
       select: {
         subtotal: true,
         transaction_id: true,
