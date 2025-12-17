@@ -35,6 +35,15 @@ export interface RecentTransaction {
   createdAt: string;
 }
 
+// Map snake_case API response to camelCase
+const mapRecentTransaction = (data: any): RecentTransaction => ({
+  id: data.id,
+  transactionNumber: data.transaction_number || data.transactionNumber,
+  total: data.total,
+  status: data.status,
+  createdAt: data.created_at || data.createdAt,
+});
+
 export interface CashierPerformance {
   cashierId: number;
   cashierName: string;
@@ -65,8 +74,8 @@ export const dashboardService = {
   },
 
   async getRecentTransactions(params?: { limit?: number }) {
-    const response = await api.get<{ success: boolean; data: RecentTransaction[] }>('/dashboard/recent-transactions', { params });
-    return response.data.data;
+    const response = await api.get<{ success: boolean; data: any[] }>('/dashboard/recent-transactions', { params });
+    return response.data.data.map(mapRecentTransaction);
   },
 
   async getCashierPerformance(params?: { days?: number }) {
