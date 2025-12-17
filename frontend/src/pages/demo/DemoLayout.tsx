@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { 
   LayoutDashboard, ShoppingCart, Users, Settings, 
-  LogOut, Menu, X, Sun, Moon, ChefHat, Store, Truck, Factory, Package, Activity
+  LogOut, Menu, X, Sun, Moon, ChefHat, Store, Truck, Factory, Package, Activity, TrendingUp
 } from 'lucide-react';
 
 interface DemoLayoutProps {
@@ -40,6 +40,7 @@ export default function DemoLayout({ children, variant, title }: DemoLayoutProps
     // Accounting Roles
     if (variant === 'accounting') return [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/owner', active: location.pathname === '/demo/accounting/owner' },
+        { icon: TrendingUp, label: 'Forecast', path: '/demo/accounting/owner/forecast', active: location.pathname.includes('forecast') },
         { icon: Users, label: 'Chart of Accounts', path: '/demo/accounting/owner/coa', active: location.pathname.includes('coa') },
         { icon: Activity, label: 'Jurnal Umum', path: '/demo/accounting/owner/journal', active: location.pathname.includes('journal') },
         { icon: Package, label: 'Buku Besar', path: '/demo/accounting/owner/ledger', active: location.pathname.includes('ledger') },
@@ -47,15 +48,31 @@ export default function DemoLayout({ children, variant, title }: DemoLayoutProps
         ...baseItems
     ];
     if (variant === 'distributor') return [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/distributor', active: true },
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/distributor', active: location.pathname === '/demo/accounting/distributor' && !location.pathname.includes('/', 30) },
+        { icon: TrendingUp, label: 'Forecast', path: '/demo/accounting/distributor/forecast', active: location.pathname.includes('forecast') },
+        { icon: ShoppingCart, label: 'Pembelian', path: '/demo/accounting/distributor/pembelian', active: location.pathname.includes('pembelian') },
+        { icon: Users, label: 'Supplier', path: '/demo/accounting/distributor/supplier', active: location.pathname.includes('supplier') },
+        { icon: Package, label: 'Stok', path: '/demo/accounting/distributor/stok', active: location.pathname.includes('stok') },
+        { icon: Activity, label: 'Keuangan', path: '/demo/accounting/distributor/keuangan', active: location.pathname.includes('keuangan') },
+        { icon: ShoppingCart, label: 'Laporan', path: '/demo/accounting/distributor/laporan', active: location.pathname.includes('laporan') },
         ...baseItems
     ];
     if (variant === 'producer') return [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/producer', active: true },
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/producer', active: location.pathname === '/demo/accounting/producer' && !location.pathname.includes('/', 28) },
+        { icon: TrendingUp, label: 'Forecast', path: '/demo/accounting/producer/forecast', active: location.pathname.includes('forecast') },
+        { icon: Factory, label: 'Produksi', path: '/demo/accounting/producer/produksi', active: location.pathname.includes('produksi') },
+        { icon: Package, label: 'Inventori', path: '/demo/accounting/producer/inventori', active: location.pathname.includes('inventori') },
+        { icon: ShoppingCart, label: 'Laporan', path: '/demo/accounting/producer/laporan', active: location.pathname.includes('laporan') },
         ...baseItems
     ];
     if (variant === 'retail') return [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/retail', active: true },
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/demo/accounting/retail', active: location.pathname === '/demo/accounting/retail' && !location.pathname.includes('/', 26) },
+        { icon: TrendingUp, label: 'Forecast', path: '/demo/accounting/retail/forecast', active: location.pathname.includes('forecast') },
+        { icon: ShoppingCart, label: 'Sales', path: '/demo/accounting/retail/sales', active: location.pathname.includes('sales') },
+        { icon: Users, label: 'Customers', path: '/demo/accounting/retail/customers', active: location.pathname.includes('customers') },
+        { icon: Package, label: 'Products', path: '/demo/accounting/retail/products', active: location.pathname.includes('products') },
+        { icon: Package, label: 'Inventory', path: '/demo/accounting/retail/inventory', active: location.pathname.includes('inventory') },
+        { icon: ShoppingCart, label: 'Reports', path: '/demo/accounting/retail/reports', active: location.pathname.includes('reports') },
         ...baseItems
     ];
 
