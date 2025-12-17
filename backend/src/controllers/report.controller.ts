@@ -53,7 +53,7 @@ export const getFinancialReport = async (req: Request, res: Response, _next: Nex
     // We need to fetch all sold items in this period
     const soldItems = await prisma.transaction_items.findMany({
       where: {
-        transactions: whereTransaction
+        transactions: { is: whereTransaction }
       },
       include: {
         items: true
