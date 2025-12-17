@@ -67,6 +67,16 @@ export default function DashboardAkuntansiPage() {
     { month: 'Dec', income: 1250, expense: 450, profit: 800 },
   ];
 
+  const forecast = {
+    revenue: 'Rp 1.35M',
+    expense: 'Rp 480jt',
+    profit: 'Rp 870jt',
+    confidence: 72,
+    trendLabel: 'Trend naik'
+  };
+
+  const forecastSeries = [32, 38, 44, 48, 52, 50, 56, 60, 64, 68, 72, 76];
+
   const maxValue = Math.max(...chartData.map(d => d.income));
 
   return (
@@ -110,6 +120,51 @@ export default function DashboardAkuntansiPage() {
             <Calendar className="w-4 h-4" />
             Dec 2025
           </button>
+        </div>
+      </div>
+
+      {/* Forecast */}
+      <div className={`p-5 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-white shadow'}`}>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Forecast</h2>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Prediksi 30 hari ke depan berdasarkan tren terbaru.
+            </p>
+          </div>
+          <div className={`px-3 py-1 rounded-full text-xs font-medium ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-600'}`}>
+            Confidence {forecast.confidence}%
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Pendapatan</p>
+            <p className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{forecast.revenue}</p>
+          </div>
+          <div>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Pengeluaran</p>
+            <p className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{forecast.expense}</p>
+          </div>
+          <div>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Laba Bersih</p>
+            <p className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{forecast.profit}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 h-10 flex items-end gap-1">
+          {forecastSeries.map((value, idx) => (
+            <div
+              key={idx}
+              className={`flex-1 rounded-t ${isDark ? 'bg-purple-500/70' : 'bg-purple-500/60'}`}
+              style={{ height: `${value}%` }}
+            />
+          ))}
+        </div>
+
+        <div className={`mt-2 flex items-center justify-between text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+          <span>{forecast.trendLabel}</span>
+          <span>Update terakhir: hari ini</span>
         </div>
       </div>
 
