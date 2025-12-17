@@ -122,6 +122,7 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
       case 'retail':
         return [
           { name: 'Dashboard Retail', icon: LayoutDashboard, path: '/accounting/retail' },
+          { name: 'Forecast', icon: AiBadgeIcon, path: '/accounting/retail/forecast' },
           { name: 'Sales Orders', icon: ShoppingCart, path: '/accounting/retail/sales' },
           { name: 'Customers', icon: Users, path: '/accounting/retail/customers' },
           { name: 'Products', icon: Package, path: '/accounting/retail/products' },
@@ -131,6 +132,7 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
       case 'distributor':
         return [
           { name: 'Dashboard', icon: LayoutDashboard, path: '/accounting/distributor' },
+          { name: 'Forecast', icon: AiBadgeIcon, path: '/accounting/distributor/forecast' },
           { name: 'Pembelian', icon: ShoppingCart, path: '/accounting/distributor/pembelian' },
           { name: 'Supplier', icon: Building2, path: '/accounting/distributor/supplier' },
           { name: 'Stok', icon: Package, path: '/accounting/distributor/stok' },
@@ -140,6 +142,7 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
       case 'produsen':
         return [
           { name: 'Dashboard', icon: LayoutDashboard, path: '/accounting/produsen' },
+          { name: 'Forecast', icon: AiBadgeIcon, path: '/accounting/produsen/forecast' },
           { name: 'Produksi', icon: Package, path: '/accounting/produsen/produksi' },
           { name: 'Inventori', icon: Package, path: '/accounting/produsen/inventori' },
           { name: 'Laporan', icon: BarChart3, path: '/accounting/produsen/laporan' },

@@ -41,10 +41,10 @@ const AccountingUserManagementPage = lazy(() => import('./pages/accounting/UserM
 const CreateUserPage = lazy(() => import('./pages/accounting/CreateUserPage'));
 const CreateJournalPage = lazy(() => import('./pages/accounting/CreateJournalPage'));
 const IncomeStatementPage = lazy(() => import('./pages/accounting/IncomeStatementPage'));
-const AccountingPlaceholderPage = lazy(() => import('./pages/accounting/PlaceholderPage'));
 const LedgerPage = lazy(() => import('./pages/accounting/LedgerPage'));
 const AccountingSettingsPage = lazy(() => import('./pages/accounting/AccountingSettingsPage'));
 const ForecastPage = lazy(() => import('./pages/accounting/ForecastPage'));
+const AccountingReadOnlyPage = lazy(() => import('./pages/accounting/AccountingReadOnlyPage'));
 
 // Loading fallback
 const PageLoader = () => (
@@ -236,64 +236,32 @@ function App() {
         >
           <Route index element={<DashboardRetailPage />} />
           <Route
+            path="forecast"
+            element={<ForecastPage variant="retail" />}
+          />
+          <Route
             path="settings"
-            element={
-              <AccountingPlaceholderPage
-                title="Pengaturan"
-                backTo="/accounting/retail"
-                backLabel="Kembali ke Dashboard Retail"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="retail" section="settings" />}
           />
           <Route
             path="sales"
-            element={
-              <AccountingPlaceholderPage
-                title="Sales Orders"
-                backTo="/accounting/retail"
-                backLabel="Kembali ke Dashboard Retail"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="retail" section="sales" />}
           />
           <Route
             path="customers"
-            element={
-              <AccountingPlaceholderPage
-                title="Customers"
-                backTo="/accounting/retail"
-                backLabel="Kembali ke Dashboard Retail"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="retail" section="customers" />}
           />
           <Route
             path="products"
-            element={
-              <AccountingPlaceholderPage
-                title="Products"
-                backTo="/accounting/retail"
-                backLabel="Kembali ke Dashboard Retail"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="retail" section="products" />}
           />
           <Route
             path="inventory"
-            element={
-              <AccountingPlaceholderPage
-                title="Inventory"
-                backTo="/accounting/retail"
-                backLabel="Kembali ke Dashboard Retail"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="retail" section="inventory" />}
           />
           <Route
             path="reports"
-            element={
-              <AccountingPlaceholderPage
-                title="Reports"
-                backTo="/accounting/retail"
-                backLabel="Kembali ke Dashboard Retail"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="retail" section="reports" />}
           />
         </Route>
 
@@ -308,64 +276,32 @@ function App() {
         >
           <Route index element={<DashboardDistributorPage />} />
           <Route
+            path="forecast"
+            element={<ForecastPage variant="distributor" />}
+          />
+          <Route
             path="settings"
-            element={
-              <AccountingPlaceholderPage
-                title="Pengaturan"
-                backTo="/accounting/distributor"
-                backLabel="Kembali ke Dashboard Distributor"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="distributor" section="settings" />}
           />
           <Route
             path="pembelian"
-            element={
-              <AccountingPlaceholderPage
-                title="Pembelian"
-                backTo="/accounting/distributor"
-                backLabel="Kembali ke Dashboard Distributor"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="distributor" section="pembelian" />}
           />
           <Route
             path="supplier"
-            element={
-              <AccountingPlaceholderPage
-                title="Supplier"
-                backTo="/accounting/distributor"
-                backLabel="Kembali ke Dashboard Distributor"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="distributor" section="supplier" />}
           />
           <Route
             path="stok"
-            element={
-              <AccountingPlaceholderPage
-                title="Stok"
-                backTo="/accounting/distributor"
-                backLabel="Kembali ke Dashboard Distributor"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="distributor" section="stok" />}
           />
           <Route
             path="keuangan"
-            element={
-              <AccountingPlaceholderPage
-                title="Keuangan"
-                backTo="/accounting/distributor"
-                backLabel="Kembali ke Dashboard Distributor"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="distributor" section="keuangan" />}
           />
           <Route
             path="laporan"
-            element={
-              <AccountingPlaceholderPage
-                title="Laporan"
-                backTo="/accounting/distributor"
-                backLabel="Kembali ke Dashboard Distributor"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="distributor" section="laporan" />}
           />
         </Route>
 
@@ -380,44 +316,24 @@ function App() {
         >
           <Route index element={<DashboardProdusenPage />} />
           <Route
+            path="forecast"
+            element={<ForecastPage variant="produsen" />}
+          />
+          <Route
             path="settings"
-            element={
-              <AccountingPlaceholderPage
-                title="Pengaturan"
-                backTo="/accounting/produsen"
-                backLabel="Kembali ke Dashboard Produsen"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="produsen" section="settings" />}
           />
           <Route
             path="produksi"
-            element={
-              <AccountingPlaceholderPage
-                title="Produksi"
-                backTo="/accounting/produsen"
-                backLabel="Kembali ke Dashboard Produsen"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="produsen" section="produksi" />}
           />
           <Route
             path="inventori"
-            element={
-              <AccountingPlaceholderPage
-                title="Inventori"
-                backTo="/accounting/produsen"
-                backLabel="Kembali ke Dashboard Produsen"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="produsen" section="inventori" />}
           />
           <Route
             path="laporan"
-            element={
-              <AccountingPlaceholderPage
-                title="Laporan"
-                backTo="/accounting/produsen"
-                backLabel="Kembali ke Dashboard Produsen"
-              />
-            }
+            element={<AccountingReadOnlyPage variant="produsen" section="laporan" />}
           />
         </Route>
 
