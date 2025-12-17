@@ -1,3 +1,4 @@
+// Forecast Page Component
 import { useState, useMemo } from 'react';
 import { useThemeStore } from '../../../store/themeStore';
 import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Info, ArrowRight } from 'lucide-react';
