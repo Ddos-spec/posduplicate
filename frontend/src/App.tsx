@@ -44,6 +44,7 @@ const IncomeStatementPage = lazy(() => import('./pages/accounting/IncomeStatemen
 const AccountingPlaceholderPage = lazy(() => import('./pages/accounting/PlaceholderPage'));
 const LedgerPage = lazy(() => import('./pages/accounting/LedgerPage'));
 const AccountingSettingsPage = lazy(() => import('./pages/accounting/AccountingSettingsPage'));
+const ForecastPage = lazy(() => import('./pages/accounting/ForecastPage'));
 
 // Loading fallback
 const PageLoader = () => (
@@ -213,6 +214,7 @@ function App() {
           }
         >
           <Route path="dashboard" element={<DashboardAkuntansiPage />} />
+          <Route path="forecast" element={<ForecastPage />} />
           <Route path="coa" element={<ChartOfAccountsPage />} />
           <Route path="journal" element={<CreateJournalPage />} />
           <Route path="ledger" element={<LedgerPage />} />

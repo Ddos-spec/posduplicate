@@ -21,6 +21,14 @@ interface AccountingLayoutProps {
   variant?: 'owner' | 'retail' | 'distributor' | 'produsen';
 }
 
+const AiBadgeIcon = ({ className = '' }: { className?: string }) => (
+  <span
+    className={`inline-flex items-center justify-center rounded-md border border-current text-[10px] font-bold leading-none ${className}`}
+  >
+    AI
+  </span>
+);
+
 export default function AccountingLayout({ variant = 'owner' }: AccountingLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
@@ -65,6 +73,7 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
       default: // owner
         return [
           { name: 'Dashboard', icon: LayoutDashboard, path: '/accounting/dashboard' },
+          { name: 'Forecast', icon: AiBadgeIcon, path: '/accounting/forecast' },
           {
             name: 'Akuntansi',
             icon: Calculator,
