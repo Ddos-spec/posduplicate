@@ -841,18 +841,18 @@ export default function CashierPage() {
                 } ${isMarkup ? 'ring-2 ring-blue-100' : ''}`}
               >
                 {managementMode && (
-                  <div className="absolute top-2 right-2 flex gap-1">
+                  <div className="absolute top-2 right-2 z-10 flex gap-1">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleOpenProductForm(product); }}
-                      className="bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
+                      className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 touch-manipulation shadow-lg"
                     >
-                      <Edit className="w-5 h-5" />
+                      <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteProduct(product.id); }}
-                      className="bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 touch-manipulation min-h-[48px] min-w-[48px] flex items-center justify-center"
+                      className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 touch-manipulation shadow-lg"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 )}
