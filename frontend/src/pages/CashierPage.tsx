@@ -158,7 +158,14 @@ export default function CashierPage() {
       if (selectedCategory) params.category_id = selectedCategory;
       if (search) params.search = search;
       const { data } = await api.get('/products', { params });
-      setProducts(data.data);
+      // Map snake_case from API to camelCase for frontend
+      const mappedProducts = (data.data || []).map((p: any) => ({
+        ...p,
+        priceGofood: p.price_gofood ?? p.priceGofood,
+        priceGrabfood: p.price_grabfood ?? p.priceGrabfood,
+        priceShopeefood: p.price_shopeefood ?? p.priceShopeefood,
+      }));
+      setProducts(mappedProducts);
     } catch (error: unknown) {
       console.error('Failed to load products:', error);
       let errorMessage = 'Failed to load products';
