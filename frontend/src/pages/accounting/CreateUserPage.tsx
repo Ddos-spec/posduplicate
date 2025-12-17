@@ -1,24 +1,46 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
+import toast from 'react-hot-toast';
+import axios from 'axios';
+import api from '../../services/api';
+import { outletService, Outlet } from '../../services/outletService';
 import {
-  ArrowLeft, Mail, User, Check, ChevronDown, Eye, Building2,
-  Package, Factory, ShoppingCart, Calculator, Info
+  ArrowLeft, Mail, Check, ChevronDown,
+  Package, Factory, ShoppingCart, Info
 } from 'lucide-react';
 
-type RoleType = 'distributor' | 'produsen' | 'retail' | 'accountant' | null;
+type RoleType = 'distributor' | 'produsen' | 'retail' | null;
 
 export default function CreateUserPage() {
   const { isDark } = useThemeStore();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     name: '',
     email: '',
+    password: '',
     role: null as RoleType,
-    outlet: '',
+    outletId: '',
     allOutlets: false,
-    confirmed: false
-  });
+    confirmed: false,
+    sendEmailNotification: true
+  };
+  const [formData, setFormData] = useState(initialFormState);
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [slotStats, setSlotStats] = useState({ used: 0, total: 0, percentage: 0 });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdUser, setCreatedUser] = useState<{
+    name: string;
+    email: string;
+    tempPassword: string;
+    emailSent: boolean;
+  } | null>(null);
+
+  const roleLabelMap: Record<Exclude<RoleType, null>, string> = {
+    distributor: 'Distributor',
+    produsen: 'Produsen',
+    retail: 'Retail'
+  };
 
   const roles = [
     {
@@ -44,28 +66,149 @@ export default function CreateUserPage() {
       icon: ShoppingCart,
       color: 'emerald',
       features: ['Akses POS', 'Tutup Kasir']
-    },
-    {
-      id: 'accountant',
-      name: 'Accountant',
-      description: 'Akses penuh ke semua laporan keuangan',
-      icon: Calculator,
-      color: 'indigo',
-      badge: 'FULL ACCESS',
-      features: ['Jurnal & Buku Besar', 'Laporan Laba Rugi']
     }
   ];
 
-  const stats = {
-    used: 8,
-    total: 20,
-    percentage: 60
+  useEffect(() => {
+    let isActive = true;
+
+    const loadOutlets = async () => {
+      try {
+        const response = await outletService.getAll({ is_active: true });
+        if (isActive) {
+          setOutlets(response.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to load outlets:', error);
+      }
+    };
+
+    const loadStats = async () => {
+      try {
+        const response = await api.get('/accounting/users', {
+          params: { page: 1, limit: 1 }
+        });
+        const statsData = response.data?.data?.stats;
+        if (!statsData || !isActive) return;
+
+        const used = Number(statsData.totalUsers || 0);
+        const total = Number(statsData.maxUsers || used || 0);
+        const percentage = total > 0 ? Math.round((used / total) * 100) : 0;
+        setSlotStats({ used, total, percentage });
+      } catch (error) {
+        console.error('Failed to load user stats:', error);
+      }
+    };
+
+    loadOutlets();
+    loadStats();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const completionSteps = [
+    Boolean(formData.name.trim()),
+    Boolean(formData.email.trim()),
+    Boolean(formData.role),
+    formData.confirmed
+  ];
+  const completionPercent = Math.round(
+    (completionSteps.filter(Boolean).length / completionSteps.length) * 100
+  );
+
+  const generatePassword = (length = 12) => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    let result = '';
+    for (let i = 0; i < length; i += 1) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
   };
 
-  const handleSubmit = () => {
-    // Handle form submission
-    console.log('Creating user:', formData);
-    navigate('/accounting/users');
+  const handleGeneratePassword = () => {
+    const generated = generatePassword();
+    setFormData((prev) => ({ ...prev, password: generated }));
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.name.trim() || !formData.email.trim() || !formData.role) {
+      toast.error('Nama, email, dan role wajib diisi');
+      return;
+    }
+
+    if (!formData.confirmed) {
+      toast.error('Mohon konfirmasi data sebelum membuat akun');
+      return;
+    }
+
+    const roleLabel = formData.role ? roleLabelMap[formData.role] : '';
+    const trimmedPassword = formData.password.trim();
+    const outletId = formData.allOutlets
+      ? null
+      : formData.outletId
+        ? Number(formData.outletId)
+        : null;
+
+    setIsSubmitting(true);
+    try {
+      const payload: Record<string, unknown> = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        role: roleLabel,
+        outletId,
+        sendEmailNotification: formData.sendEmailNotification
+      };
+      if (trimmedPassword) {
+        payload.password = trimmedPassword;
+      }
+
+      const response = await api.post('/accounting/users/create', payload);
+
+      const created = response.data?.data?.user;
+      setCreatedUser({
+        name: created?.name || formData.name.trim(),
+        email: created?.email || formData.email.trim(),
+        tempPassword: created?.tempPassword || trimmedPassword || '',
+        emailSent: Boolean(response.data?.data?.emailSent)
+      });
+      setSlotStats((prev) => {
+        const used = prev.used + 1;
+        const total = prev.total || used;
+        const percentage = total > 0 ? Math.round((used / total) * 100) : 0;
+        return { ...prev, used, percentage };
+      });
+      toast.success('Pengguna berhasil dibuat');
+    } catch (error: unknown) {
+      console.error('Failed to create user:', error);
+      let errorMessage = 'Gagal membuat pengguna';
+      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      }
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({ ...initialFormState });
+  };
+
+  const handleCopyPassword = async () => {
+    if (!createdUser?.tempPassword) {
+      toast.error('Password sementara tidak tersedia');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(createdUser.tempPassword);
+      toast.success('Password berhasil disalin');
+    } catch (error) {
+      console.error('Failed to copy password:', error);
+      toast.error('Gagal menyalin password');
+    }
   };
 
   return (
@@ -97,7 +240,7 @@ export default function CreateUserPage() {
                   Buat akun untuk anggota tim dengan role dan akses spesifik
                 </span>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-600'}`}>
-                  ⚠ {stats.used} dari {stats.total} pengguna telah digunakan
+                  ⚠ {slotStats.used} dari {slotStats.total} pengguna telah digunakan
                 </span>
               </div>
             </div>
@@ -150,6 +293,37 @@ export default function CreateUserPage() {
                   <p className={`text-xs mt-1 flex items-center gap-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                     <Info className="w-3 h-3" />
                     Email digunakan untuk login dan notifikasi
+                  </p>
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Password (Opsional)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      autoComplete="new-password"
+                      placeholder="Klik Generate atau isi manual"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className={`w-full pr-28 px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                        isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleGeneratePassword}
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg text-xs font-medium ${
+                        isDark ? 'bg-slate-600 text-gray-200 hover:bg-slate-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      Generate
+                    </button>
+                  </div>
+                  <p className={`text-xs mt-1 flex items-center gap-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <Info className="w-3 h-3" />
+                    Isi manual atau klik Generate untuk password acak.
                   </p>
                 </div>
               </div>
@@ -228,16 +402,25 @@ export default function CreateUserPage() {
 
               <div className="relative mb-3">
                 <select
-                  value={formData.outlet}
-                  onChange={(e) => setFormData({ ...formData, outlet: e.target.value })}
+                  value={formData.outletId}
+                  onChange={(e) => setFormData({ ...formData, outletId: e.target.value })}
+                  disabled={formData.allOutlets}
                   className={`w-full px-4 py-3 rounded-xl border appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                     isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
                   }`}
                 >
                   <option value="">Pilih outlet...</option>
-                  <option value="pusat">Outlet Pusat</option>
-                  <option value="jakarta">Outlet Jakarta</option>
-                  <option value="surabaya">Outlet Surabaya</option>
+                  {outlets.length === 0 ? (
+                    <option value="" disabled>
+                      Tidak ada outlet aktif
+                    </option>
+                  ) : (
+                    outlets.map((outlet) => (
+                      <option key={outlet.id} value={outlet.id}>
+                        {outlet.name}
+                      </option>
+                    ))
+                  )}
                 </select>
                 <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
               </div>
@@ -246,7 +429,13 @@ export default function CreateUserPage() {
                 <input
                   type="checkbox"
                   checked={formData.allOutlets}
-                  onChange={(e) => setFormData({ ...formData, allOutlets: e.target.checked })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      allOutlets: e.target.checked,
+                      outletId: e.target.checked ? '' : formData.outletId
+                    })
+                  }
                   className="w-4 h-4 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500"
                 />
                 <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Berikan akses ke semua outlet</span>
@@ -297,14 +486,14 @@ export default function CreateUserPage() {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!formData.name || !formData.email || !formData.role || !formData.confirmed}
+                disabled={!formData.name || !formData.email || !formData.role || !formData.confirmed || isSubmitting}
                 className={`px-6 py-3 rounded-xl font-medium flex items-center gap-2 ${
-                  formData.name && formData.email && formData.role && formData.confirmed
+                  formData.name && formData.email && formData.role && formData.confirmed && !isSubmitting
                     ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                     : isDark ? 'bg-slate-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                Buat Akun & Kirim Email
+                {isSubmitting ? 'Membuat akun...' : 'Buat Akun & Kirim Email'}
                 <ArrowLeft className="w-4 h-4 rotate-180" />
               </button>
             </div>
@@ -342,12 +531,12 @@ export default function CreateUserPage() {
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-2">
                   <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Kelengkapan Data</span>
-                  <span className="text-sm font-medium text-emerald-500">{stats.percentage}%</span>
+                  <span className="text-sm font-medium text-emerald-500">{completionPercent}%</span>
                 </div>
                 <div className={`h-2 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
                   <div
                     className="h-full rounded-full bg-emerald-500 transition-all"
-                    style={{ width: `${stats.percentage}%` }}
+                    style={{ width: `${completionPercent}%` }}
                   />
                 </div>
                 <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -358,6 +547,63 @@ export default function CreateUserPage() {
           </div>
         </div>
       </div>
+
+      {createdUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className={`w-full max-w-md rounded-2xl p-6 ${isDark ? 'bg-slate-800' : 'bg-white shadow-xl'}`}>
+            <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Pengguna berhasil dibuat
+            </h3>
+            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Simpan kredensial ini untuk login pertama.
+            </p>
+
+            <div className={`mt-4 rounded-lg border p-4 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+              <p className={`text-xs uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Email</p>
+              <p className={`mt-1 font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{createdUser.email}</p>
+            </div>
+
+            <div className={`mt-3 rounded-lg border p-4 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+              <p className={`text-xs uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Password login</p>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={createdUser.tempPassword || 'Tidak tersedia'}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+                />
+                <button
+                  onClick={handleCopyPassword}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium ${isDark ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Salin
+                </button>
+              </div>
+              <p className={`mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                {createdUser.emailSent ? 'Email dikirim (mock). Pastikan user menerima kredensial.' : 'Email tidak dikirim, bagikan password ini secara aman.'}
+              </p>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setCreatedUser(null);
+                  resetForm();
+                }}
+                className={`flex-1 rounded-lg px-4 py-2 font-medium ${isDark ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                Buat Lagi
+              </button>
+              <button
+                onClick={() => navigate('/accounting/users')}
+                className="flex-1 rounded-lg bg-emerald-500 px-4 py-2 font-medium text-white hover:bg-emerald-600"
+              >
+                Lihat Pengguna
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

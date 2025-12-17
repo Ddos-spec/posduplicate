@@ -105,8 +105,15 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
  */
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, role, outletId, sendEmailNotification } = req.body;
+    const { name, email, password, role, outletId, sendEmailNotification } = req.body;
     const tenantId = req.tenantId!;
+
+    if (!name || !email || !role) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Name, email, and role are required' }
+      });
+    }
 
     // 1. Validate Slots
     const tenant = await prisma.tenants.findUnique({
@@ -123,21 +130,31 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     }
 
     // 2. Resolve Role ID
-    // Check if role exists by name, or use provided ID?
-    // Prompt sends "role": "produsen".
-    let roleId = 0;
-    // Standardize role names: 'distributor', 'produsen', 'retail', 'owner', 'staff'
-    const roleRecord = await prisma.roles.findUnique({ where: { name: role } });
-    if (roleRecord) {
-        roleId = roleRecord.id;
-    } else {
-        // Fallback or Error?
-        // Let's create role if it's one of the standard accounting roles and doesn't exist?
-        // Or return error.
-        return res.status(400).json({
-            success: false,
-            error: { code: 'INVALID_ROLE', message: `Role '${role}' not found` }
+    const rawRole = String(role).trim();
+    const roleMap: Record<string, string> = {
+      distributor: 'Distributor',
+      produsen: 'Produsen',
+      retail: 'Retail',
+      accountant: 'Accountant'
+    };
+    const resolvedRoleName = roleMap[rawRole.toLowerCase()] || rawRole;
+
+    let roleRecord = await prisma.roles.findFirst({
+      where: { name: { equals: resolvedRoleName, mode: 'insensitive' } }
+    });
+
+    if (!roleRecord) {
+      const autoCreateRoles = new Set(Object.values(roleMap));
+      if (autoCreateRoles.has(resolvedRoleName)) {
+        roleRecord = await prisma.roles.create({
+          data: { name: resolvedRoleName }
         });
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_ROLE', message: `Role '${role}' not found` }
+        });
+      }
     }
 
     // 3. Create User
@@ -149,7 +166,8 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
         });
     }
 
-    const tempPassword = `Temp${Math.floor(Math.random() * 10000)}!`;
+    const rawPassword = typeof password === 'string' ? password.trim() : '';
+    const tempPassword = rawPassword || `Temp${Math.floor(Math.random() * 10000)}!`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
     const user = await prisma.users.create({
@@ -158,7 +176,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
             name,
             email,
             password_hash: passwordHash,
-            role_id: roleId,
+            role_id: roleRecord.id,
             outlet_id: outletId ? Number(outletId) : null,
             is_active: true,
         }

@@ -99,6 +99,35 @@ function OwnerRoute({ children }: { children: React.ReactNode }) {
   return <Navigate to="/login" />;
 }
 
+// SECURITY: Accounting module route guard
+// Allows: super admin, admin, owner, manager, distributor, produsen, retail, accountant
+function AccountingRoute({ children }: { children: React.ReactNode }) {
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+
+  const allowedRoles = [
+    'super admin',
+    'super_admin',
+    'admin',
+    'owner',
+    'manager',
+    'distributor',
+    'produsen',
+    'retail',
+    'accountant'
+  ];
+  const userRole = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+  if (user && allowedRoles.includes(userRole)) {
+    return <>{children}</>;
+  }
+
+  return <Navigate to="/login" />;
+}
+
 // SECURITY: Cashier-level route guard
 // Allows: any authenticated user (cashier, owner, admin, etc.)
 function CashierRoute({ children }: { children: React.ReactNode }) {
@@ -178,9 +207,9 @@ function App() {
         <Route
           path="/accounting"
           element={
-            <OwnerRoute>
+            <AccountingRoute>
               <AccountingLayout />
-            </OwnerRoute>
+            </AccountingRoute>
           }
         >
           <Route path="dashboard" element={<DashboardAkuntansiPage />} />
@@ -198,9 +227,9 @@ function App() {
         <Route
           path="/accounting/retail"
           element={
-            <OwnerRoute>
+            <AccountingRoute>
               <AccountingLayout variant="retail" />
-            </OwnerRoute>
+            </AccountingRoute>
           }
         >
           <Route index element={<DashboardRetailPage />} />
@@ -260,9 +289,9 @@ function App() {
         <Route
           path="/accounting/distributor"
           element={
-            <OwnerRoute>
+            <AccountingRoute>
               <AccountingLayout variant="distributor" />
-            </OwnerRoute>
+            </AccountingRoute>
           }
         >
           <Route index element={<DashboardDistributorPage />} />
@@ -322,9 +351,9 @@ function App() {
         <Route
           path="/accounting/produsen"
           element={
-            <OwnerRoute>
+            <AccountingRoute>
               <AccountingLayout variant="produsen" />
-            </OwnerRoute>
+            </AccountingRoute>
           }
         >
           <Route index element={<DashboardProdusenPage />} />

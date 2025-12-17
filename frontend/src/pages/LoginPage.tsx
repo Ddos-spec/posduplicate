@@ -30,10 +30,14 @@ export default function LoginPage() {
 
       if (roleName === 'owner') {
         navigate('/module-selector');
-      } else if (roleName === 'admin' || roleName === 'super admin') {
+      } else if (roleName === 'admin' || roleName === 'super admin' || roleName === 'super_admin') {
         navigate('/admin/dashboard');
       } else if (roleName === 'cashier' || roleName === 'kasir') {
         navigate('/cashier');
+      } else if (roleName === 'distributor' || roleName === 'produsen' || roleName === 'retail') {
+        navigate(`/accounting/${roleName}`);
+      } else if (roleName === 'accountant') {
+        navigate('/accounting/dashboard');
       } else {
         navigate('/module-selector');
       }
