@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { notificationService } from '../services/notificationService';
 import type { AdminNotification } from '../services/notificationService';
+import { useAuthStore } from './authStore';
 
 interface NotificationState {
   notifications: AdminNotification[];
@@ -18,10 +19,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   fetchNotifications: async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const user = useAuthStore.getState().user;
+      if (!user) {
+        set({ notifications: [], unreadCount: 0 });
+        return;
+      }
       let response;
 
-      if (user.role?.name === 'Super Admin') {
+      const roleName = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+      const isSuperAdmin = roleName === 'super admin' || roleName === 'super_admin';
+
+      if (isSuperAdmin) {
         // Super admins get all system notifications
         response = await notificationService.getAdminNotifications();
       } else {
