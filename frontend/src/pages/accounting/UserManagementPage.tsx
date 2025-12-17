@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
+import { outletService, Outlet } from '../../services/outletService';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import {
@@ -15,7 +17,10 @@ import {
   Building2,
   Clock,
   ChevronDown,
-  Loader2
+  Loader2,
+  Pencil,
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 
 interface ApiRole {
@@ -45,6 +50,7 @@ interface UserRow {
   email: string;
   role: string;
   outlet: string;
+  outletId: number | null;
   allOutlets: boolean;
   status: boolean;
   createdAt: string;
@@ -60,6 +66,22 @@ interface StatsState {
   maxSlots: number;
 }
 
+interface EditFormState {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  outletId: string;
+  allOutlets: boolean;
+  status: boolean;
+  password: string;
+}
+
+interface DeleteDialogState {
+  isOpen: boolean;
+  targets: UserRow[];
+}
+
 const roleQueryMap: Record<string, string> = {
   distributor: 'Distributor',
   produsen: 'Produsen',
@@ -69,6 +91,12 @@ const roleQueryMap: Record<string, string> = {
   owner: 'Owner',
   manager: 'Manager'
 };
+
+const editableRoleOptions = [
+  { id: 'Distributor', label: 'Distributor' },
+  { id: 'Produsen', label: 'Produsen' },
+  { id: 'Retail', label: 'Retail' }
+];
 
 const formatDate = (value: string | null) => {
   if (!value) return '-';
@@ -129,6 +157,14 @@ export default function UserManagementPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [updatingUserIds, setUpdatingUserIds] = useState<number[]>([]);
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [editForm, setEditForm] = useState<EditFormState | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
+    isOpen: false,
+    targets: []
+  });
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchUsers = useCallback(
     async (pageValue = 1) => {
@@ -169,6 +205,7 @@ export default function UserManagementPage() {
           email: user.email,
           role: user.role?.name || 'Staff',
           outlet: user.outlet?.name || 'Semua Outlet',
+          outletId: user.outlet?.id ?? null,
           allOutlets: !user.outlet || user.outlet.id === 0,
           status: user.is_active,
           createdAt: formatDate(user.created_at),
@@ -194,6 +231,27 @@ export default function UserManagementPage() {
     },
     [activeFilter, pageSize, searchTerm]
   );
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadOutlets = async () => {
+      try {
+        const response = await outletService.getAll({ is_active: true });
+        if (isActive) {
+          setOutlets(response.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to load outlets:', error);
+      }
+    };
+
+    loadOutlets();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -266,6 +324,114 @@ export default function UserManagementPage() {
     }
   };
 
+  const openEditModal = (user: UserRow) => {
+    if (user.id === currentUserId) {
+      toast.error('Tidak bisa mengubah akun sendiri');
+      return;
+    }
+
+    setEditForm({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      outletId: user.outletId ? String(user.outletId) : '',
+      allOutlets: user.allOutlets || !user.outletId,
+      status: user.status,
+      password: ''
+    });
+  };
+
+  const generatePassword = (length = 12) => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    let result = '';
+    for (let i = 0; i < length; i += 1) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const handleGeneratePassword = () => {
+    if (!editForm) return;
+    const generated = generatePassword();
+    setEditForm({ ...editForm, password: generated });
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editForm) return;
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      toast.error('Nama dan email wajib diisi');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
+        name: editForm.name.trim(),
+        email: editForm.email.trim(),
+        role: editForm.role,
+        outletId: editForm.allOutlets ? null : editForm.outletId ? Number(editForm.outletId) : null,
+        is_active: editForm.status
+      };
+
+      if (editForm.password.trim()) {
+        payload.password = editForm.password.trim();
+      }
+
+      await api.patch(`/accounting/users/${editForm.id}`, payload);
+      toast.success('Pengguna diperbarui');
+      setEditForm(null);
+      fetchUsers(page);
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      let errorMessage = 'Gagal memperbarui pengguna';
+      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      }
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const openDeleteDialog = (targets: UserRow[]) => {
+    const safeTargets = targets.filter((user) => user.id !== currentUserId);
+    if (safeTargets.length === 0) {
+      toast.error('Tidak bisa menghapus akun sendiri');
+      return;
+    }
+    setDeleteDialog({ isOpen: true, targets: safeTargets });
+  };
+
+  const handleDeleteUsers = async () => {
+    if (!deleteDialog.targets.length) return;
+    setDeleteLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        deleteDialog.targets.map((user) => api.delete(`/accounting/users/${user.id}`))
+      );
+      const failed = results.filter((result) => result.status === 'rejected');
+      if (failed.length > 0) {
+        const firstError = failed[0];
+        let errorMessage = `Gagal menghapus ${failed.length} pengguna`;
+        if (firstError.status === 'rejected') {
+          const err = firstError.reason;
+          if (axios.isAxiosError(err) && err.response?.data?.error?.message) {
+            errorMessage = err.response.data.error.message;
+          }
+        }
+        toast.error(errorMessage);
+      } else {
+        toast.success('Pengguna berhasil dihapus');
+      }
+      fetchUsers(page);
+    } finally {
+      setDeleteLoading(false);
+      setDeleteDialog({ isOpen: false, targets: [] });
+      setSelectedUsers([]);
+    }
+  };
+
   const handleToggleStatus = async (user: UserRow) => {
     if (user.id === currentUserId) {
       toast.error('Tidak bisa menonaktifkan akun sendiri');
@@ -322,6 +488,25 @@ export default function UserManagementPage() {
 
   const rangeStart = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = Math.min(page * pageSize, totalCount);
+  const deleteCount = deleteDialog.targets.length;
+  const deleteDetails =
+    deleteCount === 1
+      ? [
+          { label: 'Nama', value: deleteDialog.targets[0].name },
+          { label: 'Email', value: deleteDialog.targets[0].email },
+          { label: 'Role', value: deleteDialog.targets[0].role }
+        ]
+      : deleteCount > 1
+        ? [{ label: 'Jumlah', value: `${deleteCount} pengguna` }]
+        : [];
+  const deleteTitle = deleteCount > 1 ? `Hapus ${deleteCount} pengguna?` : 'Hapus pengguna?';
+  const deleteMessage =
+    deleteCount > 1
+      ? 'Pengguna terpilih akan dihapus. Pengguna yang sudah memiliki aktivitas akan gagal dihapus.'
+      : 'Pengguna akan dihapus. Jika sudah memiliki aktivitas, penghapusan akan ditolak.';
+  const isRoleEditable =
+    editForm ? editableRoleOptions.some((option) => option.id.toLowerCase() === editForm.role.toLowerCase()) : false;
+  const isEditingSelf = editForm ? editForm.id === currentUserId : false;
 
   return (
     <div className="space-y-6">
@@ -487,12 +672,13 @@ export default function UserManagementPage() {
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Dibuat</th>
                 <th className="px-4 py-3 font-medium">Login Terakhir</th>
+                <th className="px-4 py-3 font-medium">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                     <div className="flex items-center justify-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Memuat pengguna...
@@ -501,7 +687,7 @@ export default function UserManagementPage() {
                 </tr>
               ) : displayedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                     Tidak ada pengguna.
                   </td>
                 </tr>
@@ -578,6 +764,32 @@ export default function UserManagementPage() {
                           </span>
                         </div>
                       </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(user)}
+                            disabled={isSelf}
+                            className={`p-2 rounded-lg border ${
+                              isDark ? 'border-slate-600 text-gray-300 hover:bg-slate-700' : 'border-gray-200 text-gray-600 hover:bg-gray-100'
+                            } ${isSelf ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title={isSelf ? 'Tidak bisa mengubah akun sendiri' : 'Edit pengguna'}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openDeleteDialog([user])}
+                            disabled={isSelf}
+                            className={`p-2 rounded-lg border ${
+                              isDark ? 'border-red-500/40 text-red-400 hover:bg-red-500/10' : 'border-red-200 text-red-600 hover:bg-red-50'
+                            } ${isSelf ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title={isSelf ? 'Tidak bisa menghapus akun sendiri' : 'Hapus pengguna'}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })
@@ -600,7 +812,7 @@ export default function UserManagementPage() {
               {bulkUpdating ? 'Memproses...' : 'Nonaktifkan'}
             </button>
             <button
-              onClick={() => toast.error('Fitur hapus belum tersedia')}
+              onClick={() => openDeleteDialog(displayedUsers.filter((user) => selectedUsers.includes(user.id)))}
               className="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-sm font-medium"
             >
               Hapus
@@ -656,6 +868,191 @@ export default function UserManagementPage() {
           </div>
         </div>
       </div>
+
+      {editForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className={`w-full max-w-lg rounded-2xl p-6 ${isDark ? 'bg-slate-800' : 'bg-white shadow-xl'}`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Edit Pengguna</h3>
+                <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Perbarui data akun pengguna.</p>
+              </div>
+              <button
+                onClick={() => setEditForm(null)}
+                className={`p-2 rounded-lg ${isDark ? 'text-gray-400 hover:bg-slate-700' : 'text-gray-500 hover:bg-gray-100'}`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Nama</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(event) =>
+                    setEditForm((prev) => (prev ? { ...prev, name: event.target.value } : prev))
+                  }
+                  className={`mt-2 w-full rounded-lg border px-3 py-2 text-sm ${
+                    isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(event) =>
+                    setEditForm((prev) => (prev ? { ...prev, email: event.target.value } : prev))
+                  }
+                  className={`mt-2 w-full rounded-lg border px-3 py-2 text-sm ${
+                    isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Role</label>
+                <select
+                  value={editForm.role}
+                  disabled={!isRoleEditable}
+                  onChange={(event) =>
+                    setEditForm((prev) => (prev ? { ...prev, role: event.target.value } : prev))
+                  }
+                  className={`mt-2 w-full rounded-lg border px-3 py-2 text-sm ${
+                    isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                  } ${!isRoleEditable ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {!isRoleEditable && <option value={editForm.role}>{editForm.role}</option>}
+                  {editableRoleOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {!isRoleEditable && (
+                  <p className={`mt-1 text-xs ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                    Role ini tidak bisa diubah di modul akuntansi.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Outlet</label>
+                <select
+                  value={editForm.allOutlets ? 'all' : editForm.outletId || ''}
+                  onChange={(event) =>
+                    setEditForm((prev) => {
+                      if (!prev) return prev;
+                      if (event.target.value === 'all') {
+                        return { ...prev, allOutlets: true, outletId: '' };
+                      }
+                      return { ...prev, allOutlets: false, outletId: event.target.value };
+                    })
+                  }
+                  className={`mt-2 w-full rounded-lg border px-3 py-2 text-sm ${
+                    isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                  }`}
+                >
+                  <option value="all">Semua Outlet</option>
+                  {outlets.map((outlet) => (
+                    <option key={outlet.id} value={String(outlet.id)}>
+                      {outlet.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Password Baru (Opsional)</label>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editForm.password}
+                    onChange={(event) =>
+                      setEditForm((prev) => (prev ? { ...prev, password: event.target.value } : prev))
+                    }
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm ${
+                      isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900'
+                    }`}
+                    placeholder="Biarkan kosong jika tidak diubah"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGeneratePassword}
+                    className={`px-3 py-2 rounded-lg border text-sm ${
+                      isDark ? 'border-slate-600 text-gray-200 hover:bg-slate-700' : 'border-gray-200 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className={`flex items-center justify-between rounded-lg border p-3 ${isDark ? 'border-slate-600' : 'border-gray-200'}`}>
+                <div>
+                  <p className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Status Akun</p>
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {editForm.status ? 'Aktif' : 'Nonaktif'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditForm((prev) => (prev ? { ...prev, status: !prev.status } : prev))
+                  }
+                  disabled={isEditingSelf}
+                  className={`w-12 h-6 rounded-full p-1 transition-colors ${
+                    editForm.status ? 'bg-emerald-500' : isDark ? 'bg-slate-600' : 'bg-gray-300'
+                  } ${isEditingSelf ? 'opacity-60 cursor-not-allowed' : ''}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${editForm.status ? 'translate-x-6' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setEditForm(null)}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold ${
+                  isDark ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateUser}
+                disabled={isSaving}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold ${
+                  isSaving
+                    ? 'bg-purple-400 text-white cursor-not-allowed'
+                    : 'bg-purple-500 text-white hover:bg-purple-600'
+                }`}
+              >
+                {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, targets: [] })}
+        onConfirm={handleDeleteUsers}
+        title={deleteTitle}
+        message={deleteMessage}
+        details={deleteDetails}
+        confirmText="Hapus"
+        cancelText="Batal"
+        type="danger"
+        isLoading={deleteLoading}
+      />
     </div>
   );
 }
