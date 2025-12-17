@@ -41,6 +41,7 @@ const AccountingUserManagementPage = lazy(() => import('./pages/accounting/UserM
 const CreateUserPage = lazy(() => import('./pages/accounting/CreateUserPage'));
 const CreateJournalPage = lazy(() => import('./pages/accounting/CreateJournalPage'));
 const IncomeStatementPage = lazy(() => import('./pages/accounting/IncomeStatementPage'));
+const AccountingPlaceholderPage = lazy(() => import('./pages/accounting/PlaceholderPage'));
 
 // Loading fallback
 const PageLoader = () => (
@@ -183,9 +184,22 @@ function App() {
           <Route path="dashboard" element={<DashboardAkuntansiPage />} />
           <Route path="coa" element={<ChartOfAccountsPage />} />
           <Route path="journal" element={<CreateJournalPage />} />
+          <Route
+            path="ledger"
+            element={<AccountingPlaceholderPage title="Buku Besar" />}
+          />
           <Route path="reports" element={<IncomeStatementPage />} />
           <Route path="users" element={<AccountingUserManagementPage />} />
           <Route path="users/create" element={<CreateUserPage />} />
+          <Route
+            path="settings"
+            element={
+              <AccountingPlaceholderPage
+                title="Pengaturan Akuntansi"
+                backLabel="Kembali ke Dashboard Akuntansi"
+              />
+            }
+          />
           <Route index element={<Navigate to="/accounting/dashboard" />} />
         </Route>
 
@@ -199,6 +213,56 @@ function App() {
           }
         >
           <Route index element={<DashboardRetailPage />} />
+          <Route
+            path="sales"
+            element={
+              <AccountingPlaceholderPage
+                title="Sales Orders"
+                backTo="/accounting/retail"
+                backLabel="Kembali ke Dashboard Retail"
+              />
+            }
+          />
+          <Route
+            path="customers"
+            element={
+              <AccountingPlaceholderPage
+                title="Customers"
+                backTo="/accounting/retail"
+                backLabel="Kembali ke Dashboard Retail"
+              />
+            }
+          />
+          <Route
+            path="products"
+            element={
+              <AccountingPlaceholderPage
+                title="Products"
+                backTo="/accounting/retail"
+                backLabel="Kembali ke Dashboard Retail"
+              />
+            }
+          />
+          <Route
+            path="inventory"
+            element={
+              <AccountingPlaceholderPage
+                title="Inventory"
+                backTo="/accounting/retail"
+                backLabel="Kembali ke Dashboard Retail"
+              />
+            }
+          />
+          <Route
+            path="reports"
+            element={
+              <AccountingPlaceholderPage
+                title="Reports"
+                backTo="/accounting/retail"
+                backLabel="Kembali ke Dashboard Retail"
+              />
+            }
+          />
         </Route>
 
         {/* Accounting Distributor Dashboard */}
@@ -211,6 +275,56 @@ function App() {
           }
         >
           <Route index element={<DashboardDistributorPage />} />
+          <Route
+            path="pembelian"
+            element={
+              <AccountingPlaceholderPage
+                title="Pembelian"
+                backTo="/accounting/distributor"
+                backLabel="Kembali ke Dashboard Distributor"
+              />
+            }
+          />
+          <Route
+            path="supplier"
+            element={
+              <AccountingPlaceholderPage
+                title="Supplier"
+                backTo="/accounting/distributor"
+                backLabel="Kembali ke Dashboard Distributor"
+              />
+            }
+          />
+          <Route
+            path="stok"
+            element={
+              <AccountingPlaceholderPage
+                title="Stok"
+                backTo="/accounting/distributor"
+                backLabel="Kembali ke Dashboard Distributor"
+              />
+            }
+          />
+          <Route
+            path="keuangan"
+            element={
+              <AccountingPlaceholderPage
+                title="Keuangan"
+                backTo="/accounting/distributor"
+                backLabel="Kembali ke Dashboard Distributor"
+              />
+            }
+          />
+          <Route
+            path="laporan"
+            element={
+              <AccountingPlaceholderPage
+                title="Laporan"
+                backTo="/accounting/distributor"
+                backLabel="Kembali ke Dashboard Distributor"
+              />
+            }
+          />
         </Route>
 
         {/* Accounting Produsen Dashboard */}
@@ -223,6 +337,36 @@ function App() {
           }
         >
           <Route index element={<DashboardProdusenPage />} />
+          <Route
+            path="produksi"
+            element={
+              <AccountingPlaceholderPage
+                title="Produksi"
+                backTo="/accounting/produsen"
+                backLabel="Kembali ke Dashboard Produsen"
+              />
+            }
+          />
+          <Route
+            path="inventori"
+            element={
+              <AccountingPlaceholderPage
+                title="Inventori"
+                backTo="/accounting/produsen"
+                backLabel="Kembali ke Dashboard Produsen"
+              />
+            }
+          />
+          <Route
+            path="laporan"
+            element={
+              <AccountingPlaceholderPage
+                title="Laporan"
+                backTo="/accounting/produsen"
+                backLabel="Kembali ke Dashboard Produsen"
+              />
+            }
+          />
         </Route>
 
         {/* Cashier Route */}
