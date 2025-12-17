@@ -23,6 +23,27 @@ export interface Tenant {
   };
 }
 
+// Map snake_case API response to camelCase
+const mapTenant = (data: any): Tenant => ({
+  id: data.id,
+  businessName: data.business_name || data.businessName,
+  ownerName: data.owner_name || data.ownerName,
+  email: data.email,
+  phone: data.phone,
+  address: data.address,
+  subscriptionPlan: data.subscription_plan || data.subscriptionPlan,
+  subscriptionStatus: data.subscription_status || data.subscriptionStatus,
+  subscriptionStartsAt: data.subscription_starts_at || data.subscriptionStartsAt,
+  subscriptionExpiresAt: data.subscription_expires_at || data.subscriptionExpiresAt,
+  nextBillingDate: data.next_billing_date || data.nextBillingDate,
+  maxOutlets: data.max_outlets || data.maxOutlets,
+  maxUsers: data.max_users || data.maxUsers,
+  isActive: data.is_active ?? data.isActive,
+  createdAt: data.created_at || data.createdAt,
+  updatedAt: data.updated_at || data.updatedAt,
+  _count: data._count,
+});
+
 export interface CreateTenantData {
   businessName: string;
   ownerName: string;
@@ -42,8 +63,11 @@ export interface UpdateTenantData {
 
 export const tenantService = {
   async getAll(params?: { status?: string; plan?: string; search?: string }) {
-    const response = await api.get<{ success: boolean; data: Tenant[]; count: number }>('/tenants', { params });
-    return response.data;
+    const response = await api.get<{ success: boolean; data: any[]; count: number }>('/tenants', { params });
+    return {
+      ...response.data,
+      data: response.data.data.map(mapTenant),
+    };
   },
 
   // Alias for backward compatibility
@@ -52,28 +76,40 @@ export const tenantService = {
   },
 
   async getById(id: number) {
-    const response = await api.get<{ success: boolean; data: Tenant }>(`/tenants/${id}`);
-    return response.data.data;
+    const response = await api.get<{ success: boolean; data: any }>(`/tenants/${id}`);
+    return mapTenant(response.data.data);
   },
 
   async create(data: CreateTenantData) {
-    const response = await api.post<{ success: boolean; data: Tenant; message: string }>('/tenants', data);
-    return response.data;
+    const response = await api.post<{ success: boolean; data: any; message: string }>('/tenants', data);
+    return {
+      ...response.data,
+      data: mapTenant(response.data.data),
+    };
   },
 
   async update(id: number, data: UpdateTenantData) {
-    const response = await api.put<{ success: boolean; data: Tenant; message: string }>(`/tenants/${id}`, data);
-    return response.data;
+    const response = await api.put<{ success: boolean; data: any; message: string }>(`/tenants/${id}`, data);
+    return {
+      ...response.data,
+      data: mapTenant(response.data.data),
+    };
   },
 
   async toggleStatus(id: number, isActive: boolean) {
-    const response = await api.patch<{ success: boolean; data: Tenant; message: string }>(`/tenants/${id}/status`, { isActive });
-    return response.data;
+    const response = await api.patch<{ success: boolean; data: any; message: string }>(`/tenants/${id}/status`, { isActive });
+    return {
+      ...response.data,
+      data: mapTenant(response.data.data),
+    };
   },
 
   async updateSubscription(id: number, data: { plan?: string; status?: string; expiresAt?: string }) {
-    const response = await api.patch<{ success: boolean; data: Tenant; message: string }>(`/tenants/${id}/subscription`, data);
-    return response.data;
+    const response = await api.patch<{ success: boolean; data: any; message: string }>(`/tenants/${id}/subscription`, data);
+    return {
+      ...response.data,
+      data: mapTenant(response.data.data),
+    };
   },
 
   async delete(id: number) {
