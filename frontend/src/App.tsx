@@ -236,6 +236,16 @@ function App() {
         >
           <Route index element={<DashboardRetailPage />} />
           <Route
+            path="settings"
+            element={
+              <AccountingPlaceholderPage
+                title="Pengaturan"
+                backTo="/accounting/retail"
+                backLabel="Kembali ke Dashboard Retail"
+              />
+            }
+          />
+          <Route
             path="sales"
             element={
               <AccountingPlaceholderPage
@@ -298,6 +308,16 @@ function App() {
         >
           <Route index element={<DashboardDistributorPage />} />
           <Route
+            path="settings"
+            element={
+              <AccountingPlaceholderPage
+                title="Pengaturan"
+                backTo="/accounting/distributor"
+                backLabel="Kembali ke Dashboard Distributor"
+              />
+            }
+          />
+          <Route
             path="pembelian"
             element={
               <AccountingPlaceholderPage
@@ -359,6 +379,16 @@ function App() {
           }
         >
           <Route index element={<DashboardProdusenPage />} />
+          <Route
+            path="settings"
+            element={
+              <AccountingPlaceholderPage
+                title="Pengaturan"
+                backTo="/accounting/produsen"
+                backLabel="Kembali ke Dashboard Produsen"
+              />
+            }
+          />
           <Route
             path="produksi"
             element={
