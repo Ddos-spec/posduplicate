@@ -1,13 +1,24 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
+import toast from 'react-hot-toast';
 import {
-  ShoppingBag, Users, FileText, TrendingUp, Star, Calendar,
-  Building2, Plus, Eye
+  ShoppingBag, Users, TrendingUp, Star, Calendar,
+  Building2, Plus
 } from 'lucide-react';
 
 export default function DashboardRetailPage() {
   const { isDark } = useThemeStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'today' | 'pending' | 'done'>('today');
+  const [selectedOutlet, setSelectedOutlet] = useState('pusat');
+  const [showOutletDropdown, setShowOutletDropdown] = useState(false);
+
+  const outlets = [
+    { id: 'pusat', name: 'Outlet Pusat' },
+    { id: 'jakarta', name: 'Outlet Jakarta' },
+    { id: 'surabaya', name: 'Outlet Surabaya' },
+  ];
 
   const stats = [
     {
@@ -41,13 +52,29 @@ export default function DashboardRetailPage() {
     }
   ];
 
-  const salesOrders = [
-    { id: 'SO-2025-156', customer: 'John Doe', items: 5, total: 1250000, status: 'Lunas' },
-    { id: 'SO-2025-155', customer: 'Sarah Smith', items: 2, total: 850000, status: 'Pending' },
-    { id: 'SO-2025-154', customer: 'Mike Ross', items: 8, total: 3400000, status: 'Lunas' },
-    { id: 'SO-2025-153', customer: 'Elena G', items: 1, total: 150000, status: 'Selesai' },
-    { id: 'SO-2025-152', customer: 'Tom H', items: 3, total: 750000, status: 'Lunas' },
+  const allSalesOrders = [
+    { id: 'SO-2025-156', customer: 'John Doe', items: 5, total: 1250000, status: 'Lunas', date: 'today' },
+    { id: 'SO-2025-155', customer: 'Sarah Smith', items: 2, total: 850000, status: 'Pending', date: 'today' },
+    { id: 'SO-2025-154', customer: 'Mike Ross', items: 8, total: 3400000, status: 'Lunas', date: 'today' },
+    { id: 'SO-2025-153', customer: 'Elena G', items: 1, total: 150000, status: 'Selesai', date: 'yesterday' },
+    { id: 'SO-2025-152', customer: 'Tom H', items: 3, total: 750000, status: 'Lunas', date: 'yesterday' },
+    { id: 'SO-2025-151', customer: 'Anna K', items: 4, total: 920000, status: 'Pending', date: 'today' },
+    { id: 'SO-2025-150', customer: 'David L', items: 2, total: 480000, status: 'Selesai', date: 'yesterday' },
   ];
+
+  const salesOrders = useMemo(() => {
+    return allSalesOrders.filter(order => {
+      if (activeTab === 'today') return order.date === 'today';
+      if (activeTab === 'pending') return order.status === 'Pending';
+      if (activeTab === 'done') return order.status === 'Selesai';
+      return true;
+    });
+  }, [activeTab]);
+
+  const handleCreateOrder = () => {
+    toast.success('Fitur Buat Order akan segera tersedia');
+    // navigate('/accounting/retail/sales/create');
+  };
 
   const topProducts = [
     { name: 'Product A', revenue: 2500000, color: 'emerald' },
@@ -79,10 +106,36 @@ export default function DashboardRetailPage() {
             <Calendar className="w-4 h-4" />
             Hari Ini
           </button>
-          <button className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${isDark ? 'border-slate-700 text-gray-300 hover:bg-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-            <Building2 className="w-4 h-4" />
-            Outlet Pusat
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowOutletDropdown(!showOutletDropdown)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${isDark ? 'border-slate-700 text-gray-300 hover:bg-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Building2 className="w-4 h-4" />
+              {outlets.find(o => o.id === selectedOutlet)?.name || 'Pilih Outlet'}
+            </button>
+            {showOutletDropdown && (
+              <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg z-10 ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-200'}`}>
+                {outlets.map(outlet => (
+                  <button
+                    key={outlet.id}
+                    onClick={() => {
+                      setSelectedOutlet(outlet.id);
+                      setShowOutletDropdown(false);
+                      toast.success(`Outlet diubah ke ${outlet.name}`);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      selectedOutlet === outlet.id
+                        ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-600'
+                        : isDark ? 'text-gray-300 hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {outlet.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -164,7 +217,10 @@ export default function DashboardRetailPage() {
                   </button>
                 ))}
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600">
+              <button
+                onClick={handleCreateOrder}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600"
+              >
                 <Plus className="w-4 h-4" />
                 Buat Order
               </button>
@@ -214,7 +270,10 @@ export default function DashboardRetailPage() {
             </table>
           </div>
 
-          <button className={`w-full mt-4 py-2 text-center text-sm font-medium ${isDark ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-600 hover:text-emerald-700'}`}>
+          <button
+            onClick={() => navigate('/accounting/retail/sales')}
+            className={`w-full mt-4 py-2 text-center text-sm font-medium ${isDark ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-600 hover:text-emerald-700'}`}
+          >
             View All Orders
           </button>
         </div>
@@ -225,7 +284,12 @@ export default function DashboardRetailPage() {
           <div className={`p-6 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-white shadow'}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Produk Terlaris</h2>
-              <button className="text-sm text-emerald-500 hover:text-emerald-400">Lihat Semua</button>
+              <button
+                onClick={() => navigate('/accounting/retail/products')}
+                className="text-sm text-emerald-500 hover:text-emerald-400"
+              >
+                Lihat Semua
+              </button>
             </div>
             <div className="space-y-4">
               {topProducts.map((product, idx) => (
@@ -277,7 +341,10 @@ export default function DashboardRetailPage() {
               <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Avg. Transaction</span>
               <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Rp 275.000</span>
             </div>
-            <button className={`w-full py-2 rounded-lg border text-center font-medium ${isDark ? 'border-slate-600 text-gray-300 hover:bg-slate-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+            <button
+              onClick={() => navigate('/accounting/retail/customers')}
+              className={`w-full py-2 rounded-lg border text-center font-medium ${isDark ? 'border-slate-600 text-gray-300 hover:bg-slate-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
               Kelola Customer
             </button>
           </div>

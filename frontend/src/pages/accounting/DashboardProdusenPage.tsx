@@ -1,13 +1,24 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
+import toast from 'react-hot-toast';
 import {
   Factory, Layers, ClipboardList, Package, CheckCircle, AlertTriangle,
-  Plus, Calendar, Building2, TrendingUp
+  Plus, Calendar, Building2
 } from 'lucide-react';
 
 export default function DashboardProdusenPage() {
   const { isDark } = useThemeStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'active' | 'pending' | 'completed'>('active');
+  const [selectedOutlet, setSelectedOutlet] = useState('pusat');
+  const [showOutletDropdown, setShowOutletDropdown] = useState(false);
+
+  const outlets = [
+    { id: 'pusat', name: 'Pabrik Pusat' },
+    { id: 'cabang1', name: 'Pabrik Cabang 1' },
+    { id: 'cabang2', name: 'Pabrik Cabang 2' },
+  ];
 
   const stats = [
     {
@@ -43,11 +54,31 @@ export default function DashboardProdusenPage() {
     }
   ];
 
-  const workOrders = [
-    { id: 'WO-2025-045', product: 'Product Alpha', quantity: 100, progress: 75, date: '14 Des', estDate: '18 Des' },
-    { id: 'WO-2025-046', product: 'Snack Pack B', quantity: 500, progress: 25, date: '15 Des', estDate: '20 Des' },
-    { id: 'WO-2025-047', product: 'Flour Mix XL', quantity: 200, progress: 10, date: '16 Des', estDate: '22 Des' },
+  const allWorkOrders = [
+    { id: 'WO-2025-045', product: 'Product Alpha', quantity: 100, progress: 75, date: '14 Des', estDate: '18 Des', status: 'active' },
+    { id: 'WO-2025-046', product: 'Snack Pack B', quantity: 500, progress: 25, date: '15 Des', estDate: '20 Des', status: 'active' },
+    { id: 'WO-2025-047', product: 'Flour Mix XL', quantity: 200, progress: 10, date: '16 Des', estDate: '22 Des', status: 'pending' },
+    { id: 'WO-2025-048', product: 'Cookie Batch', quantity: 300, progress: 0, date: '17 Des', estDate: '24 Des', status: 'pending' },
+    { id: 'WO-2025-044', product: 'Bread Mix', quantity: 150, progress: 100, date: '12 Des', estDate: '15 Des', status: 'completed' },
+    { id: 'WO-2025-043', product: 'Cake Base', quantity: 80, progress: 100, date: '10 Des', estDate: '13 Des', status: 'completed' },
   ];
+
+  const workOrders = useMemo(() => {
+    return allWorkOrders.filter(order => order.status === activeTab);
+  }, [activeTab]);
+
+  const handleCreateWorkOrder = () => {
+    toast.success('Fitur Buat Work Order akan segera tersedia');
+    // navigate('/accounting/produsen/produksi/create');
+  };
+
+  const handleOrderMaterial = (material: string) => {
+    toast.success(`Order bahan ${material} diproses`);
+  };
+
+  const handleAddMaterial = () => {
+    toast.success('Fitur Tambah Bahan akan segera tersedia');
+  };
 
   const materials = [
     { name: 'Tepung Terigu', used: 50, left: 200, unit: 'kg', status: 'normal' },
@@ -84,12 +115,38 @@ export default function DashboardProdusenPage() {
         <div className="flex items-center gap-3">
           <button className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${isDark ? 'border-slate-700 text-gray-300 hover:bg-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
             <Calendar className="w-4 h-4" />
-            16 Des 2025
+            {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
           </button>
-          <button className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${isDark ? 'border-slate-700 text-gray-300 hover:bg-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-            <Building2 className="w-4 h-4" />
-            Outlet: Pusat
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowOutletDropdown(!showOutletDropdown)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${isDark ? 'border-slate-700 text-gray-300 hover:bg-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Building2 className="w-4 h-4" />
+              {outlets.find(o => o.id === selectedOutlet)?.name || 'Pilih Pabrik'}
+            </button>
+            {showOutletDropdown && (
+              <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg z-10 ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-200'}`}>
+                {outlets.map(outlet => (
+                  <button
+                    key={outlet.id}
+                    onClick={() => {
+                      setSelectedOutlet(outlet.id);
+                      setShowOutletDropdown(false);
+                      toast.success(`Pabrik diubah ke ${outlet.name}`);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      selectedOutlet === outlet.id
+                        ? isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-600'
+                        : isDark ? 'text-gray-300 hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {outlet.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -160,7 +217,10 @@ export default function DashboardProdusenPage() {
               <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Work Orders Produksi</h2>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Monitor status dan progres pesanan</p>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600">
+            <button
+              onClick={handleCreateWorkOrder}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+            >
               <Plus className="w-4 h-4" />
               Buat Work Order
             </button>
@@ -178,7 +238,9 @@ export default function DashboardProdusenPage() {
                     : isDark ? 'text-gray-400' : 'text-gray-500'
                 }`}
               >
-                {tab === 'active' ? 'Active (12)' : tab === 'pending' ? 'Pending (4)' : 'Completed (45)'}
+                {tab === 'active' ? `Active (${allWorkOrders.filter(o => o.status === 'active').length})` :
+                 tab === 'pending' ? `Pending (${allWorkOrders.filter(o => o.status === 'pending').length})` :
+                 `Completed (${allWorkOrders.filter(o => o.status === 'completed').length})`}
               </button>
             ))}
           </div>
@@ -289,7 +351,12 @@ export default function DashboardProdusenPage() {
           <div className={`p-6 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-white shadow'}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Penggunaan Bahan</h2>
-              <button className="text-sm text-purple-500 hover:text-purple-400">+ Tambah</button>
+              <button
+                onClick={handleAddMaterial}
+                className="text-sm text-purple-500 hover:text-purple-400"
+              >
+                + Tambah
+              </button>
             </div>
             <div className="space-y-4">
               {materials.map((material, idx) => (
@@ -299,7 +366,12 @@ export default function DashboardProdusenPage() {
                     {material.status === 'low' ? (
                       <div className="flex items-center gap-2">
                         <span className="text-red-500 text-sm">Low Stock</span>
-                        <button className="px-2 py-0.5 rounded bg-red-500 text-white text-xs">Order</button>
+                        <button
+                          onClick={() => handleOrderMaterial(material.name)}
+                          className="px-2 py-0.5 rounded bg-red-500 text-white text-xs"
+                        >
+                          Order
+                        </button>
                       </div>
                     ) : (
                       <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
