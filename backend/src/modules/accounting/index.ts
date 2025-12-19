@@ -12,6 +12,10 @@ import accountingBudgetRoutes from './routes/accounting.budget.routes';
 import accountingReconciliationRoutes from './routes/accounting.reconciliation.routes';
 import accountingAssetRoutes from './routes/accounting.asset.routes';
 import accountingTaxRoutes from './routes/accounting.tax.routes';
+// Advanced modules
+import accountingRolebasedRoutes from './routes/accounting.rolebased.routes';
+import accountingSettingsRoutes from './routes/accounting.settings.routes';
+import accountingAdvancedForecastRoutes from './routes/accounting.advanced-forecast.routes';
 
 const router = Router();
 
@@ -29,5 +33,10 @@ router.use('/budgets', accountingBudgetRoutes);
 router.use('/reconciliation', accountingReconciliationRoutes);
 router.use('/assets', accountingAssetRoutes);
 router.use('/tax', accountingTaxRoutes);
+
+// Advanced Modules
+router.use('/dashboard/role', accountingRolebasedRoutes);  // Role-based dashboards
+router.use('/settings', accountingSettingsRoutes);          // Comprehensive settings
+router.use('/forecast/advanced', accountingAdvancedForecastRoutes); // Advanced forecasting
 
 export default router;
