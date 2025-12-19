@@ -7,6 +7,7 @@ import accountingPeriodRoutes from './routes/accounting.period.routes';
 import accountingDashboardRoutes from './routes/accounting.dashboard.routes';
 import accountingUserRoutes from './routes/accounting.user.routes';
 import accountingLedgerRoutes from './routes/accounting.ledger.routes';
+import accountingForecastRoutes from './routes/accounting.forecast.routes';
 
 const router = Router();
 
@@ -19,5 +20,6 @@ router.use('/periods', accountingPeriodRoutes);
 router.use('/dashboard', accountingDashboardRoutes);
 router.use('/users', accountingUserRoutes);
 router.use('/ledger', accountingLedgerRoutes);
+router.use('/forecast', accountingForecastRoutes);
 
 export default router;
