@@ -8,6 +8,10 @@ import accountingDashboardRoutes from './routes/accounting.dashboard.routes';
 import accountingUserRoutes from './routes/accounting.user.routes';
 import accountingLedgerRoutes from './routes/accounting.ledger.routes';
 import accountingForecastRoutes from './routes/accounting.forecast.routes';
+import accountingBudgetRoutes from './routes/accounting.budget.routes';
+import accountingReconciliationRoutes from './routes/accounting.reconciliation.routes';
+import accountingAssetRoutes from './routes/accounting.asset.routes';
+import accountingTaxRoutes from './routes/accounting.tax.routes';
 
 const router = Router();
 
@@ -21,5 +25,9 @@ router.use('/dashboard', accountingDashboardRoutes);
 router.use('/users', accountingUserRoutes);
 router.use('/ledger', accountingLedgerRoutes);
 router.use('/forecast', accountingForecastRoutes);
+router.use('/budgets', accountingBudgetRoutes);
+router.use('/reconciliation', accountingReconciliationRoutes);
+router.use('/assets', accountingAssetRoutes);
+router.use('/tax', accountingTaxRoutes);
 
 export default router;
