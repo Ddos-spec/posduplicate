@@ -16,6 +16,10 @@ import accountingTaxRoutes from './routes/accounting.tax.routes';
 import accountingRolebasedRoutes from './routes/accounting.rolebased.routes';
 import accountingSettingsRoutes from './routes/accounting.settings.routes';
 import accountingAdvancedForecastRoutes from './routes/accounting.advanced-forecast.routes';
+// Enterprise modules (101/100 vs Accurate)
+import accountingEfakturRoutes from './routes/accounting.efaktur.routes';
+import accountingApprovalRoutes from './routes/accounting.approval.routes';
+import accountingPsakRoutes from './routes/accounting.psak.routes';
 
 const router = Router();
 
@@ -38,5 +42,10 @@ router.use('/tax', accountingTaxRoutes);
 router.use('/dashboard/role', accountingRolebasedRoutes);  // Role-based dashboards
 router.use('/settings', accountingSettingsRoutes);          // Comprehensive settings
 router.use('/forecast/advanced', accountingAdvancedForecastRoutes); // Advanced forecasting
+
+// Enterprise Modules (101/100 vs Accurate)
+router.use('/efaktur', accountingEfakturRoutes);            // e-Faktur PPN/PPh integration
+router.use('/approval', accountingApprovalRoutes);          // Multi-level approval workflow
+router.use('/psak', accountingPsakRoutes);                  // PSAK-compliant reports
 
 export default router;
