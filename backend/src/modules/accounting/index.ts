@@ -20,6 +20,9 @@ import accountingAdvancedForecastRoutes from './routes/accounting.advanced-forec
 import accountingEfakturRoutes from './routes/accounting.efaktur.routes';
 import accountingApprovalRoutes from './routes/accounting.approval.routes';
 import accountingPsakRoutes from './routes/accounting.psak.routes';
+// Final modules (101/100 completion)
+import accountingAttachmentRoutes from './routes/accounting.attachment.routes';
+import accountingPayrollRoutes from './routes/accounting.payroll.routes';
 
 const router = Router();
 
@@ -47,5 +50,9 @@ router.use('/forecast/advanced', accountingAdvancedForecastRoutes); // Advanced 
 router.use('/efaktur', accountingEfakturRoutes);            // e-Faktur PPN/PPh integration
 router.use('/approval', accountingApprovalRoutes);          // Multi-level approval workflow
 router.use('/psak', accountingPsakRoutes);                  // PSAK-compliant reports
+
+// Final Modules (101/100 completion)
+router.use('/attachments', accountingAttachmentRoutes);     // Document attachment system
+router.use('/payroll', accountingPayrollRoutes);            // Payroll with PPh 21 & BPJS
 
 export default router;
