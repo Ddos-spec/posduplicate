@@ -1,25 +1,73 @@
 import { Request, Response } from 'express';
 import prisma from '../../../utils/prisma';
+import { safeParseInt, safeParseDate } from '../../../utils/validation';
+
+/**
+ * Get tenant outlet IDs for isolation
+ */
+const getTenantOutletIds = async (tenantId: number | undefined): Promise<number[]> => {
+  if (!tenantId) return [];
+  const outlets = await prisma.outlets.findMany({
+    where: { tenant_id: tenantId },
+    select: { id: true }
+  });
+  return outlets.map(o => o.id);
+};
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
-    const { date_from, date_to } = req.query;
+    const { date_from, date_to, outlet_id } = req.query;
 
-    // Date range filter
-    const dateFilter: any = {};
-    if (date_from) {
-      dateFilter.gte = new Date(date_from as string);
+    // Build where clause with tenant isolation
+    const where: any = { status: 'completed' };
+
+    // Tenant isolation
+    if (req.tenantId) {
+      const outletIds = await getTenantOutletIds(req.tenantId);
+      if (outletIds.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            totalRevenue: 0,
+            totalTransactions: 0,
+            averageTransaction: 0,
+            totalItemsSold: 0,
+            todayRevenue: 0,
+            todayTransactions: 0,
+            revenueChange: 0
+          }
+        });
+      }
+      where.outlet_id = { in: outletIds };
     }
-    if (date_to) {
-      dateFilter.lte = new Date(date_to as string);
+
+    // Specific outlet filter with tenant validation
+    if (outlet_id) {
+      const parsedOutletId = safeParseInt(outlet_id);
+      if (req.tenantId) {
+        const outletIds = await getTenantOutletIds(req.tenantId);
+        if (!outletIds.includes(parsedOutletId)) {
+          return res.status(403).json({
+            success: false,
+            error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
+          });
+        }
+      }
+      where.outlet_id = parsedOutletId;
+    }
+
+    // Date range filter with validation
+    const fromDate = safeParseDate(date_from);
+    const toDate = safeParseDate(date_to);
+    if (fromDate || toDate) {
+      where.created_at = {};
+      if (fromDate) where.created_at.gte = fromDate;
+      if (toDate) where.created_at.lte = toDate;
     }
 
     // Get all completed transactions
     const transactions = await prisma.transactions.findMany({
-      where: {
-        status: 'completed',
-        ...(Object.keys(dateFilter).length > 0 && { created_at: dateFilter })
-      },
+      where,
       include: {
         transaction_items: true,
         payments: true
@@ -45,14 +93,10 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     // Get yesterday's revenue for comparison
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+
+    const yesterdayWhere = { ...where, created_at: { gte: yesterday, lt: today } };
     const yesterdayTransactions = await prisma.transactions.findMany({
-      where: {
-        status: 'completed',
-        created_at: {
-          gte: yesterday,
-          lt: today
-        }
-      }
+      where: yesterdayWhere
     });
     const yesterdayRevenue = yesterdayTransactions.reduce((sum, t) => sum + parseFloat((t.total ?? 0).toString()), 0);
     const revenueChange = yesterdayRevenue > 0
@@ -75,14 +119,41 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     console.error('Get dashboard stats error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to get dashboard stats', details: error.message }
+      error: { code: 'SERVER_ERROR', message: 'Failed to get dashboard stats' }
     });
   }
 };
 
 export const getSalesChart = async (req: Request, res: Response) => {
   try {
-    const { period = 'week' } = req.query; // week, month, year
+    const { period = 'week', outlet_id } = req.query;
+
+    // Build where clause with tenant isolation
+    const where: any = { status: 'completed' };
+
+    // Tenant isolation
+    if (req.tenantId) {
+      const outletIds = await getTenantOutletIds(req.tenantId);
+      if (outletIds.length === 0) {
+        return res.json({ success: true, data: [] });
+      }
+      where.outlet_id = { in: outletIds };
+    }
+
+    // Specific outlet filter
+    if (outlet_id) {
+      const parsedOutletId = safeParseInt(outlet_id);
+      if (req.tenantId) {
+        const outletIds = await getTenantOutletIds(req.tenantId);
+        if (!outletIds.includes(parsedOutletId)) {
+          return res.status(403).json({
+            success: false,
+            error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
+          });
+        }
+      }
+      where.outlet_id = parsedOutletId;
+    }
 
     const startDate = new Date();
     let groupBy = 'day';
@@ -98,16 +169,11 @@ export const getSalesChart = async (req: Request, res: Response) => {
       groupBy = 'month';
     }
 
+    where.created_at = { gte: startDate };
+
     const transactions = await prisma.transactions.findMany({
-      where: {
-        status: 'completed',
-        created_at: {
-          gte: startDate
-        }
-      },
-      orderBy: {
-        created_at: 'asc'
-      }
+      where,
+      orderBy: { created_at: 'asc' }
     });
 
     // Group by date
@@ -117,9 +183,9 @@ export const getSalesChart = async (req: Request, res: Response) => {
       let key: string;
 
       if (groupBy === 'day') {
-        key = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        key = date.toISOString().split('T')[0];
       } else {
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       }
 
       if (!salesByDate[key]) {
@@ -146,21 +212,46 @@ export const getSalesChart = async (req: Request, res: Response) => {
     console.error('Get sales chart error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to get sales chart', details: error.message }
+      error: { code: 'SERVER_ERROR', message: 'Failed to get sales chart' }
     });
   }
 };
 
 export const getTopProducts = async (req: Request, res: Response) => {
   try {
-    const { limit = 10 } = req.query;
+    const { limit = 10, outlet_id } = req.query;
+
+    // Build where clause with tenant isolation
+    const transactionWhere: any = { status: 'completed' };
+
+    // Tenant isolation
+    if (req.tenantId) {
+      const outletIds = await getTenantOutletIds(req.tenantId);
+      if (outletIds.length === 0) {
+        return res.json({ success: true, data: [] });
+      }
+      transactionWhere.outlet_id = { in: outletIds };
+    }
+
+    // Specific outlet filter
+    if (outlet_id) {
+      const parsedOutletId = safeParseInt(outlet_id);
+      if (req.tenantId) {
+        const outletIds = await getTenantOutletIds(req.tenantId);
+        if (!outletIds.includes(parsedOutletId)) {
+          return res.status(403).json({
+            success: false,
+            error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
+          });
+        }
+      }
+      transactionWhere.outlet_id = parsedOutletId;
+    }
 
     const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
-          is: {
-            status: 'completed'
-          }
+          is: transactionWhere
         }
       },
       select: {
@@ -187,7 +278,7 @@ export const getTopProducts = async (req: Request, res: Response) => {
     // Sort by quantity and limit
     const topProducts = Object.values(productStats)
       .sort((a: any, b: any) => b.quantity - a.quantity)
-      .slice(0, parseInt(limit as string));
+      .slice(0, safeParseInt(limit, 10));
 
     res.json({
       success: true,
@@ -197,15 +288,51 @@ export const getTopProducts = async (req: Request, res: Response) => {
     console.error('Get top products error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to get top products', details: error.message }
+      error: { code: 'SERVER_ERROR', message: 'Failed to get top products' }
     });
   }
 };
 
-export const getSalesByCategory = async (_req: Request, res: Response) => {
+export const getSalesByCategory = async (req: Request, res: Response) => {
   try {
-    // Get all items with their categories
+    const { outlet_id } = req.query;
+
+    // Build where clause with tenant isolation
+    const transactionWhere: any = { status: 'completed' };
+
+    // Tenant isolation
+    if (req.tenantId) {
+      const outletIds = await getTenantOutletIds(req.tenantId);
+      if (outletIds.length === 0) {
+        return res.json({ success: true, data: [] });
+      }
+      transactionWhere.outlet_id = { in: outletIds };
+    }
+
+    // Specific outlet filter
+    if (outlet_id) {
+      const parsedOutletId = safeParseInt(outlet_id);
+      if (req.tenantId) {
+        const outletIds = await getTenantOutletIds(req.tenantId);
+        if (!outletIds.includes(parsedOutletId)) {
+          return res.status(403).json({
+            success: false,
+            error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
+          });
+        }
+      }
+      transactionWhere.outlet_id = parsedOutletId;
+    }
+
+    // Get all items with their categories (filtered by tenant outlets)
+    const itemsWhere: any = {};
+    if (req.tenantId) {
+      const outletIds = await getTenantOutletIds(req.tenantId);
+      itemsWhere.outlet_id = { in: outletIds };
+    }
+
     const items = await prisma.items.findMany({
+      where: itemsWhere,
       include: {
         categories: true
       }
@@ -221,9 +348,7 @@ export const getSalesByCategory = async (_req: Request, res: Response) => {
     const transactionItems = await prisma.transaction_items.findMany({
       where: {
         transactions: {
-          is: {
-            status: 'completed'
-          }
+          is: transactionWhere
         }
       },
       select: {
@@ -259,16 +384,44 @@ export const getSalesByCategory = async (_req: Request, res: Response) => {
     console.error('Get sales by category error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to get sales by category', details: error.message }
+      error: { code: 'SERVER_ERROR', message: 'Failed to get sales by category' }
     });
   }
 };
 
 export const getRecentTransactions = async (req: Request, res: Response) => {
   try {
-    const { limit = 10 } = req.query;
+    const { limit = 10, outlet_id } = req.query;
+
+    // Build where clause with tenant isolation
+    const where: any = {};
+
+    // Tenant isolation
+    if (req.tenantId) {
+      const outletIds = await getTenantOutletIds(req.tenantId);
+      if (outletIds.length === 0) {
+        return res.json({ success: true, data: [] });
+      }
+      where.outlet_id = { in: outletIds };
+    }
+
+    // Specific outlet filter
+    if (outlet_id) {
+      const parsedOutletId = safeParseInt(outlet_id);
+      if (req.tenantId) {
+        const outletIds = await getTenantOutletIds(req.tenantId);
+        if (!outletIds.includes(parsedOutletId)) {
+          return res.status(403).json({
+            success: false,
+            error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
+          });
+        }
+      }
+      where.outlet_id = parsedOutletId;
+    }
 
     const transactions = await prisma.transactions.findMany({
+      where,
       include: {
         users: {
           select: {
@@ -286,7 +439,7 @@ export const getRecentTransactions = async (req: Request, res: Response) => {
       orderBy: {
         created_at: 'desc'
       },
-      take: parseInt(limit as string)
+      take: safeParseInt(limit, 10)
     });
 
     res.json({
@@ -297,7 +450,7 @@ export const getRecentTransactions = async (req: Request, res: Response) => {
     console.error('Get recent transactions error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to get recent transactions', details: error.message }
+      error: { code: 'SERVER_ERROR', message: 'Failed to get recent transactions' }
     });
   }
 };
