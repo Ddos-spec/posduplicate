@@ -275,8 +275,10 @@ export const verifyGoFoodSignature = async (
       });
     }
 
-    // Store outlet_id from integration config in request
-    (req as any).integrationOutletId = gofoodIntegration.outlet_id;
+    // Store outlet_id from integration configuration JSON
+    const config = gofoodIntegration.configuration as any;
+    (req as any).integrationOutletId = config?.outlet_id || config?.outletId || null;
+    (req as any).integrationTenantId = gofoodIntegration.tenant_id;
 
     return next();
   } catch (error) {
@@ -383,8 +385,10 @@ export const verifyGrabFoodSignature = async (
       });
     }
 
-    // Store outlet_id from integration config in request
-    (req as any).integrationOutletId = grabfoodIntegration.outlet_id;
+    // Store outlet_id from integration configuration JSON
+    const config = grabfoodIntegration.configuration as any;
+    (req as any).integrationOutletId = config?.outlet_id || config?.outletId || null;
+    (req as any).integrationTenantId = grabfoodIntegration.tenant_id;
 
     return next();
   } catch (error) {
@@ -491,8 +495,10 @@ export const verifyShopeeFoodSignature = async (
       });
     }
 
-    // Store outlet_id from integration config in request
-    (req as any).integrationOutletId = shopeefoodIntegration.outlet_id;
+    // Store outlet_id from integration configuration JSON
+    const config = shopeefoodIntegration.configuration as any;
+    (req as any).integrationOutletId = config?.outlet_id || config?.outletId || null;
+    (req as any).integrationTenantId = shopeefoodIntegration.tenant_id;
 
     return next();
   } catch (error) {
