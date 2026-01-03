@@ -2,6 +2,19 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
 import { generateJournalFromExpense } from '../../../services/autoJournal.service';
+import { safeParseInt, safeParseDate } from '../../../utils/validation';
+
+/**
+ * Get tenant outlet IDs for isolation
+ */
+const getTenantOutletIds = async (tenantId: number | undefined): Promise<number[]> => {
+  if (!tenantId) return [];
+  const outlets = await prisma.outlets.findMany({
+    where: { tenant_id: tenantId },
+    select: { id: true }
+  });
+  return outlets.map(o => o.id);
+};
 
 // Get all expenses with filters
 export const getExpenses = async (req: Request, res: Response, _next: NextFunction) => {
@@ -18,8 +31,28 @@ export const getExpenses = async (req: Request, res: Response, _next: NextFuncti
 
     const where: any = {};
 
+    // Tenant isolation
+    if (req.tenantId) {
+      const outletIds = await getTenantOutletIds(req.tenantId);
+      if (outletIds.length === 0) {
+        return res.json({ success: true, data: [], count: 0 });
+      }
+      where.outlet_id = { in: outletIds };
+    }
+
+    // Specific outlet filter with tenant validation
     if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+      const parsedOutletId = safeParseInt(outlet_id);
+      if (req.tenantId) {
+        const outletIds = await getTenantOutletIds(req.tenantId);
+        if (!outletIds.includes(parsedOutletId)) {
+          return res.status(403).json({
+            success: false,
+            error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
+          });
+        }
+      }
+      where.outlet_id = parsedOutletId;
     }
 
     if (expense_type) {
@@ -31,13 +64,16 @@ export const getExpenses = async (req: Request, res: Response, _next: NextFuncti
     }
 
     if (supplier_id) {
-      where.supplier_id = parseInt(supplier_id as string);
+      where.supplier_id = safeParseInt(supplier_id);
     }
 
+    // Date validation
     if (date_from || date_to) {
       where.created_at = {};
-      if (date_from) where.created_at.gte = new Date(date_from as string);
-      if (date_to) where.created_at.lte = new Date(date_to as string);
+      const fromDate = safeParseDate(date_from);
+      const toDate = safeParseDate(date_to);
+      if (fromDate) where.created_at.gte = fromDate;
+      if (toDate) where.created_at.lte = toDate;
     }
 
     const expenses = await prisma.expenses.findMany({
@@ -56,7 +92,7 @@ export const getExpenses = async (req: Request, res: Response, _next: NextFuncti
         }
       },
       orderBy: { created_at: 'desc' },
-      take: parseInt(limit as string)
+      take: safeParseInt(limit, 100)
     });
 
     res.json({ success: true, data: expenses, count: expenses.length });
@@ -71,10 +107,11 @@ export const getExpense = async (req: Request, res: Response, _next: NextFunctio
     const { id } = req.params;
 
     const expense = await prisma.expenses.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: safeParseInt(id) },
       include: {
         users: { select: { id: true, name: true } },
         suppliers: { select: { id: true, name: true, phone: true, email: true } },
+        outlets: true,
         stock_movements: {
           include: {
             ingredients: { select: { name: true, unit: true } },
@@ -89,6 +126,16 @@ export const getExpense = async (req: Request, res: Response, _next: NextFunctio
         success: false,
         error: { code: 'EXPENSE_NOT_FOUND', message: 'Expense not found' }
       });
+    }
+
+    // Tenant isolation check
+    if (req.tenantId && expense.outlets) {
+      if (expense.outlets.tenant_id !== req.tenantId) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Access denied' }
+        });
+      }
     }
 
     res.json({ success: true, data: expense });
@@ -123,6 +170,21 @@ export const createExpense = async (req: Request, res: Response, _next: NextFunc
       });
     }
 
+    const parsedOutletId = safeParseInt(outletId);
+
+    // Tenant isolation - validate outlet belongs to tenant
+    if (req.tenantId) {
+      const outlet = await prisma.outlets.findFirst({
+        where: { id: parsedOutletId, tenant_id: req.tenantId }
+      });
+      if (!outlet) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
+        });
+      }
+    }
+
     const validTypes = ['STOCK_PURCHASE', 'SALARY', 'UTILITIES', 'RENT', 'MARKETING', 'OTHER'];
     if (!validTypes.includes(expenseType)) {
       return res.status(400).json({
@@ -133,18 +195,18 @@ export const createExpense = async (req: Request, res: Response, _next: NextFunc
 
     const expense = await prisma.expenses.create({
       data: {
-        outlet_id: parseInt(outletId),
+        outlet_id: parsedOutletId,
         expense_type: expenseType,
         category,
         amount: parseFloat(amount),
         description: description || null,
         payment_method: paymentMethod || null,
         receipt_image: receiptImage || null,
-        reference_id: referenceId ? parseInt(referenceId) : null,
-        supplier_id: supplierId ? parseInt(supplierId) : null,
+        reference_id: referenceId ? safeParseInt(referenceId) : null,
+        supplier_id: supplierId ? safeParseInt(supplierId) : null,
         invoice_number: invoiceNumber || null,
-        due_date: dueDate ? new Date(dueDate) : null,
-        paid_at: paidAt ? new Date(paidAt) : null,
+        due_date: safeParseDate(dueDate),
+        paid_at: safeParseDate(paidAt),
         user_id: req.userId || 0
       },
       include: {
