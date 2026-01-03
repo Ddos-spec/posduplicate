@@ -103,7 +103,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
       : 0;
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         totalRevenue,
@@ -117,7 +117,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Get dashboard stats error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'Failed to get dashboard stats' }
     });
@@ -204,13 +204,13 @@ export const getSalesChart = async (req: Request, res: Response) => {
       a.date.localeCompare(b.date)
     );
 
-    res.json({
+    return res.json({
       success: true,
       data: chartData
     });
   } catch (error: any) {
     console.error('Get sales chart error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'Failed to get sales chart' }
     });
@@ -280,13 +280,13 @@ export const getTopProducts = async (req: Request, res: Response) => {
       .sort((a: any, b: any) => b.quantity - a.quantity)
       .slice(0, safeParseInt(limit, 10));
 
-    res.json({
+    return res.json({
       success: true,
       data: topProducts
     });
   } catch (error: any) {
     console.error('Get top products error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'Failed to get top products' }
     });
@@ -376,13 +376,13 @@ export const getSalesByCategory = async (req: Request, res: Response) => {
 
     const categoryData = Object.values(categoryStats).sort((a: any, b: any) => b.revenue - a.revenue);
 
-    res.json({
+    return res.json({
       success: true,
       data: categoryData
     });
   } catch (error: any) {
     console.error('Get sales by category error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'Failed to get sales by category' }
     });
@@ -442,13 +442,13 @@ export const getRecentTransactions = async (req: Request, res: Response) => {
       take: safeParseInt(limit, 10)
     });
 
-    res.json({
+    return res.json({
       success: true,
       data: transactions
     });
   } catch (error: any) {
     console.error('Get recent transactions error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: { code: 'SERVER_ERROR', message: 'Failed to get recent transactions' }
     });
