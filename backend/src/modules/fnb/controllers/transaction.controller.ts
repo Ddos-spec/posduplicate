@@ -1,6 +1,43 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { generateJournalFromPOSTransaction } from '../../../services/autoJournal.service';
+import { safeParseFloat } from '../../../utils/validation';
+
+/**
+ * Check stock availability for items before checkout
+ */
+const validateStockAvailability = async (
+  items: Array<{ itemId: number; quantity: number; variantId?: number }>
+): Promise<{ valid: boolean; errors: string[] }> => {
+  const errors: string[] = [];
+
+  for (const item of items) {
+    const itemData = await prisma.items.findUnique({
+      where: { id: item.itemId },
+      select: { id: true, name: true, stock: true, track_stock: true, min_stock: true }
+    });
+
+    if (!itemData) {
+      errors.push(`Item ID ${item.itemId} tidak ditemukan`);
+      continue;
+    }
+
+    // Only check stock for items with track_stock enabled
+    if (itemData.track_stock) {
+      const currentStock = safeParseFloat(itemData.stock);
+      const requestedQty = safeParseFloat(item.quantity);
+
+      if (currentStock < requestedQty) {
+        errors.push(`Stok "${itemData.name}" tidak cukup (tersedia: ${currentStock}, diminta: ${requestedQty})`);
+      }
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+};
 
 /**
  * Get all transactions
@@ -268,6 +305,19 @@ export const createTransaction = async (
       });
     }
 
+    // Validate stock availability BEFORE creating transaction
+    const stockValidation = await validateStockAvailability(items);
+    if (!stockValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_STOCK',
+          message: 'Stok tidak mencukupi untuk beberapa item',
+          details: stockValidation.errors
+        }
+      });
+    }
+
     const transactionResult = await prisma.$transaction(async (tx) => {
       // Generate transaction number
       const transactionNumber = `TRX-${Date.now()}`;
@@ -469,10 +519,13 @@ export const createTransaction = async (
     });
   } catch (error: any) {
     if (error.message.includes('Item with ID')) {
-        return res.status(400).json({ success: false, error: { code: 'ITEM_NOT_FOUND', message: error.message } });
+      return res.status(400).json({ success: false, error: { code: 'ITEM_NOT_FOUND', message: error.message } });
     }
     if (error.message.includes('Total payment')) {
-        return res.status(400).json({ success: false, error: { code: 'INSUFFICIENT_PAYMENT', message: error.message } });
+      return res.status(400).json({ success: false, error: { code: 'INSUFFICIENT_PAYMENT', message: error.message } });
+    }
+    if (error.message.includes('Stok')) {
+      return res.status(400).json({ success: false, error: { code: 'INSUFFICIENT_STOCK', message: error.message } });
     }
     return next(error);
   }

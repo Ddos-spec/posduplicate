@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authMiddleware } from '../../../middleware/auth.middleware';
-import { tenantMiddleware } from '../../../middleware/tenant.middleware';
+import { authMiddleware } from '../../../middlewares/auth.middleware';
+import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import {
   // Employee management
   getEmployees,
