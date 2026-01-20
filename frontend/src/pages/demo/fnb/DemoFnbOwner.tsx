@@ -363,6 +363,7 @@ export default function DemoFnbOwner() {
             <span className="text-sm font-medium text-gray-700">View Reports</span>
           </button>
           <button
+            onClick={() => navigate('/demo/fnb/owner/settings')}
             className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition flex flex-col items-center gap-2"
           >
             <Settings className="w-8 h-8 text-orange-600" />
