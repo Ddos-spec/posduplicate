@@ -64,18 +64,7 @@ export default function ModuleSelectorPage() {
     }
   ];
 
-  const comingSoon = [
-    {
-      name: 'MyCRM',
-      description: 'Customer relationship management.',
-      icon: Users
-    },
-    {
-      name: 'MyReports',
-      description: 'Custom analytics dashboard.',
-      icon: BarChart3
-    }
-  ];
+  const comingSoon = [];
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
