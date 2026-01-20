@@ -1,12 +1,21 @@
 import { useThemeStore } from '../../store/themeStore';
 import { MOCK_INVENTORY_STATS, MOCK_ALERTS, MOCK_FORECAST_DATA } from './mockInventoryData';
 import {
-  AlertTriangle, CheckCircle, Package, ShoppingCart, TrendingUp, ArrowRight, XCircle
-} from 'lucide-react';
+  AlertTriangle, CheckCircle, Package, ShoppingCart, TrendingUp, ArrowRight, XCircle, Clock
+}
+from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
-} from 'recharts';
+}
+from 'recharts';
 import { useNavigate, useLocation } from 'react-router-dom';
+
+const RECENT_ACTIVITIES = [
+  { id: 1, user: 'Budi (Gudang)', action: 'Stok Opname: Kopi Arabika', time: '10 mins ago', type: 'adjustment' },
+  { id: 2, user: 'Siti (Purchasing)', action: 'PO Created: #PO-2025-001', time: '1 hour ago', type: 'order' },
+  { id: 3, user: 'System', action: 'Alert: Susu Low Stock', time: '2 hours ago', type: 'alert' },
+  { id: 4, user: 'Andi (Kitchen)', action: 'Usage: 5kg Tepung', time: '3 hours ago', type: 'usage' },
+];
 
 export default function InventoryDashboard() {
   const { isDark } = useThemeStore();
@@ -137,38 +146,63 @@ export default function InventoryDashboard() {
         </div>
 
         {/* Quick Action / Recommendations */}
-        <div className={`p-6 rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <h3 className={`font-bold text-lg mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Rekomendasi Cerdas</h3>
-          <div className="space-y-4">
-            {MOCK_ALERTS.filter(a => a.type !== 'critical').map((alert, idx) => (
-              <div key={idx} className={`p-4 rounded-xl flex gap-3 ${isDark ? 'bg-slate-700/50' : 'bg-orange-50'}`}>
+        <div className="space-y-6">
+          <div className={`p-6 rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <h3 className={`font-bold text-lg mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Rekomendasi Cerdas</h3>
+            <div className="space-y-4">
+              {MOCK_ALERTS.filter(a => a.type !== 'critical').map((alert, idx) => (
+                <div key={idx} className={`p-4 rounded-xl flex gap-3 ${isDark ? 'bg-slate-700/50' : 'bg-orange-50'}`}>
+                  <div className="mt-1">
+                    <AlertTriangle className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>{alert.item}</p>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{alert.message}</p>
+                  </div>
+                </div>
+              ))}
+              
+              <div className={`p-4 rounded-xl flex gap-3 ${isDark ? 'bg-slate-700/50' : 'bg-green-50'}`}>
                 <div className="mt-1">
-                  <AlertTriangle className="w-5 h-5 text-orange-500" />
+                  <TrendingUp className="w-5 h-5 text-green-500" />
                 </div>
                 <div>
-                  <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>{alert.item}</p>
-                  <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{alert.message}</p>
+                  <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>Weekend Peak!</p>
+                  <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Prediksi demand naik 20% hari Sabtu. Siapkan stok susu lebih banyak.</p>
                 </div>
               </div>
-            ))}
+            </div>
             
-            <div className={`p-4 rounded-xl flex gap-3 ${isDark ? 'bg-slate-700/50' : 'bg-green-50'}`}>
-              <div className="mt-1">
-                <TrendingUp className="w-5 h-5 text-green-500" />
-              </div>
-              <div>
-                <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>Weekend Peak!</p>
-                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Prediksi demand naik 20% hari Sabtu. Siapkan stok susu lebih banyak.</p>
-              </div>
+            <button 
+              onClick={() => navigate(`${basePath}/reorder`)}
+              className="w-full mt-6 py-3 rounded-xl bg-slate-900 dark:bg-white dark:text-slate-900 text-white font-bold text-sm hover:opacity-90 transition-opacity"
+            >
+              Buat Purchase Order
+            </button>
+          </div>
+
+          {/* Activity Log Widget */}
+          <div className={`p-6 rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>Aktivitas Terbaru</h3>
+              <Clock className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+            </div>
+            <div className="space-y-4">
+              {RECENT_ACTIVITIES.map((log) => (
+                <div key={log.id} className="flex gap-3 items-start">
+                  <div className={`mt-1 w-2 h-2 rounded-full ${
+                    log.type === 'alert' ? 'bg-red-500' : 
+                    log.type === 'order' ? 'bg-blue-500' : 
+                    log.type === 'adjustment' ? 'bg-orange-500' : 'bg-gray-400'
+                  }`} />
+                  <div>
+                    <p className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{log.action}</p>
+                    <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{log.user} • {log.time}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          
-          <button 
-            onClick={() => navigate(`${basePath}/reorder`)}
-            className="w-full mt-6 py-3 rounded-xl bg-slate-900 dark:bg-white dark:text-slate-900 text-white font-bold text-sm hover:opacity-90 transition-opacity"
-          >
-            Buat Purchase Order
-          </button>
         </div>
       </div>
     </div>

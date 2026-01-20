@@ -5,7 +5,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import {
   LayoutDashboard, Calendar, MessageCircle, Share2, Settings,
-  LogOut, Menu, Sun, Moon, ArrowLeft, Instagram, Facebook, Youtube
+  LogOut, Menu, Sun, Moon, ArrowLeft, Instagram, Facebook, Youtube, Plus
 } from 'lucide-react';
 
 export default function MedsosLayout() {
@@ -53,6 +53,15 @@ export default function MedsosLayout() {
           </div>
 
           {/* Navigation */}
+          <div className="px-2 mb-4">
+            <button 
+              onClick={() => navigate(`${basePath}/create`)}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all"
+            >
+              <Plus size={20} /> Create Post
+            </button>
+          </div>
+
           <ul className="space-y-2 font-medium">
             {menuItems.map((item, idx) => {
               const isActive = location.pathname === item.path;

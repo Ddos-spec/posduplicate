@@ -73,6 +73,7 @@ const ReorderPage = lazy(() => import('./pages/inventory/ReorderPage'));
 const MedsosLayout = lazy(() => import('./components/medsos/MedsosLayout'));
 const MedsosDashboard = lazy(() => import('./pages/medsos/MedsosDashboard'));
 const ContentCalendar = lazy(() => import('./pages/medsos/ContentCalendar'));
+const CreatePost = lazy(() => import('./pages/medsos/CreatePost'));
 
 // Loading fallback
 const PageLoader = () => (
@@ -234,6 +235,7 @@ function App() {
         {/* DEMO MEDSOS (Public Access) - Reusing Logic */}
         <Route path="/demo/medsos" element={<MedsosLayout />}>
           <Route path="dashboard" element={<MedsosDashboard />} />
+          <Route path="create" element={<CreatePost />} />
           <Route path="calendar" element={<ContentCalendar />} />
           <Route path="inbox" element={<div className="p-6">Inbox & Reply (Coming Soon)</div>} />
           <Route path="settings" element={<div className="p-6">Account Settings (Coming Soon)</div>} />
@@ -337,6 +339,7 @@ function App() {
           }
         >
           <Route path="dashboard" element={<MedsosDashboard />} />
+          <Route path="create" element={<CreatePost />} />
           <Route path="calendar" element={<ContentCalendar />} />
           <Route path="inbox" element={<div className="p-6">Inbox & Reply (Coming Soon)</div>} />
           <Route path="settings" element={<div className="p-6">Account Settings (Coming Soon)</div>} />
