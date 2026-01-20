@@ -160,7 +160,7 @@ export default function RecipeSimulationPage() {
                       <div className="flex items-center justify-center gap-2">
                         <button 
                           onClick={() => handleQtyChange(item.id, Math.max(0, item.qty - 0.01))}
-                          className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center hover:bg-gray-200"
+                          className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                         >
                           -
                         </button>
@@ -173,7 +173,7 @@ export default function RecipeSimulationPage() {
                         />
                         <button 
                           onClick={() => handleQtyChange(item.id, item.qty + 0.01)}
-                          className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center hover:bg-gray-200"
+                          className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${isDark ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                         >
                           +
                         </button>
