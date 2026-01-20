@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { useInventoryConfig } from '../../pages/inventory/inventoryConfigStore';
+import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import {
   LayoutDashboard, Package, TrendingUp, ShoppingCart, Settings,
   LogOut, Menu, Sun, Moon, ArrowLeft, Boxes, ChevronDown
@@ -11,6 +12,7 @@ import {
 export default function InventoryLayout() {
   const { isDark, toggleTheme } = useThemeStore();
   const { businessType, setBusinessType } = useInventoryConfig();
+  const { currentRole } = useDemoUser();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -28,13 +30,21 @@ export default function InventoryLayout() {
   const isDemo = location.pathname.startsWith('/demo');
   const basePath = isDemo ? '/demo/inventory' : '/inventory';
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: `${basePath}/dashboard` },
-    { icon: Boxes, label: 'Stok Barang', path: `${basePath}/stock` },
-    { icon: TrendingUp, label: 'Smart Forecast', path: `${basePath}/forecast` },
-    { icon: ShoppingCart, label: 'Belanja (PO)', path: `${basePath}/reorder` },
-    { icon: Settings, label: 'Pengaturan', path: `${basePath}/settings` },
+  // Define All Menus
+  const allMenus = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: `${basePath}/dashboard`, roles: ['all'] },
+    { icon: Boxes, label: 'Stok Barang', path: `${basePath}/stock`, roles: ['all'] },
+    { icon: TrendingUp, label: 'Smart Forecast', path: `${basePath}/forecast`, roles: ['inventory_manager'] },
+    { icon: ShoppingCart, label: 'Belanja (PO)', path: `${basePath}/reorder`, roles: ['inventory_manager', 'purchasing'] },
+    { icon: Settings, label: 'Pengaturan', path: `${basePath}/settings`, roles: ['inventory_manager'] },
   ];
+
+  // Filter Menus based on Role
+  const menuItems = allMenus.filter(item => {
+    if (currentRole === 'super_admin') return true; // Default fallback
+    if (item.roles.includes('all')) return true;
+    return item.roles.includes(currentRole);
+  });
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDark ? 'bg-slate-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -48,7 +58,11 @@ export default function InventoryLayout() {
             </div>
             <div>
               <h2 className="font-bold text-lg leading-tight">MyInventory</h2>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Smart Stock Control</p>
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {currentRole === 'inventory_manager' ? 'Manager View' : 
+                 currentRole === 'stock_keeper' ? 'Stock Keeper' : 
+                 currentRole === 'purchasing' ? 'Purchasing' : 'Admin View'}
+              </p>
             </div>
           </div>
 
