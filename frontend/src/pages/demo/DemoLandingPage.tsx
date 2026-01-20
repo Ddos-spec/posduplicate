@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ChefHat, ShoppingCart, TrendingUp, Truck, Store, Factory, ArrowRight } from 'lucide-react';
+import { ChefHat, ShoppingCart, TrendingUp, Truck, Store, Factory, ArrowRight, Package, Share2 } from 'lucide-react';
 
 export default function DemoLandingPage() {
   const navigate = useNavigate();
@@ -19,6 +19,13 @@ export default function DemoLandingPage() {
         { name: "Distributor", path: "/demo/accounting/distributor", icon: Truck, desc: "Manajemen stok & pengiriman.", color: "bg-orange-500" },
         { name: "Produsen", path: "/demo/accounting/producer", icon: Factory, desc: "Pantau biaya produksi & HPP.", color: "bg-indigo-500" },
         { name: "Retail", path: "/demo/accounting/retail", icon: Store, desc: "Penjualan harian & manajemen toko.", color: "bg-pink-500" }
+      ]
+    },
+    {
+      title: "New Modules (Beta)",
+      items: [
+        { name: "MyInventory", path: "/demo/inventory", icon: Package, desc: "Smart Stock, Forecast & PO. Support FnB/Retail/Farmasi.", color: "bg-orange-600" },
+        { name: "MyMedsos", path: "/demo/medsos", icon: Share2, desc: "Content Calendar & Engagement Dashboard.", color: "bg-blue-600" }
       ]
     }
   ];

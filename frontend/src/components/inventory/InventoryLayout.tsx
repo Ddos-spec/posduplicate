@@ -15,12 +15,16 @@ export default function InventoryLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // Detect if we are in demo mode
+  const isDemo = location.pathname.startsWith('/demo');
+  const basePath = isDemo ? '/demo/inventory' : '/inventory';
+
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/inventory/dashboard' },
-    { icon: Boxes, label: 'Stok Barang', path: '/inventory/stock' },
-    { icon: TrendingUp, label: 'Smart Forecast', path: '/inventory/forecast' },
-    { icon: ShoppingCart, label: 'Belanja (PO)', path: '/inventory/reorder' },
-    { icon: Settings, label: 'Pengaturan', path: '/inventory/settings' },
+    { icon: LayoutDashboard, label: 'Dashboard', path: `${basePath}/dashboard` },
+    { icon: Boxes, label: 'Stok Barang', path: `${basePath}/stock` },
+    { icon: TrendingUp, label: 'Smart Forecast', path: `${basePath}/forecast` },
+    { icon: ShoppingCart, label: 'Belanja (PO)', path: `${basePath}/reorder` },
+    { icon: Settings, label: 'Pengaturan', path: `${basePath}/settings` },
   ];
 
   return (
@@ -65,13 +69,13 @@ export default function InventoryLayout() {
         {/* Footer Sidebar */}
         <div className={`absolute bottom-0 left-0 w-full p-4 border-t ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
           <button
-            onClick={() => navigate('/module-selector')}
+            onClick={() => navigate(isDemo ? '/demo' : '/module-selector')}
             className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-xl transition-colors ${
               isDark ? 'text-gray-400 hover:bg-slate-700 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
-            Ganti Modul
+            {isDemo ? 'Kembali ke Demo' : 'Ganti Modul'}
           </button>
         </div>
       </aside>
