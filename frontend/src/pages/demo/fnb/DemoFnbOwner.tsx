@@ -9,6 +9,7 @@ import {
   Settings, BarChart3, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import DemoLayout from '../DemoLayout';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6b7280', '#8b5cf6'];
 
@@ -114,8 +115,9 @@ export default function DemoFnbOwner() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
+    <DemoLayout variant="owner" title="Dashboard Overview (Demo)">
+      <div className="p-6">
+        <div className="mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">
@@ -368,6 +370,7 @@ export default function DemoFnbOwner() {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </DemoLayout>
   );
 }
