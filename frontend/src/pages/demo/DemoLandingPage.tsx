@@ -1,31 +1,41 @@
 import { useNavigate } from 'react-router-dom';
-import { ChefHat, ShoppingCart, TrendingUp, Truck, Store, Factory, ArrowRight, Package, Share2 } from 'lucide-react';
+import { 
+  ChefHat, ShoppingCart, TrendingUp, Truck, Store, Factory, ArrowRight, 
+  Package, Share2, Pill, Tag 
+} from 'lucide-react';
 
 export default function DemoLandingPage() {
   const navigate = useNavigate();
 
   const demos = [
     {
-      title: "F&B System",
+      title: "F&B Operations",
       items: [
         { name: "Owner Dashboard", path: "/demo/fnb/owner", icon: ChefHat, desc: "Kelola menu, karyawan, dan laporan restoran.", color: "bg-purple-500" },
         { name: "Cashier (POS)", path: "/demo/fnb/cashier", icon: ShoppingCart, desc: "Antarmuka kasir untuk transaksi cepat.", color: "bg-blue-500" }
       ]
     },
     {
-      title: "Accounting System",
+      title: "Finance & ERP",
       items: [
         { name: "Accounting Owner", path: "/demo/accounting/owner", icon: TrendingUp, desc: "Laporan keuangan lengkap & Neraca.", color: "bg-emerald-500" },
-        { name: "Distributor", path: "/demo/accounting/distributor", icon: Truck, desc: "Manajemen stok & pengiriman.", color: "bg-orange-500" },
-        { name: "Produsen", path: "/demo/accounting/producer", icon: Factory, desc: "Pantau biaya produksi & HPP.", color: "bg-indigo-500" },
-        { name: "Retail", path: "/demo/accounting/retail", icon: Store, desc: "Penjualan harian & manajemen toko.", color: "bg-pink-500" }
+        { name: "Distributor Finance", path: "/demo/accounting/distributor", icon: Truck, desc: "Manajemen hutang piutang & stok.", color: "bg-orange-500" },
+        { name: "Factory Costing", path: "/demo/accounting/producer", icon: Factory, desc: "Pantau biaya produksi & HPP.", color: "bg-indigo-500" },
+        { name: "Retail Finance", path: "/demo/accounting/retail", icon: Store, desc: "Penjualan harian & manajemen toko.", color: "bg-pink-500" }
       ]
     },
     {
-      title: "New Modules (Beta)",
+      title: "Inventory System",
       items: [
-        { name: "MyInventory", path: "/demo/inventory", icon: Package, desc: "Smart Stock, Forecast & PO. Support FnB/Retail/Farmasi.", color: "bg-orange-600" },
-        { name: "MyMedsos", path: "/demo/medsos", icon: Share2, desc: "Content Calendar & Engagement Dashboard.", color: "bg-blue-600" }
+        { name: "FnB Inventory", path: "/demo/inventory?type=fnb", icon: ChefHat, desc: "Stok bahan baku resep & waste.", color: "bg-orange-600" },
+        { name: "Pharmacy Inventory", path: "/demo/inventory?type=pharmacy", icon: Pill, desc: "Kelola obat, batch no & expiry date.", color: "bg-green-600" },
+        { name: "Retail Inventory", path: "/demo/inventory?type=retail", icon: Tag, desc: "Stok varian produk (size/warna).", color: "bg-blue-600" }
+      ]
+    },
+    {
+      title: "Digital Engagement",
+      items: [
+        { name: "MyMedsos", path: "/demo/medsos", icon: Share2, desc: "Content Calendar & Engagement Dashboard.", color: "bg-sky-500" }
       ]
     }
   ];
