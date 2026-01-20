@@ -31,6 +31,7 @@ const DemoLandingPage = lazy(() => import('./pages/demo/DemoLandingPage'));
 const DemoFnbOwner = lazy(() => import('./pages/demo/fnb/DemoFnbOwner'));
 const DemoFnbProducts = lazy(() => import('./pages/demo/fnb/DemoFnbProducts'));
 const DemoFnbUsers = lazy(() => import('./pages/demo/fnb/DemoFnbUsers'));
+const DemoFnbSettings = lazy(() => import('./pages/demo/fnb/DemoFnbSettings'));
 const DemoCashier = lazy(() => import('./pages/demo/fnb/DemoCashier'));
 const DemoAcctOwner = lazy(() => import('./pages/demo/accounting/DemoAcctOwner'));
 const DemoCoA = lazy(() => import('./pages/demo/accounting/DemoCoA'));
@@ -193,6 +194,7 @@ function App() {
         <Route path="/demo/fnb/owner" element={<DemoFnbOwner />} />
         <Route path="/demo/fnb/owner/products" element={<DemoFnbProducts />} />
         <Route path="/demo/fnb/owner/users" element={<DemoFnbUsers />} />
+        <Route path="/demo/fnb/owner/settings" element={<DemoFnbSettings />} />
         <Route path="/demo/fnb/cashier" element={<DemoCashier />} />
         <Route path="/demo/accounting/owner" element={<DemoAcctOwner />} />
         <Route path="/demo/accounting/owner/forecast" element={<DemoForecastPage variant="owner" />} />
