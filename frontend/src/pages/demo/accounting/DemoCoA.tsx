@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   ChevronDown, ChevronRight, Search, Download, RefreshCw, Loader2
 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import DemoLayout from '../DemoLayout';
 
 // --- DUMMY DATA ---

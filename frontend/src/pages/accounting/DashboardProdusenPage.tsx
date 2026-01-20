@@ -1,15 +1,13 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import toast from 'react-hot-toast';
 import {
-  Factory, Layers, ClipboardList, Package, CheckCircle, AlertTriangle,
+  Factory, Layers, ClipboardList, CheckCircle, AlertTriangle,
   Plus, Calendar, Building2
 } from 'lucide-react';
 
 export default function DashboardProdusenPage() {
   const { isDark } = useThemeStore();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'active' | 'pending' | 'completed'>('active');
   const [selectedOutlet, setSelectedOutlet] = useState('pusat');
   const [showOutletDropdown, setShowOutletDropdown] = useState(false);

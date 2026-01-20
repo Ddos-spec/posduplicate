@@ -74,7 +74,8 @@ export default function TenantManagementPage() {
       ownerName: tenant.ownerName,
       email: tenant.email,
       phone: tenant.phone || '',
-      address: tenant.address || ''
+      address: tenant.address || '',
+      moduleType: 'fnb' // Default or fetch if available in tenant data
     });
     setShowModal(true);
   };

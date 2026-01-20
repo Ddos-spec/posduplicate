@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
-import { outletService, Outlet } from '../../services/outletService';
+import { outletService, type Outlet } from '../../services/outletService';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import axios from 'axios';
 import toast from 'react-hot-toast';

@@ -49,8 +49,7 @@ export default function DemoFnbProducts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [imagePreview, setImagePreview] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage] = useState(1);
   const itemsPerPage = 12;
 
   // Simulate loading
@@ -101,7 +100,6 @@ export default function DemoFnbProducts() {
 
   const handleFormChange = (field: string, value: string) => {
     setProductForm(prev => ({ ...prev, [field]: value }));
-    if (field === 'image') setImagePreview(value);
   };
 
   const handleOpenProductForm = (product?: Product) => {
@@ -115,11 +113,9 @@ export default function DemoFnbProducts() {
         image: product.image || '',
         description: product.description || ''
       });
-      setImagePreview(product.image || '');
     } else {
       setEditingProduct(null);
       setProductForm({ name: '', categoryId: '', price: '', priceOnline: '', image: '', description: '' });
-      setImagePreview('');
     }
     setShowProductForm(true);
   };
@@ -167,22 +163,8 @@ export default function DemoFnbProducts() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setProductForm(prev => ({ ...prev, image: result }));
-        setImagePreview(result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const closeForm = () => {
     setShowProductForm(false);
-    setImagePreview('');
   };
 
   return (

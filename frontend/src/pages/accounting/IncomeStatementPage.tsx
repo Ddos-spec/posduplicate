@@ -4,7 +4,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
   Calendar, Printer, Download, TrendingUp, TrendingDown,
-  RefreshCw, ToggleLeft, ToggleRight, Loader2, Scale
+  RefreshCw, Loader2, Scale
 } from 'lucide-react';
 
 interface AccountRow {

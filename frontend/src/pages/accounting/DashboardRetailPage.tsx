@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import toast from 'react-hot-toast';
 import {
-  ShoppingBag, Users, TrendingUp, Star, Calendar,
+  ShoppingBag, TrendingUp, Star, Calendar,
   Building2, Plus
 } from 'lucide-react';
 

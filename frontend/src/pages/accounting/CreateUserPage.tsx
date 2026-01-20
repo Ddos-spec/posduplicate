@@ -4,7 +4,7 @@ import { useThemeStore } from '../../store/themeStore';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import api from '../../services/api';
-import { outletService, Outlet } from '../../services/outletService';
+import { outletService, type Outlet } from '../../services/outletService';
 import {
   ArrowLeft, Mail, Check, ChevronDown,
   Package, Factory, ShoppingCart, Info
@@ -372,11 +372,6 @@ export default function CreateUserPage() {
 
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{role.name}</h3>
-                      {role.badge && (
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
-                          {role.badge}
-                        </span>
-                      )}
                     </div>
                     <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{role.description}</p>
 

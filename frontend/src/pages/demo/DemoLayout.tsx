@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { 
   LayoutDashboard, ShoppingCart, Users, Settings, 
-  LogOut, Menu, X, Sun, Moon, ChefHat, Store, Truck, Factory, Package, Activity, TrendingUp
+  LogOut, Menu, Sun, Moon, ChefHat, Store, Truck, Factory, Package, Activity, TrendingUp
 } from 'lucide-react';
 
 interface DemoLayoutProps {

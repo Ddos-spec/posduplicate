@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import api from '../../services/api';
 import {
-  TrendingUp, TrendingDown, DollarSign, Wallet, ArrowUpRight, ArrowDownRight,
-  Download, Eye, PieChart, Calendar, Loader2
+  TrendingUp, TrendingDown, DollarSign, Loader2, FileText
 } from 'lucide-react';
 
 export default function DashboardAkuntansiPage() {

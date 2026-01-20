@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import { Sparkles, TrendingUp, TrendingDown, Minus, RefreshCw, AlertCircle } from 'lucide-react';
-import { forecastService, ForecastResponse, ForecastDataPoint } from '../../services/forecastService';
+import { forecastService, type ForecastResponse, type ForecastDataPoint } from '../../services/forecastService';
 
 type ForecastVariant = 'owner' | 'retail' | 'distributor' | 'produsen';
 

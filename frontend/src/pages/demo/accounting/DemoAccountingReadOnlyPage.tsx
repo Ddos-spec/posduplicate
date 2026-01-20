@@ -367,7 +367,7 @@ export default function DemoAccountingReadOnlyPage({ variant, section }: DemoAcc
                 <table className="w-full text-sm">
                 <thead className={isDark ? 'text-gray-400' : 'text-gray-500'}>
                     <tr>
-                    {config.table.columns.map((column) => (
+                    {config.table?.columns.map((column) => (
                         <th key={column} className="px-6 py-3 text-left font-medium">
                         {column}
                         </th>
@@ -375,9 +375,9 @@ export default function DemoAccountingReadOnlyPage({ variant, section }: DemoAcc
                     </tr>
                 </thead>
                 <tbody className={isDark ? 'divide-y divide-slate-700 text-gray-200' : 'divide-y divide-gray-200 text-gray-700'}>
-                    {config.table.rows.map((row, index) => (
+                    {config.table?.rows.map((row, index) => (
                     <tr key={`${config.title}-${index}`}>
-                        {config.table.columns.map((column) => (
+                        {config.table?.columns.map((column) => (
                         <td key={column} className="px-6 py-3">
                             {row[column] ?? '-'}
                         </td>

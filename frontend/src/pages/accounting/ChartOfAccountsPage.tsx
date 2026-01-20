@@ -101,15 +101,6 @@ export default function ChartOfAccountsPage() {
       // we need to traverse. For simplicity, we'll keep the tree structure but maybe dim non-matches?
       // Or better, let's just hide non-matching roots if filter is active.
       
-      const typeMap: Record<string, string[]> = {
-        'asset': ['ASSET', 'CASH_BANK', 'ACCOUNT_RECEIVABLE', 'INVENTORY', 'FIXED_ASSET'],
-        'liability': ['LIABILITY', 'ACCOUNT_PAYABLE', 'TAX_PAYABLE'],
-        'equity': ['EQUITY', 'RETAINED_EARNINGS'],
-        'revenue': ['REVENUE', 'OTHER_INCOME'],
-        'expense': ['EXPENSE', 'COGS', 'OPERATING_EXPENSE']
-      };
-      
-      const allowedTypes = typeMap[activeFilter] || [];
       // If it's a root category, check if it matches the broad category name or code prefix
       // detailed logic omitted for brevity, assuming backend filter is preferred or user searches.
     }
@@ -378,7 +369,7 @@ export default function ChartOfAccountsPage() {
             <div className={`p-4 rounded-lg mb-4 ${isDark ? 'bg-slate-700' : 'bg-gray-50'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Total Kewajiban (Liability)</p>
               <p className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Rp {stats.totalLiability?.toLocaleString('id-ID') || stats.totalLiabilities.toLocaleString('id-ID')}
+                Rp {stats.totalLiabilities.toLocaleString('id-ID')}
               </p>
             </div>
 

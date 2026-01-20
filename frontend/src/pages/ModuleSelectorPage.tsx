@@ -4,7 +4,7 @@ import { useThemeStore } from '../store/themeStore';
 import {
   Monitor, Calculator, Package, Users, BarChart3,
   ArrowRight, LogOut, Clock, Sun, Moon, Star,
-  ShoppingCart, FileText, Receipt
+  ShoppingCart, Share2
 } from 'lucide-react';
 
 export default function ModuleSelectorPage() {
@@ -39,15 +39,32 @@ export default function ModuleSelectorPage() {
       features: ['General Ledger', 'Financial Reports', 'Tax Prep'],
       status: 'new',
       path: '/accounting/dashboard'
+    },
+    {
+      id: 'inventory',
+      name: 'MyInventory',
+      description: 'Advanced stock control and warehouse management.',
+      icon: Package,
+      color: 'from-orange-500 to-orange-600',
+      iconBg: 'bg-orange-500',
+      features: ['Multi-warehouse', 'Stock Transfer', 'Supplier Portal'],
+      status: 'new',
+      path: '/inventory/dashboard'
+    },
+    {
+      id: 'medsos',
+      name: 'MyMedsos',
+      description: 'Manage your social media presence and engagement.',
+      icon: Share2,
+      color: 'from-blue-500 to-blue-600',
+      iconBg: 'bg-blue-500',
+      features: ['Post Scheduling', 'Analytics', 'Auto-Reply'],
+      status: 'new',
+      path: '/medsos/dashboard'
     }
   ];
 
   const comingSoon = [
-    {
-      name: 'MyInventory',
-      description: 'Advanced warehouse tracking.',
-      icon: Package
-    },
     {
       name: 'MyCRM',
       description: 'Customer relationship management.',

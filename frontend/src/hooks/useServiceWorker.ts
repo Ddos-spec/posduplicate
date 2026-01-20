@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+// @ts-ignore
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
 export function useServiceWorker() {
@@ -9,10 +10,10 @@ export function useServiceWorker() {
     needRefresh: [swNeedRefresh, setSwNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    onRegistered(r) {
+    onRegistered(r: any) {
       console.log('SW Registered: ' + r);
     },
-    onRegisterError(error) {
+    onRegisterError(error: any) {
       console.log('SW registration error', error);
     },
   });

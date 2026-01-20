@@ -1,8 +1,3 @@
-import { 
-  TrendingUp, TrendingDown, DollarSign, Wallet, 
-  ShoppingBag, Users, Package, Activity 
-} from 'lucide-react';
-
 export const DEMO_STATS = {
   fnb: {
     revenue: "Rp 15.250.000",

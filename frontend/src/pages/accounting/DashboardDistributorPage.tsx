@@ -4,7 +4,7 @@ import { useThemeStore } from '../../store/themeStore';
 import toast from 'react-hot-toast';
 import {
   ShoppingCart, CreditCard, FileText, Package, TrendingDown, TrendingUp,
-  Plus, Calendar, Building2, AlertTriangle, CheckCircle
+  Plus, Calendar, CheckCircle
 } from 'lucide-react';
 
 export default function DashboardDistributorPage() {
