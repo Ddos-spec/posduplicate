@@ -1,9 +1,9 @@
 import { useThemeStore } from '../../store/themeStore';
 import {
-  Heart, MessageCircle, Share2, TrendingUp, Users, Eye
+  Heart, MessageCircle, Users, Eye
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line
+  BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
 const ENGAGEMENT_DATA = [

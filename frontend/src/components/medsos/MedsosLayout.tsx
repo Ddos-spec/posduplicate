@@ -5,7 +5,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import {
   LayoutDashboard, Calendar, MessageCircle, Share2, Settings,
-  LogOut, Menu, Sun, Moon, ArrowLeft, Instagram, Facebook, Youtube, Plus
+  Menu, Sun, Moon, ArrowLeft, Instagram, Facebook, Youtube, Plus
 } from 'lucide-react';
 
 export default function MedsosLayout() {

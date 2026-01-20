@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import { MOCK_INVENTORY_ITEMS } from './mockInventoryData';
-import { ShoppingCart, Send, Printer } from 'lucide-react';
+import { Send, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ReorderPage() {

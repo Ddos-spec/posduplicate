@@ -1,13 +1,11 @@
 import { useThemeStore } from '../../store/themeStore';
 import { MOCK_INVENTORY_STATS, MOCK_ALERTS, MOCK_FORECAST_DATA } from './mockInventoryData';
 import {
-  AlertTriangle, CheckCircle, Package, ShoppingCart, TrendingUp, ArrowRight, XCircle, Clock
-}
-from 'lucide-react';
+  AlertTriangle, Package, ShoppingCart, TrendingUp, ArrowRight, XCircle, Clock
+} from 'lucide-react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
-}
-from 'recharts';
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Line
+} from 'recharts';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const RECENT_ACTIVITIES = [

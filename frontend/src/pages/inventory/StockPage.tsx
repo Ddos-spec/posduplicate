@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import { useInventoryConfig } from './inventoryConfigStore';
-import { MOCK_INVENTORY_ITEMS, InventoryItem } from './mockInventoryData';
+import { MOCK_INVENTORY_ITEMS } from './mockInventoryData';
 import { MOCK_PHARMACY_ITEMS, MOCK_RETAIL_ITEMS } from './mockVariantsData';
 import {
   Search, Filter, Edit2, History, AlertCircle, CheckCircle, XCircle, ScanBarcode

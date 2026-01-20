@@ -6,7 +6,7 @@ import { useInventoryConfig } from '../../pages/inventory/inventoryConfigStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import {
   LayoutDashboard, Package, TrendingUp, ShoppingCart, Settings,
-  LogOut, Menu, Sun, Moon, ArrowLeft, Boxes, ChevronDown
+  Menu, Sun, Moon, ArrowLeft, Boxes, ChevronDown
 } from 'lucide-react';
 
 export default function InventoryLayout() {

@@ -1,5 +1,5 @@
 import { useThemeStore } from '../../store/themeStore';
-import { Calendar as CalendarIcon, Plus, Instagram, Facebook, Youtube } from 'lucide-react';
+import { Plus, Instagram, Facebook, Youtube } from 'lucide-react';
 
 const SCHEDULED_POSTS = [
   { id: 1, day: 20, title: 'Promo Merdeka', platform: 'ig', time: '10:00' },
