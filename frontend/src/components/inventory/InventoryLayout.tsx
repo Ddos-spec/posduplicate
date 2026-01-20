@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { useInventoryConfig } from '../../pages/inventory/inventoryConfigStore';
 import {
@@ -13,7 +13,16 @@ export default function InventoryLayout() {
   const { businessType, setBusinessType } = useInventoryConfig();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Auto-switch mode based on URL param (e.g. ?type=pharmacy)
+  useEffect(() => {
+    const typeParam = searchParams.get('type');
+    if (typeParam && ['fnb', 'pharmacy', 'retail'].includes(typeParam)) {
+      setBusinessType(typeParam as any);
+    }
+  }, [searchParams, setBusinessType]);
 
   // Detect if we are in demo mode
   const isDemo = location.pathname.startsWith('/demo');
