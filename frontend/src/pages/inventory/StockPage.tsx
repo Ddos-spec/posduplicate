@@ -4,7 +4,7 @@ import { useInventoryConfig } from './inventoryConfigStore';
 import { MOCK_INVENTORY_ITEMS } from './mockInventoryData';
 import { MOCK_PHARMACY_ITEMS, MOCK_RETAIL_ITEMS } from './mockVariantsData';
 import {
-  Search, Filter, Edit2, History, AlertCircle, CheckCircle, XCircle, ScanBarcode
+  Search, Filter, Edit2, History, AlertCircle, CheckCircle, XCircle, ScanBarcode, Truck, Store
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -47,6 +47,11 @@ export default function StockPage() {
     }
   };
 
+  const getSourceBadge = (source: string) => {
+    if (source === 'DC') return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200 flex items-center gap-1 w-fit"><Truck size={10} /> DC PUSAT</span>;
+    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1 w-fit"><Store size={10} /> VENDOR</span>;
+  };
+
   const handleSaveAdjustment = () => {
     if (!editItem || !adjustQty) return;
     
@@ -77,12 +82,12 @@ export default function StockPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Stok {businessType === 'pharmacy' ? 'Obat' : businessType === 'retail' ? 'Produk' : 'Barang'}
+            Stok {businessType === 'pharmacy' ? 'Obat' : businessType === 'retail' ? 'Produk' : 'Gudang Outlet'}
           </h1>
           <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             {businessType === 'pharmacy' ? 'Kelola stok obat, expiry date, dan batch number.' : 
              businessType === 'retail' ? 'Kelola varian produk, SKU, dan stok toko.' : 
-             'Kelola stok fisik dan lakukan stock opname.'}
+             'Monitoring stok DC vs Supplier, Days Cover, dan Opname.'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -102,7 +107,7 @@ export default function StockPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input 
                     type="text" 
-                    placeholder="Cari nama barang atau SKU..." 
+                    placeholder="Cari nama barang, SKU, atau supplier..." 
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className={`w-full pl-10 pr-4 py-2 rounded-lg outline-none border focus:ring-2 focus:ring-orange-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
@@ -131,7 +136,7 @@ export default function StockPage() {
                 <thead>
                     <tr className={`border-b ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-100 bg-gray-50/50'}`}>
                         <th className={`p-4 font-semibold text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Item Details</th>
-                        <th className={`p-4 font-semibold text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Kategori</th>
+                        <th className={`p-4 font-semibold text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Kategori / Source</th>
                         <th className={`p-4 font-semibold text-sm text-right ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Stok Fisik</th>
                         
                         {/* Dynamic Columns based on Business Type */}
@@ -140,6 +145,10 @@ export default function StockPage() {
                         )}
                         {businessType === 'retail' && (
                           <th className={`p-4 font-semibold text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Varian</th>
+                        )}
+                        {/* FnB Specific Column */}
+                        {businessType === 'fnb' && (
+                          <th className={`p-4 font-semibold text-sm text-center ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Days Cover</th>
                         )}
 
                         <th className={`p-4 font-semibold text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Status</th>
@@ -160,6 +169,11 @@ export default function StockPage() {
                                 <span className={`px-2 py-1 rounded text-xs ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
                                     {item.category}
                                 </span>
+                                {item.source && (
+                                  <div className="mt-1">
+                                    {getSourceBadge(item.source)}
+                                  </div>
+                                )}
                             </td>
                             <td className="p-4 text-right">
                                 <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -191,6 +205,16 @@ export default function StockPage() {
                               <td className="p-4">
                                 <p className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.variant}</p>
                                 <p className="text-xs text-gray-400">{item.barcode}</p>
+                              </td>
+                            )}
+                            {businessType === 'fnb' && (
+                              <td className="p-4 text-center">
+                                <span className={`text-sm font-bold ${
+                                  (item.daysCover || 0) < 3 ? 'text-red-500' : 
+                                  (item.daysCover || 0) > 7 ? 'text-blue-500' : 'text-green-500'
+                                }`}>
+                                  {item.daysCover} Hari
+                                </span>
                               </td>
                             )}
 
@@ -239,9 +263,11 @@ export default function StockPage() {
                             className={`w-full p-3 rounded-xl border outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
                         >
                             <option value="Stock Opname">Stock Opname Rutin</option>
-                            <option value="Barang Rusak">Barang Rusak / Basi</option>
-                            <option value="Bonus Supplier">Bonus Supplier</option>
-                            <option value="Koreksi Salah Input">Koreksi Salah Input</option>
+                            <option value="Waste">Waste (Terbuang)</option>
+                            <option value="Spoilage">Spoilage (Basi/Rusak)</option>
+                            <option value="Portioning">Selisih Portioning</option>
+                            <option value="Hilang">Barang Hilang</option>
+                            <option value="Salah Input">Salah Input</option>
                         </select>
                     </div>
                 </div>
