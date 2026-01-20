@@ -13,11 +13,15 @@ export default function MedsosLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // Detect if we are in demo mode
+  const isDemo = location.pathname.startsWith('/demo');
+  const basePath = isDemo ? '/demo/medsos' : '/medsos';
+
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/medsos/dashboard' },
-    { icon: Calendar, label: 'Content Calendar', path: '/medsos/calendar' },
-    { icon: MessageCircle, label: 'Inbox & Reply', path: '/medsos/inbox' },
-    { icon: Settings, label: 'Settings', path: '/medsos/settings' },
+    { icon: LayoutDashboard, label: 'Dashboard', path: `${basePath}/dashboard` },
+    { icon: Calendar, label: 'Content Calendar', path: `${basePath}/calendar` },
+    { icon: MessageCircle, label: 'Inbox & Reply', path: `${basePath}/inbox` },
+    { icon: Settings, label: 'Settings', path: `${basePath}/settings` },
   ];
 
   return (
@@ -62,13 +66,13 @@ export default function MedsosLayout() {
         {/* Footer Sidebar */}
         <div className={`absolute bottom-0 left-0 w-full p-4 border-t ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
           <button
-            onClick={() => navigate('/module-selector')}
+            onClick={() => navigate(isDemo ? '/demo' : '/module-selector')}
             className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-xl transition-colors ${
               isDark ? 'text-gray-400 hover:bg-slate-700 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
-            Ganti Modul
+            {isDemo ? 'Kembali ke Demo' : 'Ganti Modul'}
           </button>
         </div>
       </aside>

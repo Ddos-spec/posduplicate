@@ -6,11 +6,15 @@ import {
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function InventoryDashboard() {
   const { isDark } = useThemeStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const isDemo = location.pathname.startsWith('/demo');
+  const basePath = isDemo ? '/demo/inventory' : '/inventory';
 
   const stats = [
     {
@@ -26,7 +30,7 @@ export default function InventoryDashboard() {
       icon: AlertTriangle,
       color: 'orange',
       desc: 'Perlu restock segera',
-      action: () => navigate('/inventory/stock')
+      action: () => navigate(`${basePath}/stock`)
     },
     {
       label: 'PO Pending',
@@ -56,7 +60,7 @@ export default function InventoryDashboard() {
             <p className="text-red-700 dark:text-red-300 text-sm mt-1">{alert.message}</p>
           </div>
           <button 
-            onClick={() => navigate('/inventory/reorder')}
+            onClick={() => navigate(`${basePath}/reorder`)}
             className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-lg shadow-lg shadow-red-500/30 transition-all"
           >
             Order Sekarang
@@ -105,7 +109,7 @@ export default function InventoryDashboard() {
               <h3 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>Tren Penggunaan Bahan</h3>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Real vs Prediksi (7 Hari)</p>
             </div>
-            <button onClick={() => navigate('/inventory/forecast')} className="text-sm font-bold text-orange-500 flex items-center gap-1 hover:underline">
+            <button onClick={() => navigate(`${basePath}/forecast`)} className="text-sm font-bold text-orange-500 flex items-center gap-1 hover:underline">
               Lihat Detail <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -160,7 +164,7 @@ export default function InventoryDashboard() {
           </div>
           
           <button 
-            onClick={() => navigate('/inventory/reorder')}
+            onClick={() => navigate(`${basePath}/reorder`)}
             className="w-full mt-6 py-3 rounded-xl bg-slate-900 dark:bg-white dark:text-slate-900 text-white font-bold text-sm hover:opacity-90 transition-opacity"
           >
             Buat Purchase Order

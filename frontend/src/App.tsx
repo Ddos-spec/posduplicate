@@ -221,6 +221,25 @@ function App() {
         <Route path="/demo/accounting/retail/inventory" element={<DemoAccountingReadOnlyPage variant="retail" section="inventory" />} />
         <Route path="/demo/accounting/retail/reports" element={<DemoAccountingReadOnlyPage variant="retail" section="reports" />} />
 
+        {/* DEMO INVENTORY (Public Access) - Reusing Logic */}
+        <Route path="/demo/inventory" element={<InventoryLayout />}>
+          <Route path="dashboard" element={<InventoryDashboard />} />
+          <Route path="stock" element={<StockPage />} />
+          <Route path="forecast" element={<ForecastPageInventory />} />
+          <Route path="reorder" element={<ReorderPage />} />
+          <Route path="settings" element={<div className="p-6">Settings Page (Coming Soon)</div>} />
+          <Route index element={<Navigate to="/demo/inventory/dashboard" />} />
+        </Route>
+
+        {/* DEMO MEDSOS (Public Access) - Reusing Logic */}
+        <Route path="/demo/medsos" element={<MedsosLayout />}>
+          <Route path="dashboard" element={<MedsosDashboard />} />
+          <Route path="calendar" element={<ContentCalendar />} />
+          <Route path="inbox" element={<div className="p-6">Inbox & Reply (Coming Soon)</div>} />
+          <Route path="settings" element={<div className="p-6">Account Settings (Coming Soon)</div>} />
+          <Route index element={<Navigate to="/demo/medsos/dashboard" />} />
+        </Route>
+
         {/* Module Selector Route */}
         <Route
           path="/module-selector"
