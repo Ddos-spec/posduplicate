@@ -1,12 +1,20 @@
 import { useState } from 'react';
-import { 
-  Search, ShoppingCart, CreditCard, 
-  X, UserCircle2, Settings, Loader2
-} from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import DemoLayout from '../DemoLayout';
+import { ShoppingCart, Search, X, Plus, Minus, Trash2, CreditCard, Settings, Receipt, UtensilsCrossed, Tag, Menu, UserCircle2 } from 'lucide-react';
+import RunningLogo from '../../../components/RunningLogo';
+// Mock Components (Since we can't import real connected components easily if they depend on API)
+// Ideally we should refactor real components to be presentational, but for now we inline simple versions or use dummy behaviors.
 
-// --- DUMMY DATA ---
+// --- DUMMY DATA FOR DEMO ---
+const DUMMY_PRODUCTS = [
+  { id: 1, name: 'Nasi Goreng Spesial', price: 35000, categoryId: 1, image: 'https://images.unsplash.com/photo-1603133872878-684f208fb74b?auto=format&fit=crop&w=500&q=60', description: 'Nasi goreng dengan telur dan ayam' },
+  { id: 2, name: 'Ayam Bakar Madu', price: 42000, categoryId: 1, image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=500&q=60', description: 'Ayam bakar bumbu madu' },
+  { id: 3, name: 'Es Teh Manis', price: 8000, categoryId: 2, image: '', description: 'Teh manis dingin segar' },
+  { id: 4, name: 'Kopi Susu Gula Aren', price: 18000, categoryId: 2, image: '', description: 'Kopi susu kekinian' },
+  { id: 5, name: 'Kentang Goreng', price: 15000, categoryId: 3, image: '', description: 'French fries original' },
+  { id: 6, name: 'Pisang Bakar Keju', price: 20000, categoryId: 4, image: '', description: 'Pisang bakar topping keju' },
+];
+
 const DUMMY_CATEGORIES = [
   { id: 1, name: 'Makanan Utama' },
   { id: 2, name: 'Minuman' },
@@ -14,311 +22,362 @@ const DUMMY_CATEGORIES = [
   { id: 4, name: 'Dessert' }
 ];
 
-const DUMMY_PRODUCTS = [
-  { id: 1, name: 'Nasi Goreng Spesial', price: 35000, categoryId: 1, image: 'https://images.unsplash.com/photo-1603133872878-684f208fb74b?auto=format&fit=crop&w=500&q=60' },
-  { id: 2, name: 'Ayam Bakar Madu', price: 42000, categoryId: 1, image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=500&q=60' },
-  { id: 3, name: 'Es Teh Manis', price: 8000, categoryId: 2, image: '' },
-  { id: 4, name: 'Kopi Susu Gula Aren', price: 18000, categoryId: 2, image: '' },
-  { id: 5, name: 'Kentang Goreng', price: 15000, categoryId: 3, image: '' },
-  { id: 6, name: 'Pisang Bakar Keju', price: 20000, categoryId: 4, image: '' },
-];
+interface CartItem {
+  itemId: string; // unique id for cart item (product id + modifiers)
+  id: number; // product id
+  name: string;
+  price: number;
+  quantity: number;
+  notes?: string;
+}
 
 export default function DemoCashier() {
-  const [cart, setCart] = useState<any[]>([]);
+  const [products] = useState<any[]>(DUMMY_PRODUCTS);
+  const [categories] = useState<any[]>(DUMMY_CATEGORIES);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [cashReceived, setCashReceived] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [orderType, setOrderType] = useState('dine_in');
+  
+  // Local Cart State for Demo
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  const filteredProducts = DUMMY_PRODUCTS.filter(p => {
+  // UI States
+  const [managementMode, setManagementMode] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showMobileCart, setShowMobileCart] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+
+  // Filter products
+  const filteredProducts = products.filter(p => {
     const matchCat = selectedCategory ? p.categoryId === selectedCategory : true;
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
   });
 
-  const getDisplayPrice = (price: number) => {
-    if (selectedPlatform === 'gofood') return price * 1.2;
-    if (selectedPlatform === 'grabfood') return price * 1.25;
-    if (selectedPlatform === 'shopeefood') return price * 1.15;
-    return price;
-  };
-
+  // Cart Functions
   const addToCart = (product: any) => {
-    const price = getDisplayPrice(product.price);
-    const existing = cart.find(item => item.id === product.id && item.price === price);
-    if (existing) {
-      setCart(cart.map(item => item.id === product.id && item.price === price ? { ...item, qty: item.qty + 1 } : item));
-    } else {
-      setCart([...cart, { ...product, qty: 1, price }]);
-    }
-    toast.success(`${product.name} added`);
+    setCartItems(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [...prev, { itemId: `${product.id}-${Date.now()}`, id: product.id, name: product.name, price: product.price, quantity: 1 }];
+    });
+    toast.success(`${product.name} added to cart`);
   };
 
-  const updateQuantity = (id: number, qty: number) => {
-    if (qty < 1) return;
-    setCart(cart.map(item => item.id === id ? { ...item, qty } : item));
+  const updateQuantity = (itemId: string, qty: number) => {
+    if (qty < 1) {
+      setCartItems(prev => prev.filter(item => item.itemId !== itemId));
+    } else {
+      setCartItems(prev => prev.map(item => item.itemId === itemId ? { ...item, quantity: qty } : item));
+    }
+  };
+
+  const removeItem = (itemId: string) => {
+    setCartItems(prev => prev.filter(item => item.itemId !== itemId));
   };
 
   const getTotal = () => {
-    return cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    return cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
+  const formatCurrency = (value: number) => `Rp ${Math.floor(value).toLocaleString('id-ID').replace(/,/g, '.')}`;
+
   const handleCheckout = () => {
-    if (cart.length === 0) return;
+    if (cartItems.length === 0) return toast.error('Cart is empty');
     setShowPayment(true);
   };
 
   const handlePayment = () => {
     setIsProcessing(true);
     setTimeout(() => {
-        setIsProcessing(false);
-        setShowPayment(false);
-        setCart([]);
-        setCashReceived('');
-        toast.success('Pembayaran Berhasil! (Simulasi)');
+      setIsProcessing(false);
+      setShowPayment(false);
+      setCartItems([]);
+      setCashReceived('');
+      toast.success('Payment successful (Demo)!');
     }, 1500);
   };
 
-  const formatCurrency = (val: number) => `Rp ${Math.floor(val).toLocaleString('id-ID')}`;
-
   return (
-    <DemoLayout variant="cashier" title="POS Terminal (Demo)">
-      <div className="flex h-[calc(100vh-140px)] gap-0 md:gap-6 bg-gray-100 dark:bg-slate-900">
-        <Toaster position="top-right" />
-        
-        {/* LEFT: Products */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-slate-800/50 rounded-xl">
-            {/* Header Controls */}
-            <div className="p-4 bg-white dark:bg-slate-800 shadow-sm z-10">
-                <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-                    <div className="relative flex-1 min-w-[200px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <input 
-                            type="text" 
-                            placeholder="Cari menu..." 
-                            className="w-full pl-9 pr-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-                    {/* Platform Switcher */}
-                    <div className="flex gap-2">
-                        <button 
-                            onClick={() => setSelectedPlatform(null)}
-                            className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${!selectedPlatform ? 'bg-gray-800 text-white' : 'bg-white text-gray-600'}`}
-                        >
-                            Dine In
-                        </button>
-                        <button 
-                            onClick={() => setSelectedPlatform('gofood')}
-                            className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${selectedPlatform === 'gofood' ? 'bg-green-600 text-white' : 'bg-white text-green-600'}`}
-                        >
-                            GoFood
-                        </button>
-                    </div>
-                </div>
+    <div className="flex h-screen bg-gray-100">
+      <Toaster position="top-right" />
 
-                {/* Categories */}
-                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                    <button 
-                        onClick={() => setSelectedCategory(null)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${!selectedCategory ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-gray-300'}`}
-                    >
-                        Semua
-                    </button>
-                    {DUMMY_CATEGORIES.map(cat => (
-                        <button 
-                            key={cat.id}
-                            onClick={() => setSelectedCategory(cat.id)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${selectedCategory === cat.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-gray-300'}`}
-                        >
-                            {cat.name}
-                        </button>
-                    ))}
-                </div>
+      {/* Products Section */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="bg-white p-4 shadow-sm">
+          <div className="flex gap-2 md:gap-4 flex-wrap">
+            <div className="flex-1 min-w-[200px] relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
 
-            {/* Product Grid */}
-            <div className="flex-1 overflow-y-auto p-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {filteredProducts.map(product => {
-                        const displayPrice = getDisplayPrice(product.price);
-                        return (
-                            <div 
-                                key={product.id}
-                                onClick={() => addToCart(product)}
-                                className="bg-white dark:bg-slate-800 rounded-xl shadow-sm hover:shadow-md transition cursor-pointer overflow-hidden border border-gray-100 dark:border-slate-700 active:scale-95 touch-manipulation"
-                            >
-                                <div className="h-32 bg-gray-200 dark:bg-slate-700 relative">
-                                    {product.image ? (
-                                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-4xl">🥘</div>
-                                    )}
-                                    {selectedPlatform && (
-                                        <span className="absolute top-2 right-2 bg-yellow-400 text-black text-[10px] font-bold px-2 py-1 rounded-full shadow">
-                                            +Markup
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="p-3">
-                                    <h3 className="font-bold text-gray-800 dark:text-white truncate">{product.name}</h3>
-                                    <p className={`text-sm font-bold mt-1 ${selectedPlatform ? 'text-orange-500' : 'text-blue-600'}`}>
-                                        {formatCurrency(displayPrice)}
-                                    </p>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        </div>
-
-        {/* RIGHT: Cart Sidebar */}
-        <div className="w-96 bg-white dark:bg-slate-800 border-l dark:border-slate-700 flex flex-col shadow-xl z-20">
-            <div className="p-4 border-b dark:border-slate-700 bg-white dark:bg-slate-800">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold flex items-center gap-2 dark:text-white">
-                        <ShoppingCart className="w-5 h-5" /> Pesanan
-                    </h2>
-                    <div className="flex gap-1">
-                        <button className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"><UserCircle2 className="w-5 h-5 text-gray-500" /></button>
-                        <button className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"><Settings className="w-5 h-5 text-gray-500" /></button>
-                    </div>
-                </div>
-                
-                {/* Order Type */}
-                <div className="grid grid-cols-3 gap-2 bg-gray-100 dark:bg-slate-700 p-1 rounded-lg">
-                    {['dine_in', 'takeaway', 'delivery'].map(type => (
-                        <button 
-                            key={type}
-                            onClick={() => setOrderType(type)}
-                            className={`py-1.5 text-xs font-bold rounded-md capitalize ${orderType === type ? 'bg-white dark:bg-slate-600 shadow text-blue-600' : 'text-gray-500 dark:text-gray-400'}`}
-                        >
-                            {type.replace('_', ' ')}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Cart Items */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {cart.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                        <ShoppingCart className="w-12 h-12 mb-3 opacity-20" />
-                        <p>Keranjang kosong</p>
-                    </div>
-                ) : (
-                    cart.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-start">
-                            <div className="flex-1">
-                                <p className="font-medium text-gray-800 dark:text-white">{item.name}</p>
-                                <p className="text-xs text-blue-600 font-bold">{formatCurrency(item.price)}</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <button onClick={() => updateQuantity(item.id, item.qty - 1)} className="w-6 h-6 bg-gray-100 dark:bg-slate-700 rounded flex items-center justify-center text-gray-600 dark:text-white">-</button>
-                                <span className="text-sm font-bold w-4 text-center dark:text-white">{item.qty}</span>
-                                <button onClick={() => updateQuantity(item.id, item.qty + 1)} className="w-6 h-6 bg-blue-100 text-blue-600 rounded flex items-center justify-center">+</button>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            {/* Total & Action */}
-            <div className="p-4 bg-gray-50 dark:bg-slate-800 border-t dark:border-slate-700">
-                <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-                        <span>Subtotal</span>
-                        <span>{formatCurrency(getTotal())}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-                        <span>Tax (10%)</span>
-                        <span>{formatCurrency(getTotal() * 0.1)}</span>
-                    </div>
-                    <div className="flex justify-between text-xl font-bold text-gray-900 dark:text-white border-t border-dashed border-gray-300 pt-2">
-                        <span>Total</span>
-                        <span>{formatCurrency(getTotal() * 1.1)}</span>
-                    </div>
-                </div>
-                <button 
-                    onClick={handleCheckout}
-                    disabled={cart.length === 0}
-                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 disabled:bg-gray-300 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2"
+            {/* Platform Switcher */}
+            <div className="flex gap-2 items-center overflow-x-auto pb-1 no-scrollbar">
+                <button
+                  onClick={() => setSelectedPlatform(null)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition border whitespace-nowrap ${
+                    selectedPlatform === null 
+                      ? 'bg-gray-800 text-white border-gray-800' 
+                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  }`}
                 >
-                    <CreditCard className="w-5 h-5" />
-                    Bayar Sekarang
+                  🏠 Dine In
+                </button>
+                <button
+                  onClick={() => setSelectedPlatform('gofood')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition border whitespace-nowrap ${
+                    selectedPlatform === 'gofood' 
+                      ? 'bg-green-600 text-white border-green-600' 
+                      : 'bg-white text-green-600 border-green-200 hover:bg-green-50'
+                  }`}
+                >
+                  GoFood
                 </button>
             </div>
+
+            {/* Desktop Buttons (Dummy) */}
+            <div className="hidden md:flex gap-2">
+              <button className="px-4 py-2 rounded-lg bg-indigo-500 text-white flex items-center gap-2 hover:bg-indigo-600">
+                <UtensilsCrossed className="w-5 h-5" /> Tables
+              </button>
+              <button className="px-4 py-2 rounded-lg bg-pink-500 text-white flex items-center gap-2 hover:bg-pink-600">
+                <Tag className="w-5 h-5" /> Modifiers
+              </button>
+              <button className="px-4 py-2 rounded-lg bg-purple-500 text-white flex items-center gap-2 hover:bg-purple-600">
+                <Receipt className="w-5 h-5" /> Transactions
+              </button>
+              <button
+                onClick={() => setManagementMode(!managementMode)}
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                  managementMode ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                <Settings className="w-5 h-5" /> {managementMode ? 'Exit' : 'Manage'}
+              </button>
+              <button className="px-4 py-2 rounded-lg bg-blue-500 text-white flex items-center gap-2 hover:bg-blue-600">
+                <UserCircle2 className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="md:hidden px-4 py-2 rounded-lg bg-blue-500 text-white"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Mobile Cart Button */}
+            <button
+              onClick={() => setShowMobileCart(true)}
+              className="md:hidden px-4 py-2 rounded-lg bg-blue-500 text-white flex items-center gap-2"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              <span className="font-semibold">{cartItems.length}</span>
+            </button>
+          </div>
+
+          {/* Categories */}
+          <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-2">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+                !selectedCategory ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+              }`}
+            >
+              All
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-4 py-2 rounded-lg whitespace-nowrap ${
+                  selectedCategory === cat.id ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Payment Modal */}
-        {showPayment && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                    <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center">
-                        <h2 className="text-xl font-bold dark:text-white">Pembayaran</h2>
-                        <button onClick={() => setShowPayment(false)}><X className="w-6 h-6 text-gray-400" /></button>
-                    </div>
-                    
-                    <div className="p-6">
-                        <div className="text-center mb-8">
-                            <p className="text-gray-500 text-sm">Total Tagihan</p>
-                            <h1 className="text-4xl font-bold text-blue-600 mt-1">{formatCurrency(getTotal() * 1.1)}</h1>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-3 mb-6">
-                            {['cash', 'qris', 'card'].map(method => (
-                                <button 
-                                    key={method}
-                                    onClick={() => setPaymentMethod(method)}
-                                    className={`py-3 rounded-xl border-2 font-bold capitalize transition ${
-                                        paymentMethod === method 
-                                        ? 'border-blue-500 bg-blue-50 text-blue-600' 
-                                        : 'border-gray-100 text-gray-500 hover:border-gray-200'
-                                    }`}
-                                >
-                                    {method}
-                                </button>
-                            ))}
-                        </div>
-
-                        {paymentMethod === 'cash' && (
-                            <div className="mb-6">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Uang Diterima</label>
-                                <input 
-                                    type="number" 
-                                    className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
-                                    placeholder="0"
-                                    value={cashReceived}
-                                    onChange={e => setCashReceived(e.target.value)}
-                                    autoFocus
-                                />
-                                {Number(cashReceived) > 0 && (
-                                    <div className="flex justify-between mt-2 text-sm">
-                                        <span className="text-gray-500">Kembalian:</span>
-                                        <span className="font-bold text-green-600">{formatCurrency(Number(cashReceived) - (getTotal() * 1.1))}</span>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        <button 
-                            onClick={handlePayment}
-                            disabled={isProcessing}
-                            className="w-full py-4 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-green-500/30 flex items-center justify-center gap-2"
-                        >
-                            {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Konfirmasi Bayar'}
-                        </button>
-                    </div>
+        {/* Products Grid */}
+        <div className="flex-1 overflow-y-auto p-2 md:p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+            {filteredProducts.map((product) => (
+              <div
+                key={product.id}
+                onClick={() => addToCart(product)}
+                className="bg-white rounded-lg p-4 shadow hover:shadow-lg transition relative min-h-[180px] touch-manipulation cursor-pointer active:scale-95"
+              >
+                <div className="aspect-square bg-gray-200 rounded-lg mb-3 flex items-center justify-center overflow-hidden relative">
+                  {product.image ? (
+                    <img 
+                      src={product.image} 
+                      alt={product.name} 
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  ) : (
+                    <span className="text-4xl text-gray-400">📦</span>
+                  )}
                 </div>
-            </div>
-        )}
+                <h3 className="font-semibold text-sm mb-1 truncate">{product.name}</h3>
+                <p className="font-bold text-blue-600">{formatCurrency(product.price)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </DemoLayout>
+
+      {/* Cart Section - Desktop */}
+      <div className="hidden md:flex w-96 bg-white border-l flex-col">
+        <div className="p-4 border-b">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <ShoppingCart className="w-6 h-6" />
+            Cart ({cartItems.length})
+          </h2>
+        </div>
+        <RunningLogo />
+
+        <div className="flex-1 overflow-y-auto p-4">
+          {cartItems.length === 0 ? (
+            <div className="text-center text-gray-400 mt-8">
+              <ShoppingCart className="w-16 h-16 mx-auto mb-2 opacity-50" />
+              <p>Cart is empty</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {cartItems.map((item) => (
+                <div key={item.itemId} className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex justify-between mb-2">
+                    <span className="font-medium">{item.name}</span>
+                    <button onClick={() => removeItem(item.itemId)} className="text-red-500">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => updateQuantity(item.itemId, item.quantity - 1)}
+                        className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="w-8 text-center font-semibold">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.itemId, item.quantity + 1)}
+                        className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center hover:bg-gray-300"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <span className="font-semibold text-blue-600">
+                      {formatCurrency(item.price * item.quantity)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t p-4">
+          <div className="space-y-2 mb-4">
+            <div className="flex justify-between text-sm">
+              <span>Subtotal:</span>
+              <span>{formatCurrency(getTotal())}</span>
+            </div>
+            <div className="flex justify-between font-bold text-lg">
+              <span>Total:</span>
+              <span className="text-blue-600">{formatCurrency(getTotal())}</span>
+            </div>
+          </div>
+          <button
+            onClick={handleCheckout}
+            disabled={cartItems.length === 0}
+            className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <CreditCard className="w-5 h-5" />
+            Checkout
+          </button>
+        </div>
+      </div>
+
+      {/* Payment Modal (Simplified for Demo) */}
+      {showPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[500px] max-w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Payment</h3>
+              <button onClick={() => setShowPayment(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-4 pb-4 border-b">
+              <p className="text-sm text-gray-600 mb-1">Total Amount</p>
+              <p className="text-3xl font-bold text-blue-600">{formatCurrency(getTotal())}</p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Payment Method</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['cash', 'card', 'qris'].map((method) => (
+                  <button
+                    key={method}
+                    onClick={() => setPaymentMethod(method)}
+                    className={`py-3 px-2 rounded-lg text-sm font-medium capitalize ${
+                      paymentMethod === method
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    {method}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {paymentMethod === 'cash' && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Cash Received</label>
+                <input
+                  type="number"
+                  value={cashReceived}
+                  onChange={(e) => setCashReceived(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg"
+                  placeholder="0"
+                />
+                {Number(cashReceived) > getTotal() && (
+                  <p className="text-sm text-green-600 mt-2">
+                    Change: {formatCurrency(Number(cashReceived) - getTotal())}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={handlePayment}
+              disabled={isProcessing}
+              className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600"
+            >
+              {isProcessing ? 'Processing...' : 'Complete Transaction'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

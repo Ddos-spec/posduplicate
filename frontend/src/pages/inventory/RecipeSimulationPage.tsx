@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import { 
-  ChefHat, TrendingUp, DollarSign, Scale, ArrowRight, Save, Plus, Trash2, AlertCircle 
+  ChefHat, TrendingUp, Save, Plus, Trash2, AlertCircle 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
