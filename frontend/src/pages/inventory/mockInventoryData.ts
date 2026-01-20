@@ -1,13 +1,13 @@
 export const MOCK_INVENTORY_STATS = {
-  totalValue: 45200000,
-  totalItems: 145,
-  lowStockCount: 5,
+  totalValue: 185000000, // Estimasi nilai stok (naik karena chain besar)
+  totalItems: 59, // Sesuai data excel (kurang lebih)
+  lowStockCount: 4,
   outOfStockCount: 1,
-  pendingPO: 2,
+  pendingPO: 3,
+  avgDaysCover: 4.2, // Target klien 4-5 hari
 };
 
-// Kategori FnB yang umum
-export type InventoryCategory = 'Bahan Baku' | 'Bahan Segar' | 'Kemasan' | 'Minuman';
+export type InventoryCategory = 'Bahan Pokok' | 'Minuman' | 'Frozen Food' | 'Packaging' | 'WIP (Olahan)';
 
 export interface InventoryItem {
   id: string;
@@ -16,121 +16,137 @@ export interface InventoryItem {
   category: InventoryCategory;
   currentStock: number;
   unit: string;
-  minStock: number; // Safety Stock
+  minStock: number;
   costPerUnit: number;
   lastUpdated: string;
   status: 'Aman' | 'Menipis' | 'Habis';
   supplier: string;
+  source: 'DC' | 'Supplier Langsung'; // Kebutuhan Klien
+  daysCover: number; // Kebutuhan Klien
 }
 
+// Data REAL dari Excel Klien
 export const MOCK_INVENTORY_ITEMS: InventoryItem[] = [
   {
-    id: 'INV-001',
-    name: 'Biji Kopi Arabika (Premium)',
-    sku: 'KOP-AR-01',
-    category: 'Bahan Baku',
-    currentStock: 12.5,
-    unit: 'kg',
-    minStock: 15, // Warning: Stok < MinStock
-    costPerUnit: 185000,
-    lastUpdated: '2026-01-20',
-    status: 'Menipis',
-    supplier: 'CV Kopi Nusantara',
-  },
-  {
-    id: 'INV-002',
-    name: 'Susu Fresh Milk (1L)',
-    sku: 'DAI-SUS-01',
-    category: 'Bahan Segar',
-    currentStock: 45,
-    unit: 'pack',
-    minStock: 20,
-    costPerUnit: 18000,
+    id: 'BR-001',
+    name: 'Beras Yaman Rice',
+    sku: 'RMT.00004-1',
+    category: 'Bahan Pokok',
+    currentStock: 250,
+    unit: 'Kg',
+    minStock: 100,
+    costPerUnit: 12500,
     lastUpdated: '2026-01-20',
     status: 'Aman',
-    supplier: 'PT Dairy Farm',
+    supplier: 'Supplier Langsung',
+    source: 'Supplier Langsung',
+    daysCover: 5.5
   },
   {
-    id: 'INV-003',
-    name: 'Gula Pasir Lokal',
-    sku: 'GUL-PAS-01',
-    category: 'Bahan Baku',
-    currentStock: 50,
-    unit: 'kg',
-    minStock: 10,
-    costPerUnit: 14500,
-    lastUpdated: '2026-01-19',
-    status: 'Aman',
-    supplier: 'Toko Grosir Jaya',
-  },
-  {
-    id: 'INV-004',
-    name: 'Paper Cup 12oz',
-    sku: 'PAC-CUP-12',
-    category: 'Kemasan',
-    currentStock: 120,
-    unit: 'pcs',
-    minStock: 500, // Critical
-    costPerUnit: 850,
-    lastUpdated: '2026-01-18',
-    status: 'Menipis',
-    supplier: 'PT Packindo',
-  },
-  {
-    id: 'INV-005',
-    name: 'Sirup Vanilla',
-    sku: 'SYR-VAN-01',
+    id: 'FGS-00007',
+    name: '7dates Jus Kurma',
+    sku: 'FGS-00007',
     category: 'Minuman',
-    currentStock: 0,
-    unit: 'btl',
-    minStock: 2,
-    costPerUnit: 95000,
-    lastUpdated: '2026-01-15',
-    status: 'Habis',
-    supplier: 'CV Rasa Utama',
+    currentStock: 12,
+    unit: 'Dus',
+    minStock: 10,
+    costPerUnit: 145000,
+    lastUpdated: '2026-01-19',
+    status: 'Menipis',
+    supplier: '7dates Pusat',
+    source: 'Supplier Langsung',
+    daysCover: 2.1
   },
   {
-    id: 'INV-006',
-    name: 'Tepung Terigu (Protein Tinggi)',
-    sku: 'TEP-TER-01',
-    category: 'Bahan Baku',
-    currentStock: 25,
-    unit: 'kg',
-    minStock: 10,
-    costPerUnit: 12000,
+    id: 'FGS-00012',
+    name: 'Samosa Beef Original',
+    sku: 'FGS-00012',
+    category: 'Frozen Food',
+    currentStock: 450,
+    unit: 'PCS',
+    minStock: 100,
+    costPerUnit: 3500,
     lastUpdated: '2026-01-20',
     status: 'Aman',
-    supplier: 'Toko Grosir Jaya',
+    supplier: 'Central Kitchen',
+    source: 'DC',
+    daysCover: 4.8
   },
   {
-    id: 'INV-007',
-    name: 'Telur Ayam Negeri',
-    sku: 'EGG-AYM-01',
-    category: 'Bahan Segar',
-    currentStock: 5,
-    unit: 'kg',
-    minStock: 8,
-    costPerUnit: 28000,
-    lastUpdated: '2026-01-20',
-    status: 'Menipis',
-    supplier: 'Peternakan Sejahtera',
+    id: 'PCG-00001',
+    name: 'Lunch Box Standard',
+    sku: 'PCG-00001',
+    category: 'Packaging',
+    currentStock: 1200,
+    unit: 'PCS',
+    minStock: 500,
+    costPerUnit: 1200,
+    lastUpdated: '2026-01-18',
+    status: 'Aman',
+    supplier: 'Mitra Pack',
+    source: 'Supplier Langsung',
+    daysCover: 7.0
   },
+  {
+    id: 'WIP-00002',
+    name: 'Kambing Olahan (WIP)',
+    sku: 'WIP-00002',
+    category: 'WIP (Olahan)',
+    currentStock: 0,
+    unit: 'Bungkus',
+    minStock: 20,
+    costPerUnit: 85000,
+    lastUpdated: '2026-01-20',
+    status: 'Habis',
+    supplier: 'Central Kitchen',
+    source: 'DC',
+    daysCover: 0
+  },
+  {
+    id: 'FGS-00009',
+    name: 'Dahagaku Lemon Sereh',
+    sku: 'FGS-00009',
+    category: 'Minuman',
+    currentStock: 45,
+    unit: 'Botol',
+    minStock: 24,
+    costPerUnit: 8500,
+    lastUpdated: '2026-01-20',
+    status: 'Aman',
+    supplier: 'Dahagaku Indonesia',
+    source: 'Supplier Langsung',
+    daysCover: 3.5
+  },
+  {
+    id: 'PCG-00023',
+    name: 'Sedotan Steril',
+    sku: 'PCG.00023',
+    category: 'Packaging',
+    currentStock: 15,
+    unit: 'Pack',
+    minStock: 20,
+    costPerUnit: 15000,
+    lastUpdated: '2026-01-15',
+    status: 'Menipis',
+    supplier: 'Mitra Pack',
+    source: 'Supplier Langsung',
+    daysCover: 1.8
+  }
 ];
 
-// Data Forecasting (Logic v1: Weighted Average + Tren Mingguan)
-// Skenario: Weekend (Sabtu/Minggu) demand naik.
+// Forecasting Data (Sesuai pola Excel: Weekend naik 30-50%)
 export const MOCK_FORECAST_DATA = [
-  { day: 'Senin', usage: 12, predicted: 13, reason: 'Stabil' },
-  { day: 'Selasa', usage: 11, predicted: 12, reason: 'Stabil' },
-  { day: 'Rabu', usage: 14, predicted: 14, reason: 'Stabil' },
-  { day: 'Kamis', usage: 15, predicted: 16, reason: 'Tren Naik' },
-  { day: 'Jumat', usage: 22, predicted: 24, reason: 'Pre-weekend' },
-  { day: 'Sabtu', usage: 35, predicted: 38, reason: 'Peak Day' }, // Demand tinggi
-  { day: 'Minggu', usage: 30, predicted: 32, reason: 'Peak Day' },
+  { day: 'Senin', usage: 450, predicted: 460, reason: 'Normal Day' },
+  { day: 'Selasa', usage: 440, predicted: 455, reason: 'Normal Day' },
+  { day: 'Rabu', usage: 480, predicted: 490, reason: 'Trend Naik' },
+  { day: 'Kamis', usage: 520, predicted: 550, reason: 'Pre-Weekend' },
+  { day: 'Jumat', usage: 850, predicted: 900, reason: 'Early Weekend (+30%)' },
+  { day: 'Sabtu', usage: 1100, predicted: 1200, reason: 'Peak Weekend (+50%)' },
+  { day: 'Minggu', usage: 950, predicted: 1050, reason: 'Family Day (+40%)' },
 ];
 
 export const MOCK_ALERTS = [
-  { id: 1, type: 'critical', message: 'Sirup Vanilla HABIS! Restock segera.', item: 'Sirup Vanilla' },
-  { id: 2, type: 'warning', message: 'Stok Kopi Arabika di bawah batas aman (12.5kg).', item: 'Biji Kopi Arabika' },
-  { id: 3, type: 'warning', message: 'Paper Cup menipis, prediksi habis dalam 2 hari.', item: 'Paper Cup 12oz' },
+  { id: 1, type: 'critical', message: 'Kambing Olahan (WIP) HABIS! Kiriman DC belum sampai.', item: 'Kambing Olahan' },
+  { id: 2, type: 'warning', message: 'Jus Kurma sisa 2 hari (Days Cover < 3). Segera order.', item: '7dates Jus Kurma' },
+  { id: 3, type: 'info', message: 'Weekend demand naik 50%. Siapkan extra Samosa & Beras.', item: 'Forecast Info' },
 ];

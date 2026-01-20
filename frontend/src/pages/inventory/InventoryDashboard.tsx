@@ -32,6 +32,13 @@ export default function InventoryDashboard() {
       desc: 'Total valuasi gudang saat ini'
     },
     {
+      label: 'Avg Days Cover',
+      value: `${MOCK_INVENTORY_STATS.avgDaysCover} Hari`,
+      icon: Clock,
+      color: 'green',
+      desc: 'Target aman: 4-5 hari'
+    },
+    {
       label: 'Low Stock Items',
       value: MOCK_INVENTORY_STATS.lowStockCount,
       icon: AlertTriangle,
@@ -76,7 +83,7 @@ export default function InventoryDashboard() {
       ))}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {stats.map((stat, idx) => (
           <div 
             key={idx} 
