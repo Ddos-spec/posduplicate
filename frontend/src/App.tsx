@@ -69,6 +69,7 @@ const StockPage = lazy(() => import('./pages/inventory/StockPage'));
 const ForecastPageInventory = lazy(() => import('./pages/inventory/ForecastPage'));
 const ReorderPage = lazy(() => import('./pages/inventory/ReorderPage'));
 const InventorySettings = lazy(() => import('./pages/inventory/InventorySettings'));
+const RecipeSimulationPage = lazy(() => import('./pages/inventory/RecipeSimulationPage'));
 
 // Medsos Module Pages (Mock)
 const MedsosLayout = lazy(() => import('./components/medsos/MedsosLayout'));
@@ -229,6 +230,7 @@ function App() {
         <Route path="/demo/inventory" element={<InventoryLayout />}>
           <Route path="dashboard" element={<InventoryDashboard />} />
           <Route path="stock" element={<StockPage />} />
+          <Route path="recipe" element={<RecipeSimulationPage />} />
           <Route path="forecast" element={<ForecastPageInventory />} />
           <Route path="reorder" element={<ReorderPage />} />
           <Route path="settings" element={<InventorySettings />} />
@@ -326,6 +328,7 @@ function App() {
         >
           <Route path="dashboard" element={<InventoryDashboard />} />
           <Route path="stock" element={<StockPage />} />
+          <Route path="recipe" element={<RecipeSimulationPage />} />
           <Route path="forecast" element={<ForecastPageInventory />} />
           <Route path="reorder" element={<ReorderPage />} />
           <Route path="settings" element={<InventorySettings />} />
