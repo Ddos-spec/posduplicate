@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DemoLayout from '../DemoLayout';
+import DemoRecipeModal from './DemoRecipeModal';
 
 // --- DUMMY DATA ---
 const DUMMY_CATEGORIES = [
@@ -49,6 +50,7 @@ export default function DemoFnbProducts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [recipeModalProduct, setRecipeModalProduct] = useState<{ id: number; name: string } | null>(null);
   const [currentPage] = useState(1);
   const itemsPerPage = 12;
 
@@ -247,7 +249,10 @@ export default function DemoFnbProducts() {
                             {formatCurrency(product.price)}
                         </p>
                         <div className="grid grid-cols-3 gap-2 mt-4">
-                            <button className="flex items-center justify-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 text-sm">
+                            <button
+                                onClick={() => setRecipeModalProduct({ id: product.id, name: product.name })}
+                                className="flex items-center justify-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 text-sm"
+                            >
                                 <ChefHat className="w-4 h-4" />
                             </button>
                             <button
@@ -333,6 +338,13 @@ export default function DemoFnbProducts() {
             </div>
         )}
         </div>
+
+      {recipeModalProduct && (
+        <DemoRecipeModal
+          product={recipeModalProduct}
+          onClose={() => setRecipeModalProduct(null)}
+        />
+      )}
     </DemoLayout>
   );
 }
