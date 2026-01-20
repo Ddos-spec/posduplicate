@@ -302,7 +302,7 @@ export default function BillingManagementPage() {
                         Record Payment
                       </button>
                       <button
-                        onClick={() => toast.success('Send reminder feature coming soon')}
+                        onClick={() => toast.success('Fitur pengingat sedang dalam pengembangan')}
                         className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
                       >
                         Send Reminder

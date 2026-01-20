@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChefHat, ShoppingCart, TrendingUp, Truck, Store, Factory, ArrowRight, 
-  Package, Share2, Pill, Tag, User, Shield, Box, Search 
+  Package, Share2, Pill, Tag, User, Shield, Box 
 } from 'lucide-react';
-import { useDemoUser, DemoRole } from './demoRoleStore';
+import { useDemoUser, type DemoRole } from './demoRoleStore';
 
 interface RoleOption {
   role: DemoRole;

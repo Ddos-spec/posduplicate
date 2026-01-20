@@ -1,0 +1,42 @@
+PROGRES PROYEK MyPOS (posduplicate)
+Tanggal catatan: 2026-01-20
+
+RINGKASAN
+- Kode fullstack sudah ada: backend Express + TypeScript + Prisma, frontend React + Vite + Tailwind.
+- Modul bisnis inti sudah terstruktur: POS/FnB, Accounting, Admin, dan Shared Services.
+- Skema database lengkap, mencakup POS, inventory, transaksi, serta akuntansi multi-schema.
+- Infrastruktur dasar tersedia (Dockerfile, docker-compose, PM2 ecosystem) serta PWA di frontend.
+
+RINCIAN BACKEND (backend/src)
+- Routing modular untuk FnB/POS: dashboard, analytics, report, product, category, customer, table, modifier, variant, promotion, recipe, ingredient, inventory, expense, supplier, stock movement, transaction.
+- Modul Accounting lengkap: COA, journal, ledger, laporan, period, budget, reconciliation, asset, tax, forecast, advanced forecast, approval, e-faktur, PSAK, attachment, payroll.
+- Shared services: auth, user, tenant, outlet, settings, printer settings, upload, webhook, integrations, API keys, notifications, activity log, owner API.
+- Middleware tersedia untuk auth, role, tenant, audit, API key, validation, dan upload.
+- Utilitas dan service: crypto, validation, journal utils, ledger/forecasting/auto-journal services, API key generator, scripts (create admin, diagnose transaksi).
+- Logging error ke file dan konfigurasi CORS berbasis env.
+
+RINCIAN FRONTEND (frontend/src)
+- Routing aplikasi untuk login, module selector, cashier, owner, admin, dan accounting.
+- Halaman owner: dashboard, user, outlet, laporan, settings, inventory, transaksi, integrasi.
+- Halaman accounting: dashboard utama + variant retail/distributor/produsen, COA, journal, ledger, laporan, forecast, settings, user management.
+- Halaman admin: tenant management, system analytics, API keys, API docs.
+- Komponen pendukung: notification/confirmation modal, PWA refresh prompt, theme store, service worker hook.
+- Demo pages untuk FnB dan Accounting tersedia.
+
+DATABASE (backend/prisma + databasestruktur.md)
+- Prisma schema multi-schema (public + accounting) dengan tabel POS lengkap: item, kategori, transaksi, payment, pelanggan, inventory, promosi, meja, resep, dll.
+- Skema accounting mendetail: COA, journal, ledger, AR/AP, budget, asset, tax, payroll, approval, reconciliation, audit logs, report cache, dll.
+- Migration awal untuk integrasi sudah ada.
+
+DEVOPS/DEPLOYMENT
+- Dockerfile dan docker-compose untuk deployment container.
+- PM2 ecosystem config untuk proses backend.
+- Konfigurasi Vercel dan PWA assets di frontend.
+
+TESTING DAN QUALITY
+- Setup Jest di backend, ada test unit dan integrasi untuk accounting.
+- Lint dan build scripts sudah disiapkan di backend dan frontend.
+
+CATATAN LANJUTAN
+- Dokumentasi operasional (README, env example) belum terlihat di repo.
+- Coverage test di luar accounting belum terlihat; perlu verifikasi.

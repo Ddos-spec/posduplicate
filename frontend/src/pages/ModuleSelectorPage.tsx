@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import {
-  Monitor, Calculator, Package, Users, BarChart3,
+  Monitor, Calculator, Package,
   ArrowRight, LogOut, Clock, Sun, Moon, Star,
   ShoppingCart, Share2
 } from 'lucide-react';
@@ -63,8 +63,6 @@ export default function ModuleSelectorPage() {
       path: '/medsos/dashboard'
     }
   ];
-
-  const comingSoon = [];
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
@@ -181,31 +179,7 @@ export default function ModuleSelectorPage() {
           ))}
         </div>
 
-        {/* Coming Soon Section */}
-        <div className="mb-8">
-          <h2 className={`text-sm font-semibold uppercase tracking-wider mb-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            AVAILABLE SOON
-          </h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            {comingSoon.map((item, idx) => (
-              <div
-                key={idx}
-                className={`rounded-xl p-5 ${isDark ? 'bg-slate-800/50 border border-slate-700' : 'bg-white/50 border border-gray-200'}`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? 'bg-slate-700' : 'bg-gray-100'}`}>
-                    <item.icon className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${isDark ? 'bg-slate-700 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
-                    COMING SOON
-                  </span>
-                </div>
-                <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.name}</h4>
-                <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{item.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Coming Soon Section Removed */}
       </div>
 
       {/* Footer / Logout */}

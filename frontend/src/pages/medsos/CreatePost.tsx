@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useThemeStore } from '../../store/themeStore';
-import { Image as ImageIcon, Smile, Hash, Send, Smartphone } from 'lucide-react';
+import { Image as ImageIcon, Smile, Hash, Send } from 'lucide-react';
 
 export default function CreatePost() {
   const { isDark } = useThemeStore();
