@@ -4,7 +4,7 @@ import { useInventoryConfig } from './inventoryConfigStore';
 import { MOCK_INVENTORY_ITEMS, InventoryItem } from './mockInventoryData';
 import { MOCK_PHARMACY_ITEMS, MOCK_RETAIL_ITEMS } from './mockVariantsData';
 import {
-  Search, Filter, Edit2, History, AlertCircle, CheckCircle, XCircle
+  Search, Filter, Edit2, History, AlertCircle, CheckCircle, XCircle, ScanBarcode
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -151,7 +151,10 @@ export default function StockPage() {
                         <tr key={item.id} className={`group transition-colors ${isDark ? 'hover:bg-slate-700/30' : 'hover:bg-orange-50/30'}`}>
                             <td className="p-4">
                                 <p className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.name}</p>
-                                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{item.sku}</p>
+                                <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
+                                  <ScanBarcode size={12} />
+                                  <span>{item.sku}</span>
+                                </div>
                             </td>
                             <td className="p-4">
                                 <span className={`px-2 py-1 rounded text-xs ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
@@ -162,7 +165,17 @@ export default function StockPage() {
                                 <p className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                     {item.currentStock} <span className="text-sm font-normal text-gray-500">{item.unit}</span>
                                 </p>
-                                <p className="text-xs text-gray-400">Min: {item.minStock}</p>
+                                {/* Stock Level Bar */}
+                                <div className="w-full h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mt-1 overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full ${
+                                      item.currentStock <= item.minStock ? 'bg-red-500' : 
+                                      item.currentStock <= item.minStock * 2 ? 'bg-yellow-500' : 'bg-emerald-500'
+                                    }`} 
+                                    style={{ width: `${Math.min((item.currentStock / (item.minStock * 3)) * 100, 100)}%` }}
+                                  />
+                                </div>
+                                <p className="text-[10px] text-gray-400 mt-1">Min: {item.minStock}</p>
                             </td>
 
                             {/* Dynamic Row Data */}
