@@ -1,6 +1,6 @@
 import { DEMO_STATS, DEMO_CHART_DATA } from '../dummyData';
 import DemoLayout from '../DemoLayout';
-import { DollarSign, TrendingDown, TrendingUp, Wallet, ArrowUpRight } from 'lucide-react';
+import { DollarSign, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { useThemeStore } from '../../../store/themeStore';
 
 export default function DemoAcctOwner() {

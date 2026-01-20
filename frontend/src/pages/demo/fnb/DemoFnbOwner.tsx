@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import {
   ShoppingCart, Package, Users, DollarSign, Store,
-  Settings, BarChart3, Loader2, ArrowRight
+  Settings, BarChart3, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DemoLayout from '../DemoLayout';

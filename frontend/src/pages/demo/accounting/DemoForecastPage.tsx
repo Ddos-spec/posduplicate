@@ -4,8 +4,8 @@ import { useThemeStore } from '../../../store/themeStore';
 import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Info, ArrowRight } from 'lucide-react';
 import DemoLayout from '../DemoLayout';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ComposedChart, Line, Bar, Legend, ReferenceLine
+  Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  ComposedChart, Line, ReferenceLine
 } from 'recharts';
 
 type ForecastVariant = 'owner' | 'retail' | 'distributor' | 'produsen';

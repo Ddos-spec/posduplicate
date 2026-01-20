@@ -5,7 +5,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Calendar, FileText, Lock, Plus, Trash2,
-  BookOpen, AlertCircle, Star, Check, Loader2, Save
+  BookOpen, AlertCircle, Check, Loader2
 } from 'lucide-react';
 
 interface JournalEntryLine {

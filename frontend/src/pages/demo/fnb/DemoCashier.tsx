@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
-  Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, 
-  X, UserCircle2, UtensilsCrossed, Tag, Receipt, Settings, Check
+  Search, ShoppingCart, CreditCard, 
+  X, UserCircle2, Settings, Loader2
 } from 'lucide-react';
-import { useThemeStore } from '../../../store/themeStore';
 import toast, { Toaster } from 'react-hot-toast';
 import DemoLayout from '../DemoLayout';
 
@@ -25,7 +24,6 @@ const DUMMY_PRODUCTS = [
 ];
 
 export default function DemoCashier() {
-  const { isDark } = useThemeStore();
   const [cart, setCart] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [search, setSearch] = useState('');
@@ -63,10 +61,6 @@ export default function DemoCashier() {
   const updateQuantity = (id: number, qty: number) => {
     if (qty < 1) return;
     setCart(cart.map(item => item.id === id ? { ...item, qty } : item));
-  };
-
-  const removeItem = (id: number) => {
-    setCart(cart.filter(item => item.id !== id));
   };
 
   const getTotal = () => {

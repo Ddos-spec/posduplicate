@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, BarChart, Bar, Legend
+  LineChart, Line, BarChart, Bar
 } from 'recharts';
-import { FileDown, Printer, Filter, Loader2, TrendingUp, Calendar, ShoppingCart, DollarSign, AlertTriangle, Users, Package } from 'lucide-react';
+import { FileDown, Printer, Filter, Loader2, TrendingUp, Calendar, ShoppingCart, DollarSign, AlertTriangle, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { dashboardService } from '../../services/dashboardService';
 import api from '../../services/api';
-import { exportSalesPDF, exportProductsPDF, exportSalesExcel, exportProductsExcel, exportExpensesExcel, exportExpensesPDF, exportTransactionsExcel, exportTransactionsPDF } from '../../utils/exportUtils';
+import { exportExpensesExcel, exportExpensesPDF, exportTransactionsExcel, exportTransactionsPDF } from '../../utils/exportUtils';
 
 // Interfaces
 interface SalesDataPoint {
@@ -535,9 +535,9 @@ export default function ReportsPage() {
                             cx="50%"
                             cy="50%"
                             outerRadius={100}
-                            label={({ method, percent }) => `${method} ${(percent * 100).toFixed(0)}%`}
+                            label={({ method, percent }) => `${method} ${((percent || 0) * 100).toFixed(0)}%`}
                         >
-                            {financialData.paymentMethods.map((entry, index) => (
+                            {financialData.paymentMethods.map((_, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                         </Pie>

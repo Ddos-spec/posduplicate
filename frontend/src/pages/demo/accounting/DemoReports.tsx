@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Download, Printer } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import DemoLayout from '../DemoLayout';
 
 export default function DemoReports() {

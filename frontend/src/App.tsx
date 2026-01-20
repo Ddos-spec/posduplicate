@@ -14,7 +14,6 @@ const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
 const TenantManagementPage = lazy(() => import('./pages/admin/TenantManagementPage'));
 const SystemAnalyticsPage = lazy(() => import('./pages/admin/SystemAnalyticsPage'));
-const BillingManagementPage = lazy(() => import('./pages/admin/BillingManagementPage'));
 const ApiDocumentationPage = lazy(() => import('./pages/admin/ApiDocumentationPage'));
 const ApiKeyManagementPage = lazy(() => import('./pages/admin/ApiKeyManagementPage'));
 const OwnerLayout = lazy(() => import('./components/owner/OwnerLayout'));

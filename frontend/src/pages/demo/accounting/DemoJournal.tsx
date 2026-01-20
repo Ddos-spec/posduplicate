@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, FileText, Lock, Plus, Trash2, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, Plus, Trash2, Check, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DemoLayout from '../DemoLayout';
 
