@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
+import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import {
   LayoutDashboard, Calendar, MessageCircle, Share2, Settings,
   LogOut, Menu, Sun, Moon, ArrowLeft, Instagram, Facebook, Youtube
@@ -9,6 +10,7 @@ import {
 
 export default function MedsosLayout() {
   const { isDark, toggleTheme } = useThemeStore();
+  const { currentRole } = useDemoUser();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -17,12 +19,18 @@ export default function MedsosLayout() {
   const isDemo = location.pathname.startsWith('/demo');
   const basePath = isDemo ? '/demo/medsos' : '/medsos';
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: `${basePath}/dashboard` },
-    { icon: Calendar, label: 'Content Calendar', path: `${basePath}/calendar` },
-    { icon: MessageCircle, label: 'Inbox & Reply', path: `${basePath}/inbox` },
-    { icon: Settings, label: 'Settings', path: `${basePath}/settings` },
+  const allMenus = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: `${basePath}/dashboard`, roles: ['all'] },
+    { icon: Calendar, label: 'Content Calendar', path: `${basePath}/calendar`, roles: ['medsos_manager', 'content_creator'] },
+    { icon: MessageCircle, label: 'Inbox & Reply', path: `${basePath}/inbox`, roles: ['medsos_manager', 'medsos_cs'] },
+    { icon: Settings, label: 'Settings', path: `${basePath}/settings`, roles: ['medsos_manager'] },
   ];
+
+  const menuItems = allMenus.filter(item => {
+    if (currentRole === 'super_admin') return true;
+    if (item.roles.includes('all')) return true;
+    return item.roles.includes(currentRole);
+  });
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDark ? 'bg-slate-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -36,7 +44,11 @@ export default function MedsosLayout() {
             </div>
             <div>
               <h2 className="font-bold text-lg leading-tight">MyMedsos</h2>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Social Media Manager</p>
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {currentRole === 'medsos_manager' ? 'Manager View' :
+                 currentRole === 'content_creator' ? 'Content Creator' :
+                 currentRole === 'medsos_cs' ? 'CS View' : 'Social Media Manager'}
+              </p>
             </div>
           </div>
 
