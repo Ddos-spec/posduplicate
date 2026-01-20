@@ -62,6 +62,18 @@ const AccountingSettingsPage = lazy(() => import('./pages/accounting/AccountingS
 const ForecastPage = lazy(() => import('./pages/accounting/ForecastPage'));
 const AccountingReadOnlyPage = lazy(() => import('./pages/accounting/AccountingReadOnlyPage'));
 
+// Inventory Module Pages (Mock)
+const InventoryLayout = lazy(() => import('./components/inventory/InventoryLayout'));
+const InventoryDashboard = lazy(() => import('./pages/inventory/InventoryDashboard'));
+const StockPage = lazy(() => import('./pages/inventory/StockPage'));
+const ForecastPageInventory = lazy(() => import('./pages/inventory/ForecastPage'));
+const ReorderPage = lazy(() => import('./pages/inventory/ReorderPage'));
+
+// Medsos Module Pages (Mock)
+const MedsosLayout = lazy(() => import('./components/medsos/MedsosLayout'));
+const MedsosDashboard = lazy(() => import('./pages/medsos/MedsosDashboard'));
+const ContentCalendar = lazy(() => import('./pages/medsos/ContentCalendar'));
+
 // Loading fallback
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -277,6 +289,39 @@ function App() {
           <Route path="users/create" element={<CreateUserPage />} />
           <Route path="settings" element={<AccountingSettingsPage />} />
           <Route index element={<Navigate to="/accounting/dashboard" />} />
+        </Route>
+
+        {/* Inventory Module Routes */}
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute>
+              <InventoryLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard" element={<InventoryDashboard />} />
+          <Route path="stock" element={<StockPage />} />
+          <Route path="forecast" element={<ForecastPageInventory />} />
+          <Route path="reorder" element={<ReorderPage />} />
+          <Route path="settings" element={<div className="p-6">Settings Page (Coming Soon)</div>} />
+          <Route index element={<Navigate to="/inventory/dashboard" />} />
+        </Route>
+
+        {/* Medsos Module Routes */}
+        <Route
+          path="/medsos"
+          element={
+            <ProtectedRoute>
+              <MedsosLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="dashboard" element={<MedsosDashboard />} />
+          <Route path="calendar" element={<ContentCalendar />} />
+          <Route path="inbox" element={<div className="p-6">Inbox & Reply (Coming Soon)</div>} />
+          <Route path="settings" element={<div className="p-6">Account Settings (Coming Soon)</div>} />
+          <Route index element={<Navigate to="/medsos/dashboard" />} />
         </Route>
 
         {/* Accounting Retail Dashboard */}
