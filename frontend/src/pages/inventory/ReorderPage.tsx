@@ -1,30 +1,123 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthStore } from '../../store/authStore';
 import { MOCK_INVENTORY_ITEMS } from './mockInventoryData';
-import { Send, Printer } from 'lucide-react';
+import { purchaseOrderService, POSuggestion } from '../../services/inventoryService';
+import { Send, Printer, Loader2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
+
+interface CartItem {
+  id: string | number;
+  name: string;
+  sku: string;
+  supplier: string;
+  currentStock: number;
+  minStock: number;
+  unit: string;
+  costPerUnit: number;
+  suggestedQty: number;
+}
 
 export default function ReorderPage() {
   const { isDark } = useThemeStore();
-  
-  // Filter only items that need reorder (Low Stock)
-  const lowStockItems = MOCK_INVENTORY_ITEMS.filter(i => i.status !== 'Aman').map(item => ({
-    ...item,
-    suggestedQty: item.minStock * 2 // Simple logic: restock to 2x safety stock
-  }));
+  const { user } = useAuthStore();
+  const location = useLocation();
 
-  const [cart, setCart] = useState(lowStockItems);
+  const isDemo = location.pathname.startsWith('/demo');
 
-  const updateQty = (id: string, newQty: number) => {
+  const [loading, setLoading] = useState(!isDemo);
+  const [submitting, setSubmitting] = useState(false);
+  const [cart, setCart] = useState<CartItem[]>([]);
+
+  useEffect(() => {
+    if (isDemo) {
+      // Demo mode: use mock data
+      const lowStockItems = MOCK_INVENTORY_ITEMS.filter(i => i.status !== 'Aman').map(item => ({
+        ...item,
+        suggestedQty: item.minStock * 2
+      }));
+      setCart(lowStockItems);
+      return;
+    }
+
+    // Real mode: fetch suggestions from API
+    const fetchSuggestions = async () => {
+      try {
+        setLoading(true);
+        const response = await purchaseOrderService.getSuggestions(user?.outlet_id);
+        if (response.success) {
+          const cartItems: CartItem[] = response.data.map((item: POSuggestion) => ({
+            id: item.inventoryId,
+            name: item.name,
+            sku: item.sku || '-',
+            supplier: item.supplier?.name || '-',
+            currentStock: item.currentStock,
+            minStock: item.minStock,
+            unit: item.unit,
+            costPerUnit: item.costPerUnit,
+            suggestedQty: item.suggestedQty
+          }));
+          setCart(cartItems);
+        }
+      } catch (error) {
+        console.error('Failed to fetch PO suggestions:', error);
+        toast.error('Gagal memuat rekomendasi');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSuggestions();
+  }, [isDemo, user?.outlet_id]);
+
+  const updateQty = (id: string | number, newQty: number) => {
     setCart(prev => prev.map(item => item.id === id ? { ...item, suggestedQty: newQty } : item));
   };
 
-  const handleCreatePO = () => {
-    toast.success('Purchase Order berhasil dibuat & dikirim ke Supplier!');
-    setCart([]); // Clear cart simulation
+  const handleCreatePO = async () => {
+    if (isDemo) {
+      toast.success('Purchase Order berhasil dibuat & dikirim ke Supplier!');
+      setCart([]);
+      return;
+    }
+
+    // Real mode: create PO via API
+    try {
+      setSubmitting(true);
+      const items = cart.map(item => ({
+        inventoryId: typeof item.id === 'string' ? parseInt(item.id) : item.id,
+        quantity: item.suggestedQty,
+        unit: item.unit,
+        unitPrice: item.costPerUnit
+      }));
+
+      const response = await purchaseOrderService.create({
+        outletId: user?.outlet_id!,
+        items
+      });
+
+      if (response.success) {
+        toast.success(`PO ${response.data.po_number} berhasil dibuat!`);
+        setCart([]);
+      }
+    } catch (error) {
+      console.error('Failed to create PO:', error);
+      toast.error('Gagal membuat PO');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const totalEstimate = cart.reduce((sum, item) => sum + (item.suggestedQty * item.costPerUnit), 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -97,13 +190,13 @@ export default function ReorderPage() {
                     </div>
                 </div>
 
-                <button 
+                <button
                     onClick={handleCreatePO}
-                    disabled={cart.length === 0}
+                    disabled={cart.length === 0 || submitting}
                     className="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <Send size={18} />
-                    Kirim PO ke Supplier
+                    {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                    {submitting ? 'Membuat PO...' : 'Kirim PO ke Supplier'}
                 </button>
                 
                 <button className={`w-full mt-3 py-3 rounded-xl border font-medium flex items-center justify-center gap-2 ${isDark ? 'border-slate-600 text-gray-300 hover:bg-slate-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>

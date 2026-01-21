@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthStore } from '../../store/authStore';
 import { MOCK_INVENTORY_STATS, MOCK_ALERTS, MOCK_FORECAST_DATA } from './mockInventoryData';
+import { inventoryService, InventoryStats, InventoryAlert, ForecastData } from '../../services/inventoryService';
 import {
-  AlertTriangle, Package, ShoppingCart, TrendingUp, ArrowRight, XCircle, Clock
+  AlertTriangle, Package, ShoppingCart, TrendingUp, ArrowRight, XCircle, Clock, Loader2
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Line
@@ -17,30 +20,73 @@ const RECENT_ACTIVITIES = [
 
 export default function InventoryDashboard() {
   const { isDark } = useThemeStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const isDemo = location.pathname.startsWith('/demo');
   const basePath = isDemo ? '/demo/inventory' : '/inventory';
+
+  // State for API data
+  const [loading, setLoading] = useState(!isDemo);
+  const [statsData, setStatsData] = useState<InventoryStats>(MOCK_INVENTORY_STATS);
+  const [alertsData, setAlertsData] = useState<InventoryAlert[]>([]);
+  const [forecastData, setForecastData] = useState<ForecastData[]>(MOCK_FORECAST_DATA);
+
+  // Fetch data from API (non-demo mode)
+  useEffect(() => {
+    if (isDemo) return;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const outletId = user?.outlet_id;
+
+        const [statsRes, alertsRes, forecastRes] = await Promise.all([
+          inventoryService.getStats(outletId),
+          inventoryService.getAlerts(outletId),
+          inventoryService.getForecast(outletId, 7)
+        ]);
+
+        if (statsRes.success) setStatsData(statsRes.data);
+        if (alertsRes.success) setAlertsData(alertsRes.data);
+        if (forecastRes.success) setForecastData(forecastRes.data);
+      } catch (error) {
+        console.error('Failed to fetch inventory data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [isDemo, user?.outlet_id]);
+
+  // Map alerts to display format
+  const displayAlerts = isDemo ? MOCK_ALERTS : alertsData.map(a => ({
+    id: a.id,
+    type: a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'warning' : 'info',
+    message: a.message,
+    item: a.inventory?.name || 'Unknown'
+  }));
 
   const stats = [
     {
       label: 'Nilai Aset Stok',
-      value: `Rp ${(MOCK_INVENTORY_STATS.totalValue / 1000000).toFixed(1)} Jt`,
+      value: `Rp ${(statsData.totalValue / 1000000).toFixed(1)} Jt`,
       icon: Package,
       color: 'blue',
       desc: 'Total valuasi gudang saat ini'
     },
     {
       label: 'Avg Days Cover',
-      value: `${MOCK_INVENTORY_STATS.avgDaysCover} Hari`,
+      value: `${statsData.avgDaysCover} Hari`,
       icon: Clock,
       color: 'green',
       desc: 'Target aman: 4-5 hari'
     },
     {
       label: 'Low Stock Items',
-      value: MOCK_INVENTORY_STATS.lowStockCount,
+      value: statsData.lowStockCount,
       icon: AlertTriangle,
       color: 'orange',
       desc: 'Perlu restock segera',
@@ -48,12 +94,20 @@ export default function InventoryDashboard() {
     },
     {
       label: 'PO Pending',
-      value: MOCK_INVENTORY_STATS.pendingPO,
+      value: statsData.pendingPO,
       icon: ShoppingCart,
       color: 'purple',
       desc: 'Menunggu approval supplier'
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -64,7 +118,7 @@ export default function InventoryDashboard() {
       </div>
 
       {/* Critical Alerts */}
-      {MOCK_ALERTS.filter(a => a.type === 'critical').map((alert, idx) => (
+      {displayAlerts.filter(a => a.type === 'critical').map((alert, idx) => (
         <div key={idx} className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-4 animate-pulse">
           <div className="p-2 bg-red-500 rounded-lg text-white">
             <XCircle className="w-6 h-6" />
@@ -130,7 +184,7 @@ export default function InventoryDashboard() {
           
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={MOCK_FORECAST_DATA}>
+              <AreaChart data={forecastData}>
                 <defs>
                   <linearGradient id="colorUsage" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
@@ -155,7 +209,7 @@ export default function InventoryDashboard() {
           <div className={`p-6 rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
             <h3 className={`font-bold text-lg mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Rekomendasi Cerdas</h3>
             <div className="space-y-4">
-              {MOCK_ALERTS.filter(a => a.type !== 'critical').map((alert, idx) => (
+              {displayAlerts.filter(a => a.type !== 'critical').map((alert, idx) => (
                 <div key={idx} className={`p-4 rounded-xl flex gap-3 ${isDark ? 'bg-slate-700/50' : 'bg-orange-50'}`}>
                   <div className="mt-1">
                     <AlertTriangle className="w-5 h-5 text-orange-500" />
