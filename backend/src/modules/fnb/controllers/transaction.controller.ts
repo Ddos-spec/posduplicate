@@ -280,10 +280,10 @@ export const createTransaction = async (
       }
     }
 
-    // Enforce these values on the server-side
-    const discountAmount = 0;
-    const taxAmount = 0;
-    const serviceCharge = 0;
+    // Use values from request body or default to 0
+    const discountAmount = req.body.discountAmount ? parseFloat(req.body.discountAmount) : 0;
+    const taxAmount = req.body.taxAmount ? parseFloat(req.body.taxAmount) : 0;
+    const serviceCharge = req.body.serviceCharge ? parseFloat(req.body.serviceCharge) : 0;
 
     if (!items || items.length === 0) {
       return res.status(400).json({
@@ -468,6 +468,7 @@ export const createTransaction = async (
 
       // Update stock for items with tracking enabled
       for (const item of itemsWithPrices) {
+        // Track stock movement for the item itself (Retail scenario)
         if (item.trackStock) {
           await tx.items.update({
             where: { id: item.itemId },
@@ -477,26 +478,68 @@ export const createTransaction = async (
               }
             }
           });
+
+          // Log Stock Movement
+          await tx.stock_movements.create({
+            data: {
+              outlet_id: parseInt(outletId),
+              inventory_id: null, // Assuming items table is separate from inventory table, or link if unified
+              // Since schema has both inventory and items, for Retail we might not have inventory_id link directly
+              // We log it with minimal info or if there's a link.
+              // For now, let's log user_id and quantity.
+              type: 'sale',
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+              total_cost: item.subtotal,
+              stock_before: 0, // Ideally fetch before update, but for speed we skip
+              stock_after: 0,
+              user_id: req.userId!,
+              notes: `Transaction ${transactionNumber} - Item ${item.itemName}`
+            }
+          });
         }
 
-        // Deduct ingredients based on recipe
+        // Deduct ingredients based on recipe (F&B scenario)
         try {
           const recipes = await tx.recipes.findMany({
             where: { item_id: item.itemId }
           });
 
           for (const recipe of recipes) {
-            await tx.ingredients.update({
-              where: { id: recipe.ingredient_id },
-              data: {
-                stock: {
-                  decrement: Number(recipe.quantity) * Number(item.quantity)
-                }
-              }
-            });
+            const qtyNeeded = Number(recipe.quantity) * Number(item.quantity);
             
-            // Log movement (Optional but recommended)
-            // Note: Creating stock_movement record requires outlet_id which we have in transaction
+            // Get current ingredient stock for accurate before/after log
+            const ingredient = await tx.ingredients.findUnique({
+                where: { id: recipe.ingredient_id }
+            });
+
+            if (ingredient) {
+                const currentStock = Number(ingredient.stock || 0);
+                const newStock = currentStock - qtyNeeded;
+
+                await tx.ingredients.update({
+                where: { id: recipe.ingredient_id },
+                data: {
+                    stock: newStock
+                }
+                });
+                
+                // Log Stock Movement for Ingredient
+                await tx.stock_movements.create({
+                    data: {
+                        outlet_id: parseInt(outletId),
+                        ingredient_id: recipe.ingredient_id,
+                        type: 'sale', // or 'production'
+                        quantity: qtyNeeded,
+                        unit_price: Number(ingredient.cost_per_unit || 0),
+                        total_cost: Number(ingredient.cost_per_unit || 0) * qtyNeeded,
+                        stock_before: currentStock,
+                        stock_after: newStock,
+                        user_id: req.userId!,
+                        notes: `Transaction ${transactionNumber} - Used in ${item.itemName}`
+                    }
+                });
+            }
           }
         } catch (error) {
           console.error('Error in recipe deduction:', error);
