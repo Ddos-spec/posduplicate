@@ -1,11 +1,90 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../store/themeStore';
-import { Bell, Archive, Save } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { inventorySettingsService, InventorySettings as ISettings } from '../../services/inventoryService';
+import { Bell, Archive, Save, Loader2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 export default function InventorySettings() {
   const { isDark } = useThemeStore();
+  const { user } = useAuthStore();
+  const location = useLocation();
+
+  const isDemo = location.pathname.startsWith('/demo');
+
+  const [loading, setLoading] = useState(!isDemo);
+  const [saving, setSaving] = useState(false);
   const [method, setMethod] = useState('FIFO');
+  const [lowStockAlert, setLowStockAlert] = useState(true);
+  const [expiryAlert, setExpiryAlert] = useState(true);
+  const [waApproval, setWaApproval] = useState(false);
+  const [settings, setSettings] = useState<Partial<ISettings>>({});
+
+  useEffect(() => {
+    if (isDemo) return;
+
+    const fetchSettings = async () => {
+      try {
+        setLoading(true);
+        const response = await inventorySettingsService.get(user?.outlet_id!);
+        if (response.success && response.data) {
+          const data = response.data;
+          setSettings(data);
+          // Load custom settings if available
+          if (data.settings) {
+            setMethod(data.settings.valuation_method || 'FIFO');
+            setLowStockAlert(data.settings.low_stock_alert !== false);
+            setExpiryAlert(data.track_expiry || false);
+            setWaApproval(data.settings.wa_approval || false);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, [isDemo, user?.outlet_id]);
+
+  const handleSave = async () => {
+    if (isDemo) {
+      toast.success('Pengaturan berhasil disimpan!');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const response = await inventorySettingsService.update(user?.outlet_id!, {
+        track_expiry: expiryAlert,
+        settings: {
+          ...settings.settings,
+          valuation_method: method,
+          low_stock_alert: lowStockAlert,
+          wa_approval: waApproval
+        }
+      });
+
+      if (response.success) {
+        toast.success('Pengaturan berhasil disimpan!');
+      }
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast.error('Gagal menyimpan pengaturan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -54,32 +133,49 @@ export default function InventorySettings() {
                         <p className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>Alert Stok Menipis</p>
                         <p className="text-xs text-gray-500">Kirim notifikasi saat stok di bawah batas aman.</p>
                     </div>
-                    <input type="checkbox" defaultChecked className="toggle-checkbox" />
+                    <input
+                      type="checkbox"
+                      checked={lowStockAlert}
+                      onChange={(e) => setLowStockAlert(e.target.checked)}
+                      className="toggle-checkbox"
+                    />
                 </div>
                 <div className="flex items-center justify-between">
                     <div>
                         <p className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>Alert Barang Expired (H-30)</p>
                         <p className="text-xs text-gray-500">Peringatan dini untuk barang yang akan kadaluarsa.</p>
                     </div>
-                    <input type="checkbox" defaultChecked className="toggle-checkbox" />
+                    <input
+                      type="checkbox"
+                      checked={expiryAlert}
+                      onChange={(e) => setExpiryAlert(e.target.checked)}
+                      className="toggle-checkbox"
+                    />
                 </div>
                 <div className="flex items-center justify-between">
                     <div>
                         <p className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>Approval PO via WhatsApp</p>
                         <p className="text-xs text-gray-500">Kirim link approval ke nomor owner.</p>
                     </div>
-                    <input type="checkbox" className="toggle-checkbox" />
+                    <input
+                      type="checkbox"
+                      checked={waApproval}
+                      onChange={(e) => setWaApproval(e.target.checked)}
+                      className="toggle-checkbox"
+                    />
                 </div>
             </div>
         </div>
       </div>
 
       <div className="flex justify-end">
-        <button 
-            onClick={() => toast.success('Pengaturan berhasil disimpan!')}
-            className="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 shadow-lg flex items-center gap-2"
+        <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 shadow-lg flex items-center gap-2 disabled:opacity-50"
         >
-            <Save size={18} /> Simpan Perubahan
+            {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+            {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
         </button>
       </div>
     </div>

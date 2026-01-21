@@ -7,10 +7,26 @@ import {
   deleteInventory,
   getLowStockItems,
   getInventoryCategories,
-  adjustInventoryStock
+  adjustInventoryStock,
+  getInventoryStats,
+  getInventoryAlerts,
+  generateAlerts,
+  resolveAlert,
+  getInventoryForecast
 } from '../controllers/inventory-module.controller';
 
 const router = Router();
+
+// Dashboard & Stats
+router.get('/stats', getInventoryStats);
+
+// Alerts
+router.get('/alerts', getInventoryAlerts);
+router.post('/alerts/generate', generateAlerts);
+router.put('/alerts/:id/resolve', resolveAlert);
+
+// Forecast
+router.get('/forecast', getInventoryForecast);
 
 // Get all inventory items
 router.get('/', getAllInventory);

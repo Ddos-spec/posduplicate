@@ -1,32 +1,86 @@
 import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthStore } from '../../store/authStore';
 import { useInventoryConfig } from './inventoryConfigStore';
 import { MOCK_INVENTORY_ITEMS } from './mockInventoryData';
 import { MOCK_PHARMACY_ITEMS, MOCK_RETAIL_ITEMS } from './mockVariantsData';
+import { inventoryService, InventoryItem } from '../../services/inventoryService';
 import {
-  Search, Filter, Edit2, History, AlertCircle, CheckCircle, XCircle, ScanBarcode, Truck, Store
+  Search, Filter, Edit2, History, AlertCircle, CheckCircle, XCircle, ScanBarcode, Truck, Store, Loader2, Plus
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 export default function StockPage() {
   const { isDark } = useThemeStore();
+  const { user } = useAuthStore();
   const { businessType } = useInventoryConfig();
-  
+  const location = useLocation();
+
+  const isDemo = location.pathname.startsWith('/demo');
+
   // Dynamic Data Loading
   const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(!isDemo);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
-  
+
+  // Fetch data from API or use mock data
   useEffect(() => {
-    // Switch data based on businessType
-    if (businessType === 'pharmacy') {
-      setItems(MOCK_PHARMACY_ITEMS);
-    } else if (businessType === 'retail') {
-      setItems(MOCK_RETAIL_ITEMS);
-    } else {
-      setItems(MOCK_INVENTORY_ITEMS);
+    if (isDemo) {
+      // Demo mode: use mock data
+      if (businessType === 'pharmacy') {
+        setItems(MOCK_PHARMACY_ITEMS);
+      } else if (businessType === 'retail') {
+        setItems(MOCK_RETAIL_ITEMS);
+      } else {
+        setItems(MOCK_INVENTORY_ITEMS);
+      }
+      return;
     }
-  }, [businessType]);
+
+    // Real mode: fetch from API
+    const fetchInventory = async () => {
+      try {
+        setLoading(true);
+        const response = await inventoryService.getAll({
+          outlet_id: user?.outlet_id,
+          business_type: businessType
+        });
+
+        if (response.success) {
+          // Transform API data to match component format
+          const transformedItems = response.data.map((item: InventoryItem) => ({
+            id: item.id,
+            name: item.name,
+            sku: item.sku || '-',
+            category: item.category,
+            currentStock: parseFloat(item.current_stock.toString()),
+            unit: item.unit,
+            minStock: parseFloat(item.min_stock.toString()),
+            costPerUnit: parseFloat(item.cost_amount.toString()),
+            lastUpdated: new Date().toISOString().split('T')[0],
+            status: item.status,
+            supplier: item.suppliers?.name || '-',
+            source: item.source || 'Supplier Langsung',
+            daysCover: item.days_cover ? parseFloat(item.days_cover.toString()) : 0,
+            batchNo: item.batch_no,
+            expiryDate: item.expiry_date,
+            variant: item.variant,
+            barcode: item.barcode
+          }));
+          setItems(transformedItems);
+        }
+      } catch (error) {
+        console.error('Failed to fetch inventory:', error);
+        toast.error('Gagal memuat data inventory');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInventory();
+  }, [isDemo, businessType, user?.outlet_id]);
 
   const [editItem, setEditItem] = useState<any | null>(null);
   const [adjustQty, setAdjustQty] = useState<string>('');
@@ -52,30 +106,71 @@ export default function StockPage() {
     return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1 w-fit"><Store size={10} /> VENDOR</span>;
   };
 
-  const handleSaveAdjustment = () => {
+  const handleSaveAdjustment = async () => {
     if (!editItem || !adjustQty) return;
-    
+
     const newQty = parseFloat(adjustQty);
     if (isNaN(newQty)) {
-        toast.error('Jumlah tidak valid');
-        return;
+      toast.error('Jumlah tidak valid');
+      return;
     }
 
-    setItems(prev => prev.map(i => {
+    if (isDemo) {
+      // Demo mode: update local state only
+      setItems(prev => prev.map(i => {
         if (i.id === editItem.id) {
-            let status: any = 'Aman';
-            if (newQty === 0) status = 'Habis';
-            else if (newQty <= i.minStock) status = 'Menipis';
-            
-            return { ...i, currentStock: newQty, status, lastUpdated: new Date().toISOString().split('T')[0] };
+          let status: any = 'Aman';
+          if (newQty === 0) status = 'Habis';
+          else if (newQty <= i.minStock) status = 'Menipis';
+          return { ...i, currentStock: newQty, status, lastUpdated: new Date().toISOString().split('T')[0] };
         }
         return i;
-    }));
+      }));
+      toast.success(`Stok ${editItem.name} berhasil diupdate!`);
+    } else {
+      // Real mode: call API
+      try {
+        const diff = newQty - editItem.currentStock;
+        const type = diff >= 0 ? 'in' : 'out';
+        const quantity = Math.abs(diff);
 
-    toast.success(`Stok ${editItem.name} berhasil diupdate!`);
+        const response = await inventoryService.adjustStock(editItem.id, {
+          quantity,
+          type,
+          notes: reason
+        });
+
+        if (response.success) {
+          // Update local state
+          setItems(prev => prev.map(i => {
+            if (i.id === editItem.id) {
+              let status: any = 'Aman';
+              if (newQty === 0) status = 'Habis';
+              else if (newQty <= i.minStock) status = 'Menipis';
+              return { ...i, currentStock: newQty, status, lastUpdated: new Date().toISOString().split('T')[0] };
+            }
+            return i;
+          }));
+          toast.success(`Stok ${editItem.name} berhasil diupdate!`);
+        }
+      } catch (error) {
+        console.error('Failed to adjust stock:', error);
+        toast.error('Gagal mengupdate stok');
+        return;
+      }
+    }
+
     setEditItem(null);
     setAdjustQty('');
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

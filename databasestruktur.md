@@ -284,21 +284,113 @@ CREATE TABLE "public"."api_keys" (
   "expires_at" TIMESTAMP NULL,
   CONSTRAINT "api_keys_pkey" PRIMARY KEY ("id")
 );
-CREATE TABLE "public"."inventory" ( 
+CREATE TABLE "public"."inventory" (
   "id" SERIAL,
   "name" VARCHAR(255) NOT NULL,
+  "sku" VARCHAR(100) NULL,
   "category" VARCHAR(100) NOT NULL,
   "unit" VARCHAR(50) NOT NULL,
-  "current_stock" NUMERIC NOT NULL DEFAULT 0 ,
-  "alert" BOOLEAN NOT NULL DEFAULT false ,
-  "stock_alert" NUMERIC NOT NULL DEFAULT 0 ,
-  "track_cost" BOOLEAN NOT NULL DEFAULT false ,
-  "cost_amount" NUMERIC NOT NULL DEFAULT 0 ,
+  "current_stock" NUMERIC NOT NULL DEFAULT 0,
+  "min_stock" NUMERIC NOT NULL DEFAULT 0,
+  "alert" BOOLEAN NOT NULL DEFAULT false,
+  "stock_alert" NUMERIC NOT NULL DEFAULT 0,
+  "track_cost" BOOLEAN NOT NULL DEFAULT false,
+  "cost_amount" NUMERIC NOT NULL DEFAULT 0,
   "outlet_id" INTEGER NULL,
-  "is_active" BOOLEAN NOT NULL DEFAULT true ,
-  "created_at" TIMESTAMP NOT NULL DEFAULT now() ,
-  "updated_at" TIMESTAMP NOT NULL DEFAULT now() ,
-  CONSTRAINT "inventory_pkey" PRIMARY KEY ("id")
+  "supplier_id" INTEGER NULL,
+  "business_type" VARCHAR(20) NOT NULL DEFAULT 'fnb',
+  "days_cover" NUMERIC NULL DEFAULT 0,
+  "source" VARCHAR(50) NULL,
+  "batch_no" VARCHAR(100) NULL,
+  "expiry_date" DATE NULL,
+  "variant" VARCHAR(255) NULL,
+  "barcode" VARCHAR(100) NULL,
+  "last_restock_date" TIMESTAMP NULL,
+  "avg_daily_usage" NUMERIC NULL DEFAULT 0,
+  "is_active" BOOLEAN NOT NULL DEFAULT true,
+  "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+  "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+  CONSTRAINT "inventory_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "inventory_business_type_check" CHECK (business_type IN ('fnb', 'pharmacy', 'retail'))
+);
+CREATE TABLE "public"."purchase_orders" (
+  "id" SERIAL,
+  "outlet_id" INTEGER NOT NULL,
+  "po_number" VARCHAR(100) NOT NULL,
+  "supplier_id" INTEGER NULL,
+  "status" VARCHAR(20) NOT NULL DEFAULT 'draft',
+  "order_date" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "expected_date" DATE NULL,
+  "received_date" TIMESTAMP NULL,
+  "subtotal" NUMERIC NOT NULL DEFAULT 0,
+  "tax_amount" NUMERIC NOT NULL DEFAULT 0,
+  "discount_amount" NUMERIC NOT NULL DEFAULT 0,
+  "total" NUMERIC NOT NULL DEFAULT 0,
+  "notes" TEXT NULL,
+  "created_by" INTEGER NOT NULL,
+  "approved_by" INTEGER NULL,
+  "approved_at" TIMESTAMP NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "purchase_orders_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "purchase_orders_po_number_key" UNIQUE ("po_number"),
+  CONSTRAINT "po_status_check" CHECK (status IN ('draft', 'pending', 'approved', 'ordered', 'partial', 'received', 'cancelled'))
+);
+CREATE TABLE "public"."purchase_order_items" (
+  "id" SERIAL,
+  "po_id" INTEGER NOT NULL,
+  "inventory_id" INTEGER NOT NULL,
+  "quantity" NUMERIC NOT NULL,
+  "unit" VARCHAR(50) NOT NULL,
+  "unit_price" NUMERIC NOT NULL DEFAULT 0,
+  "subtotal" NUMERIC NOT NULL DEFAULT 0,
+  "received_qty" NUMERIC NOT NULL DEFAULT 0,
+  "notes" TEXT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "purchase_order_items_pkey" PRIMARY KEY ("id")
+);
+CREATE TABLE "public"."inventory_settings" (
+  "id" SERIAL,
+  "outlet_id" INTEGER NOT NULL,
+  "business_type" VARCHAR(20) NOT NULL DEFAULT 'fnb',
+  "low_stock_threshold_days" INTEGER NOT NULL DEFAULT 3,
+  "auto_reorder_enabled" BOOLEAN NOT NULL DEFAULT false,
+  "reorder_lead_days" INTEGER NOT NULL DEFAULT 2,
+  "track_expiry" BOOLEAN NOT NULL DEFAULT false,
+  "expiry_warning_days" INTEGER NOT NULL DEFAULT 30,
+  "track_batch" BOOLEAN NOT NULL DEFAULT false,
+  "settings" JSONB NULL DEFAULT '{}'::jsonb,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "inventory_settings_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "inventory_settings_outlet_unique" UNIQUE ("outlet_id")
+);
+CREATE TABLE "public"."inventory_alerts" (
+  "id" SERIAL,
+  "outlet_id" INTEGER NOT NULL,
+  "inventory_id" INTEGER NOT NULL,
+  "alert_type" VARCHAR(50) NOT NULL,
+  "severity" VARCHAR(20) NOT NULL DEFAULT 'warning',
+  "message" TEXT NOT NULL,
+  "is_read" BOOLEAN NOT NULL DEFAULT false,
+  "is_resolved" BOOLEAN NOT NULL DEFAULT false,
+  "resolved_at" TIMESTAMP NULL,
+  "resolved_by" INTEGER NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "inventory_alerts_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "alert_severity_check" CHECK (severity IN ('info', 'warning', 'critical'))
+);
+CREATE TABLE "public"."inventory_forecast" (
+  "id" SERIAL,
+  "outlet_id" INTEGER NOT NULL,
+  "inventory_id" INTEGER NULL,
+  "forecast_date" DATE NOT NULL,
+  "predicted_usage" NUMERIC NOT NULL DEFAULT 0,
+  "actual_usage" NUMERIC NULL,
+  "confidence_level" NUMERIC NULL,
+  "factors" JSONB NULL DEFAULT '{}'::jsonb,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "inventory_forecast_pkey" PRIMARY KEY ("id")
 );
 CREATE TABLE "public"."recipes" ( 
   "id" SERIAL,
@@ -865,13 +957,81 @@ CREATE INDEX "idx_api_keys_key"
 ON "public"."api_keys" (
   "api_key" ASC
 );
-CREATE INDEX "idx_inventory_outlet" 
+CREATE INDEX "idx_inventory_outlet"
 ON "public"."inventory" (
   "outlet_id" ASC
 );
-CREATE INDEX "idx_inventory_category" 
+CREATE INDEX "idx_inventory_category"
 ON "public"."inventory" (
   "category" ASC
+);
+CREATE INDEX "idx_inventory_business_type"
+ON "public"."inventory" (
+  "business_type" ASC
+);
+CREATE INDEX "idx_inventory_supplier"
+ON "public"."inventory" (
+  "supplier_id" ASC
+);
+CREATE INDEX "idx_inventory_sku"
+ON "public"."inventory" (
+  "sku" ASC
+);
+CREATE INDEX "idx_inventory_barcode"
+ON "public"."inventory" (
+  "barcode" ASC
+);
+CREATE INDEX "idx_inventory_expiry"
+ON "public"."inventory" (
+  "expiry_date" ASC
+);
+CREATE INDEX "idx_po_outlet"
+ON "public"."purchase_orders" (
+  "outlet_id" ASC
+);
+CREATE INDEX "idx_po_supplier"
+ON "public"."purchase_orders" (
+  "supplier_id" ASC
+);
+CREATE INDEX "idx_po_status"
+ON "public"."purchase_orders" (
+  "status" ASC
+);
+CREATE INDEX "idx_po_date"
+ON "public"."purchase_orders" (
+  "order_date" ASC
+);
+CREATE INDEX "idx_po_items_po"
+ON "public"."purchase_order_items" (
+  "po_id" ASC
+);
+CREATE INDEX "idx_po_items_inventory"
+ON "public"."purchase_order_items" (
+  "inventory_id" ASC
+);
+CREATE INDEX "idx_inv_alerts_outlet"
+ON "public"."inventory_alerts" (
+  "outlet_id" ASC
+);
+CREATE INDEX "idx_inv_alerts_inventory"
+ON "public"."inventory_alerts" (
+  "inventory_id" ASC
+);
+CREATE INDEX "idx_inv_alerts_type"
+ON "public"."inventory_alerts" (
+  "alert_type" ASC
+);
+CREATE INDEX "idx_inv_alerts_resolved"
+ON "public"."inventory_alerts" (
+  "is_resolved" ASC
+);
+CREATE INDEX "idx_inv_forecast_outlet"
+ON "public"."inventory_forecast" (
+  "outlet_id" ASC
+);
+CREATE INDEX "idx_inv_forecast_date"
+ON "public"."inventory_forecast" (
+  "forecast_date" ASC
 );
 CREATE UNIQUE INDEX "unique_tenant_integration" 
 ON "public"."integrations" (
@@ -1263,6 +1423,19 @@ ALTER TABLE "public"."stock_movements" ADD CONSTRAINT "fk_stock_movements_outlet
 ALTER TABLE "public"."stock_movements" ADD CONSTRAINT "fk_stock_movements_ingredient" FOREIGN KEY ("ingredient_id") REFERENCES "public"."ingredients" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "public"."stock_movements" ADD CONSTRAINT "fk_stock_movements_inventory" FOREIGN KEY ("inventory_id") REFERENCES "public"."inventory" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "public"."stock_movements" ADD CONSTRAINT "fk_stock_movements_user" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE "public"."inventory" ADD CONSTRAINT "inventory_supplier_id_fkey" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers" ("id") ON DELETE SET NULL ON UPDATE NO ACTION;
+ALTER TABLE "public"."purchase_orders" ADD CONSTRAINT "purchase_orders_outlet_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "public"."purchase_orders" ADD CONSTRAINT "purchase_orders_supplier_fkey" FOREIGN KEY ("supplier_id") REFERENCES "public"."suppliers" ("id") ON DELETE SET NULL ON UPDATE NO ACTION;
+ALTER TABLE "public"."purchase_orders" ADD CONSTRAINT "purchase_orders_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE "public"."purchase_orders" ADD CONSTRAINT "purchase_orders_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "public"."users" ("id") ON DELETE SET NULL ON UPDATE NO ACTION;
+ALTER TABLE "public"."purchase_order_items" ADD CONSTRAINT "po_items_po_fkey" FOREIGN KEY ("po_id") REFERENCES "public"."purchase_orders" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "public"."purchase_order_items" ADD CONSTRAINT "po_items_inventory_fkey" FOREIGN KEY ("inventory_id") REFERENCES "public"."inventory" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "public"."inventory_settings" ADD CONSTRAINT "inventory_settings_outlet_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "public"."inventory_alerts" ADD CONSTRAINT "inventory_alerts_outlet_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "public"."inventory_alerts" ADD CONSTRAINT "inventory_alerts_inventory_fkey" FOREIGN KEY ("inventory_id") REFERENCES "public"."inventory" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "public"."inventory_alerts" ADD CONSTRAINT "inventory_alerts_resolved_by_fkey" FOREIGN KEY ("resolved_by") REFERENCES "public"."users" ("id") ON DELETE SET NULL ON UPDATE NO ACTION;
+ALTER TABLE "public"."inventory_forecast" ADD CONSTRAINT "inventory_forecast_outlet_fkey" FOREIGN KEY ("outlet_id") REFERENCES "public"."outlets" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "public"."inventory_forecast" ADD CONSTRAINT "inventory_forecast_inventory_fkey" FOREIGN KEY ("inventory_id") REFERENCES "public"."inventory" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "accounting"."chart_of_accounts" ADD CONSTRAINT "chart_of_accounts_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "accounting"."chart_of_accounts" ADD CONSTRAINT "chart_of_accounts_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "accounting"."chart_of_accounts" ("id") ON DELETE SET NULL ON UPDATE NO ACTION;
 ALTER TABLE "accounting"."accounting_periods" ADD CONSTRAINT "accounting_periods_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
@@ -1442,6 +1615,54 @@ AS
      LEFT JOIN accounting.journal_entries je ON (((je.id = jel.journal_entry_id) AND ((je.status)::text = 'posted'::text))))
   WHERE (coa.is_active = true)
   GROUP BY coa.tenant_id, coa.id, coa.account_code, coa.account_name, coa.account_type, coa.normal_balance;;
+CREATE VIEW "public"."v_inventory_low_stock"
+AS
+SELECT
+  i.id,
+  i.outlet_id,
+  i.name,
+  i.sku,
+  i.category,
+  i.business_type,
+  i.current_stock,
+  i.min_stock,
+  i.stock_alert,
+  i.unit,
+  i.days_cover,
+  i.expiry_date,
+  s.name as supplier_name,
+  CASE
+    WHEN i.current_stock <= 0 THEN 'Habis'
+    WHEN i.current_stock <= i.min_stock THEN 'Menipis'
+    ELSE 'Aman'
+  END as status
+FROM inventory i
+LEFT JOIN suppliers s ON s.id = i.supplier_id
+WHERE i.is_active = true
+  AND (i.current_stock <= i.min_stock OR (i.alert = true AND i.current_stock <= i.stock_alert));;
+CREATE VIEW "public"."v_inventory_expiring"
+AS
+SELECT
+  i.id,
+  i.outlet_id,
+  i.name,
+  i.sku,
+  i.batch_no,
+  i.expiry_date,
+  i.current_stock,
+  i.unit,
+  (i.expiry_date - CURRENT_DATE) as days_until_expiry,
+  CASE
+    WHEN i.expiry_date < CURRENT_DATE THEN 'Expired'
+    WHEN (i.expiry_date - CURRENT_DATE) <= 30 THEN 'Expiring Soon'
+    WHEN (i.expiry_date - CURRENT_DATE) <= 90 THEN 'Warning'
+    ELSE 'OK'
+  END as expiry_status
+FROM inventory i
+WHERE i.is_active = true
+  AND i.business_type = 'pharmacy'
+  AND i.expiry_date IS NOT NULL
+ORDER BY i.expiry_date ASC;;
 CREATE VIEW "accounting"."v_ap_aging"
 AS
  SELECT ap.id,
@@ -1489,3 +1710,12 @@ AS
         END AS aging_category
    FROM accounting.accounts_receivable ar
   WHERE ((status)::text <> 'bad_debt'::text);;
+CREATE TRIGGER "update_inventory_updated_at"
+BEFORE UPDATE ON "public"."inventory"
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER "update_purchase_orders_updated_at"
+BEFORE UPDATE ON "public"."purchase_orders"
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER "update_inventory_settings_updated_at"
+BEFORE UPDATE ON "public"."inventory_settings"
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

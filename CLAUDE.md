@@ -1,13 +1,94 @@
-You are a Senior Full-Stack Engineer specialized in multi-tenant POS systems with food delivery integrations (GoFood, GrabFood, ShopeeFood, QRIS).
+# CLAUDE.md
 
-TECH STACK CONTEXT (MyPOS):
-- Backend: Express.js, Prisma ORM
-- Frontend: React, Vite
-- Architecture: Multi-tenant (Super Admin → Tenant → Outlet → Users)
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Development Commands
+
+```bash
+# Install all dependencies (root, backend, frontend)
+npm run install:all
+
+# Development
+npm run dev:backend      # Backend: http://localhost:3000
+npm run dev:frontend     # Frontend: http://localhost:5173
+
+# Build
+npm run build            # Build both
+npm run build:frontend   # Build frontend only
+npm run build:backend    # Build backend only
+
+# Database
+npm run prisma:generate  # Generate Prisma client
+npm run prisma:migrate   # Run migrations
+cd backend && npm run prisma:studio  # Open Prisma Studio
+cd backend && npm run prisma:seed    # Seed database
+
+# Testing (backend)
+cd backend && npm test             # All tests
+cd backend && npm run test:unit    # Unit tests only
+cd backend && npm run test:integration  # Integration tests
+
+# Linting
+cd backend && npm run lint         # Backend lint
+cd backend && npm run lint:fix     # Backend lint fix
+cd frontend && npm run lint        # Frontend lint
+
+# Verification
+cd backend && npm run verify       # lint + typecheck + tests
+```
+
+## Architecture Overview
+
+### Multi-Tenant Structure
+```
+Super Admin → Tenant → Outlet → Users (Owner/Manager/Cashier)
+```
+All data queries must include `tenantId` filter (enforced via middleware).
+
+### Backend Modules (`backend/src/modules/`)
+- **fnb**: POS/F&B operations (products, categories, transactions, inventory, recipes)
+- **accounting**: Full accounting system (COA, journals, reports, budgets, AP/AR)
+- **shared**: Auth, users, tenants, outlets, integrations, webhooks
+- **admin**: Super admin analytics, billing management
+
+### Frontend Structure (`frontend/src/`)
+- **pages/**: Route components by module (owner/, admin/, accounting/, demo/)
+- **components/**: Reusable UI (owner/, admin/, cashier/, common/)
+- **store/**: Zustand stores (authStore, cartStore, confirmationStore, themeStore)
+- **services/api.ts**: Axios instance with interceptors
+
+### Middleware Chain
+```
+authMiddleware → tenantMiddleware → roleMiddleware → controller
+```
+- `authMiddleware`: JWT verification, attaches userId/tenantId/userRole to req
+- `tenantMiddleware`: Validates tenant access, subscription status
+- `roleMiddleware(['owner', 'manager'])`: Role-based access control
+
+### API Response Format
+```typescript
+{ success: true, data: {...}, message: "..." }
+{ success: false, error: { code: "ERROR_CODE", message: "..." } }
+```
+
+### Database
+PostgreSQL with dual schemas: `public` (core) + `accounting` (financial data).
+Prisma ORM with `multiSchema` preview feature.
+
+## Tech Stack
+
+- Backend: Express.js, Prisma ORM, TypeScript
+- Frontend: React 19, Vite, Tailwind CSS, Zustand
+- Auth: JWT with role-based access control
 - Integrations: QRIS, GoFood, GrabFood, ShopeeFood
-- State Management: Zustand
-- Auth: Role-based access control
-- Database: PostgreSQL with data isolation middleware
+
+## Bahasa & Komunikasi
+
+WAJIB pake Bahasa Indonesia yang santai & gaul. Contoh:
+- "Gua udah fix bug-nya" bukan "I have fixed the bug"
+- "Nih codenya" bukan "Here is the code"
+- "Lo mau gimana?" bukan "What do you prefer?"
+- "Done, tinggal test aja" bukan "Completed, please test"
 
 CORE PRINCIPLES (MANDATORY):
 - KISS: Simplest solution that works

@@ -1,12 +1,51 @@
+import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthStore } from '../../store/authStore';
 import { MOCK_FORECAST_DATA } from './mockInventoryData';
+import { inventoryService, ForecastData } from '../../services/inventoryService';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
 } from 'recharts';
-import { CloudRain, Sun, Info } from 'lucide-react';
+import { CloudRain, Sun, Info, Loader2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 export default function ForecastPage() {
   const { isDark } = useThemeStore();
+  const { user } = useAuthStore();
+  const location = useLocation();
+
+  const isDemo = location.pathname.startsWith('/demo');
+
+  const [loading, setLoading] = useState(!isDemo);
+  const [forecastData, setForecastData] = useState<ForecastData[]>(MOCK_FORECAST_DATA);
+
+  useEffect(() => {
+    if (isDemo) return;
+
+    const fetchForecast = async () => {
+      try {
+        setLoading(true);
+        const response = await inventoryService.getForecast(user?.outlet_id, 7);
+        if (response.success) {
+          setForecastData(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch forecast:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchForecast();
+  }, [isDemo, user?.outlet_id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -35,7 +74,7 @@ export default function ForecastPage() {
 
         <div className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={MOCK_FORECAST_DATA} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                <LineChart data={forecastData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
                     <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: isDark ? '#94a3b8' : '#64748b'}} />
                     <YAxis axisLine={false} tickLine={false} tick={{fill: isDark ? '#94a3b8' : '#64748b'}} />
