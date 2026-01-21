@@ -14,6 +14,7 @@ import accountingRoutes from './modules/accounting';
 import sharedRoutes from './modules/shared';
 import adminRoutes from './modules/admin';
 import medsosRoutes from './modules/medsos';
+import scheduler from './services/scheduler.service';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -161,6 +162,7 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
 
 // Start server
 app.listen(PORT, () => {
+  scheduler.start();
   console.log(`🚀 MyPOS API Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔄 Server Restart Triggered at: ${new Date().toISOString()}`);
