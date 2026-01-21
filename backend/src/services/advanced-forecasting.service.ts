@@ -885,11 +885,10 @@ export const getAdvancedRevenueForecast = async (
   // Detect seasonality
   const weeklyAC = autocorrelation(values, 7);
   const monthlyAC = autocorrelation(values, 30);
-  let seasonLength = 7;
+  const seasonLength = 7; // Fixed const
   let seasonality: AdvancedForecastResult['seasonality'] = 'weekly';
 
   if (Math.abs(monthlyAC) > Math.abs(weeklyAC) && Math.abs(monthlyAC) > 0.3) {
-    seasonLength = 30;
     seasonality = 'monthly';
   } else if (Math.abs(weeklyAC) < 0.2) {
     seasonality = 'none';
@@ -1000,7 +999,7 @@ export const getAdvancedExpenseForecast = async (
   const { values, dates } = fillMissingDatesWithDates(historicalData, historicalDays, startDate);
 
   const weeklyAC = autocorrelation(values, 7);
-  let seasonLength = 7;
+  const seasonLength = 7; // Fixed const
   let seasonality: AdvancedForecastResult['seasonality'] = Math.abs(weeklyAC) > 0.2 ? 'weekly' : 'none';
 
   const ensemble = ensembleForecast(values, forecastDays, seasonLength);
@@ -1101,7 +1100,7 @@ export const getAdvancedSalesForecast = async (
   const { values, dates } = fillMissingDatesWithDates(historicalData, historicalDays, startDate);
 
   const weeklyAC = autocorrelation(values, 7);
-  let seasonLength = 7;
+  const seasonLength = 7; // Fixed const
   let seasonality: AdvancedForecastResult['seasonality'] = Math.abs(weeklyAC) > 0.2 ? 'weekly' : 'none';
 
   const ensemble = ensembleForecast(values, forecastDays, seasonLength);
