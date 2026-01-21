@@ -269,7 +269,7 @@ export const getYearOverYearAnalysis = async (req: Request, res: Response, next:
 
       data.forEach(row => {
         const month = parseInt(row.month) - 1;
-        let amount = Number(row.amount || 0);
+        const amount = Number(row.amount || 0);
 
         if (metric === 'profit') {
           if (row.account_type === 'REVENUE') {
