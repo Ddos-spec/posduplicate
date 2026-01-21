@@ -4,23 +4,41 @@ import { Decimal } from '@prisma/client/runtime/library';
 
 /**
  * Helper: Get Date Range for Period
+ * Supports: startDate/endDate params, periodId (from accounting_periods), or defaults to current month
  */
-const getDateRange = (query: any) => {
-  const { startDate, endDate } = query;
-  
+const getDateRange = async (query: any, tenantId: number) => {
+  const { startDate, endDate, periodId } = query;
+
+  // Option 1: Direct date range from query params
   if (startDate && endDate) {
     return {
       start: new Date(String(startDate)),
       end: new Date(String(endDate))
     };
   }
-  
-  // TODO: Fetch from accounting_periods if periodId is provided
-  // For now default to current month if nothing provided
+
+  // Option 2: Fetch from accounting_periods if periodId is provided
+  if (periodId) {
+    const period = await prisma.accounting_periods.findFirst({
+      where: {
+        id: parseInt(periodId),
+        tenant_id: tenantId
+      }
+    });
+
+    if (period) {
+      return {
+        start: new Date(period.start_date),
+        end: new Date(period.end_date)
+      };
+    }
+  }
+
+  // Default: current month
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  
+
   return { start, end };
 };
 
@@ -99,7 +117,7 @@ export const getTrialBalance = async (req: Request, res: Response, next: NextFun
 export const getIncomeStatement = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.tenantId!;
-    const { start, end } = getDateRange(req.query);
+    const { start, end } = await getDateRange(req.query, tenantId);
 
     // 1. Fetch relevant accounts (Revenue, Expense, COGS)
     // We aggregate from general_ledger table filtered by date
@@ -181,7 +199,7 @@ export const getIncomeStatement = async (req: Request, res: Response, next: Next
 export const getBalanceSheet = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.tenantId!;
-    const { end } = getDateRange(req.query); // BS is "As of end date"
+    const { end } = await getDateRange(req.query, tenantId); // BS is "As of end date"
 
     // 1. Fetch BS accounts (Asset, Liability, Equity)
     // Aggregate from GL up to end date

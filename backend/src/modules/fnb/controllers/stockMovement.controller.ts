@@ -5,11 +5,20 @@ import { createActivityLog } from '../../shared/controllers/activity-log.control
 // Get all stock movements with filters
 export const getStockMovements = async (req: Request, res: Response, _next: NextFunction) => {
   try {
-    const { outlet_id, type, ingredient_id, inventory_id, supplier_id, date_from, date_to, limit = '100' } = req.query;
+    const { outlet_id, type, ingredient_id, inventory_id, item_id, supplier_id, date_from, date_to, limit = '100' } = req.query;
     const where: any = {};
+
+    // Tenant isolation via outlet
+    if (req.tenantId) {
+      where.outlets = { tenant_id: req.tenantId };
+    }
 
     if (outlet_id) {
       where.outlet_id = parseInt(outlet_id as string);
+    }
+
+    if (item_id) {
+      where.item_id = parseInt(item_id as string);
     }
 
     if (type) {
@@ -38,6 +47,7 @@ export const getStockMovements = async (req: Request, res: Response, _next: Next
       where,
       include: {
         users: { select: { id: true, name: true } },
+        items: { select: { id: true, name: true } },
         ingredients: { select: { id: true, name: true, unit: true } },
         inventory: { select: { id: true, name: true, unit: true } },
         outlets: { select: { id: true, name: true } },

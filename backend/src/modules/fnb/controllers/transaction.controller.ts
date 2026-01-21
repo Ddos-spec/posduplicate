@@ -118,15 +118,7 @@ export const getTransactions = async (
     res.json({
       success: true,
       data: transactions,
-      count: transactions.length,
-      debug: {
-        serverTime: new Date().toISOString(),
-        status: "SAFE FILTER MODE - TENANT ISOLATION ENABLED",
-        queryParams: { status, outlet_id, date_from, date_to },
-        constructedWhere: JSON.parse(JSON.stringify(where, (_, value) =>
-          typeof value === 'bigint' ? value.toString() : value
-        ))
-      }
+      count: transactions.length
     });
   } catch (error) {
     return next(error);
@@ -285,6 +277,17 @@ export const createTransaction = async (
     const taxAmount = req.body.taxAmount ? parseFloat(req.body.taxAmount) : 0;
     const serviceCharge = req.body.serviceCharge ? parseFloat(req.body.serviceCharge) : 0;
 
+    // Validasi: diskon/pajak/service charge tidak boleh negatif
+    if (discountAmount < 0 || taxAmount < 0 || serviceCharge < 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Diskon, pajak, dan service charge tidak boleh negatif'
+        }
+      });
+    }
+
     if (!items || items.length === 0) {
       return res.status(400).json({
         success: false,
@@ -394,6 +397,17 @@ export const createTransaction = async (
         });
       }
 
+      // Validasi: diskon/pajak/service charge tidak boleh lebih besar dari subtotal
+      if (discountAmount > subtotal) {
+        throw new Error(`Diskon (${discountAmount}) tidak boleh lebih besar dari subtotal (${subtotal})`);
+      }
+      if (taxAmount > subtotal) {
+        throw new Error(`Pajak (${taxAmount}) tidak boleh lebih besar dari subtotal (${subtotal})`);
+      }
+      if (serviceCharge > subtotal) {
+        throw new Error(`Service charge (${serviceCharge}) tidak boleh lebih besar dari subtotal (${subtotal})`);
+      }
+
       const total = subtotal - discountAmount + taxAmount + serviceCharge;
 
       // Validate payments
@@ -470,29 +484,33 @@ export const createTransaction = async (
       for (const item of itemsWithPrices) {
         // Track stock movement for the item itself (Retail scenario)
         if (item.trackStock) {
+          // Fetch current stock BEFORE decrement
+          const currentItem = await tx.items.findUnique({
+            where: { id: item.itemId },
+            select: { stock: true }
+          });
+          const stockBefore = Number(currentItem?.stock || 0);
+          const stockAfter = stockBefore - item.quantity;
+
+          // Update item stock
           await tx.items.update({
             where: { id: item.itemId },
             data: {
-              stock: {
-                decrement: item.quantity
-              }
+              stock: stockAfter
             }
           });
 
-          // Log Stock Movement
+          // Log Stock Movement with accurate data
           await tx.stock_movements.create({
             data: {
               outlet_id: parseInt(outletId),
-              inventory_id: null, // Assuming items table is separate from inventory table, or link if unified
-              // Since schema has both inventory and items, for Retail we might not have inventory_id link directly
-              // We log it with minimal info or if there's a link.
-              // For now, let's log user_id and quantity.
+              item_id: item.itemId,
               type: 'sale',
               quantity: item.quantity,
               unit_price: item.unitPrice,
               total_cost: item.subtotal,
-              stock_before: 0, // Ideally fetch before update, but for speed we skip
-              stock_after: 0,
+              stock_before: stockBefore,
+              stock_after: stockAfter,
               user_id: req.userId!,
               notes: `Transaction ${transactionNumber} - Item ${item.itemName}`
             }
@@ -570,6 +588,15 @@ export const createTransaction = async (
     }
     if (error.message.includes('Stok')) {
       return res.status(400).json({ success: false, error: { code: 'INSUFFICIENT_STOCK', message: error.message } });
+    }
+    if (error.message.includes('Diskon')) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_DISCOUNT', message: error.message } });
+    }
+    if (error.message.includes('Pajak')) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_TAX', message: error.message } });
+    }
+    if (error.message.includes('Service charge')) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_SERVICE_CHARGE', message: error.message } });
     }
     return next(error);
   }

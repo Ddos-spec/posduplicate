@@ -863,6 +863,7 @@ model items {
   recipes           recipes[]
   transaction_items transaction_items[]
   variants          variants[]
+  stock_movements   stock_movements[]
 
   @@index([is_active], map: "idx_items_active")
   @@index([category_id], map: "idx_items_category")
@@ -1053,6 +1054,7 @@ model stock_movements {
   outlet_id      Int
   ingredient_id  Int?
   inventory_id   Int?
+  item_id        Int?
   type           String       @db.VarChar(20)
   quantity       Decimal      @db.Decimal(12, 2)
   unit_price     Decimal      @default(0) @db.Decimal(12, 2)
@@ -1068,12 +1070,14 @@ model stock_movements {
   expenses       expenses[]
   ingredients    ingredients? @relation(fields: [ingredient_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_stock_movements_ingredient")
   inventory      inventory?   @relation(fields: [inventory_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_stock_movements_inventory")
+  items          items?       @relation(fields: [item_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_stock_movements_item")
   outlets        outlets      @relation(fields: [outlet_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_stock_movements_outlet")
   users          users        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_stock_movements_user")
 
   @@index([created_at], map: "idx_stock_movements_created")
   @@index([ingredient_id], map: "idx_stock_movements_ingredient")
   @@index([inventory_id], map: "idx_stock_movements_inventory")
+  @@index([item_id], map: "idx_stock_movements_item")
   @@index([outlet_id], map: "idx_stock_movements_outlet")
   @@index([supplier_id], map: "idx_stock_movements_supplier")
   @@index([type], map: "idx_stock_movements_type")
@@ -1167,6 +1171,10 @@ model tenants {
   outlets                         outlets[]
   social_accounts                 social_accounts[]
   social_posts                    social_posts[]
+  employees                       employees[]
+  payroll_periods                 payroll_periods[]
+  payroll_details                 payroll_details[]
+  overtime                        overtime[]
   users_tenants_invited_byTousers users?                   @relation("tenants_invited_byTousers", fields: [invited_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users_users_tenant_idTotenants  users[]                  @relation("users_tenant_idTotenants")
 
@@ -1290,6 +1298,7 @@ model users {
   purchase_orders_approved                                       purchase_orders[]      @relation("purchase_orders_approved_byTousers")
   inventory_alerts                                               inventory_alerts[]
   social_posts                                                   social_posts[]
+  employees                                                      employees[]
 
   @@index([email], map: "idx_users_email")
   @@index([invitation_token], map: "idx_users_invitation_token")
@@ -1453,6 +1462,7 @@ model social_posts {
   scheduled_at     DateTime?         @db.Timestamp(6)
   published_at     DateTime?         @db.Timestamp(6)
   status           String            @default("draft") @db.VarChar(20) // draft, scheduled, published, failed
+  external_id      String?           @db.VarChar(255) // Platform-specific post ID
   error_message    String?           @db.Text
   created_by       Int
   created_at       DateTime          @default(now()) @db.Timestamp(6)
@@ -1469,14 +1479,18 @@ model social_posts {
 }
 
 model social_analytics {
-  id             Int          @id @default(autoincrement())
-  post_id        Int          @unique
-  likes_count    Int          @default(0)
-  comments_count Int          @default(0)
-  shares_count   Int          @default(0)
-  reach_count    Int          @default(0)
-  last_updated   DateTime     @default(now()) @db.Timestamp(6)
-  social_posts   social_posts @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  id              Int          @id @default(autoincrement())
+  post_id         Int          @unique
+  impressions     Int          @default(0)
+  reach           Int          @default(0)
+  likes           Int          @default(0)
+  comments        Int          @default(0)
+  shares          Int          @default(0)
+  saves           Int          @default(0)
+  engagement_rate Decimal?     @db.Decimal(5, 2)
+  created_at      DateTime     @default(now()) @db.Timestamp(6)
+  updated_at      DateTime     @default(now()) @db.Timestamp(6)
+  social_posts    social_posts @relation(fields: [post_id], references: [id], onDelete: Cascade)
 
   @@schema("public")
 }

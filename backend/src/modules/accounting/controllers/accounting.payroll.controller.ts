@@ -12,7 +12,8 @@ import prisma from '../../../utils/prisma';
 
 const PPH_21_TER = {
   // TER (Tarif Efektif Rata-rata) - effective Jan 2024
-  TK_0: [ // Tidak Kawin, Tanpa Tanggungan
+  // Category A: TK/0, TK/1, K/0
+  A: [
     { min: 0, max: 5400000, rate: 0 },
     { min: 5400001, max: 5650000, rate: 0.0025 },
     { min: 5650001, max: 5950000, rate: 0.005 },
@@ -57,7 +58,106 @@ const PPH_21_TER = {
     { min: 695000001, max: 910000000, rate: 0.32 },
     { min: 910000001, max: 1400000000, rate: 0.33 },
     { min: 1400000001, max: Infinity, rate: 0.34 }
+  ],
+  // Category B: TK/2, TK/3, K/1, K/2
+  B: [
+    { min: 0, max: 6200000, rate: 0 },
+    { min: 6200001, max: 6500000, rate: 0.0025 },
+    { min: 6500001, max: 6850000, rate: 0.005 },
+    { min: 6850001, max: 7300000, rate: 0.0075 },
+    { min: 7300001, max: 9200000, rate: 0.01 },
+    { min: 9200001, max: 10750000, rate: 0.015 },
+    { min: 10750001, max: 11250000, rate: 0.02 },
+    { min: 11250001, max: 11600000, rate: 0.025 },
+    { min: 11600001, max: 12600000, rate: 0.03 },
+    { min: 12600001, max: 13600000, rate: 0.04 },
+    { min: 13600001, max: 14950000, rate: 0.05 },
+    { min: 14950001, max: 16400000, rate: 0.06 },
+    { min: 16400001, max: 18450000, rate: 0.07 },
+    { min: 18450001, max: 21850000, rate: 0.08 },
+    { min: 21850001, max: 26000000, rate: 0.09 },
+    { min: 26000001, max: 28000000, rate: 0.1 },
+    { min: 28000001, max: 29750000, rate: 0.11 },
+    { min: 29750001, max: 31750000, rate: 0.12 },
+    { min: 31750001, max: 34500000, rate: 0.13 },
+    { min: 34500001, max: 37500000, rate: 0.14 },
+    { min: 37500001, max: 41000000, rate: 0.15 },
+    { min: 41000001, max: 45800000, rate: 0.16 },
+    { min: 45800001, max: 49500000, rate: 0.17 },
+    { min: 49500001, max: 53800000, rate: 0.18 },
+    { min: 53800001, max: 58500000, rate: 0.19 },
+    { min: 58500001, max: 64000000, rate: 0.2 },
+    { min: 64000001, max: 71000000, rate: 0.21 },
+    { min: 71000001, max: 80000000, rate: 0.22 },
+    { min: 80000001, max: 93000000, rate: 0.23 },
+    { min: 93000001, max: 109000000, rate: 0.24 },
+    { min: 109000001, max: 129000000, rate: 0.25 },
+    { min: 129000001, max: 163000000, rate: 0.26 },
+    { min: 163000001, max: 211000000, rate: 0.27 },
+    { min: 211000001, max: 374000000, rate: 0.28 },
+    { min: 374000001, max: 459000000, rate: 0.29 },
+    { min: 459000001, max: 555000000, rate: 0.30 },
+    { min: 555000001, max: 704000000, rate: 0.31 },
+    { min: 704000001, max: 957000000, rate: 0.32 },
+    { min: 957000001, max: 1405000000, rate: 0.33 },
+    { min: 1405000001, max: Infinity, rate: 0.34 }
+  ],
+  // Category C: K/3
+  C: [
+    { min: 0, max: 6600000, rate: 0 },
+    { min: 6600001, max: 6950000, rate: 0.0025 },
+    { min: 6950001, max: 7350000, rate: 0.005 },
+    { min: 7350001, max: 7800000, rate: 0.0075 },
+    { min: 7800001, max: 8850000, rate: 0.01 },
+    { min: 8850001, max: 9800000, rate: 0.0125 },
+    { min: 9800001, max: 10950000, rate: 0.015 },
+    { min: 10950001, max: 11200000, rate: 0.0175 },
+    { min: 11200001, max: 12050000, rate: 0.02 },
+    { min: 12050001, max: 12950000, rate: 0.03 },
+    { min: 12950001, max: 14150000, rate: 0.04 },
+    { min: 14150001, max: 15550000, rate: 0.05 },
+    { min: 15550001, max: 17050000, rate: 0.06 },
+    { min: 17050001, max: 19500000, rate: 0.07 },
+    { min: 19500001, max: 22700000, rate: 0.08 },
+    { min: 22700001, max: 26600000, rate: 0.09 },
+    { min: 26600001, max: 28100000, rate: 0.1 },
+    { min: 28100001, max: 30100000, rate: 0.11 },
+    { min: 30100001, max: 32350000, rate: 0.12 },
+    { min: 32350001, max: 35400000, rate: 0.13 },
+    { min: 35400001, max: 38550000, rate: 0.14 },
+    { min: 38550001, max: 42300000, rate: 0.15 },
+    { min: 42300001, max: 47150000, rate: 0.16 },
+    { min: 47150001, max: 51650000, rate: 0.17 },
+    { min: 51650001, max: 56300000, rate: 0.18 },
+    { min: 56300001, max: 62000000, rate: 0.19 },
+    { min: 62000001, max: 68600000, rate: 0.2 },
+    { min: 68600001, max: 76500000, rate: 0.21 },
+    { min: 76500001, max: 86500000, rate: 0.22 },
+    { min: 86500001, max: 99000000, rate: 0.23 },
+    { min: 99000001, max: 115000000, rate: 0.24 },
+    { min: 115000001, max: 138000000, rate: 0.25 },
+    { min: 138000001, max: 174000000, rate: 0.26 },
+    { min: 174000001, max: 221000000, rate: 0.27 },
+    { min: 221000001, max: 390000000, rate: 0.28 },
+    { min: 390000001, max: 463000000, rate: 0.29 },
+    { min: 463000001, max: 561000000, rate: 0.30 },
+    { min: 561000001, max: 709000000, rate: 0.31 },
+    { min: 709000001, max: 965000000, rate: 0.32 },
+    { min: 965000001, max: 1419000000, rate: 0.33 },
+    { min: 1419000001, max: Infinity, rate: 0.34 }
   ]
+};
+
+// Map PTKP status to TER category
+const PTKP_TO_TER_CATEGORY: Record<string, 'A' | 'B' | 'C'> = {
+  'TK/0': 'A',
+  'TK/1': 'A',
+  'K/0': 'A',
+  'TK/2': 'B',
+  'TK/3': 'B',
+  'K/1': 'B',
+  'K/2': 'B',
+  'K/3': 'C'
 };
 
 const BPJS = {
@@ -397,9 +497,9 @@ export const calculatePayroll = async (req: Request, res: Response, next: NextFu
             const jpEmployer = Math.round(jpBase * BPJS.jp.employerRate);
             const jpEmployee = Math.round(jpBase * BPJS.jp.employeeRate);
 
-            // PPh 21
+            // PPh 21 - use employee's PTKP status for correct TER category
             const taxableIncome = grossSalary - jhtEmployee - jpEmployee;
-            const pph21 = calculatePPh21TER(taxableIncome, emp.npwp || '');
+            const pph21 = calculatePPh21TER(taxableIncome, emp.npwp || '', emp.ptkp_status || 'TK/0');
 
             // Net
             const totalDeductions = bpjsKesEmployee + jhtEmployee + jpEmployee + pph21;
@@ -707,8 +807,8 @@ export const calculateTHR = async (req: Request, res: Response, next: NextFuncti
         thrAmount = 0;
       }
 
-      // Calculate PPh 21 on THR
-      const pph21THR = calculatePPh21TER(thrAmount, emp.npwp || '');
+      // Calculate PPh 21 on THR - use employee's PTKP status
+      const pph21THR = calculatePPh21TER(thrAmount, emp.npwp || '', emp.ptkp_status || 'TK/0');
       const netTHR = thrAmount - pph21THR;
 
       thrResults.push({
@@ -915,8 +1015,10 @@ export const getPPh21Report = async (req: Request, res: Response, next: NextFunc
 
 // ============= HELPER FUNCTIONS =============
 
-function calculatePPh21TER(monthlyIncome: number, hasNPWP: boolean | string): number {
-  const tariffs = PPH_21_TER.TK_0; // Simplified - use TK/0 for all
+function calculatePPh21TER(monthlyIncome: number, hasNPWP: boolean | string, ptkpStatus: string = 'TK/0'): number {
+  // Get TER category based on PTKP status
+  const category = PTKP_TO_TER_CATEGORY[ptkpStatus] || 'A';
+  const tariffs = PPH_21_TER[category];
 
   let rate = 0;
   for (const bracket of tariffs) {
