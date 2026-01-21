@@ -146,19 +146,27 @@ export const getMovements = async (req: Request, res: Response, _next: NextFunct
       if (date_to) where.created_at.lte = new Date(date_to as string);
     }
 
-    // Since inventoryMovement doesn't exist, returning a placeholder
-    const movements: any[] = []; // Placeholder - would use actual model if it existed
-
-    // const movements = await prisma.inventoryMovement.findMany({
-    //   where,
-    //   include: {
-    //     item: { select: { id: true, name: true } },
-    //     outlet: { select: { id: true, name: true } },
-    //     user: { select: { id: true, name: true } }
-    //   },
-    //   orderBy: { createdAt: 'desc' },
-    //   take: 100
-    // });
+    // Use real stock_movements table
+    const movements = await prisma.stock_movements.findMany({
+      where: {
+        ...(req.tenantId && { outlets: { tenant_id: req.tenantId } }),
+        ...(outlet_id && { outlet_id: parseInt(outlet_id as string) }),
+        ...(date_from && { created_at: { gte: new Date(date_from as string) } }),
+        ...(date_to && { created_at: { lte: new Date(date_to as string) } }),
+        // Note: filtering by item_id needs a join relation or specific field if available.
+        // stock_movements has `inventory_id` (for raw materials) or `ingredient_id`
+        // We assume this endpoint is for General Items/Products logic, but stock_movements schema is mixed.
+        // For now, let's return all movements for the outlet.
+      },
+      include: {
+        outlets: { select: { id: true, name: true } },
+        users: { select: { id: true, name: true } },
+        inventory: { select: { id: true, name: true } },
+        ingredients: { select: { id: true, name: true } }
+      },
+      orderBy: { created_at: 'desc' },
+      take: 100
+    });
 
     res.json({ success: true, data: movements, count: movements.length });
   } catch (error) {
@@ -182,34 +190,23 @@ export const getLowStock = async (req: Request, res: Response, _next: NextFuncti
       where.outlet_id = parseInt(outlet_id as string);
     }
 
-    try {
-      const items = await prisma.$queryRaw`
-        SELECT * FROM items
-        WHERE "is_active" = true
-        AND "track_stock" = true
-        AND stock <= "min_stock"
-        ${outlet_id ? prisma.$queryRawUnsafe(`AND "outlet_id" = ${outlet_id}`) : prisma.$queryRawUnsafe('')}
-        ORDER BY stock ASC
-      `;
+    // Safe implementation using Prisma
+    const allTrackedItems = await prisma.items.findMany({
+      where,
+      include: {
+        outlets: { select: { id: true, name: true } }
+      },
+      orderBy: { stock: 'asc' }
+    });
 
-      res.json({ success: true, data: items, count: (items as any[]).length });
-    } catch (error) {
-      // Fallback to regular query
-      const items = await prisma.items.findMany({
-        where: {
-          is_active: true,
-          track_stock: true,
-          ...(outlet_id && { outlet_id: parseInt(outlet_id as string) })
-        },
-        orderBy: { stock: 'asc' }
-      });
+    // Filter in-memory because Prisma doesn't support comparing two columns in `where` clause yet
+    const lowStockItems = allTrackedItems.filter(item => {
+      const stock = parseFloat(item.stock?.toString() || '0');
+      const minStock = parseFloat(item.min_stock?.toString() || '0');
+      return stock <= minStock;
+    });
 
-      const lowStock = items.filter(item =>
-        parseFloat((item.stock || 0).toString()) <= parseFloat((item.min_stock || 0).toString())
-      );
-
-      res.json({ success: true, data: lowStock, count: lowStock.length });
-    }
+    res.json({ success: true, data: lowStockItems, count: lowStockItems.length });
   } catch (error) {
     return _next(error);
   }
