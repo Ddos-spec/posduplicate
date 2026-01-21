@@ -13,6 +13,7 @@ import fnbRoutes from './modules/fnb';
 import accountingRoutes from './modules/accounting';
 import sharedRoutes from './modules/shared';
 import adminRoutes from './modules/admin';
+import medsosRoutes from './modules/medsos';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -80,7 +81,8 @@ app.get('/', (_req: Request, res: Response) => {
       fnb: 'Food & Beverage / POS Module',
       accounting: 'Accounting Module',
       shared: 'Shared Services (Auth, Users, Tenants, etc.)',
-      admin: 'Admin & Analytics'
+      admin: 'Admin & Analytics',
+      medsos: 'Social Media Management'
     },
     endpoints: {
       health: '/health',
@@ -117,6 +119,9 @@ app.use('/api/accounting', accountingRoutes);
 
 // Admin Module Routes
 app.use('/api/admin', adminRoutes);
+
+// Medsos Module Routes
+app.use('/api/medsos', medsosRoutes);
 
 // DEBUG endpoints removed for security
 // Use proper logging and monitoring service in production
