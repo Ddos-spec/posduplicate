@@ -284,10 +284,22 @@ Medsos
 - Scheduler/publisher belum ada (status tidak otomatis berubah). File: backend/src/modules/medsos/controllers/post.controller.ts (hanya CRUD).
 - Analytics masih mock insert default social_analytics. File: backend/src/modules/medsos/controllers/post.controller.ts.
 
-## 14. Fase 2 (Security/Hardening) - Ditunda
+## 14. Fase 2 (Security/Hardening) - Ready
+Status: belum mulai. Target: hardening + security compliance.
+
+Ruang lingkup (wajib):
 - Ganti semua $queryRawUnsafe ke query parameterized (Prisma.sql / $queryRaw).
-- Audit input validation + tenant isolation menyeluruh.
-- Rate limit + webhook signature hardening.
+- Audit input validation (server-side) untuk semua endpoint yang menerima angka/amount.
+- Tenant isolation audit menyeluruh (shared + fnb + accounting + medsos).
+- Rate limit untuk endpoint rawan (auth, webhooks, owner API).
+- Hardening webhook: signature validation + idempotency + retry guard.
+- Secrets & env hygiene: pastikan tidak ada default/placeholder di production.
+- Audit logging untuk aksi kritikal (approval, transaksi, inventory adjust, publish medsos).
+
+Output wajib Fase 2:
+- Daftar temuan + severity + fix plan.
+- Diff kode yang mengganti unsafe query + validasi input.
+- Rencana verifikasi (manual + test).
 
 ## 15. Eksekusi Fix oleh Claude (2026-01-21)
 
