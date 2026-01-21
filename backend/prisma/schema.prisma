@@ -1066,6 +1066,8 @@ model tenants {
   api_keys                        api_keys[]
   integrations                    integrations[]
   outlets                         outlets[]
+  social_accounts                 social_accounts[]
+  social_posts                    social_posts[]
   users_tenants_invited_byTousers users?                   @relation("tenants_invited_byTousers", fields: [invited_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users_users_tenant_idTotenants  users[]                  @relation("users_tenant_idTotenants")
 
@@ -1188,6 +1190,7 @@ model users {
   purchase_orders_created                                        purchase_orders[]      @relation("purchase_orders_created_byTousers")
   purchase_orders_approved                                       purchase_orders[]      @relation("purchase_orders_approved_byTousers")
   inventory_alerts                                               inventory_alerts[]
+  social_posts                                                   social_posts[]
 
   @@index([email], map: "idx_users_email")
   @@index([invitation_token], map: "idx_users_invitation_token")
@@ -1318,5 +1321,63 @@ model inventory_forecast {
 
   @@index([outlet_id], map: "idx_inv_forecast_outlet")
   @@index([forecast_date], map: "idx_inv_forecast_date")
+  @@schema("public")
+}
+
+model social_accounts {
+  id            Int            @id @default(autoincrement())
+  tenant_id     Int
+  platform      String         @db.VarChar(50) // instagram, facebook, tiktok
+  account_name  String         @db.VarChar(100)
+  account_id    String         @db.VarChar(100) // external ID
+  access_token  String?        @db.Text
+  refresh_token String?        @db.Text
+  token_expires DateTime?      @db.Timestamp(6)
+  is_active     Boolean        @default(true)
+  metadata      Json?          @default("{}")
+  created_at    DateTime       @default(now()) @db.Timestamp(6)
+  updated_at    DateTime       @default(now()) @db.Timestamp(6)
+  tenants       tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  social_posts  social_posts[]
+
+  @@unique([tenant_id, platform, account_id])
+  @@schema("public")
+}
+
+model social_posts {
+  id               Int               @id @default(autoincrement())
+  tenant_id        Int
+  account_id       Int?
+  content          String?           @db.Text
+  media_urls       Json?             @default("[]") // Array of strings
+  platform         String            @db.VarChar(50)
+  scheduled_at     DateTime?         @db.Timestamp(6)
+  published_at     DateTime?         @db.Timestamp(6)
+  status           String            @default("draft") @db.VarChar(20) // draft, scheduled, published, failed
+  error_message    String?           @db.Text
+  created_by       Int
+  created_at       DateTime          @default(now()) @db.Timestamp(6)
+  updated_at       DateTime          @default(now()) @db.Timestamp(6)
+  tenants          tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  social_accounts  social_accounts?  @relation(fields: [account_id], references: [id])
+  users            users             @relation(fields: [created_by], references: [id])
+  social_analytics social_analytics?
+
+  @@index([tenant_id], map: "idx_social_posts_tenant")
+  @@index([status], map: "idx_social_posts_status")
+  @@index([scheduled_at], map: "idx_social_posts_schedule")
+  @@schema("public")
+}
+
+model social_analytics {
+  id             Int          @id @default(autoincrement())
+  post_id        Int          @unique
+  likes_count    Int          @default(0)
+  comments_count Int          @default(0)
+  shares_count   Int          @default(0)
+  reach_count    Int          @default(0)
+  last_updated   DateTime     @default(now()) @db.Timestamp(6)
+  social_posts   social_posts @relation(fields: [post_id], references: [id], onDelete: Cascade)
+
   @@schema("public")
 }
