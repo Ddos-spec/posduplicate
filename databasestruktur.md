@@ -452,6 +452,7 @@ CREATE TABLE "public"."stock_movements" (
   "outlet_id" INTEGER NOT NULL,
   "ingredient_id" INTEGER NULL,
   "inventory_id" INTEGER NULL,
+  "item_id" INTEGER NULL,
   "type" VARCHAR(20) NOT NULL,
   "quantity" NUMERIC NOT NULL,
   "unit_price" NUMERIC NOT NULL DEFAULT 0 ,
@@ -1719,3 +1720,199 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER "update_inventory_settings_updated_at"
 BEFORE UPDATE ON "public"."inventory_settings"
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================================
+-- UPDATE 2026-01-21 (Fase 1): Medsos + Payroll + Item Movements
+-- =============================================================
+
+-- Medsos tables
+CREATE TABLE "public"."social_accounts" (
+  "id" SERIAL,
+  "tenant_id" INTEGER NOT NULL,
+  "platform" VARCHAR(50) NOT NULL,
+  "account_name" VARCHAR(100) NOT NULL,
+  "account_id" VARCHAR(100) NOT NULL,
+  "access_token" TEXT NULL,
+  "refresh_token" TEXT NULL,
+  "token_expires" TIMESTAMP NULL,
+  "is_active" BOOLEAN NOT NULL DEFAULT true,
+  "metadata" JSON NULL DEFAULT '{}'::jsonb,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "social_accounts_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "social_accounts_unique" UNIQUE ("tenant_id", "platform", "account_id")
+);
+
+CREATE TABLE "public"."social_posts" (
+  "id" SERIAL,
+  "tenant_id" INTEGER NOT NULL,
+  "account_id" INTEGER NULL,
+  "content" TEXT NULL,
+  "media_urls" JSON NULL DEFAULT '[]'::json,
+  "platform" VARCHAR(50) NOT NULL,
+  "scheduled_at" TIMESTAMP NULL,
+  "published_at" TIMESTAMP NULL,
+  "status" VARCHAR(20) NOT NULL DEFAULT 'draft',
+  "external_id" VARCHAR(255) NULL,
+  "error_message" TEXT NULL,
+  "created_by" INTEGER NOT NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "social_posts_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "public"."social_analytics" (
+  "id" SERIAL,
+  "post_id" INTEGER NOT NULL,
+  "impressions" INTEGER NOT NULL DEFAULT 0,
+  "reach" INTEGER NOT NULL DEFAULT 0,
+  "likes" INTEGER NOT NULL DEFAULT 0,
+  "comments" INTEGER NOT NULL DEFAULT 0,
+  "shares" INTEGER NOT NULL DEFAULT 0,
+  "saves" INTEGER NOT NULL DEFAULT 0,
+  "engagement_rate" NUMERIC NULL,
+  "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "social_analytics_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "social_analytics_post_id_key" UNIQUE ("post_id")
+);
+
+ALTER TABLE "public"."social_accounts"
+ADD CONSTRAINT "social_accounts_tenant_id_fkey"
+FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE "public"."social_posts"
+ADD CONSTRAINT "social_posts_tenant_id_fkey"
+FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE "public"."social_posts"
+ADD CONSTRAINT "social_posts_account_id_fkey"
+FOREIGN KEY ("account_id") REFERENCES "public"."social_accounts" ("id") ON DELETE SET NULL ON UPDATE NO ACTION;
+
+ALTER TABLE "public"."social_posts"
+ADD CONSTRAINT "social_posts_created_by_fkey"
+FOREIGN KEY ("created_by") REFERENCES "public"."users" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+ALTER TABLE "public"."social_analytics"
+ADD CONSTRAINT "social_analytics_post_id_fkey"
+FOREIGN KEY ("post_id") REFERENCES "public"."social_posts" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE "public"."stock_movements"
+ADD CONSTRAINT "stock_movements_item_id_fkey"
+FOREIGN KEY ("item_id") REFERENCES "public"."items" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- Payroll tables (accounting schema)
+CREATE TABLE "accounting"."employees" (
+  "id" SERIAL,
+  "tenant_id" INTEGER NOT NULL,
+  "employee_id" VARCHAR(50) NOT NULL,
+  "user_id" INTEGER NULL,
+  "name" VARCHAR(255) NOT NULL,
+  "nik" VARCHAR(20) NULL,
+  "npwp" VARCHAR(20) NULL,
+  "ptkp_status" VARCHAR(10) NULL DEFAULT 'TK/0',
+  "department" VARCHAR(100) NULL,
+  "position" VARCHAR(100) NULL,
+  "join_date" DATE NULL,
+  "bank_name" VARCHAR(100) NULL,
+  "bank_account" VARCHAR(50) NULL,
+  "basic_salary" NUMERIC NULL DEFAULT 0,
+  "allowances" JSON NULL DEFAULT '{}'::jsonb,
+  "bpjs_kesehatan" VARCHAR(50) NULL,
+  "bpjs_ketenagakerjaan" VARCHAR(50) NULL,
+  "jkk_risk_level" INTEGER NULL DEFAULT 1,
+  "status" VARCHAR(20) NULL DEFAULT 'active',
+  "created_by" INTEGER NULL,
+  "created_at" TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_by" INTEGER NULL,
+  "updated_at" TIMESTAMP WITH TIME ZONE NULL,
+  CONSTRAINT "employees_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "accounting"."payroll_periods" (
+  "id" SERIAL,
+  "tenant_id" INTEGER NOT NULL,
+  "period_start" DATE NOT NULL,
+  "period_end" DATE NOT NULL,
+  "pay_date" DATE NULL,
+  "description" VARCHAR(255) NULL,
+  "status" VARCHAR(20) NULL DEFAULT 'draft',
+  "calculated_at" TIMESTAMP WITH TIME ZONE NULL,
+  "calculated_by" INTEGER NULL,
+  "finalized_at" TIMESTAMP WITH TIME ZONE NULL,
+  "finalized_by" INTEGER NULL,
+  "created_by" INTEGER NULL,
+  "created_at" TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "payroll_periods_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "accounting"."payroll_details" (
+  "id" SERIAL,
+  "tenant_id" INTEGER NOT NULL,
+  "period_id" INTEGER NOT NULL,
+  "employee_id" INTEGER NOT NULL,
+  "basic_salary" NUMERIC NULL DEFAULT 0,
+  "total_allowance" NUMERIC NULL DEFAULT 0,
+  "overtime_hours" NUMERIC NULL DEFAULT 0,
+  "overtime_pay" NUMERIC NULL DEFAULT 0,
+  "gross_salary" NUMERIC NULL DEFAULT 0,
+  "bpjs_kes_employer" NUMERIC NULL DEFAULT 0,
+  "bpjs_kes_employee" NUMERIC NULL DEFAULT 0,
+  "jkk" NUMERIC NULL DEFAULT 0,
+  "jkm" NUMERIC NULL DEFAULT 0,
+  "jht_employer" NUMERIC NULL DEFAULT 0,
+  "jht_employee" NUMERIC NULL DEFAULT 0,
+  "jp_employer" NUMERIC NULL DEFAULT 0,
+  "jp_employee" NUMERIC NULL DEFAULT 0,
+  "pph21" NUMERIC NULL DEFAULT 0,
+  "total_deductions" NUMERIC NULL DEFAULT 0,
+  "net_salary" NUMERIC NULL DEFAULT 0,
+  "employer_cost" NUMERIC NULL DEFAULT 0,
+  "created_at" TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "payroll_details_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "accounting"."overtime" (
+  "id" SERIAL,
+  "tenant_id" INTEGER NOT NULL,
+  "employee_id" INTEGER NOT NULL,
+  "date" DATE NOT NULL,
+  "hours" NUMERIC NOT NULL,
+  "type" VARCHAR(20) NULL DEFAULT 'weekday',
+  "description" TEXT NULL,
+  "created_by" INTEGER NULL,
+  "created_at" TIMESTAMP WITH TIME ZONE NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "overtime_pkey" PRIMARY KEY ("id")
+);
+
+ALTER TABLE "accounting"."employees"
+ADD CONSTRAINT "employees_tenant_id_fkey"
+FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE "accounting"."employees"
+ADD CONSTRAINT "employees_user_id_fkey"
+FOREIGN KEY ("user_id") REFERENCES "public"."users" ("id") ON DELETE SET NULL ON UPDATE NO ACTION;
+
+ALTER TABLE "accounting"."payroll_periods"
+ADD CONSTRAINT "payroll_periods_tenant_id_fkey"
+FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE "accounting"."payroll_details"
+ADD CONSTRAINT "payroll_details_tenant_id_fkey"
+FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE "accounting"."payroll_details"
+ADD CONSTRAINT "payroll_details_period_id_fkey"
+FOREIGN KEY ("period_id") REFERENCES "accounting"."payroll_periods" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE "accounting"."payroll_details"
+ADD CONSTRAINT "payroll_details_employee_id_fkey"
+FOREIGN KEY ("employee_id") REFERENCES "accounting"."employees" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE "accounting"."overtime"
+ADD CONSTRAINT "overtime_tenant_id_fkey"
+FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+ALTER TABLE "accounting"."overtime"
+ADD CONSTRAINT "overtime_employee_id_fkey"
+FOREIGN KEY ("employee_id") REFERENCES "accounting"."employees" ("id") ON DELETE CASCADE ON UPDATE NO ACTION;
