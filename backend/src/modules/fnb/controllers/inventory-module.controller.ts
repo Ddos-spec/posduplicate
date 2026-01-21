@@ -646,6 +646,27 @@ export const adjustInventoryStock = async (req: Request, res: Response, _next: N
       data: { current_stock: newStock }
     });
 
+    // Create stock_movements record for audit trail
+    try {
+      await prisma.stock_movements.create({
+        data: {
+          outlet_id: item.outlet_id || req.outletId || 0,
+          inventory_id: parseInt(id),
+          type: type === 'in' ? 'adjustment_in' : 'adjustment_out',
+          quantity: adjustment,
+          unit_price: Number(item.cost_amount || 0),
+          total_cost: adjustment * Number(item.cost_amount || 0),
+          stock_before: currentStock,
+          stock_after: newStock,
+          user_id: req.userId || 0,
+          notes: notes || 'Stock adjustment'
+        }
+      });
+    } catch (movementError) {
+      console.error('Failed to create stock movement:', movementError);
+      // Continue even if stock movement logging fails
+    }
+
     res.json({
       success: true,
       message: 'Stok berhasil disesuaikan',

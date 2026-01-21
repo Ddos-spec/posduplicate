@@ -80,6 +80,27 @@ export const adjustStock = async (req: Request, res: Response, _next: NextFuncti
       data: { stock: newStock }
     });
 
+    // Create stock_movements record for audit trail
+    try {
+      await prisma.stock_movements.create({
+        data: {
+          outlet_id: item.outlet_id || req.outletId || 0,
+          item_id: itemId,
+          type: type === 'in' ? 'adjustment_in' : 'adjustment_out',
+          quantity: adjustment,
+          unit_price: Number(item.price || 0),
+          total_cost: adjustment * Number(item.price || 0),
+          stock_before: currentStock,
+          stock_after: newStock,
+          user_id: req.userId || 0,
+          notes: `${reason}${notes ? ' - ' + notes : ''}`
+        }
+      });
+    } catch (movementError) {
+      console.error('Failed to create stock movement:', movementError);
+      // Continue even if stock movement logging fails
+    }
+
     // Create activity log
     try {
       await createActivityLog(
@@ -146,21 +167,19 @@ export const getMovements = async (req: Request, res: Response, _next: NextFunct
       if (date_to) where.created_at.lte = new Date(date_to as string);
     }
 
-    // Use real stock_movements table
+    // Use real stock_movements table with proper item_id filter
     const movements = await prisma.stock_movements.findMany({
       where: {
         ...(req.tenantId && { outlets: { tenant_id: req.tenantId } }),
         ...(outlet_id && { outlet_id: parseInt(outlet_id as string) }),
+        ...(item_id && { item_id: parseInt(item_id as string) }),
         ...(date_from && { created_at: { gte: new Date(date_from as string) } }),
         ...(date_to && { created_at: { lte: new Date(date_to as string) } }),
-        // Note: filtering by item_id needs a join relation or specific field if available.
-        // stock_movements has `inventory_id` (for raw materials) or `ingredient_id`
-        // We assume this endpoint is for General Items/Products logic, but stock_movements schema is mixed.
-        // For now, let's return all movements for the outlet.
       },
       include: {
         outlets: { select: { id: true, name: true } },
         users: { select: { id: true, name: true } },
+        items: { select: { id: true, name: true } },
         inventory: { select: { id: true, name: true } },
         ingredients: { select: { id: true, name: true } }
       },

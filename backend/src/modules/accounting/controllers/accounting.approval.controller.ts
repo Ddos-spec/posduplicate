@@ -239,7 +239,13 @@ export const createApprovalRequest = async (req: Request, res: Response, next: N
         VALUES (${id}, 1, ${approver.id}, 'pending', NOW())
       `).catch(() => {});
 
-      // TODO: Send notification to approver
+      // Send notification to approver
+      await createApprovalNotification(
+        approver.id,
+        'APPROVAL_REQUEST',
+        `Approval request baru: ${description} (${formatCurrency(amount)})`,
+        { requestId: id, entityType, entityId, amount }
+      );
     }
 
     res.status(201).json({
@@ -384,6 +390,14 @@ export const approveRequest = async (req: Request, res: Response, next: NextFunc
         // Update entity status
         await updateEntityStatus(req_.entity_type, req_.entity_id, 'approved');
 
+        // Notify requester about approval
+        await createApprovalNotification(
+          req_.requested_by,
+          'APPROVAL_APPROVED',
+          `Request disetujui: ${req_.description}`,
+          { requestId: Number(requestId), entityType: req_.entity_type, entityId: req_.entity_id }
+        );
+
         res.json({
           success: true,
           data: { completed: true, status: 'approved' },
@@ -448,7 +462,7 @@ export const rejectRequest = async (req: Request, res: Response, next: NextFunct
 
     // Verify approver
     const action: any[] = await prisma.$queryRawUnsafe(`
-      SELECT aa.*, ar.entity_type, ar.entity_id
+      SELECT aa.*, ar.entity_type, ar.entity_id, ar.requested_by, ar.description, ar.amount
       FROM "accounting"."approval_actions" aa
       JOIN "accounting"."approval_requests" ar ON aa.request_id = ar.id
       WHERE aa.request_id = ${requestId} AND aa.approver_id = ${userId} AND aa.status = 'pending'
@@ -479,7 +493,13 @@ export const rejectRequest = async (req: Request, res: Response, next: NextFunct
     // Update entity status
     await updateEntityStatus(action[0].entity_type, action[0].entity_id, 'rejected');
 
-    // TODO: Notify requester
+    // Notify requester about rejection
+    await createApprovalNotification(
+      action[0].requested_by,
+      'APPROVAL_REJECTED',
+      `Request ditolak: ${action[0].description} - Alasan: ${reason}`,
+      { requestId: Number(requestId), entityType: action[0].entity_type, entityId: action[0].entity_id, reason }
+    );
 
     res.json({
       success: true,
@@ -839,4 +859,30 @@ async function createApprovalTables(): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {});
+}
+
+/**
+ * Create notification/activity log for approval events
+ */
+async function createApprovalNotification(
+  userId: number,
+  actionType: string,
+  message: string,
+  metadata: Record<string, any>
+): Promise<void> {
+  try {
+    await prisma.activity_logs.create({
+      data: {
+        user_id: userId,
+        action_type: actionType,
+        entity_type: 'approval',
+        entity_id: metadata.requestId || null,
+        new_value: metadata,
+        reason: message
+      }
+    });
+  } catch (error) {
+    console.error('Failed to create approval notification:', error);
+    // Don't throw - notification failure shouldn't break the main flow
+  }
 }
