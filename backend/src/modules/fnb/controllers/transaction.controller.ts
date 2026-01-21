@@ -479,8 +479,7 @@ export const createTransaction = async (
           });
         }
 
-        // Deduct ingredients based on recipe (DISABLED: recipes table missing in DB)
-        /*
+        // Deduct ingredients based on recipe
         try {
           const recipes = await tx.recipes.findMany({
             where: { item_id: item.itemId }
@@ -491,16 +490,18 @@ export const createTransaction = async (
               where: { id: recipe.ingredient_id },
               data: {
                 stock: {
-                  decrement: parseFloat(recipe.quantity.toString()) * item.quantity
+                  decrement: Number(recipe.quantity) * Number(item.quantity)
                 }
               }
             });
+            
+            // Log movement (Optional but recommended)
+            // Note: Creating stock_movement record requires outlet_id which we have in transaction
           }
         } catch (error) {
-          // Skip recipe-based ingredient deduction if recipes table doesn't exist
-          console.warn('Skipping recipe deduction:', error);
+          console.error('Error in recipe deduction:', error);
+          // Don't block transaction if recipe fails, but log it
         }
-        */
       }
 
       return transaction;
