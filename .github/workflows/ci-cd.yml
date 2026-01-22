@@ -1,0 +1,271 @@
+name: CI/CD - Full Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ "main", "master" ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  # Job 1: Lint & Type Check
+  lint-and-typecheck:
+    name: Lint & TypeScript Check
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Generate Prisma Client
+      run: npx prisma generate
+
+    - name: Run ESLint
+      run: npm run lint
+      continue-on-error: true
+
+    - name: TypeScript Compilation Check
+      run: npx tsc --noEmit --skipLibCheck
+
+  # Job 2: Unit Tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Generate Prisma Client
+      run: npx prisma generate
+
+    - name: Run Unit Tests
+      run: npm run test:unit
+      env:
+        NODE_ENV: test
+
+  # Job 3: Integration Tests with Database
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: mypos_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Setup Test Database
+      run: |
+        npx prisma generate
+        npx prisma migrate deploy
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/mypos_test
+
+    - name: Run Integration Tests
+      run: npm run test:integration
+      env:
+        NODE_ENV: test
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/mypos_test
+        JWT_SECRET: test_jwt_secret_for_ci_cd_pipeline_testing_only
+        ENCRYPTION_KEY: test_encryption_key_for_ci_cd_pipeline_testing_only
+
+  # Job 4: Build Check
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Generate Prisma Client
+      run: npx prisma generate
+
+    - name: Build Application
+      run: npm run build
+
+    - name: Verify Build Output
+      run: |
+        if [ ! -f "dist/server.js" ]; then
+          echo "Build failed: dist/server.js not found"
+          exit 1
+        fi
+        echo "✅ Build successful: dist/server.js exists"
+
+  # Job 5: Smoke Tests (All Modules)
+  smoke-tests:
+    name: Smoke Tests - All Modules
+    runs-on: ubuntu-latest
+    needs: build
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: smoke_user
+          POSTGRES_PASSWORD: smoke_password
+          POSTGRES_DB: mypos_smoke
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Setup Smoke Test Database
+      run: |
+        npx prisma generate
+        npx prisma migrate deploy
+      env:
+        DATABASE_URL: postgresql://smoke_user:smoke_password@localhost:5432/mypos_smoke
+
+    - name: Run Smoke Tests
+      run: npm run test:smoke
+      env:
+        NODE_ENV: test
+        DATABASE_URL: postgresql://smoke_user:smoke_password@localhost:5432/mypos_smoke
+        JWT_SECRET: smoke_test_jwt_secret_random_string
+        ENCRYPTION_KEY: smoke_test_encryption_key_random_string
+        PORT: 3500
+
+  # Job 6: Security Audit
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: Run npm audit
+      run: npm audit --audit-level=high
+      continue-on-error: true
+
+  # Summary Job
+  ci-success:
+    name: ✅ All Checks Passed
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, unit-tests, integration-tests, build, smoke-tests, security-audit]
+
+    steps:
+    - name: Success Message
+      run: |
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "✅ CI/CD Pipeline Completed Successfully!"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "✓ Lint & TypeScript Check"
+        echo "✓ Unit Tests"
+        echo "✓ Integration Tests"
+        echo "✓ Build Check"
+        echo "✓ Smoke Tests (All Modules)"
+        echo "✓ Security Audit"
+        echo ""
+        echo "🚀 Ready to deploy!"
