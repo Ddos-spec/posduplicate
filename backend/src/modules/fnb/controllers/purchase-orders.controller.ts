@@ -23,8 +23,8 @@ export const getAllPurchaseOrders = async (req: Request, res: Response, _next: N
       where,
       include: {
         suppliers: { select: { id: true, name: true } },
-        created_by_user: { select: { id: true, name: true } },
-        approved_by_user: { select: { id: true, name: true } },
+        users_created: { select: { id: true, name: true } },
+        users_approved: { select: { id: true, name: true } },
         purchase_order_items: {
           include: {
             inventory: { select: { id: true, name: true, sku: true, unit: true } }
@@ -34,10 +34,16 @@ export const getAllPurchaseOrders = async (req: Request, res: Response, _next: N
       orderBy: { created_at: 'desc' }
     });
 
+    const normalizedOrders = orders.map(order => ({
+      ...order,
+      created_by_user: (order as any).users_created,
+      approved_by_user: (order as any).users_approved
+    }));
+
     res.json({
       success: true,
-      data: orders,
-      count: orders.length
+      data: normalizedOrders,
+      count: normalizedOrders.length
     });
   } catch (error) {
     return _next(error);
@@ -52,9 +58,9 @@ export const getPurchaseOrderById = async (req: Request, res: Response, _next: N
     const order = await prisma.purchase_orders.findUnique({
       where: { id: parseInt(id) },
       include: {
-        suppliers: { select: { id: true, name: true, contact_person: true, phone: true } },
-        created_by_user: { select: { id: true, name: true } },
-        approved_by_user: { select: { id: true, name: true } },
+        suppliers: { select: { id: true, name: true, phone: true } },
+        users_created: { select: { id: true, name: true } },
+        users_approved: { select: { id: true, name: true } },
         purchase_order_items: {
           include: {
             inventory: { select: { id: true, name: true, sku: true, unit: true, current_stock: true } }
@@ -70,7 +76,14 @@ export const getPurchaseOrderById = async (req: Request, res: Response, _next: N
       });
     }
 
-    res.json({ success: true, data: order });
+    res.json({
+      success: true,
+      data: {
+        ...order,
+        created_by_user: (order as any).users_created,
+        approved_by_user: (order as any).users_approved
+      }
+    });
   } catch (error) {
     return _next(error);
   }

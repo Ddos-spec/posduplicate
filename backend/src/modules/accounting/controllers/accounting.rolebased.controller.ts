@@ -757,7 +757,7 @@ async function getJournalStats(tenantId: number, outletId?: number) {
     prisma.journal_entries.count({
       where: {
         tenant_id: tenantId,
-        entry_date: { gte: thisMonth },
+        transaction_date: { gte: thisMonth },
         ...whereOutlet
       }
     })
@@ -818,15 +818,20 @@ async function getCOAStats(tenantId: number) {
 }
 
 async function getRecentJournals(tenantId: number, outletId?: number) {
-  return prisma.journal_entries.findMany({
+  const entries = await prisma.journal_entries.findMany({
     where: {
       tenant_id: tenantId,
       ...(outletId ? { outlet_id: outletId } : {})
     },
     orderBy: { created_at: 'desc' },
     take: 10,
-    include: { users: { select: { name: true } } }
+    include: { users_journal_entries_created_byTousers: { select: { name: true } } }
   });
+
+  return entries.map(entry => ({
+    ...entry,
+    users: entry.users_journal_entries_created_byTousers
+  }));
 }
 
 async function getAccountantPendingTasks(tenantId: number) {
@@ -972,14 +977,14 @@ async function getAPStatus(tenantId: number) {
 
 async function getSupplierAnalysis(tenantId: number) {
   const suppliers = await prisma.suppliers.findMany({
-    where: { tenant_id: tenantId, is_active: true },
+    where: { outlets: { tenant_id: tenantId }, is_active: true },
     take: 5,
     orderBy: { created_at: 'desc' }
   });
 
   return {
-    total: await prisma.suppliers.count({ where: { tenant_id: tenantId, is_active: true } }),
-    top5: suppliers.map(s => ({ name: s.name, code: s.code })),
+    total: await prisma.suppliers.count({ where: { outlets: { tenant_id: tenantId }, is_active: true } }),
+    top5: suppliers.map(s => ({ name: s.name, code: s.id })),
     avgRating: 4.2
   };
 }
@@ -1068,7 +1073,7 @@ async function getRecentTransactions(tenantId: number, outletId: number) {
     id: t.id,
     time: t.created_at?.toISOString().split('T')[1].substring(0, 5),
     total: Number(t.total),
-    paymentMethod: t.payment_method || 'Cash',
+    paymentMethod: (t as any).payment_method || 'Cash',
     itemCount: t._count.transaction_items
   }));
 }

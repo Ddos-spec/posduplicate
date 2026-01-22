@@ -51,7 +51,7 @@ export const getLaporanPosisiKeuangan = async (req: Request, res: Response, next
     // Get tenant info for header
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
-      select: { name: true }
+      select: { business_name: true }
     });
 
     // ===== ASET (ASSETS) =====
@@ -155,7 +155,7 @@ export const getLaporanPosisiKeuangan = async (req: Request, res: Response, next
       success: true,
       data: {
         header: {
-          companyName: tenant?.name,
+          companyName: tenant?.business_name,
           reportTitle: labels.title,
           reportSubtitle: labels.subtitle,
           asOf: currentEnd.toISOString().split('T')[0],
@@ -238,7 +238,7 @@ export const getLaporanLabaRugi = async (req: Request, res: Response, next: Next
 
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
-      select: { name: true }
+      select: { business_name: true }
     });
 
     // ===== PENDAPATAN (REVENUE) =====
@@ -314,7 +314,7 @@ export const getLaporanLabaRugi = async (req: Request, res: Response, next: Next
       success: true,
       data: {
         header: {
-          companyName: tenant?.name,
+          companyName: tenant?.business_name,
           reportTitle: labels.title,
           periodStart: periodStart.toISOString().split('T')[0],
           periodEnd: periodEnd.toISOString().split('T')[0],
@@ -406,7 +406,7 @@ export const getLaporanPerubahanEkuitas = async (req: Request, res: Response, ne
 
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
-      select: { name: true }
+      select: { business_name: true }
     });
 
     // Get opening balances
@@ -443,7 +443,7 @@ export const getLaporanPerubahanEkuitas = async (req: Request, res: Response, ne
       success: true,
       data: {
         header: {
-          companyName: tenant?.name,
+          companyName: tenant?.business_name,
           reportTitle: labels.title,
           periodStart: periodStart.toISOString().split('T')[0],
           periodEnd: periodEnd.toISOString().split('T')[0],
@@ -498,7 +498,7 @@ export const getLaporanArusKasDirect = async (req: Request, res: Response, next:
 
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
-      select: { name: true }
+      select: { business_name: true }
     });
 
     // ===== AKTIVITAS OPERASI =====
@@ -543,7 +543,7 @@ export const getLaporanArusKasDirect = async (req: Request, res: Response, next:
       success: true,
       data: {
         header: {
-          companyName: tenant?.name,
+          companyName: tenant?.business_name,
           reportTitle: labels.title,
           reportSubtitle: labels.subtitle,
           periodStart: periodStart.toISOString().split('T')[0],
@@ -607,7 +607,7 @@ export const getLaporanArusKasIndirect = async (req: Request, res: Response, nex
 
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
-      select: { name: true }
+      select: { business_name: true }
     });
 
     // Get net income
@@ -646,7 +646,7 @@ export const getLaporanArusKasIndirect = async (req: Request, res: Response, nex
       success: true,
       data: {
         header: {
-          companyName: tenant?.name,
+          companyName: tenant?.business_name,
           reportTitle: labels.title,
           reportSubtitle: labels.subtitle,
           periodStart: periodStart.toISOString().split('T')[0],
@@ -700,7 +700,7 @@ export const getCatatanLaporanKeuangan = async (req: Request, res: Response, nex
 
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
-      select: { name: true }
+      select: { business_name: true }
     });
 
     // Note 1: General Information
@@ -708,7 +708,7 @@ export const getCatatanLaporanKeuangan = async (req: Request, res: Response, nex
       noteNumber: 1,
       title: language === 'id' ? 'Umum' : 'General',
       content: {
-        companyName: tenant?.name,
+        companyName: tenant?.business_name,
         establishment: 'Perusahaan didirikan berdasarkan hukum Indonesia',
         businessActivities: 'Bergerak dalam bidang perdagangan dan jasa'
       }
@@ -743,7 +743,7 @@ export const getCatatanLaporanKeuangan = async (req: Request, res: Response, nex
       success: true,
       data: {
         header: {
-          companyName: tenant?.name,
+          companyName: tenant?.business_name,
           reportTitle: language === 'id' ? 'CATATAN ATAS LAPORAN KEUANGAN' : 'NOTES TO FINANCIAL STATEMENTS',
           asOf: reportDate.toISOString().split('T')[0]
         },
@@ -787,7 +787,7 @@ async function getAccountBalances(
   categories: string[],
   whereOutlet: string
 ): Promise<{ name: string; balance: number; code: string }[]> {
-  const results: any[] = await prisma.$queryRawUnsafe(`
+  const results: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT
       coa.account_code as code,
       coa.account_name as name,
@@ -828,7 +828,7 @@ async function getIncomeStatementSection(
   accountType: string,
   whereOutlet: string
 ): Promise<{ name: string; amount: number; code: string }[]> {
-  const results: any[] = await prisma.$queryRawUnsafe(`
+  const results: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT
       coa.account_code as code,
       coa.account_name as name,
@@ -862,7 +862,12 @@ async function getIncomeStatementSection(
   }));
 }
 
-async function getOtherIncomeExpenses(tenantId: number, startDate: Date, endDate: Date, whereOutlet: string) {
+async function getOtherIncomeExpenses(
+  tenantId: number,
+  startDate: Date,
+  endDate: Date,
+  whereOutlet: string
+): Promise<{ pendapatan: { name: string; amount: number }[]; beban: { name: string; amount: number }[] }> {
   // Simplified - would need proper categorization
   return {
     pendapatan: [],
@@ -872,7 +877,7 @@ async function getOtherIncomeExpenses(tenantId: number, startDate: Date, endDate
 
 async function getCashFlowOperating(tenantId: number, startDate: Date, endDate: Date, whereOutlet: string) {
   // Get cash receipts from customers
-  const receipts: any[] = await prisma.$queryRawUnsafe(`
+  const receipts: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT COALESCE(SUM(collection_amount), 0) as total
     FROM "accounting"."ar_collections"
     WHERE tenant_id = ${tenantId}
@@ -880,7 +885,7 @@ async function getCashFlowOperating(tenantId: number, startDate: Date, endDate: 
   `).catch(() => [{ total: 0 }]);
 
   // Get cash payments to suppliers
-  const payments: any[] = await prisma.$queryRawUnsafe(`
+  const payments: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT COALESCE(SUM(payment_amount), 0) as total
     FROM "accounting"."ap_payments"
     WHERE tenant_id = ${tenantId}
@@ -916,7 +921,7 @@ async function getCashFlowFinancing(tenantId: number, startDate: Date, endDate: 
 }
 
 async function getCashBalance(tenantId: number, asOfDate: Date, whereOutlet: string): Promise<number> {
-  const result: any[] = await prisma.$queryRawUnsafe(`
+  const result: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT COALESCE(SUM(gl.debit_amount - gl.credit_amount), 0) as balance
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
@@ -931,7 +936,7 @@ async function getCashBalance(tenantId: number, asOfDate: Date, whereOutlet: str
 }
 
 async function getNetIncomeForPeriod(tenantId: number, startDate: Date, endDate: Date): Promise<number> {
-  const revenue: any[] = await prisma.$queryRawUnsafe(`
+  const revenue: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT COALESCE(SUM(gl.credit_amount - gl.debit_amount), 0) as total
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
@@ -940,7 +945,7 @@ async function getNetIncomeForPeriod(tenantId: number, startDate: Date, endDate:
     AND gl.transaction_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
   `).catch(() => [{ total: 0 }]);
 
-  const expenses: any[] = await prisma.$queryRawUnsafe(`
+  const expenses: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT COALESCE(SUM(gl.debit_amount - gl.credit_amount), 0) as total
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
@@ -954,7 +959,7 @@ async function getNetIncomeForPeriod(tenantId: number, startDate: Date, endDate:
 
 async function getEquityBalances(tenantId: number, asOfDate: Date): Promise<number[]> {
   // Simplified - returns [Modal Saham, Tambahan Modal, Saldo Laba, Total]
-  const result: any[] = await prisma.$queryRawUnsafe(`
+  const result: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT COALESCE(SUM(gl.credit_amount - gl.debit_amount), 0) as balance
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id

@@ -93,7 +93,7 @@ export const uploadAttachment = async (req: Request, res: Response, next: NextFu
       const hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
       // Check for duplicate
-      const existing: any[] = await prisma.$queryRawUnsafe(`
+      const existing: any[] = await prisma.$queryRawUnsafe<any[]>(`
         SELECT id, version FROM "accounting"."document_attachments"
         WHERE tenant_id = ${tenantId}
         AND document_type = '${documentType}'
@@ -109,7 +109,7 @@ export const uploadAttachment = async (req: Request, res: Response, next: NextFu
       }
 
       // Get next version
-      const lastVersion: any[] = await prisma.$queryRawUnsafe(`
+      const lastVersion: any[] = await prisma.$queryRawUnsafe<any[]>(`
         SELECT COALESCE(MAX(version), 0) as max_version FROM "accounting"."document_attachments"
         WHERE tenant_id = ${tenantId}
         AND document_type = '${documentType}'
@@ -175,7 +175,7 @@ export const getAttachments = async (req: Request, res: Response, next: NextFunc
     const tenantId = req.tenantId!;
     const { documentType, documentId } = req.params;
 
-    const attachments: any[] = await prisma.$queryRawUnsafe(`
+    const attachments: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         a.*,
         u.name as uploaded_by_name
@@ -215,7 +215,7 @@ export const downloadAttachment = async (req: Request, res: Response, next: Next
     const tenantId = req.tenantId!;
     const { attachmentId } = req.params;
 
-    const attachment: any[] = await prisma.$queryRawUnsafe(`
+    const attachment: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT * FROM "accounting"."document_attachments"
       WHERE id = ${attachmentId}
       AND tenant_id = ${tenantId}
@@ -260,7 +260,7 @@ export const deleteAttachment = async (req: Request, res: Response, next: NextFu
     const userId = (req as any).userId;
     const { attachmentId } = req.params;
 
-    const attachment: any[] = await prisma.$queryRawUnsafe(`
+    const attachment: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT * FROM "accounting"."document_attachments"
       WHERE id = ${attachmentId}
       AND tenant_id = ${tenantId}
@@ -313,7 +313,7 @@ export const getAllAttachments = async (req: Request, res: Response, next: NextF
 
     const offset = (Number(page) - 1) * Number(limit);
 
-    const attachments: any[] = await prisma.$queryRawUnsafe(`
+    const attachments: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         a.*,
         u.name as uploaded_by_name
@@ -324,12 +324,12 @@ export const getAllAttachments = async (req: Request, res: Response, next: NextF
       LIMIT ${limit} OFFSET ${offset}
     `).catch(() => []);
 
-    const total: any[] = await prisma.$queryRawUnsafe(`
+    const total: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT COUNT(*) as count FROM "accounting"."document_attachments" a ${whereClause}
     `).catch(() => [{ count: 0 }]);
 
     // Calculate storage usage
-    const storage: any[] = await prisma.$queryRawUnsafe(`
+    const storage: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         COALESCE(SUM(size), 0) as total_size,
         COUNT(*) as total_files
@@ -378,7 +378,7 @@ export const getAttachmentVersions = async (req: Request, res: Response, next: N
     const tenantId = req.tenantId!;
     const { documentType, documentId, originalName } = req.params;
 
-    const versions: any[] = await prisma.$queryRawUnsafe(`
+    const versions: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         a.*,
         u.name as uploaded_by_name
