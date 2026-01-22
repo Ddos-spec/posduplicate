@@ -37,6 +37,22 @@ cd frontend && npm run lint        # Frontend lint
 cd backend && npm run verify       # lint + typecheck + tests
 ```
 
+## ⚠️ CRITICAL: FNB Module Middleware Policy (DO NOT MODIFY)
+
+**FORBIDDEN:** NEVER add `roleMiddleware`, `requireRole`, `requireOwner`, or `requireManager` to FNB Module routes (`backend/src/modules/fnb/routes/**`).
+
+**Reason:** FNB Module intentionally uses ONLY `authMiddleware` + `tenantMiddleware` by design decision.
+
+**Allowed:**
+- Modify Accounting module middleware (already uses role middleware)
+- Modify Admin module middleware (already uses superAdminOnly)
+- Controller-level logic changes (tenant isolation enforced)
+
+**Forbidden:**
+- Adding role middleware to FNB routes
+- Changing FNB Module auth strategy
+- Suggesting role-based access control for FNB
+
 ## Architecture Overview
 
 ### Multi-Tenant Structure

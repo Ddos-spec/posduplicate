@@ -25,6 +25,21 @@ Tugas utama di repo ini adalah audit kerjaan programmer (Gemini) dan memberi ara
 - Bahasa Indonesia santai, langsung to the point.
 - Fokus: analisis + arahan fix, bukan implementasi.
 
+## ⚠️ CRITICAL: Middleware Role System (DO NOT TOUCH)
+**JANGAN PERNAH** modifikasi atau tambahkan `roleMiddleware`, `requireRole`, `requireOwner`, atau `requireManager` ke route FNB Module (`backend/src/modules/fnb/routes/**`).
+
+**Alasan:** Sistem role middleware di FNB Module **SENGAJA** tidak digunakan sesuai design decision owner.
+
+**Yang BOLEH:**
+- Modifikasi middleware di modul Accounting (sudah pake role middleware)
+- Modifikasi middleware di modul Admin (sudah pake superAdminOnly)
+- Modifikasi logic di controller (tenant isolation tetap enforce)
+
+**Yang DILARANG:**
+- Menambahkan role middleware ke FNB routes
+- Mengubah strategi auth di FNB Module
+- Menyarankan implementasi role-based access di FNB
+
 ## Log Kesalahan Asisten (Wajib)
 Jika asisten membuat kesalahan (faktual, salah baca requirement, salah arah solusi, salah file, atau kelalaian penting),
 wajib dicatat di bawah ini beserta cara perbaikan dan pencegahannya.

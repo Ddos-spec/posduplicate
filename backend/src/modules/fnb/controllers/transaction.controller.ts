@@ -60,18 +60,41 @@ export const getTransactions = async (
       outletIds = tenantOutlets.map(outlet => outlet.id);
     }
 
-    // SAFE FILTER MODE:
-    // 1. Always filter by current cashier (User ID)
-    const where: any = {
-      cashier_id: req.userId
-    };
+    // Role-based filtering
+    const where: any = {};
+    const userRole = req.userRole;
 
-    // 2. Apply Tenant Isolation via Outlet IDs
-    if (outletIds.length > 0) {
-      where.outlet_id = { in: outletIds };
+    // Owner, Manager, Supervisor, Super Admin: See all transactions in their tenant
+    const canViewAllTransactions = ['Owner', 'Manager', 'Supervisor', 'Super Admin'].includes(userRole || '');
+
+    if (canViewAllTransactions) {
+      // Apply only tenant isolation
+      if (outletIds.length > 0) {
+        where.outlet_id = { in: outletIds };
+      }
+    } else {
+      // Cashier/Staff: Only see their own transactions
+      where.cashier_id = req.userId;
+      // Still apply tenant isolation for safety
+      if (outletIds.length > 0) {
+        where.outlet_id = { in: outletIds };
+      }
     }
 
-    // 3. Apply Date Filter if provided
+    // Apply specific outlet filter if provided
+    if (outlet_id) {
+      const requestedOutletId = parseInt(outlet_id as string);
+      // Verify outlet belongs to tenant
+      if (req.tenantId && outletIds.length > 0 && !outletIds.includes(requestedOutletId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Access to outlet denied' }
+        });
+      }
+      where.outlet_id = requestedOutletId;
+    }
+
+    // Apply Date Filter if provided
     if (date_from || date_to) {
       where.created_at = {};
       if (date_from) {
