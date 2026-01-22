@@ -151,6 +151,98 @@ const options: swaggerJsdoc.Options = {
       {
         name: 'Users',
         description: 'User management'
+      },
+      {
+        name: 'Dashboard',
+        description: 'Dashboard insights and KPIs'
+      },
+      {
+        name: 'Reports',
+        description: 'Reporting endpoints'
+      },
+      {
+        name: 'Modifiers',
+        description: 'Product modifier management'
+      },
+      {
+        name: 'Variants',
+        description: 'Product variant management'
+      },
+      {
+        name: 'Promotions',
+        description: 'Promotions and discounts'
+      },
+      {
+        name: 'Recipes',
+        description: 'Recipe management'
+      },
+      {
+        name: 'Ingredients',
+        description: 'Ingredient management'
+      },
+      {
+        name: 'Tables',
+        description: 'Table management'
+      },
+      {
+        name: 'Stock Movements',
+        description: 'Inventory stock movement tracking'
+      },
+      {
+        name: 'Purchase Orders',
+        description: 'Purchase order management'
+      },
+      {
+        name: 'Inventory Settings',
+        description: 'Inventory configuration and preferences'
+      },
+      {
+        name: 'Sales Analytics',
+        description: 'Sales analytics and KPIs'
+      },
+      {
+        name: 'Outlets',
+        description: 'Outlet management'
+      },
+      {
+        name: 'API Keys',
+        description: 'API key management'
+      },
+      {
+        name: 'Integrations',
+        description: 'Third-party integrations'
+      },
+      {
+        name: 'Webhooks',
+        description: 'Webhook endpoints'
+      },
+      {
+        name: 'Settings',
+        description: 'General settings management'
+      },
+      {
+        name: 'Printer Settings',
+        description: 'Printer settings management'
+      },
+      {
+        name: 'Uploads',
+        description: 'File and image uploads'
+      },
+      {
+        name: 'Notifications',
+        description: 'Notification management'
+      },
+      {
+        name: 'Activity Logs',
+        description: 'Activity log and audit trails'
+      },
+      {
+        name: 'Owner API',
+        description: 'External owner API endpoints'
+      },
+      {
+        name: 'Social Media',
+        description: 'Social media accounts and posts'
       }
     ]
   },
