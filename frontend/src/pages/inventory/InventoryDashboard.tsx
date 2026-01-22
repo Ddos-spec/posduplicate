@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../store/authStore';
 import { MOCK_INVENTORY_STATS, MOCK_ALERTS, MOCK_FORECAST_DATA } from './mockInventoryData';
-import { inventoryService, InventoryStats, InventoryAlert, ForecastData } from '../../services/inventoryService';
+import { inventoryService } from '../../services/inventoryService';
+import type { InventoryStats, InventoryAlert, ForecastData } from '../../services/inventoryService';
 import {
   AlertTriangle, Package, ShoppingCart, TrendingUp, ArrowRight, XCircle, Clock, Loader2
 } from 'lucide-react';

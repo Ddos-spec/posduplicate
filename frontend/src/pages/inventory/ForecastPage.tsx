@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../store/authStore';
 import { MOCK_FORECAST_DATA } from './mockInventoryData';
-import { inventoryService, ForecastData } from '../../services/inventoryService';
+import { inventoryService } from '../../services/inventoryService';
+import type { ForecastData } from '../../services/inventoryService';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
 } from 'recharts';
