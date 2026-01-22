@@ -4,7 +4,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useInventoryConfig } from './inventoryConfigStore';
 import { MOCK_INVENTORY_ITEMS } from './mockInventoryData';
 import { MOCK_PHARMACY_ITEMS, MOCK_RETAIL_ITEMS } from './mockVariantsData';
-import { inventoryService, InventoryItem } from '../../services/inventoryService';
+import { inventoryService } from '../../services/inventoryService';
+import type { InventoryItem } from '../../services/inventoryService';
 import {
   Search, Filter, Edit2, History, AlertCircle, CheckCircle, XCircle, ScanBarcode, Truck, Store, Loader2, Plus
 } from 'lucide-react';

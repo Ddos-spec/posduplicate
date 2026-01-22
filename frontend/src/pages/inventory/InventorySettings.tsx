@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../store/authStore';
-import { inventorySettingsService, InventorySettings as ISettings } from '../../services/inventoryService';
+import { inventorySettingsService } from '../../services/inventoryService';
+import type { InventorySettings as ISettings } from '../../services/inventoryService';
 import { Bell, Archive, Save, Loader2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
