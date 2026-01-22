@@ -13,6 +13,37 @@ router.use(tenantMiddleware);
  * @route GET /api/accounting/forecast/advanced/revenue
  * @desc Get advanced revenue forecast with ensemble methods
  */
+/**
+ * @swagger
+ * /api/accounting/forecast/advanced/revenue:
+ *   get:
+ *     tags: [Accounting]
+ *     summary: Get advanced revenue forecast
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: outletId
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Revenue forecast data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/revenue', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.tenantId!;
@@ -45,6 +76,37 @@ router.get('/revenue', async (req: Request, res: Response, next: NextFunction) =
 /**
  * @route GET /api/accounting/forecast/advanced/expense
  * @desc Get advanced expense forecast with ensemble methods
+ */
+/**
+ * @swagger
+ * /api/accounting/forecast/advanced/expense:
+ *   get:
+ *     tags: [Accounting]
+ *     summary: Get advanced expense forecast
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: outletId
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Expense forecast data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/expense', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -79,6 +141,37 @@ router.get('/expense', async (req: Request, res: Response, next: NextFunction) =
  * @route GET /api/accounting/forecast/advanced/sales
  * @desc Get advanced sales forecast with ensemble methods
  */
+/**
+ * @swagger
+ * /api/accounting/forecast/advanced/sales:
+ *   get:
+ *     tags: [Accounting]
+ *     summary: Get advanced sales forecast
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: outletId
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Sales forecast data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/sales', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.tenantId!;
@@ -111,6 +204,37 @@ router.get('/sales', async (req: Request, res: Response, next: NextFunction) => 
 /**
  * @route GET /api/accounting/forecast/advanced/comprehensive
  * @desc Get comprehensive advanced forecast (all types + health score)
+ */
+/**
+ * @swagger
+ * /api/accounting/forecast/advanced/comprehensive:
+ *   get:
+ *     tags: [Accounting]
+ *     summary: Get comprehensive advanced forecast
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: outletId
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Comprehensive forecast data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/comprehensive', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -168,6 +292,33 @@ router.get('/comprehensive', async (req: Request, res: Response, next: NextFunct
  * @route GET /api/accounting/forecast/advanced/health
  * @desc Get financial health score only
  */
+/**
+ * @swagger
+ * /api/accounting/forecast/advanced/health:
+ *   get:
+ *     tags: [Accounting]
+ *     summary: Get financial health score
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: outletId
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Financial health score
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/health', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.tenantId!;
@@ -200,6 +351,41 @@ router.get('/health', async (req: Request, res: Response, next: NextFunction) =>
 /**
  * @route POST /api/accounting/forecast/advanced/custom
  * @desc Run custom forecast with specified parameters
+ */
+/**
+ * @swagger
+ * /api/accounting/forecast/advanced/custom:
+ *   post:
+ *     tags: [Accounting]
+ *     summary: Run custom advanced forecast
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *               outletId:
+ *                 type: integer
+ *               days:
+ *                 type: integer
+ *               method:
+ *                 type: string
+ *               seasonLength:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Forecast generated
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/custom', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -248,6 +434,41 @@ router.post('/custom', async (req: Request, res: Response, next: NextFunction) =
 /**
  * @route GET /api/accounting/forecast/advanced/compare
  * @desc Compare forecast methods
+ */
+/**
+ * @swagger
+ * /api/accounting/forecast/advanced/compare:
+ *   get:
+ *     tags: [Accounting]
+ *     summary: Compare forecast methods
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: outletId
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Forecast comparison
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/compare', async (req: Request, res: Response, next: NextFunction) => {
   try {
