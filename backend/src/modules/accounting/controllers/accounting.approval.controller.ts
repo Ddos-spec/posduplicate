@@ -109,7 +109,7 @@ export const getApprovalConfig = async (req: Request, res: Response, next: NextF
     const tenantId = req.tenantId!;
 
     // Get custom config from database
-    const config: any[] = await prisma.$queryRawUnsafe(`
+    const config: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT * FROM "accounting"."approval_config"
       WHERE tenant_id = ${tenantId}
       ORDER BY level
@@ -215,7 +215,7 @@ export const createApprovalRequest = async (req: Request, res: Response, next: N
     }
 
     // Create approval request
-    const requestId = await prisma.$queryRawUnsafe(`
+    const requestId = await prisma.$queryRawUnsafe<any[]>(`
       INSERT INTO "accounting"."approval_requests"
       (tenant_id, entity_type, entity_id, amount, description, current_level, total_levels, status, urgency, requested_by, requested_at, expires_at)
       VALUES
@@ -275,7 +275,7 @@ export const getPendingApprovals = async (req: Request, res: Response, next: Nex
 
     const offset = (Number(page) - 1) * Number(limit);
 
-    const approvals: any[] = await prisma.$queryRawUnsafe(`
+    const approvals: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         ar.*,
         aa.id as action_id,
@@ -293,7 +293,7 @@ export const getPendingApprovals = async (req: Request, res: Response, next: Nex
       LIMIT ${limit} OFFSET ${offset}
     `).catch(() => []);
 
-    const total: any[] = await prisma.$queryRawUnsafe(`
+    const total: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT COUNT(*) as count
       FROM "accounting"."approval_requests" ar
       JOIN "accounting"."approval_actions" aa ON ar.id = aa.request_id
@@ -341,7 +341,7 @@ export const approveRequest = async (req: Request, res: Response, next: NextFunc
     const { comment } = req.body;
 
     // Get request details
-    const request: any[] = await prisma.$queryRawUnsafe(`
+    const request: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT * FROM "accounting"."approval_requests"
       WHERE id = ${requestId} AND tenant_id = ${tenantId}
     `).catch(() => []);
@@ -356,7 +356,7 @@ export const approveRequest = async (req: Request, res: Response, next: NextFunc
     const req_ = request[0];
 
     // Verify user is an approver for current level
-    const action: any[] = await prisma.$queryRawUnsafe(`
+    const action: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT * FROM "accounting"."approval_actions"
       WHERE request_id = ${requestId} AND approver_id = ${userId} AND level = ${req_.current_level} AND status = 'pending'
     `).catch(() => []);
@@ -461,7 +461,7 @@ export const rejectRequest = async (req: Request, res: Response, next: NextFunct
     }
 
     // Verify approver
-    const action: any[] = await prisma.$queryRawUnsafe(`
+    const action: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT aa.*, ar.entity_type, ar.entity_id, ar.requested_by, ar.description, ar.amount
       FROM "accounting"."approval_actions" aa
       JOIN "accounting"."approval_requests" ar ON aa.request_id = ar.id
@@ -528,7 +528,7 @@ export const delegateApproval = async (req: Request, res: Response, next: NextFu
     }
 
     // Verify approver
-    const action: any[] = await prisma.$queryRawUnsafe(`
+    const action: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT * FROM "accounting"."approval_actions"
       WHERE request_id = ${requestId} AND approver_id = ${userId} AND status = 'pending'
     `).catch(() => []);
@@ -571,7 +571,7 @@ export const getApprovalHistory = async (req: Request, res: Response, next: Next
     const tenantId = req.tenantId!;
     const { entityType, entityId } = req.params;
 
-    const history: any[] = await prisma.$queryRawUnsafe(`
+    const history: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         ar.*,
         aa.level,
@@ -626,7 +626,7 @@ export const getApprovalStats = async (req: Request, res: Response, next: NextFu
       dateFilter = `AND requested_at >= NOW() - INTERVAL '365 days'`;
     }
 
-    const stats: any[] = await prisma.$queryRawUnsafe(`
+    const stats: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         status,
         COUNT(*) as count,
@@ -638,7 +638,7 @@ export const getApprovalStats = async (req: Request, res: Response, next: NextFu
       GROUP BY status
     `).catch(() => []);
 
-    const byEntity: any[] = await prisma.$queryRawUnsafe(`
+    const byEntity: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         entity_type,
         COUNT(*) as count,
@@ -687,7 +687,7 @@ export const getApprovalStats = async (req: Request, res: Response, next: NextFu
 // ============= HELPER FUNCTIONS =============
 
 async function getApprovalLevelsForAmount(tenantId: number, amount: number): Promise<ApprovalLevel[]> {
-  const config: any[] = await prisma.$queryRawUnsafe(`
+  const config: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT * FROM "accounting"."approval_config"
     WHERE tenant_id = ${tenantId}
     ORDER BY level
@@ -711,7 +711,7 @@ async function getApprovalLevelsForAmount(tenantId: number, amount: number): Pro
 }
 
 async function getApproversForLevel(tenantId: number, roleName: string): Promise<any[]> {
-  return prisma.$queryRawUnsafe(`
+  return prisma.$queryRawUnsafe<any[]>(`
     SELECT u.id, u.name, u.email
     FROM "users" u
     JOIN "roles" r ON u.role_id = r.id
@@ -723,7 +723,7 @@ async function getApproversForLevel(tenantId: number, roleName: string): Promise
 
 async function isLevelComplete(requestId: number, level: number): Promise<boolean> {
   // Get approval config for this request
-  const request: any[] = await prisma.$queryRawUnsafe(`
+  const request: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT ar.*, ac.mode, ac.required_approvers
     FROM "accounting"."approval_requests" ar
     LEFT JOIN "accounting"."approval_config" ac ON ar.tenant_id = ac.tenant_id AND ac.level = ${level}
@@ -736,7 +736,7 @@ async function isLevelComplete(requestId: number, level: number): Promise<boolea
   const required = request[0].required_approvers || 1;
 
   // Count approvals for this level
-  const approved: any[] = await prisma.$queryRawUnsafe(`
+  const approved: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT COUNT(*) as count FROM "accounting"."approval_actions"
     WHERE request_id = ${requestId} AND level = ${level} AND status = 'approved'
   `).catch(() => [{ count: 0 }]);
@@ -749,7 +749,7 @@ async function isLevelComplete(requestId: number, level: number): Promise<boolea
     return approvedCount >= required;
   } else {
     // sequential - need all
-    const total: any[] = await prisma.$queryRawUnsafe(`
+    const total: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT COUNT(*) as count FROM "accounting"."approval_actions"
       WHERE request_id = ${requestId} AND level = ${level}
     `).catch(() => [{ count: 1 }]);
@@ -786,7 +786,7 @@ async function getEntityDetails(entityType: string, entityId: number): Promise<a
   const query = queries[entityType];
   if (!query) return null;
 
-  const result: any[] = await prisma.$queryRawUnsafe(query).catch(() => []);
+  const result: any[] = await prisma.$queryRawUnsafe<any[]>(query).catch(() => []);
   return result[0] || null;
 }
 

@@ -430,7 +430,7 @@ async function publishToSocialMedia(post: any, account: any): Promise<{ success:
         return { success: false, error: `Platform ${account.platform} tidak didukung` };
     }
 
-    const data = await response.json();
+      const data = (await response.json()) as any;
     if (!response.ok) {
       return { success: false, error: data.error?.message || data.error_description || 'Publish failed' };
     }
@@ -623,7 +623,7 @@ async function fetchAnalyticsFromPlatform(externalId: string, account: any): Pro
         return null;
     }
 
-    const data = await response.json();
+      const data = (await response.json()) as any;
     if (!response.ok) {
       console.error(`[Analytics] API error for ${account.platform}:`, data);
       return null;

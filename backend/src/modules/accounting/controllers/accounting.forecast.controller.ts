@@ -269,7 +269,7 @@ function formatCurrency(value: number): string {
 }
 
 async function getAPDueSoon(tenantId: number): Promise<number> {
-  const { prisma } = await import('../../../utils/prisma');
+  const prisma = (await import('../../../utils/prisma')).default;
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);
 

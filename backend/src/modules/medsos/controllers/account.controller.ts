@@ -335,7 +335,7 @@ async function exchangeCodeForTokens(platform: string, code: string): Promise<an
       })
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     if (!response.ok) {
       return { success: false, error: data.error_description || data.error || 'Token exchange failed' };
     }
@@ -377,7 +377,7 @@ async function refreshAccessToken(platform: string, refreshToken: string): Promi
       })
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     if (!response.ok) {
       return { success: false, error: data.error_description || data.error || 'Token refresh failed' };
     }

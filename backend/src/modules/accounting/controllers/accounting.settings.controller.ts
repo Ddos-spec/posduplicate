@@ -5,6 +5,7 @@ import prisma from '../../../utils/prisma';
  * Comprehensive Accounting Settings Controller
  * Manages all accounting configurations per tenant/outlet/role
  */
+const tenantSettingsClient = (prisma as any).tenant_settings;
 
 // ============= TYPES =============
 
@@ -481,7 +482,7 @@ export const getSettings = async (req: Request, res: Response, next: NextFunctio
     const tenantId = req.tenantId!;
 
     // Get settings from database
-    const dbSettings = await prisma.tenant_settings?.findFirst({
+    const dbSettings = await tenantSettingsClient?.findFirst({
       where: { tenant_id: tenantId, setting_key: 'accounting' }
     }).catch(() => null);
 
@@ -493,11 +494,11 @@ export const getSettings = async (req: Request, res: Response, next: NextFunctio
     // Get tenant info for general settings
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
-      select: { name: true, email: true }
+      select: { business_name: true, email: true }
     });
 
     if (tenant) {
-      settings.general.companyName = settings.general.companyName || tenant.name;
+      settings.general.companyName = settings.general.companyName || tenant.business_name;
     }
 
     res.json({
@@ -529,7 +530,7 @@ export const updateSettings = async (req: Request, res: Response, next: NextFunc
     }
 
     // Get current settings
-    const dbSettings = await prisma.tenant_settings?.findFirst({
+    const dbSettings = await tenantSettingsClient?.findFirst({
       where: { tenant_id: tenantId, setting_key: 'accounting' }
     }).catch(() => null);
 
@@ -586,7 +587,7 @@ export const getSectionSettings = async (req: Request, res: Response, next: Next
       });
     }
 
-    const dbSettings = await prisma.tenant_settings?.findFirst({
+    const dbSettings = await tenantSettingsClient?.findFirst({
       where: { tenant_id: tenantId, setting_key: 'accounting' }
     }).catch(() => null);
 
@@ -621,7 +622,7 @@ export const updateSectionSettings = async (req: Request, res: Response, next: N
       });
     }
 
-    const dbSettings = await prisma.tenant_settings?.findFirst({
+    const dbSettings = await tenantSettingsClient?.findFirst({
       where: { tenant_id: tenantId, setting_key: 'accounting' }
     }).catch(() => null);
 
@@ -723,7 +724,7 @@ export const updateRoleSettings = async (req: Request, res: Response, next: Next
     }
 
     // Get current custom role settings
-    const dbSettings = await prisma.tenant_settings?.findFirst({
+    const dbSettings = await tenantSettingsClient?.findFirst({
       where: { tenant_id: tenantId, setting_key: `role_${normalizedRole}` }
     }).catch(() => null);
 
@@ -764,7 +765,7 @@ export const resetSettings = async (req: Request, res: Response, next: NextFunct
 
     if (section && typeof section === 'string') {
       // Reset specific section
-      const dbSettings = await prisma.tenant_settings?.findFirst({
+      const dbSettings = await tenantSettingsClient?.findFirst({
         where: { tenant_id: tenantId, setting_key: 'accounting' }
       }).catch(() => null);
 
@@ -941,7 +942,7 @@ export const exportSettings = async (req: Request, res: Response, next: NextFunc
   try {
     const tenantId = req.tenantId!;
 
-    const dbSettings = await prisma.tenant_settings?.findFirst({
+    const dbSettings = await tenantSettingsClient?.findFirst({
       where: { tenant_id: tenantId, setting_key: 'accounting' }
     }).catch(() => null);
 

@@ -35,8 +35,8 @@ const scheduler = cron.schedule('* * * * *', async () => {
         // Mock Analytics update
         await prisma.social_analytics.upsert({
             where: { post_id: post.id },
-            create: { post_id: post.id, likes_count: 0, reach_count: 0 },
-            update: { last_updated: now }
+            create: { post_id: post.id, likes: 0, reach: 0 },
+            update: { updated_at: now }
         });
     }
     

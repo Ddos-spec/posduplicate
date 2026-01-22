@@ -84,14 +84,14 @@ export const getNSFP = async (req: Request, res: Response, next: NextFunction) =
     const tenantId = req.tenantId!;
 
     // Get NSFP allocations
-    const nsfpList = await prisma.$queryRawUnsafe(`
+    const nsfpList = await prisma.$queryRawUnsafe<any[]>(`
       SELECT * FROM "accounting"."nsfp_allocation"
       WHERE tenant_id = ${tenantId}
       ORDER BY created_at DESC
     `).catch(() => []);
 
     // Calculate usage
-    const usedCount = await prisma.$queryRawUnsafe(`
+    const usedCount = await prisma.$queryRawUnsafe<any[]>(`
       SELECT COUNT(*) as count FROM "accounting"."faktur_pajak"
       WHERE tenant_id = ${tenantId}
       AND EXTRACT(YEAR FROM tanggal_faktur) = EXTRACT(YEAR FROM NOW())
@@ -171,7 +171,7 @@ export const getFakturKeluaran = async (req: Request, res: Response, next: NextF
 
     const offset = (Number(page) - 1) * Number(limit);
 
-    const fakturs: any[] = await prisma.$queryRawUnsafe(`
+    const fakturs: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         fp.*,
         u.name as created_by_name
@@ -182,12 +182,12 @@ export const getFakturKeluaran = async (req: Request, res: Response, next: NextF
       LIMIT ${limit} OFFSET ${offset}
     `).catch(() => []);
 
-    const total: any[] = await prisma.$queryRawUnsafe(`
+    const total: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT COUNT(*) as count FROM "accounting"."faktur_pajak" fp ${whereClause}
     `).catch(() => [{ count: 0 }]);
 
     // Calculate summary
-    const summary: any[] = await prisma.$queryRawUnsafe(`
+    const summary: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         COALESCE(SUM(dpp), 0) as total_dpp,
         COALESCE(SUM(ppn), 0) as total_ppn,
@@ -272,7 +272,7 @@ export const createFakturKeluaran = async (req: Request, res: Response, next: Ne
       }
     } else if (transactionId) {
       // Get items from transaction
-      const txItems: any[] = await prisma.$queryRawUnsafe(`
+      const txItems: any[] = await prisma.$queryRawUnsafe<any[]>(`
         SELECT ti.*, p.name as product_name
         FROM "transaction_items" ti
         JOIN "products" p ON ti.product_id = p.id
@@ -347,7 +347,7 @@ export const generateFakturFromAR = async (req: Request, res: Response, next: Ne
     const { arId } = req.params;
 
     // Get AR invoice details
-    const ar: any[] = await prisma.$queryRawUnsafe(`
+    const ar: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT ar.*, c.name as customer_name, c.npwp, c.address
       FROM "accounting"."accounts_receivable" ar
       LEFT JOIN "customers" c ON ar.customer_id = c.id
@@ -417,7 +417,7 @@ export const getFakturMasukan = async (req: Request, res: Response, next: NextFu
 
     const offset = (Number(page) - 1) * Number(limit);
 
-    const fakturs: any[] = await prisma.$queryRawUnsafe(`
+    const fakturs: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT fp.*, u.name as created_by_name
       FROM "accounting"."faktur_pajak" fp
       LEFT JOIN "users" u ON fp.created_by = u.id
@@ -426,7 +426,7 @@ export const getFakturMasukan = async (req: Request, res: Response, next: NextFu
       LIMIT ${limit} OFFSET ${offset}
     `).catch(() => []);
 
-    const summary: any[] = await prisma.$queryRawUnsafe(`
+    const summary: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         COALESCE(SUM(dpp), 0) as total_dpp,
         COALESCE(SUM(ppn), 0) as total_ppn,
@@ -488,7 +488,7 @@ export const inputFakturMasukan = async (req: Request, res: Response, next: Next
     }
 
     // Check for duplicate
-    const existing: any[] = await prisma.$queryRawUnsafe(`
+    const existing: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT id FROM "accounting"."faktur_pajak"
       WHERE tenant_id = ${tenantId} AND no_faktur = '${noFaktur}' AND jenis = 'masukan'
     `).catch(() => []);
@@ -533,7 +533,7 @@ export const getPPhSummary = async (req: Request, res: Response, next: NextFunct
     const tahunFilter = tahun || new Date().getFullYear();
     const masaFilter = masa ? `AND EXTRACT(MONTH FROM tanggal) = ${masa}` : '';
 
-    const summary: any[] = await prisma.$queryRawUnsafe(`
+    const summary: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         jenis,
         COUNT(*) as jumlah,
@@ -672,7 +672,7 @@ export const getSPTMasaPPN = async (req: Request, res: Response, next: NextFunct
     }
 
     // Get Faktur Keluaran (PPN Keluaran)
-    const keluaran: any[] = await prisma.$queryRawUnsafe(`
+    const keluaran: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         COALESCE(SUM(dpp), 0) as total_dpp,
         COALESCE(SUM(ppn), 0) as total_ppn,
@@ -686,7 +686,7 @@ export const getSPTMasaPPN = async (req: Request, res: Response, next: NextFunct
     `).catch(() => [{ total_dpp: 0, total_ppn: 0, jumlah: 0 }]);
 
     // Get Faktur Masukan (PPN Masukan)
-    const masukan: any[] = await prisma.$queryRawUnsafe(`
+    const masukan: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT
         COALESCE(SUM(dpp), 0) as total_dpp,
         COALESCE(SUM(ppn), 0) as total_ppn,
@@ -738,7 +738,7 @@ export const exportEFakturCSV = async (req: Request, res: Response, next: NextFu
     const tenantId = req.tenantId!;
     const { masa, tahun, jenis = 'keluaran' } = req.query;
 
-    const fakturs: any[] = await prisma.$queryRawUnsafe(`
+    const fakturs: any[] = await prisma.$queryRawUnsafe<any[]>(`
       SELECT *
       FROM "accounting"."faktur_pajak"
       WHERE tenant_id = ${tenantId}
@@ -887,7 +887,7 @@ function calculateRemainingNSFP(allocations: any[], used: number): number {
 
 async function getNextNSFP(tenantId: number): Promise<string> {
   // Get current allocation
-  const alloc: any[] = await prisma.$queryRawUnsafe(`
+  const alloc: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT * FROM "accounting"."nsfp_allocation"
     WHERE tenant_id = ${tenantId}
     AND tahun_pajak = EXTRACT(YEAR FROM NOW())
@@ -904,7 +904,7 @@ async function getNextNSFP(tenantId: number): Promise<string> {
   }
 
   // Get last used number
-  const lastUsed: any[] = await prisma.$queryRawUnsafe(`
+  const lastUsed: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT no_faktur FROM "accounting"."faktur_pajak"
     WHERE tenant_id = ${tenantId}
     AND jenis = 'keluaran'
@@ -928,7 +928,7 @@ async function generateBuktiPotongNumber(tenantId: number, jenis: string): Promi
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
 
-  const count: any[] = await prisma.$queryRawUnsafe(`
+  const count: any[] = await prisma.$queryRawUnsafe<any[]>(`
     SELECT COUNT(*) as count FROM "accounting"."pph_potput"
     WHERE tenant_id = ${tenantId}
     AND jenis = '${jenis}'
