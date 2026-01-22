@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import swaggerUi from 'swagger-ui-express';
 
 // Load environment variables
 dotenv.config();
@@ -15,6 +16,7 @@ import sharedRoutes from './modules/shared';
 import adminRoutes from './modules/admin';
 import medsosRoutes from './modules/medsos';
 import scheduler from './services/scheduler.service';
+import { swaggerSpec } from './config/swagger';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -78,6 +80,7 @@ app.get('/', (_req: Request, res: Response) => {
     success: true,
     message: 'MyPOS API Server',
     version: '1.0.0',
+    documentation: '/api-docs',
     modules: {
       fnb: 'Food & Beverage / POS Module',
       accounting: 'Accounting Module',
@@ -87,6 +90,8 @@ app.get('/', (_req: Request, res: Response) => {
     },
     endpoints: {
       health: '/health',
+      docs: '/api-docs',
+      docsJson: '/api-docs.json',
       api: '/api',
       auth: '/api/auth/login',
       products: '/api/products',
@@ -106,6 +111,18 @@ app.get('/health', (_req: Request, res: Response) => {
     message: 'MyPOS API is running',
     timestamp: new Date().toISOString()
   });
+});
+
+// API Documentation (Swagger)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'MyPOS API Documentation'
+}));
+
+// Swagger JSON endpoint
+app.get('/api-docs.json', (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
 });
 
 // API Routes - Organized by Module
