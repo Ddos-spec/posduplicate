@@ -75,6 +75,7 @@ const ForecastPageInventory = lazy(() => import('./pages/inventory/ForecastPage'
 const ReorderPage = lazy(() => import('./pages/inventory/ReorderPage'));
 const InventorySettings = lazy(() => import('./pages/inventory/InventorySettings'));
 const RecipeSimulationPage = lazy(() => import('./pages/inventory/RecipeSimulationPage'));
+const InventoryAnalyticsPage = lazy(() => import('./pages/inventory/InventoryAnalyticsPage'));
 
 // Medsos Module Pages (Mock)
 const MedsosLayout = lazy(() => import('./components/medsos/MedsosLayout'));
@@ -342,6 +343,7 @@ function App() {
           <Route path="forecast" element={<ForecastPageInventory />} />
           <Route path="reorder" element={<ReorderPage />} />
           <Route path="settings" element={<InventorySettings />} />
+          <Route path="analytics" element={<InventoryAnalyticsPage />} />
           <Route index element={<Navigate to="/inventory/dashboard" />} />
         </Route>
 

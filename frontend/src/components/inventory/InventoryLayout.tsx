@@ -6,7 +6,7 @@ import { useInventoryConfig } from '../../pages/inventory/inventoryConfigStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import {
   LayoutDashboard, Package, TrendingUp, ShoppingCart, Settings,
-  Menu, Sun, Moon, ArrowLeft, Boxes, ChevronDown, ChefHat
+  Menu, Sun, Moon, ArrowLeft, Boxes, ChevronDown, ChefHat, BarChart3
 } from 'lucide-react';
 
 export default function InventoryLayout() {
@@ -35,6 +35,7 @@ export default function InventoryLayout() {
     { icon: LayoutDashboard, label: 'Dashboard', path: `${basePath}/dashboard`, roles: ['all'] },
     { icon: Boxes, label: 'Stok Barang', path: `${basePath}/stock`, roles: ['all'] },
     { icon: ChefHat, label: 'Recipe & Costing', path: `${basePath}/recipe`, roles: ['inventory_manager', 'kitchen'] },
+    { icon: BarChart3, label: 'Analytics', path: `${basePath}/analytics`, roles: ['inventory_manager', 'owner'] },
     { icon: TrendingUp, label: 'Smart Forecast', path: `${basePath}/forecast`, roles: ['inventory_manager'] },
     { icon: ShoppingCart, label: 'Belanja (PO)', path: `${basePath}/reorder`, roles: ['inventory_manager', 'purchasing'] },
     { icon: Settings, label: 'Pengaturan', path: `${basePath}/settings`, roles: ['inventory_manager'] },
