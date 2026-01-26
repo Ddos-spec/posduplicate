@@ -8,7 +8,7 @@ import {
   LayoutDashboard, BarChart3,
   Users, Settings, LogOut, Bell, Search, Menu, X,
   Sun, Moon, ChevronDown, Calculator, ShoppingCart,
-  Package, Wallet, Building2
+  Package, Wallet, Building2, CreditCard, Receipt, Landmark, PiggyBank
 } from 'lucide-react';
 
 interface MenuItem {
@@ -160,7 +160,17 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
               { name: 'Buku Besar', path: '/accounting/ledger' },
             ]
           },
-          { name: 'Laporan Keuangan', icon: BarChart3, path: '/accounting/reports', badge: 3 },
+          { name: 'Laporan Keuangan', icon: BarChart3, path: '/accounting/reports', badge: 4 },
+          {
+            name: 'Keuangan',
+            icon: Wallet,
+            children: [
+              { name: 'Hutang (AP)', path: '/accounting/ap' },
+              { name: 'Piutang (AR)', path: '/accounting/ar' },
+              { name: 'Aset Tetap', path: '/accounting/assets' },
+              { name: 'Anggaran', path: '/accounting/budget' },
+            ]
+          },
           { name: 'Kelola Pengguna', icon: Users, path: '/accounting/users', badge: '8 users' },
         ];
     }

@@ -32,11 +32,9 @@
       "Bash(git push:*)",
       "Bash(del nul 2)",
       "Bash(git config:*)",
-      "Bash(git pull:*)",
-      "Bash(npx tsc:*)",
-      "Bash(timeout /t 8)",
-      "Bash(test:*)",
-      "Bash(git restore:*)"
+      "Bash(grep:*)",
+      "Bash(git stash push:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

@@ -45,6 +45,33 @@ interface BalanceSheetData {
   };
 }
 
+interface CashFlowItem {
+  description: string;
+  amount: number;
+}
+
+interface CashFlowSection {
+  items: CashFlowItem[];
+  total: number;
+}
+
+interface CashFlowData {
+  period: { startDate: string; endDate: string };
+  method: 'indirect' | 'direct';
+  operatingActivities: CashFlowSection;
+  investingActivities: CashFlowSection;
+  financingActivities: CashFlowSection;
+  netCashFlow: number;
+  beginningCash: number;
+  endingCash: number;
+  reconciliation?: {
+    netIncome: number;
+    adjustments: CashFlowItem[];
+    totalAdjustments: number;
+    cashFromOperations: number;
+  };
+}
+
 export default function IncomeStatementPage() {
   const { isDark } = useThemeStore();
   const [activeTab, setActiveTab] = useState<'laba-rugi' | 'neraca' | 'arus-kas'>('laba-rugi');
@@ -54,6 +81,8 @@ export default function IncomeStatementPage() {
   
   const [plData, setPlData] = useState<IncomeStatementData | null>(null);
   const [bsData, setBsData] = useState<BalanceSheetData | null>(null);
+  const [cfData, setCfData] = useState<CashFlowData | null>(null);
+  const [cfMethod, setCfMethod] = useState<'indirect' | 'direct'>('indirect');
   const [loading, setLoading] = useState(true);
 
   const fetchReport = async () => {
@@ -78,9 +107,16 @@ export default function IncomeStatementPage() {
         if (response.data?.success) {
           setBsData(response.data.data);
         }
-      } else {
-        // Arus Kas - Placeholder for now
-        toast.success('Laporan Arus Kas akan segera hadir');
+      } else if (activeTab === 'arus-kas') {
+        const endpoint = cfMethod === 'indirect'
+          ? '/accounting/psak/arus-kas/indirect'
+          : '/accounting/psak/arus-kas/direct';
+        const response = await api.get(endpoint, {
+          params: { startDate, endDate }
+        });
+        if (response.data?.success) {
+          setCfData(response.data.data);
+        }
       }
 
     } catch (error) {
@@ -93,7 +129,7 @@ export default function IncomeStatementPage() {
 
   useEffect(() => {
     fetchReport();
-  }, [month, year, activeTab]);
+  }, [month, year, activeTab, cfMethod]);
 
   const formatCurrency = (value: string | number | undefined) => {
     if (value === undefined) return '0';
@@ -293,6 +329,150 @@ export default function IncomeStatementPage() {
     );
   };
 
+  const renderCashFlow = () => {
+    if (!cfData) return <div className="text-center py-10 text-gray-500">Tidak ada data.</div>;
+    return (
+      <div className="space-y-6">
+        {/* Method Toggle */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Metode:</span>
+          <div className={`flex items-center rounded-lg p-1 ${isDark ? 'bg-slate-700' : 'bg-gray-100'}`}>
+            <button
+              onClick={() => setCfMethod('indirect')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                cfMethod === 'indirect'
+                  ? isDark ? 'bg-slate-600 text-white' : 'bg-white text-gray-900 shadow'
+                  : isDark ? 'text-gray-400' : 'text-gray-500'
+              }`}
+            >
+              Tidak Langsung
+            </button>
+            <button
+              onClick={() => setCfMethod('direct')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                cfMethod === 'direct'
+                  ? isDark ? 'bg-slate-600 text-white' : 'bg-white text-gray-900 shadow'
+                  : isDark ? 'text-gray-400' : 'text-gray-500'
+              }`}
+            >
+              Langsung
+            </button>
+          </div>
+        </div>
+
+        <table className="w-full">
+          <thead>
+            <tr className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              <th className="text-left pb-4 font-medium">KETERANGAN</th>
+              <th className="text-right pb-4 font-medium">JUMLAH</th>
+            </tr>
+          </thead>
+          <tbody className="text-sm">
+            {/* Operating Activities */}
+            <tr>
+              <td colSpan={2} className="pt-6 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
+                  <span className={`font-semibold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>AKTIVITAS OPERASI</span>
+                </div>
+              </td>
+            </tr>
+            {cfData.operatingActivities.items.map((item, idx) => (
+              <tr key={idx} className={isDark ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'}>
+                <td className={`py-2 pl-6 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{item.description}</td>
+                <td className={`py-2 text-right ${item.amount < 0 ? 'text-red-500' : isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {item.amount < 0 ? `(${formatCurrency(Math.abs(item.amount))})` : formatCurrency(item.amount)}
+                </td>
+              </tr>
+            ))}
+            <tr className={`font-semibold ${isDark ? 'bg-slate-700/30' : 'bg-gray-50'}`}>
+              <td className={`py-2 pl-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>Kas Bersih dari Aktivitas Operasi</td>
+              <td className={`py-2 text-right ${cfData.operatingActivities.total < 0 ? 'text-red-500' : isDark ? 'text-white' : 'text-gray-900'}`}>
+                {cfData.operatingActivities.total < 0
+                  ? `(${formatCurrency(Math.abs(cfData.operatingActivities.total))})`
+                  : formatCurrency(cfData.operatingActivities.total)}
+              </td>
+            </tr>
+
+            {/* Investing Activities */}
+            <tr>
+              <td colSpan={2} className="pt-8 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-4 bg-purple-500 rounded-full"></div>
+                  <span className={`font-semibold ${isDark ? 'text-purple-400' : 'text-purple-600'}`}>AKTIVITAS INVESTASI</span>
+                </div>
+              </td>
+            </tr>
+            {cfData.investingActivities.items.map((item, idx) => (
+              <tr key={idx} className={isDark ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'}>
+                <td className={`py-2 pl-6 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{item.description}</td>
+                <td className={`py-2 text-right ${item.amount < 0 ? 'text-red-500' : isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {item.amount < 0 ? `(${formatCurrency(Math.abs(item.amount))})` : formatCurrency(item.amount)}
+                </td>
+              </tr>
+            ))}
+            <tr className={`font-semibold ${isDark ? 'bg-slate-700/30' : 'bg-gray-50'}`}>
+              <td className={`py-2 pl-6 ${isDark ? 'text-purple-400' : 'text-purple-600'}`}>Kas Bersih dari Aktivitas Investasi</td>
+              <td className={`py-2 text-right ${cfData.investingActivities.total < 0 ? 'text-red-500' : isDark ? 'text-white' : 'text-gray-900'}`}>
+                {cfData.investingActivities.total < 0
+                  ? `(${formatCurrency(Math.abs(cfData.investingActivities.total))})`
+                  : formatCurrency(cfData.investingActivities.total)}
+              </td>
+            </tr>
+
+            {/* Financing Activities */}
+            <tr>
+              <td colSpan={2} className="pt-8 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+                  <span className={`font-semibold ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>AKTIVITAS PENDANAAN</span>
+                </div>
+              </td>
+            </tr>
+            {cfData.financingActivities.items.map((item, idx) => (
+              <tr key={idx} className={isDark ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'}>
+                <td className={`py-2 pl-6 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{item.description}</td>
+                <td className={`py-2 text-right ${item.amount < 0 ? 'text-red-500' : isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {item.amount < 0 ? `(${formatCurrency(Math.abs(item.amount))})` : formatCurrency(item.amount)}
+                </td>
+              </tr>
+            ))}
+            <tr className={`font-semibold ${isDark ? 'bg-slate-700/30' : 'bg-gray-50'}`}>
+              <td className={`py-2 pl-6 ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>Kas Bersih dari Aktivitas Pendanaan</td>
+              <td className={`py-2 text-right ${cfData.financingActivities.total < 0 ? 'text-red-500' : isDark ? 'text-white' : 'text-gray-900'}`}>
+                {cfData.financingActivities.total < 0
+                  ? `(${formatCurrency(Math.abs(cfData.financingActivities.total))})`
+                  : formatCurrency(cfData.financingActivities.total)}
+              </td>
+            </tr>
+
+            {/* Summary */}
+            <tr className={`border-t-2 ${isDark ? 'border-slate-600' : 'border-gray-300'}`}>
+              <td className={`py-4 font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Kenaikan (Penurunan) Kas Bersih</td>
+              <td className={`py-4 text-right font-bold ${cfData.netCashFlow < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                {cfData.netCashFlow < 0
+                  ? `(${formatCurrency(Math.abs(cfData.netCashFlow))})`
+                  : formatCurrency(cfData.netCashFlow)}
+              </td>
+            </tr>
+            <tr>
+              <td className={`py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Kas Awal Periode</td>
+              <td className={`py-2 text-right ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                {formatCurrency(cfData.beginningCash)}
+              </td>
+            </tr>
+            <tr className={`border-t-4 ${isDark ? 'border-emerald-500 bg-emerald-500/10' : 'border-emerald-500 bg-emerald-50'}`}>
+              <td className={`py-6 font-bold text-xl ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>KAS AKHIR PERIODE</td>
+              <td className={`py-6 text-right font-bold text-xl ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                {formatCurrency(cfData.endingCash)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -396,9 +576,7 @@ export default function IncomeStatementPage() {
              <div className="flex justify-center py-10">
                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
              </div>
-          ) : activeTab === 'laba-rugi' ? renderIncomeStatement() : activeTab === 'neraca' ? renderBalanceSheet() : (
-            <div className="text-center py-10 text-gray-500">Fitur Arus Kas belum tersedia.</div>
-          )}
+          ) : activeTab === 'laba-rugi' ? renderIncomeStatement() : activeTab === 'neraca' ? renderBalanceSheet() : renderCashFlow()}
         </div>
       </div>
     </div>
