@@ -20,6 +20,7 @@ import supplierRoutes from './routes/supplier.routes';
 import stockMovementRoutes from './routes/stockMovement.routes';
 import transactionRoutes from './routes/transaction.routes';
 import salesAnalyticsRoutes from './routes/sales-analytics.routes';
+import inventoryAnalyticsRoutes from './routes/inventory-analytics.routes';
 
 const router = Router();
 
@@ -45,5 +46,6 @@ router.use('/suppliers', supplierRoutes);
 router.use('/stock-movements', stockMovementRoutes);
 router.use('/transactions', transactionRoutes);
 router.use('/sales-analytics', salesAnalyticsRoutes);
+router.use('/inventory-analytics', inventoryAnalyticsRoutes);
 
 export default router;
