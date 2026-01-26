@@ -1,6 +1,57 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 
+// Helper: Check and create real-time alerts after stock change
+async function checkAndCreateAlerts(inventoryId: number, outletId: number) {
+  const item = await prisma.inventory.findUnique({ where: { id: inventoryId } });
+  if (!item) return;
+
+  const currentStock = parseFloat(item.current_stock.toString());
+  const minStock = parseFloat(item.min_stock.toString());
+
+  if (currentStock <= 0) {
+    const existing = await prisma.inventory_alerts.findFirst({
+      where: { inventory_id: inventoryId, alert_type: 'out_of_stock', is_resolved: false }
+    });
+    if (!existing) {
+      await prisma.inventory_alerts.create({
+        data: {
+          outlet_id: outletId,
+          inventory_id: inventoryId,
+          alert_type: 'out_of_stock',
+          severity: 'critical',
+          message: `${item.name} HABIS! Segera lakukan restock.`
+        }
+      });
+    }
+  } else if (currentStock <= minStock) {
+    const existing = await prisma.inventory_alerts.findFirst({
+      where: { inventory_id: inventoryId, alert_type: 'low_stock', is_resolved: false }
+    });
+    if (!existing) {
+      await prisma.inventory_alerts.create({
+        data: {
+          outlet_id: outletId,
+          inventory_id: inventoryId,
+          alert_type: 'low_stock',
+          severity: 'warning',
+          message: `${item.name} menipis (sisa ${currentStock} ${item.unit}). Min: ${minStock}`
+        }
+      });
+    }
+  } else if (currentStock > minStock) {
+    // Auto-resolve alerts if stock is back to normal
+    await prisma.inventory_alerts.updateMany({
+      where: {
+        inventory_id: inventoryId,
+        alert_type: { in: ['out_of_stock', 'low_stock'] },
+        is_resolved: false
+      },
+      data: { is_resolved: true, resolved_at: new Date() }
+    });
+  }
+}
+
 // Get all inventory items
 export const getAllInventory = async (req: Request, res: Response, _next: NextFunction) => {
   try {
@@ -665,6 +716,13 @@ export const adjustInventoryStock = async (req: Request, res: Response, _next: N
     } catch (movementError) {
       console.error('Failed to create stock movement:', movementError);
       // Continue even if stock movement logging fails
+    }
+
+    // Real-time alert check after stock adjustment
+    try {
+      await checkAndCreateAlerts(parseInt(id), item.outlet_id || req.outletId || 0);
+    } catch (alertError) {
+      console.error('Failed to check/create alerts:', alertError);
     }
 
     res.json({

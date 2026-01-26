@@ -2,6 +2,64 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
 
+// Helper: Check and create real-time alerts after stock movement
+async function checkAndCreateAlerts(inventoryId: number, outletId: number) {
+  const item = await prisma.inventory.findUnique({ where: { id: inventoryId } });
+  if (!item) return;
+
+  const currentStock = parseFloat(item.current_stock.toString());
+  const minStock = parseFloat(item.min_stock.toString());
+
+  // Check out of stock
+  if (currentStock <= 0) {
+    const existing = await prisma.inventory_alerts.findFirst({
+      where: { inventory_id: inventoryId, alert_type: 'out_of_stock', is_resolved: false }
+    });
+    if (!existing) {
+      await prisma.inventory_alerts.create({
+        data: {
+          outlet_id: outletId,
+          inventory_id: inventoryId,
+          alert_type: 'out_of_stock',
+          severity: 'critical',
+          message: `${item.name} HABIS! Segera lakukan restock.`
+        }
+      });
+    }
+  }
+  // Check low stock
+  else if (currentStock <= minStock) {
+    const existing = await prisma.inventory_alerts.findFirst({
+      where: { inventory_id: inventoryId, alert_type: 'low_stock', is_resolved: false }
+    });
+    if (!existing) {
+      await prisma.inventory_alerts.create({
+        data: {
+          outlet_id: outletId,
+          inventory_id: inventoryId,
+          alert_type: 'low_stock',
+          severity: 'warning',
+          message: `${item.name} menipis (sisa ${currentStock} ${item.unit}). Min: ${minStock}`
+        }
+      });
+    }
+  }
+  // Auto-resolve alerts if stock is back to normal
+  else if (currentStock > minStock) {
+    await prisma.inventory_alerts.updateMany({
+      where: {
+        inventory_id: inventoryId,
+        alert_type: { in: ['out_of_stock', 'low_stock'] },
+        is_resolved: false
+      },
+      data: {
+        is_resolved: true,
+        resolved_at: new Date()
+      }
+    });
+  }
+}
+
 // Get all stock movements with filters
 export const getStockMovements = async (req: Request, res: Response, _next: NextFunction) => {
   try {
@@ -224,6 +282,13 @@ export const createStockMovement = async (req: Request, res: Response, _next: Ne
           ...(type === 'IN' && price > 0 && { cost_amount: price }) // Update cost when stock IN
         }
       });
+
+      // Real-time alert check after inventory stock change
+      try {
+        await checkAndCreateAlerts(inventoryId, parseInt(outletId));
+      } catch (alertError) {
+        console.error('Failed to check/create alerts:', alertError);
+      }
     }
 
     // Create activity log

@@ -62,6 +62,10 @@ const LedgerPage = lazy(() => import('./pages/accounting/LedgerPage'));
 const AccountingSettingsPage = lazy(() => import('./pages/accounting/AccountingSettingsPage'));
 const ForecastPage = lazy(() => import('./pages/accounting/ForecastPage'));
 const AccountingReadOnlyPage = lazy(() => import('./pages/accounting/AccountingReadOnlyPage'));
+const AccountsPayablePage = lazy(() => import('./pages/accounting/AccountsPayablePage'));
+const AccountsReceivablePage = lazy(() => import('./pages/accounting/AccountsReceivablePage'));
+const FixedAssetsPage = lazy(() => import('./pages/accounting/FixedAssetsPage'));
+const BudgetPage = lazy(() => import('./pages/accounting/BudgetPage'));
 
 // Inventory Module Pages (Mock)
 const InventoryLayout = lazy(() => import('./components/inventory/InventoryLayout'));
@@ -313,6 +317,10 @@ function App() {
           <Route path="journal" element={<CreateJournalPage />} />
           <Route path="ledger" element={<LedgerPage />} />
           <Route path="reports" element={<IncomeStatementPage />} />
+          <Route path="ap" element={<AccountsPayablePage />} />
+          <Route path="ar" element={<AccountsReceivablePage />} />
+          <Route path="assets" element={<FixedAssetsPage />} />
+          <Route path="budget" element={<BudgetPage />} />
           <Route path="users" element={<AccountingUserManagementPage />} />
           <Route path="users/create" element={<CreateUserPage />} />
           <Route path="settings" element={<AccountingSettingsPage />} />
