@@ -11,7 +11,7 @@ interface ReasonSelectDialogProps {
   isLoading?: boolean;
   confirmText?: string;
   cancelText?: string;
-  reasons: string[];
+  reasons: string[]; // Predefined reasons
 }
 
 export default function ReasonSelectDialog({
@@ -116,21 +116,43 @@ export default function ReasonSelectDialog({
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Pilih Alasan
                       </label>
-                      <select
-                        value={selectedReason}
-                        onChange={(e) => {
-                          setSelectedReason(e.target.value);
+                      {/* Replace select with buttons for predefined reasons */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {reasons.filter(r => r !== 'Lainnya').map((reasonOption) => (
+                          <button
+                            key={reasonOption}
+                            onClick={() => {
+                              setSelectedReason(reasonOption);
+                              setCustomReason(''); // Clear custom reason if a predefined one is selected
+                              setError('');
+                            }}
+                            className={`px-3 py-2 rounded-lg border text-sm font-medium text-left transition-colors ${
+                              selectedReason === reasonOption
+                                ? 'bg-blue-500 text-white border-blue-500'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                            disabled={isLoading}
+                          >
+                            {reasonOption}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      {/* "Lainnya" Option */}
+                      <button
+                        onClick={() => {
+                          setSelectedReason('Lainnya');
                           setError('');
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className={`mt-2 w-full px-3 py-2 rounded-lg border text-sm font-medium text-left transition-colors ${
+                          selectedReason === 'Lainnya'
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
                         disabled={isLoading}
                       >
-                        <option value="">-- Pilih Alasan --</option>
-                        {reasons.map((r, idx) => (
-                          <option key={idx} value={r}>{r}</option>
-                        ))}
-                        <option value="Lainnya">Lainnya...</option>
-                      </select>
+                        Lainnya...
+                      </button>
                     </div>
 
                     {selectedReason === 'Lainnya' && (
