@@ -727,7 +727,19 @@ export const updateTransactionStatus = async (
 ) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, reason } = req.body;
+
+    // Validation for sensitive statuses
+    const sensitiveStatuses = ['cancelled', 'void', 'failed', 'refund'];
+    if (sensitiveStatuses.includes(status) && !reason) {
+      return res.status(400).json({
+        success: false,
+        error: { 
+          code: 'REASON_REQUIRED', 
+          message: 'Alasan wajib diisi untuk mengubah status ini.' 
+        }
+      });
+    }
 
     // Get existing transaction with items
     const existingTransaction = await prisma.transactions.findUnique({
@@ -768,13 +780,37 @@ export const updateTransactionStatus = async (
       }
     }
 
+    // Prepare updated notes if reason is provided
+    let updatedNotes = existingTransaction.notes;
+    if (reason) {
+      const timestamp = new Date().toLocaleString('id-ID');
+      const noteEntry = `[${timestamp}] Status changed to ${status}: ${reason}`;
+      updatedNotes = updatedNotes ? `${updatedNotes}\n${noteEntry}` : noteEntry;
+    }
+
     const transaction = await prisma.transactions.update({
       where: { id: parseInt(id) },
       data: {
         status,
+        notes: updatedNotes,
         ...(status === 'completed' && { completed_at: new Date() })
       }
     });
+
+    // Log to activity_logs
+    if (req.userId) {
+      await prisma.activity_logs.create({
+        data: {
+          user_id: req.userId,
+          action_type: 'UPDATE_TRANSACTION_STATUS',
+          entity_type: 'transactions',
+          entity_id: transaction.id,
+          old_value: { status: existingTransaction.status },
+          new_value: { status: status },
+          reason: reason || undefined
+        }
+      });
+    }
 
     res.json({
       success: true,

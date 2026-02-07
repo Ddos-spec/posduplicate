@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import { X, Calendar, DollarSign, User, Clock, Receipt, Trash2, AlertCircle, Printer, FileText, RefreshCw } from 'lucide-react';
+import { X, Calendar, DollarSign, User, Clock, Receipt, Trash2, AlertCircle, Printer, FileText, RefreshCw, MessageSquare } from 'lucide-react';
 import ConfirmDialog, { type ConfirmDialogType } from '../common/ConfirmDialog';
+import ReasonSelectDialog from '../common/ReasonSelectDialog';
 
 interface Transaction {
   id: number;
@@ -12,6 +13,7 @@ interface Transaction {
   total: number;
   status: string;
   createdAt: string;
+  notes?: string;
   cashier?: { name: string; email: string };
   table?: { name: string };
   transactionItems: Array<{
@@ -31,6 +33,28 @@ interface TransactionHistoryProps {
   onClose: () => void;
 }
 
+// Constants for Reasons
+const CANCELLATION_REASONS = [
+  "Salah Input",
+  "Pelanggan Berubah Pikiran",
+  "Stok Habis",
+  "Masalah Pembayaran",
+  "Double Input"
+];
+
+const REFUND_REASONS = [
+  "Kualitas Buruk",
+  "Salah Menu",
+  "Pelanggan Komplain",
+  "Pesanan Tidak Sesuai"
+];
+
+const FAILED_REASONS = [
+  "Pembayaran Gagal",
+  "Koneksi Error",
+  "Timeout"
+];
+
 // Helper function to get today's date in YYYY-MM-DD format
 const getTodayDate = () => {
   const today = new Date();
@@ -48,6 +72,7 @@ const transformTransaction = (data: any): Transaction => {
     orderType: data.order_type,
     total: data.total,
     status: data.status,
+    notes: data.notes,
     createdAt: data.createdAt,
     cashier: data.users ? { name: data.users.name, email: data.users.email } : undefined,
     table: data.tables ? { name: data.tables.name } : undefined,
@@ -89,6 +114,24 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
     message: '',
     onConfirm: () => {}
   });
+
+  // Reason Dialog State
+  const [reasonDialog, setReasonDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    reasons: string[];
+    onConfirm: (reason: string) => void;
+    confirmText: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    reasons: [],
+    onConfirm: () => {},
+    confirmText: 'Konfirmasi'
+  });
+
   const [isProcessing, setIsProcessing] = useState(false);
 
   const loadTransactions = useCallback(async () => {
@@ -104,18 +147,17 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
 
       console.log('Loading transactions with params:', params);
       const { data } = await api.get('/transactions', { params });
-      console.log('Received transaction data:', data.data.length, 'transactions');
-      if (data.debug) {
-        console.log('🔍 SERVER DEBUG INFO:', data.debug);
-        console.log('   Server Time:', data.debug.serverTime);
-        console.log('   Constructed Where:', JSON.stringify(data.debug.constructedWhere, null, 2));
-      }
-      if (data.data.length > 0) {
-        console.log('Latest transaction date:', data.data[0].createdAt);
-        console.log('Latest transaction number:', data.data[0].transaction_number);
-      }
+      
       const transformedData = data.data.map(transformTransaction);
       setTransactions(transformedData);
+      
+      // Update selected transaction if it exists in the new list
+      if (selectedTransaction) {
+        const updatedSelected = transformedData.find((t: Transaction) => t.id === selectedTransaction.id);
+        if (updatedSelected) {
+          setSelectedTransaction(updatedSelected);
+        }
+      }
     } catch (error: unknown) {
       console.error('Error loading transactions:', error);
       let errorMessage = 'Failed to load transactions';
@@ -126,34 +168,30 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
     } finally {
       setLoading(false);
     }
-  }, [dateFrom, dateTo, statusFilter]);
+  }, [dateFrom, dateTo, statusFilter, selectedTransaction?.id]);
 
   useEffect(() => {
     loadTransactions();
   }, [loadTransactions]);
 
   const handleVoidTransaction = (transaction: Transaction) => {
-    setConfirmDialog({
+    setReasonDialog({
       isOpen: true,
-      type: 'warning',
       title: 'Batalkan Transaksi',
-      message: 'Apakah Anda yakin ingin membatalkan transaksi ini? Transaksi akan dibatalkan dan stok akan dikembalikan.',
-      details: [
-        { label: 'No. Transaksi', value: transaction.transactionNumber },
-        { label: 'Total', value: `Rp ${Number(transaction.total).toLocaleString('id-ID')}` }
-      ],
+      message: 'Mohon pilih alasan pembatalan transaksi. Stok akan dikembalikan.',
+      reasons: CANCELLATION_REASONS,
       confirmText: 'Ya, Batalkan',
-      onConfirm: async () => {
+      onConfirm: async (reason) => {
         setIsProcessing(true);
         try {
           await api.put(`/transactions/${transaction.id}/status`, {
-            status: 'cancelled'
+            status: 'cancelled',
+            reason: reason
           });
 
           toast.success('Transaksi berhasil dibatalkan');
-          loadTransactions(); // Reload transactions
-          setSelectedTransaction(null); // Clear selection
-          setConfirmDialog({ ...confirmDialog, isOpen: false });
+          setReasonDialog(prev => ({ ...prev, isOpen: false }));
+          loadTransactions();
         } catch (error: unknown) {
           console.error('Error voiding transaction:', error);
           let errorMessage = 'Gagal membatalkan transaksi';
@@ -203,39 +241,37 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
   };
 
   const handleUpdateStatus = (transaction: Transaction, newStatus: string) => {
-    const statusLabels: { [key: string]: string } = {
-      'failed': 'gagal',
-      'refund': 'refund'
-    };
+    let reasons = ['Alasan Lainnya'];
+    let title = 'Ubah Status';
+    let message = 'Pilih alasan perubahan status';
 
-    const statusConfig: { [key: string]: { type: ConfirmDialogType; title: string } } = {
-      'failed': { type: 'warning', title: 'Tandai Gagal' },
-      'refund': { type: 'info', title: 'Refund Transaksi' }
-    };
+    if (newStatus === 'failed') {
+      reasons = FAILED_REASONS;
+      title = 'Tandai Gagal';
+      message = 'Pilih alasan mengapa transaksi gagal:';
+    } else if (newStatus === 'refund') {
+      reasons = REFUND_REASONS;
+      title = 'Refund Transaksi';
+      message = 'Pilih alasan refund:';
+    }
 
-    const config = statusConfig[newStatus] || { type: 'info', title: 'Ubah Status' };
-
-    setConfirmDialog({
+    setReasonDialog({
       isOpen: true,
-      type: config.type,
-      title: config.title,
-      message: `Apakah Anda yakin ingin mengubah status transaksi menjadi ${statusLabels[newStatus]}?`,
-      details: [
-        { label: 'No. Transaksi', value: transaction.transactionNumber },
-        { label: 'Total', value: `Rp ${Number(transaction.total).toLocaleString('id-ID')}` }
-      ],
+      title,
+      message,
+      reasons,
       confirmText: 'Ya, Ubah Status',
-      onConfirm: async () => {
+      onConfirm: async (reason) => {
         setIsProcessing(true);
         try {
           await api.put(`/transactions/${transaction.id}/status`, {
-            status: newStatus
+            status: newStatus,
+            reason: reason
           });
 
-          toast.success(`Status transaksi berhasil diubah menjadi ${statusLabels[newStatus]}`);
+          toast.success(`Status transaksi berhasil diubah menjadi ${newStatus}`);
+          setReasonDialog(prev => ({ ...prev, isOpen: false }));
           loadTransactions();
-          setSelectedTransaction(null);
-          setConfirmDialog({ ...confirmDialog, isOpen: false });
         } catch (error: unknown) {
           console.error('Error updating transaction status:', error);
           let errorMessage = 'Gagal mengubah status transaksi';
@@ -1102,6 +1138,14 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                         <span>{selectedTransaction.table.name}</span>
                       </div>
                     )}
+                    {selectedTransaction.notes && (
+                      <div className="mt-3 p-2 bg-gray-50 border border-gray-200 rounded text-gray-700 italic">
+                        <div className="flex items-start gap-2">
+                           <MessageSquare className="w-4 h-4 mt-0.5" />
+                           <div className="whitespace-pre-wrap">{selectedTransaction.notes}</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1252,6 +1296,18 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
         details={confirmDialog.details}
         confirmText={confirmDialog.confirmText}
         type={confirmDialog.type}
+        isLoading={isProcessing}
+      />
+
+      {/* Reason Select Dialog */}
+      <ReasonSelectDialog
+        isOpen={reasonDialog.isOpen}
+        onClose={() => setReasonDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={reasonDialog.onConfirm}
+        title={reasonDialog.title}
+        message={reasonDialog.message}
+        reasons={reasonDialog.reasons}
+        confirmText={reasonDialog.confirmText}
         isLoading={isProcessing}
       />
     </div>
