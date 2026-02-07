@@ -1,6 +1,6 @@
 import { useNotificationStore } from '../../store/notificationStore';
 import { Link } from 'react-router-dom';
-import { Bell, AlertTriangle } from 'lucide-react';
+import { Bell, AlertTriangle, AlertOctagon } from 'lucide-react';
 
 export default function NotificationPanel() {
   const { notifications, isPanelOpen } = useNotificationStore();
@@ -22,27 +22,48 @@ export default function NotificationPanel() {
           </div>
         ) : (
           <div className="divide-y">
-            {notifications.map(notification => (
-              <Link
-                key={notification.id}
-                to={`/admin/tenants?search=${notification.tenantId}`} // Simple link to tenant page
-                className="block p-4 hover:bg-gray-50"
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`mt-1 p-1.5 rounded-full ${
-                    notification.type === 'overdue' ? 'bg-red-100' : 'bg-yellow-100'
-                  }`}>
-                    <AlertTriangle className={`w-5 h-5 ${
-                      notification.type === 'overdue' ? 'text-red-600' : 'text-yellow-600'
-                    }`} />
+            {notifications.map(notification => {
+              // Determine styles and icon based on type
+              let bgColor = 'bg-yellow-100';
+              let textColor = 'text-yellow-600';
+              let Icon = AlertTriangle;
+              let linkTo = `/admin/tenants?search=${notification.tenantId}`;
+
+              if (notification.type === 'overdue') {
+                bgColor = 'bg-red-100';
+                textColor = 'text-red-600';
+              } else if (notification.type === 'transaction_alert') {
+                bgColor = 'bg-orange-100';
+                textColor = 'text-orange-600';
+                Icon = AlertOctagon;
+                linkTo = '#'; // Or link to transaction history if available
+              } else if (notification.type === 'billing') {
+                bgColor = 'bg-blue-100';
+                textColor = 'text-blue-600';
+                linkTo = '/admin/billing';
+              }
+
+              return (
+                <Link
+                  key={notification.id}
+                  to={linkTo}
+                  className="block p-4 hover:bg-gray-50"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-1 p-1.5 rounded-full ${bgColor}`}>
+                      <Icon className={`w-5 h-5 ${textColor}`} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-700">{notification.message}</p>
+                      <p className="text-xs text-gray-500 mt-1">{notification.details}</p>
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        {new Date(notification.createdAt).toLocaleString()}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-700">{notification.message}</p>
-                    <p className="text-xs text-gray-500 mt-1">{notification.details}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

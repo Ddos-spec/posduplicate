@@ -2,7 +2,7 @@ import api from './api';
 
 export interface AdminNotification {
   id: string;
-  type: 'expiring' | 'overdue';
+  type: 'expiring' | 'overdue' | 'billing' | 'transaction_alert';
   message: string;
   details: string;
   tenantId: number;

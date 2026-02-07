@@ -158,6 +158,50 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
       }
     }
 
+    // Get transaction status changes from activity logs (Last 24 hours)
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    // Find users belonging to this tenant to filter logs
+    const tenantUsers = await prisma.users.findMany({
+      where: { tenant_id: tenantId },
+      select: { id: true, name: true }
+    });
+    const tenantUserIds = tenantUsers.map(u => u.id);
+
+    if (tenantUserIds.length > 0) {
+      const recentActivityLogs = await prisma.activity_logs.findMany({
+        where: {
+          user_id: { in: tenantUserIds },
+          action_type: 'UPDATE_TRANSACTION_STATUS',
+          created_at: { gte: twentyFourHoursAgo }
+        },
+        include: {
+          users: { select: { name: true } } // Get actor name
+        },
+        orderBy: { created_at: 'desc' }
+      });
+
+      for (const log of recentActivityLogs) {
+        // Safe casting for JSON fields
+        const newValue = log.new_value as { status?: string } | null;
+        const status = newValue?.status || 'unknown';
+        const reason = log.reason || 'No reason provided';
+        const actorName = log.users?.name || 'Unknown User';
+
+        // Only notify for sensitive statuses
+        if (['cancelled', 'void', 'failed', 'refund'].includes(status)) {
+           notifications.push({
+            id: `activity-log-${log.id}`,
+            type: 'transaction_alert', // New type
+            message: `Transaction status changed to ${status.toUpperCase()} by ${actorName}`,
+            details: `Reason: ${reason}`,
+            tenantId: tenant.id,
+            createdAt: log.created_at?.toISOString(),
+          });
+        }
+      }
+    }
+
     // Sort notifications by date
     notifications.sort((a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
 
