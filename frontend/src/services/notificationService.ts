@@ -7,6 +7,7 @@ export interface AdminNotification {
   details: string;
   tenantId: number;
   createdAt: string;
+  entityId?: number;
 }
 
 export const notificationService = {

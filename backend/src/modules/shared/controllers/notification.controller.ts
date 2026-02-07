@@ -197,6 +197,7 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
             details: `Reason: ${reason}`,
             tenantId: tenant.id,
             createdAt: log.created_at?.toISOString(),
+            entityId: log.entity_id,
           });
         }
       }
