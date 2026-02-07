@@ -175,12 +175,13 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
   }, [loadTransactions]);
 
   const handleVoidTransaction = (transaction: Transaction) => {
+    console.log('Opening void transaction dialog');
     setReasonDialog({
       isOpen: true,
       title: 'Batalkan Transaksi',
       message: 'Mohon pilih alasan pembatalan transaksi. Stok akan dikembalikan.',
       reasons: CANCELLATION_REASONS,
-      confirmText: 'Ya, Batalkan',
+      confirmText: 'Konfirmasi Pembatalan',
       onConfirm: async (reason) => {
         setIsProcessing(true);
         try {
@@ -241,6 +242,7 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
   };
 
   const handleUpdateStatus = (transaction: Transaction, newStatus: string) => {
+    console.log('Opening update status dialog for:', newStatus);
     let reasons = ['Alasan Lainnya'];
     let title = 'Ubah Status';
     let message = 'Pilih alasan perubahan status';
@@ -260,7 +262,7 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       title,
       message,
       reasons,
-      confirmText: 'Ya, Ubah Status',
+      confirmText: 'Simpan Status',
       onConfirm: async (reason) => {
         setIsProcessing(true);
         try {
@@ -1209,7 +1211,7 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
                           className="bg-yellow-500 text-white py-2 rounded-lg font-semibold hover:bg-yellow-600 flex items-center justify-center gap-2 text-sm"
                         >
                           <X className="w-4 h-4" />
-                          Batalkan
+                          Batalkan Transaksi
                         </button>
                         <button
                           onClick={() => handleUpdateStatus(selectedTransaction, 'failed')}
