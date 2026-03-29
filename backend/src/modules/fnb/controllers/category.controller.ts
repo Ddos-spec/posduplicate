@@ -1,5 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
+import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+
+const buildCategoryLogSnapshot = (category: any) => ({
+  id: category.id,
+  name: category.name,
+  type: category.type,
+  outlet_id: category.outlet_id,
+  is_active: category.is_active
+});
+
+const normalizeReason = (value: unknown, fallback: string) => {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
+};
 
 /**
  * Get all categories
@@ -160,6 +173,21 @@ export const createCategory = async (
       }
     });
 
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'category_create',
+        'category',
+        category.id,
+        null,
+        buildCategoryLogSnapshot(category),
+        normalizeReason(req.body.reason, 'Created category'),
+        category.outlet_id || null
+      );
+    } catch (logError) {
+      console.error('Failed to create category activity log:', logError);
+    }
+
     res.status(201).json({
       success: true,
       data: category,
@@ -246,6 +274,21 @@ export const updateCategory = async (
       }
     });
 
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'category_update',
+        'category',
+        updatedCategory.id,
+        buildCategoryLogSnapshot(category),
+        buildCategoryLogSnapshot(updatedCategory),
+        normalizeReason(req.body.reason, 'Updated category'),
+        updatedCategory.outlet_id || category.outlet_id || null
+      );
+    } catch (logError) {
+      console.error('Failed to create category update log:', logError);
+    }
+
     res.json({
       success: true,
       data: updatedCategory,
@@ -308,6 +351,21 @@ export const deleteCategory = async (
       where: { id: parseInt(id) },
       data: { is_active: false }
     });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'category_delete',
+        'category',
+        category.id,
+        buildCategoryLogSnapshot(category),
+        null,
+        normalizeReason(req.body?.reason, 'Soft deleted category'),
+        category.outlet_id || null
+      );
+    } catch (logError) {
+      console.error('Failed to create category delete log:', logError);
+    }
 
     res.json({
       success: true,

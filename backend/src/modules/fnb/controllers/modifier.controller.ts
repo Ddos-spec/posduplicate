@@ -1,6 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { safeParseInt } from '../../../utils/validation';
+import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+
+const buildModifierLogSnapshot = (modifier: any) => ({
+  id: modifier.id,
+  name: modifier.name,
+  price: modifier.price,
+  outlet_id: modifier.outlet_id,
+  is_active: modifier.is_active
+});
+
+const normalizeReason = (value: unknown, fallback: string) => {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
+};
 
 /**
  * Get tenant outlet IDs for isolation
@@ -97,6 +110,22 @@ export const createModifier = async (req: Request, res: Response, _next: NextFun
         is_active: true
       }
     });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'modifier_create',
+        'modifier',
+        modifier.id,
+        null,
+        buildModifierLogSnapshot(modifier),
+        normalizeReason(req.body.reason, 'Created modifier'),
+        modifier.outlet_id || null
+      );
+    } catch (logError) {
+      console.error('Failed to create modifier activity log:', logError);
+    }
+
     res.status(201).json({ success: true, data: modifier, message: 'Modifier created successfully' });
   } catch (error) {
     return _next(error);
@@ -140,6 +169,22 @@ export const updateModifier = async (req: Request, res: Response, _next: NextFun
         ...(isActive !== undefined && { is_active: isActive })
       }
     });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'modifier_update',
+        'modifier',
+        modifier.id,
+        buildModifierLogSnapshot(existing),
+        buildModifierLogSnapshot(modifier),
+        normalizeReason(req.body.reason, 'Updated modifier'),
+        modifier.outlet_id || existing.outlet_id || null
+      );
+    } catch (logError) {
+      console.error('Failed to create modifier update log:', logError);
+    }
+
     res.json({ success: true, data: modifier, message: 'Modifier updated successfully' });
   } catch (error) {
     return _next(error);
@@ -178,6 +223,22 @@ export const deleteModifier = async (req: Request, res: Response, _next: NextFun
       where: { id: modifierId },
       data: { is_active: false }
     });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'modifier_delete',
+        'modifier',
+        existing.id,
+        buildModifierLogSnapshot(existing),
+        null,
+        normalizeReason(req.body?.reason, 'Soft deleted modifier'),
+        existing.outlet_id || null
+      );
+    } catch (logError) {
+      console.error('Failed to create modifier delete log:', logError);
+    }
+
     res.json({ success: true, message: 'Modifier deleted successfully' });
   } catch (error) {
     return _next(error);

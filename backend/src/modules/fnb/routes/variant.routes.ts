@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getVariants, createVariant, updateVariant, deleteVariant } from '../controllers/variant.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { ownerOnly, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
@@ -62,7 +62,7 @@ router.get('/', getVariants);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', createVariant);
+router.post('/', ownerOnly, createVariant);
 /**
  * @swagger
  * /api/variants/{id}:
@@ -93,7 +93,7 @@ router.post('/', createVariant);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', updateVariant);
+router.put('/:id', ownerOnly, updateVariant);
 /**
  * @swagger
  * /api/variants/{id}:
@@ -118,6 +118,6 @@ router.put('/:id', updateVariant);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id', deleteVariant);
+router.delete('/:id', ownerOnly, deleteVariant);
 
 export default router;

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { X, Plus, Edit, Trash2, Users } from 'lucide-react';
 import useConfirmationStore from '../../store/confirmationStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface Table {
   id: number;
@@ -26,6 +27,7 @@ export default function TableManagement({ onClose, onSelectTable }: TableManagem
   const [form, setForm] = useState({ name: '', capacity: '4' });
   const [isProcessing, setIsProcessing] = useState(false);
   const { showConfirmation } = useConfirmationStore();
+  const { user } = useAuthStore();
 
   useEffect(() => {
     loadTables();
@@ -64,13 +66,26 @@ export default function TableManagement({ onClose, onSelectTable }: TableManagem
       toast.error('Table name and capacity are required');
       return;
     }
+
+    const outletId = user?.outletId || user?.outlets?.id;
+    if (!outletId && !editingTable) {
+      toast.error('Outlet ID missing. Please log in again.');
+      return;
+    }
+
     setIsProcessing(true);
     try {
+      const data = {
+        name: form.name,
+        capacity: form.capacity,
+        ...(outletId && { outletId })
+      };
+
       if (editingTable) {
-        await api.put(`/tables/${editingTable.id}`, form);
+        await api.put(`/tables/${editingTable.id}`, data);
         toast.success('Table updated successfully');
       } else {
-        await api.post('/tables', form);
+        await api.post('/tables', data);
         toast.success('Table added successfully');
       }
       setShowForm(false);
