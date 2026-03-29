@@ -235,15 +235,14 @@ export default function LoginPage() {
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <a
                       href={androidAppDownloadUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                      download="mypos-latest.apk"
                       className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
                     >
                       <Download className="h-4 w-4" />
                       Download MyPOS App
                     </a>
                     <span className={`text-xs self-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      Disarankan untuk kasir dan printer Bluetooth.
+                      Buka dari HP Android untuk install langsung.
                     </span>
                   </div>
                 </div>
