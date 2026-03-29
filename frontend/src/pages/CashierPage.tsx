@@ -342,7 +342,7 @@ export default function CashierPage() {
       toast.success('Payment successful!');
 
       // Generate and print receipt
-      printReceipt(
+      await printReceipt(
         {
           transactionNumber: transactionData?.transactionNumber,
           items: items.map(item => ({

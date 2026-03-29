@@ -1,13 +1,25 @@
 import axios from 'axios';
+import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '../store/authStore';
 
 // Determine API URL dynamically to support LAN/Mobile testing
 const getBaseUrl = () => {
-  // If VITE_API_URL is explicitly set, use it
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  const isNativeApp = Capacitor.isNativePlatform();
+  const configuredApiUrl = isNativeApp
+    ? import.meta.env.VITE_MOBILE_API_URL || import.meta.env.VITE_API_URL
+    : import.meta.env.VITE_API_URL;
+
+  // If API URL is explicitly set, use it
+  if (configuredApiUrl) {
+    return configuredApiUrl;
   }
-  
+
+  // Capacitor Android uses a localhost webview origin, so avoid routing native
+  // app traffic back to the device itself unless we're intentionally on emulator.
+  if (isNativeApp) {
+    return 'http://10.0.2.2:3000/api';
+  }
+
   // If running on localhost/127.0.0.1, default to localhost:3000
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://localhost:3000/api';

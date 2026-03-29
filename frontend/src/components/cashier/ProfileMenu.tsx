@@ -1,9 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, User, Package, LogOut, Save, Plus, Minus, Settings, Printer, Download } from 'lucide-react';
+import {
+  X,
+  User,
+  Package,
+  LogOut,
+  Save,
+  Plus,
+  Minus,
+  Settings,
+  Printer,
+  Download,
+  Bluetooth,
+  RefreshCw,
+  ExternalLink,
+} from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import useConfirmationStore from '../../store/confirmationStore';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import {
+  NativeBluetoothPrinter,
+  clearPrinterSelection,
+  getSavedPrinterSelection,
+  isNativeAndroidApp,
+  savePrinterSelection,
+} from '../../plugins/nativeBluetoothPrinter';
+import type { BondedPrinterDevice } from '../../plugins/nativeBluetoothPrinter';
 
 interface Ingredient {
   id: number;
@@ -26,6 +48,8 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const { user, logout } = useAuthStore();
   const { showConfirmation } = useConfirmationStore();
+  const nativePrinterMode = isNativeAndroidApp();
+  const savedPrinter = getSavedPrinterSelection();
 
   // Profile states
   const [cashierName, setCashierName] = useState(user?.name || '');
@@ -34,6 +58,11 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
   // Settings states
   const [printerDevice, setPrinterDevice] = useState(localStorage.getItem('defaultPrinterDevice') || '');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [nativePrinters, setNativePrinters] = useState<BondedPrinterDevice[]>([]);
+  const [selectedNativePrinterAddress, setSelectedNativePrinterAddress] = useState(savedPrinter.address);
+  const [nativeBluetoothEnabled, setNativeBluetoothEnabled] = useState(false);
+  const [isLoadingNativePrinters, setIsLoadingNativePrinters] = useState(false);
+  const [isTestingNativePrinter, setIsTestingNativePrinter] = useState(false);
 
   // Inventory states
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -136,6 +165,61 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen, activeTab, loadIngredients]);
 
+  const ensureNativePrinterPermissions = useCallback(async () => {
+    if (!nativePrinterMode) {
+      return false;
+    }
+
+    try {
+      const permissionResult = await NativeBluetoothPrinter.ensurePermissions();
+      return permissionResult.granted;
+    } catch (error) {
+      console.error('Failed to request Bluetooth permissions:', error);
+      toast.error('Izin Bluetooth diperlukan untuk mencari printer');
+      return false;
+    }
+  }, [nativePrinterMode]);
+
+  const loadNativePrinters = useCallback(async () => {
+    if (!nativePrinterMode) {
+      return;
+    }
+
+    setIsLoadingNativePrinters(true);
+    try {
+      const granted = await ensureNativePrinterPermissions();
+      if (!granted) {
+        return;
+      }
+
+      const bluetoothState = await NativeBluetoothPrinter.getBluetoothState();
+      setNativeBluetoothEnabled(Boolean(bluetoothState.enabled));
+
+      const result = await NativeBluetoothPrinter.getBondedPrinters();
+      const printers = [...result.printers].sort((left, right) =>
+        (left.name || left.address).localeCompare(right.name || right.address),
+      );
+
+      setNativePrinters(printers);
+
+      const selectedPrinter = printers.find((printer) => printer.address === selectedNativePrinterAddress);
+      if (!selectedPrinter && printers.length === 1) {
+        setSelectedNativePrinterAddress(printers[0].address);
+      }
+    } catch (error) {
+      console.error('Failed to load bonded Bluetooth printers:', error);
+      toast.error('Gagal memuat printer Bluetooth');
+    } finally {
+      setIsLoadingNativePrinters(false);
+    }
+  }, [ensureNativePrinterPermissions, nativePrinterMode, selectedNativePrinterAddress]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'settings' && nativePrinterMode) {
+      loadNativePrinters();
+    }
+  }, [activeTab, isOpen, loadNativePrinters, nativePrinterMode]);
+
   // PWA install prompt handler
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -157,6 +241,80 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
     } catch (error) {
       console.error('Error saving printer device:', error);
       toast.error('Gagal menyimpan printer device');
+    }
+  };
+
+  const handleSaveNativePrinter = () => {
+    const selectedPrinter = nativePrinters.find((printer) => printer.address === selectedNativePrinterAddress);
+    if (!selectedPrinter) {
+      toast.error('Pilih printer Bluetooth terlebih dahulu');
+      return;
+    }
+
+    savePrinterSelection({
+      address: selectedPrinter.address,
+      name: selectedPrinter.name || selectedPrinter.address,
+    });
+    localStorage.setItem('defaultPrinterDevice', selectedPrinter.name || selectedPrinter.address);
+    setPrinterDevice(selectedPrinter.name || selectedPrinter.address);
+    toast.success(`Printer ${selectedPrinter.name || selectedPrinter.address} tersimpan`);
+  };
+
+  const handleResetNativePrinter = () => {
+    clearPrinterSelection();
+    localStorage.removeItem('defaultPrinterDevice');
+    setSelectedNativePrinterAddress('');
+    setPrinterDevice('');
+    toast.success('Default printer berhasil dihapus');
+  };
+
+  const handleOpenBluetoothSettings = async () => {
+    try {
+      await NativeBluetoothPrinter.openBluetoothSettings();
+    } catch (error) {
+      console.error('Failed to open Bluetooth settings:', error);
+      toast.error('Tidak bisa membuka pengaturan Bluetooth');
+    }
+  };
+
+  const handleTestNativePrinter = async () => {
+    const selectedPrinter = nativePrinters.find((printer) => printer.address === selectedNativePrinterAddress);
+    if (!selectedPrinter) {
+      toast.error('Pilih printer Bluetooth terlebih dahulu');
+      return;
+    }
+
+    setIsTestingNativePrinter(true);
+    try {
+      const granted = await ensureNativePrinterPermissions();
+      if (!granted) {
+        return;
+      }
+
+      await NativeBluetoothPrinter.printFormattedText({
+        address: selectedPrinter.address,
+        text:
+          `[C]<b>MyPOS Test Print</b>\n` +
+          `[C]${new Date().toLocaleString('id-ID')}\n` +
+          `[C]==============================\n` +
+          `[L]Printer:[R]${selectedPrinter.name || selectedPrinter.address}\n` +
+          `[L]Status:[R]Siap digunakan\n` +
+          `[C]==============================\n` +
+          `[C]Test print berhasil\n`,
+        printerDpi: 203,
+        printerWidthMm: 48,
+        printerNbrCharactersPerLine: 32,
+        feedPaperMm: 18,
+        cutPaper: false,
+      });
+
+      toast.success('Test print berhasil dikirim');
+      handleSaveNativePrinter();
+    } catch (error) {
+      console.error('Failed to print test receipt:', error);
+      toast.error('Test print gagal. Pastikan printer aktif dan sudah paired.');
+    } finally {
+      setIsTestingNativePrinter(false);
     }
   };
 
@@ -539,72 +697,197 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="space-y-6">
-              {/* Printer Device Settings */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
-                  <Printer size={20} />
-                  Pengaturan Printer
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Device Printer Default
-                    </label>
-                    <input
-                      type="text"
-                      value={printerDevice}
-                      onChange={(e) => setPrinterDevice(e.target.value)}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      placeholder="Contoh: EPSON TM-T82, Bluetooth Printer, dll"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Masukkan nama device printer yang sering Anda gunakan
-                    </p>
+              {nativePrinterMode ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                    <Bluetooth size={20} />
+                    Printer Bluetooth Android
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="rounded-lg bg-white border border-blue-100 p-4 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">Status Bluetooth</p>
+                          <p className="text-xs text-gray-500">
+                            {nativeBluetoothEnabled
+                              ? 'Bluetooth aktif. Pilih printer yang sudah paired.'
+                              : 'Bluetooth belum aktif atau printer belum paired.'}
+                          </p>
+                        </div>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            nativeBluetoothEnabled
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
+                          {nativeBluetoothEnabled ? 'Aktif' : 'Perlu dicek'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <button
+                          onClick={handleOpenBluetoothSettings}
+                          className="flex-1 bg-white border border-blue-200 text-blue-700 py-2.5 rounded-lg hover:bg-blue-100 transition-colors font-medium flex items-center justify-center gap-2"
+                        >
+                          <ExternalLink size={16} />
+                          Buka Pengaturan Bluetooth
+                        </button>
+                        <button
+                          onClick={loadNativePrinters}
+                          disabled={isLoadingNativePrinters}
+                          className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:bg-blue-400"
+                        >
+                          <RefreshCw size={16} className={isLoadingNativePrinters ? 'animate-spin' : ''} />
+                          {isLoadingNativePrinters ? 'Memuat...' : 'Muat Printer'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Printer Tersambung / Paired
+                      </label>
+                      <div className="space-y-2">
+                        {nativePrinters.length > 0 ? (
+                          nativePrinters.map((printer) => (
+                            <label
+                              key={printer.address}
+                              className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                                selectedNativePrinterAddress === printer.address
+                                  ? 'border-blue-500 bg-blue-100'
+                                  : 'border-gray-200 bg-white hover:border-blue-200'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="native-printer"
+                                value={printer.address}
+                                checked={selectedNativePrinterAddress === printer.address}
+                                onChange={() => setSelectedNativePrinterAddress(printer.address)}
+                                className="h-4 w-4 text-blue-600"
+                              />
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-gray-800 truncate">
+                                  {printer.name || 'Unnamed Printer'}
+                                </p>
+                                <p className="text-xs text-gray-500">{printer.address}</p>
+                              </div>
+                            </label>
+                          ))
+                        ) : (
+                          <div className="rounded-lg border border-dashed border-blue-200 bg-white p-4 text-sm text-gray-600">
+                            Belum ada printer paired yang terdeteksi. Pair printer di Bluetooth Android
+                            dulu, lalu klik <span className="font-semibold">Muat Printer</span>.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg bg-white border border-blue-100 p-4">
+                      <p className="text-sm font-semibold text-gray-800">Default Printer</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {printerDevice
+                          ? `Printer aktif: ${printerDevice}`
+                          : 'Belum ada printer default yang disimpan di aplikasi ini.'}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={handleSaveNativePrinter}
+                        disabled={!selectedNativePrinterAddress}
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                      >
+                        <Save size={18} />
+                        Simpan Printer Default
+                      </button>
+                      <button
+                        onClick={handleTestNativePrinter}
+                        disabled={!selectedNativePrinterAddress || isTestingNativePrinter}
+                        className="w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:bg-emerald-300 disabled:cursor-not-allowed"
+                      >
+                        <Printer size={18} />
+                        {isTestingNativePrinter ? 'Mengirim Test Print...' : 'Test Print'}
+                      </button>
+                      <button
+                        onClick={handleResetNativePrinter}
+                        className="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
+                      >
+                        Hapus Default Printer
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={handleSavePrinterDevice}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2"
-                  >
-                    <Save size={18} />
-                    Simpan Pengaturan Printer
-                  </button>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                    <Printer size={20} />
+                    Pengaturan Printer
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Device Printer Default
+                      </label>
+                      <input
+                        type="text"
+                        value={printerDevice}
+                        onChange={(e) => setPrinterDevice(e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        placeholder="Contoh: EPSON TM-T82, Bluetooth Printer, dll"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Masukkan nama device printer yang sering Anda gunakan
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleSavePrinterDevice}
+                      className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2"
+                    >
+                      <Save size={18} />
+                      Simpan Pengaturan Printer
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* PWA Install */}
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center gap-2">
-                  <Download size={20} />
-                  Install Aplikasi Kasir
-                </h3>
-                <p className="text-sm text-gray-700 mb-4">
-                  Install aplikasi kasir di perangkat Anda untuk akses yang lebih cepat dan mudah.
-                  Aplikasi dapat digunakan secara offline dan memberikan pengalaman seperti aplikasi native.
-                </p>
-                <div className="bg-white rounded-lg p-4 mb-4 border border-purple-200">
-                  <h4 className="font-semibold text-sm mb-2 text-gray-800">✨ Keuntungan Install:</h4>
-                  <ul className="text-xs text-gray-600 space-y-1">
-                    <li>• Akses cepat dari home screen</li>
-                    <li>• Bekerja offline (data tersimpan lokal)</li>
-                    <li>• Notifikasi real-time</li>
-                    <li>• Pengalaman seperti aplikasi native</li>
-                    <li>• Tidak perlu buka browser</li>
-                  </ul>
-                </div>
-                <button
-                  onClick={handleInstallPWA}
-                  disabled={!deferredPrompt}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-semibold flex items-center justify-center gap-2 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg"
-                >
-                  <Download size={18} />
-                  {deferredPrompt ? 'Install Aplikasi Kasir' : 'Aplikasi Sudah Terinstall'}
-                </button>
-                {!deferredPrompt && (
-                  <p className="text-xs text-center text-gray-500 mt-2">
-                    ℹ️ Aplikasi sudah terinstall atau browser tidak mendukung instalasi PWA
+              {!nativePrinterMode && (
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center gap-2">
+                    <Download size={20} />
+                    Install Aplikasi Kasir
+                  </h3>
+                  <p className="text-sm text-gray-700 mb-4">
+                    Install aplikasi kasir di perangkat Anda untuk akses yang lebih cepat dan mudah.
+                    Aplikasi dapat digunakan secara offline dan memberikan pengalaman seperti aplikasi native.
                   </p>
-                )}
-              </div>
+                  <div className="bg-white rounded-lg p-4 mb-4 border border-purple-200">
+                    <h4 className="font-semibold text-sm mb-2 text-gray-800">✨ Keuntungan Install:</h4>
+                    <ul className="text-xs text-gray-600 space-y-1">
+                      <li>• Akses cepat dari home screen</li>
+                      <li>• Bekerja offline (data tersimpan lokal)</li>
+                      <li>• Notifikasi real-time</li>
+                      <li>• Pengalaman seperti aplikasi native</li>
+                      <li>• Tidak perlu buka browser</li>
+                    </ul>
+                  </div>
+                  <button
+                    onClick={handleInstallPWA}
+                    disabled={!deferredPrompt}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-semibold flex items-center justify-center gap-2 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg"
+                  >
+                    <Download size={18} />
+                    {deferredPrompt ? 'Install Aplikasi Kasir' : 'Aplikasi Sudah Terinstall'}
+                  </button>
+                  {!deferredPrompt && (
+                    <p className="text-xs text-center text-gray-500 mt-2">
+                      ℹ️ Aplikasi sudah terinstall atau browser tidak mendukung instalasi PWA
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

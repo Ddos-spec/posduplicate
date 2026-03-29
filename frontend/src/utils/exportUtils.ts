@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { printNativeReceipt } from './nativePrinter';
 
 interface SalesDataPoint {
   date: string;
@@ -207,10 +208,19 @@ export const exportProductsExcel = (products: TopProduct[]) => {
 };
 
 // Print Receipt/Struk for Transaction (HTML Method matching TransactionHistory)
-export const printReceipt = (
+export const printReceipt = async (
   transactionData: ReceiptData,
   settings?: TenantPrintSettings
 ) => {
+  try {
+    const printedNatively = await printNativeReceipt(transactionData, settings);
+    if (printedNatively) {
+      return;
+    }
+  } catch (error) {
+    console.error('Native receipt print failed, falling back to HTML print:', error);
+  }
+
   const receiptWindow = window.open('', '_blank');
   if (!receiptWindow) {
     alert('Please allow popups to print receipt');

@@ -27,7 +27,12 @@ app.set('trust proxy', 1);
 // Middleware
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',')
-  : ['http://localhost:5173', 'http://localhost:3000'];
+  : [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://localhost',
+      'capacitor://localhost'
+    ];
 
 app.use(cors({
   origin: (origin, callback) => {
