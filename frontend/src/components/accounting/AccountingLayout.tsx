@@ -63,7 +63,12 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
   };
 
   useEffect(() => {
-    fetchNotifications();
+    void fetchNotifications();
+    const intervalId = window.setInterval(() => {
+      void fetchNotifications();
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
   }, [fetchNotifications]);
 
   const roleLabel = (user?.roles?.name || user?.role?.name || '').toString();
@@ -401,7 +406,10 @@ export default function AccountingLayout({ variant = 'owner' }: AccountingLayout
 
             {/* Notifications */}
             <button
-              onClick={togglePanel}
+              onClick={() => {
+                void fetchNotifications();
+                togglePanel();
+              }}
               className={`relative p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
             >
               <Bell className="w-5 h-5" />

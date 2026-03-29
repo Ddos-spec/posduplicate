@@ -1,6 +1,183 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 
+const RECENT_ACTIVITY_WINDOW_HOURS = 72;
+const IMPORTANT_ACTIVITY_ACTIONS = [
+  'UPDATE_TRANSACTION_STATUS',
+  'product_create',
+  'product_update',
+  'product_delete',
+  'ingredient_create',
+  'ingredient_update',
+  'ingredient_delete',
+  'stock_in',
+  'stock_out',
+  'stock_increase',
+  'stock_decrease',
+  'stock_movement_delete',
+  'expense_create',
+  'expense_update',
+  'expense_delete',
+  'supplier_create',
+  'supplier_update',
+  'supplier_delete',
+];
+
+const toRecord = (value: unknown): Record<string, any> | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, any>;
+};
+
+const pickStringValue = (value: Record<string, any> | null, keys: string[]) => {
+  if (!value) return null;
+
+  for (const key of keys) {
+    const candidate = value[key];
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  return null;
+};
+
+const humanizeFieldName = (value: string) => {
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const extractEntityName = (log: any) => {
+  const oldValue = toRecord(log.old_value);
+  const newValue = toRecord(log.new_value);
+
+  return (
+    pickStringValue(newValue, ['name', 'itemName', 'category', 'description']) ||
+    pickStringValue(oldValue, ['name', 'itemName', 'category', 'description']) ||
+    (log.entity_id ? `#${log.entity_id}` : null)
+  );
+};
+
+const summarizeChangedFields = (oldValue: unknown, newValue: unknown) => {
+  const oldRecord = toRecord(oldValue);
+  const newRecord = toRecord(newValue);
+
+  if (!oldRecord || !newRecord) {
+    return [];
+  }
+
+  const excludedKeys = new Set(['id', 'created_at', 'updated_at', 'deleted_at']);
+  const keys = Array.from(new Set([...Object.keys(oldRecord), ...Object.keys(newRecord)]));
+
+  return keys
+    .filter((key) => !excludedKeys.has(key))
+    .filter((key) => JSON.stringify(oldRecord[key]) !== JSON.stringify(newRecord[key]))
+    .slice(0, 3)
+    .map(humanizeFieldName);
+};
+
+const buildActivityDetails = (log: any) => {
+  if (typeof log.reason === 'string' && log.reason.trim().length > 0) {
+    return `Alasan: ${log.reason.trim()}`;
+  }
+
+  const changedFields = summarizeChangedFields(log.old_value, log.new_value);
+  if (changedFields.length > 0) {
+    return `Perubahan: ${changedFields.join(', ')}`;
+  }
+
+  return 'Aktivitas berhasil dicatat.';
+};
+
+const getActivityRoute = (actionType: string) => {
+  if (
+    actionType.startsWith('product_') ||
+    actionType.startsWith('ingredient_') ||
+    actionType.startsWith('stock_') ||
+    actionType.startsWith('supplier_')
+  ) {
+    return '/owner/inventory';
+  }
+
+  if (actionType.startsWith('expense_')) {
+    return '/owner/reports?tab=expenses';
+  }
+
+  return undefined;
+};
+
+const formatActivityNotification = (tenantId: number, log: any) => {
+  const actionType = log.action_type;
+  const actorName = log.users?.name || 'Seseorang';
+  const entityName = extractEntityName(log);
+  const details = buildActivityDetails(log);
+  const newValue = toRecord(log.new_value);
+
+  if (actionType === 'UPDATE_TRANSACTION_STATUS') {
+    const status = typeof newValue?.status === 'string' ? newValue.status.toLowerCase() : 'unknown';
+
+    if (!['cancelled', 'void', 'failed', 'refund'].includes(status)) {
+      return null;
+    }
+
+    return {
+      id: `activity-log-${log.id}`,
+      type: 'transaction_alert',
+      message: `Status transaksi #${log.entity_id} diubah ke ${status.toUpperCase()} oleh ${actorName}`,
+      details,
+      tenantId,
+      createdAt: log.created_at?.toISOString(),
+      entityId: log.entity_id,
+      entityType: log.entity_type,
+      actionType,
+      actorName,
+    };
+  }
+
+  const inventoryTarget = entityName ? ` ${entityName}` : '';
+
+  const messageMap: Record<string, string> = {
+    product_create: `${actorName} menambahkan menu${inventoryTarget}`,
+    product_update: `${actorName} mengubah menu${inventoryTarget}`,
+    product_delete: `${actorName} menghapus menu${inventoryTarget}`,
+    ingredient_create: `${actorName} menambahkan bahan baku${inventoryTarget}`,
+    ingredient_update: `${actorName} mengubah bahan baku${inventoryTarget}`,
+    ingredient_delete: `${actorName} menghapus bahan baku${inventoryTarget}`,
+    stock_in: `${actorName} menambah stok${inventoryTarget}`,
+    stock_out: `${actorName} mengurangi stok${inventoryTarget}`,
+    stock_increase: `${actorName} menaikkan stok item${inventoryTarget}`,
+    stock_decrease: `${actorName} menurunkan stok item${inventoryTarget}`,
+    stock_movement_delete: `${actorName} menghapus riwayat pergerakan stok${inventoryTarget}`,
+    expense_create: `${actorName} membuat expense baru${inventoryTarget}`,
+    expense_update: `${actorName} memperbarui expense${inventoryTarget}`,
+    expense_delete: `${actorName} menghapus expense${inventoryTarget}`,
+    supplier_create: `${actorName} menambahkan supplier${inventoryTarget}`,
+    supplier_update: `${actorName} mengubah supplier${inventoryTarget}`,
+    supplier_delete: `${actorName} menghapus supplier${inventoryTarget}`,
+  };
+
+  const message = messageMap[actionType];
+  if (!message) {
+    return null;
+  }
+
+  return {
+    id: `activity-log-${log.id}`,
+    type: 'activity_alert',
+    message,
+    details,
+    tenantId,
+    createdAt: log.created_at?.toISOString(),
+    entityId: log.entity_id,
+    entityType: log.entity_type,
+    actionType,
+    actorName,
+    route: getActivityRoute(actionType),
+  };
+};
+
 export const getAdminNotifications = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const now = new Date();
@@ -158,47 +335,47 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
       }
     }
 
-    // Get transaction status changes from activity logs (Last 24 hours)
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    
-    // Find users belonging to this tenant to filter logs
+    const recentActivityThreshold = new Date(now.getTime() - RECENT_ACTIVITY_WINDOW_HOURS * 60 * 60 * 1000);
+
+    const tenantOutlets = await prisma.outlets.findMany({
+      where: { tenant_id: tenantId },
+      select: { id: true }
+    });
+    const tenantOutletIds = tenantOutlets.map((outlet) => outlet.id);
+
+    // Find users belonging to this tenant to help recover older logs that may not have outlet_id set.
     const tenantUsers = await prisma.users.findMany({
       where: { tenant_id: tenantId },
       select: { id: true, name: true }
     });
     const tenantUserIds = tenantUsers.map(u => u.id);
 
+    const recentActivityConditions: any[] = [];
+    if (tenantOutletIds.length > 0) {
+      recentActivityConditions.push({ outlet_id: { in: tenantOutletIds } });
+    }
     if (tenantUserIds.length > 0) {
+      recentActivityConditions.push({ user_id: { in: tenantUserIds } });
+    }
+
+    if (recentActivityConditions.length > 0) {
       const recentActivityLogs = await prisma.activity_logs.findMany({
         where: {
-          user_id: { in: tenantUserIds },
-          action_type: 'UPDATE_TRANSACTION_STATUS',
-          created_at: { gte: twentyFourHoursAgo }
+          OR: recentActivityConditions,
+          action_type: { in: IMPORTANT_ACTIVITY_ACTIONS },
+          created_at: { gte: recentActivityThreshold }
         },
         include: {
-          users: { select: { name: true } } // Get actor name
+          users: { select: { name: true } }
         },
-        orderBy: { created_at: 'desc' }
+        orderBy: { created_at: 'desc' },
+        take: 40
       });
 
       for (const log of recentActivityLogs) {
-        // Safe casting for JSON fields
-        const newValue = log.new_value as { status?: string } | null;
-        const status = newValue?.status || 'unknown';
-        const reason = log.reason || 'No reason provided';
-        const actorName = log.users?.name || 'Unknown User';
-
-        // Only notify for sensitive statuses
-        if (['cancelled', 'void', 'failed', 'refund'].includes(status)) {
-           notifications.push({
-            id: `activity-log-${log.id}`,
-            type: 'transaction_alert', // New type
-            message: `Transaction status changed to ${status.toUpperCase()} by ${actorName}`,
-            details: `Reason: ${reason}`,
-            tenantId: tenant.id,
-            createdAt: log.created_at?.toISOString(),
-            entityId: log.entity_id,
-          });
+        const formattedNotification = formatActivityNotification(tenant.id, log);
+        if (formattedNotification) {
+          notifications.push(formattedNotification);
         }
       }
     }

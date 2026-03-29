@@ -1,5 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
+import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+
+const buildProductLogSnapshot = (product: any) => ({
+  id: product.id,
+  name: product.name,
+  price: product.price,
+  category_id: product.category_id,
+  outlet_id: product.outlet_id,
+  is_active: product.is_active,
+  track_stock: product.track_stock,
+  stock: product.stock
+});
+
+const normalizeReason = (value: unknown, fallback: string) => {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
+};
 
 /**
  * Get all products with filters
@@ -208,6 +224,21 @@ export const createProduct = async (req: Request, res: Response, _next: NextFunc
       data: createData
     });
 
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'product_create',
+        'product',
+        product.id,
+        null,
+        buildProductLogSnapshot(product),
+        normalizeReason(productData.reason, 'Created product'),
+        product.outlet_id || outletId
+      );
+    } catch (logError) {
+      console.error('Failed to create product activity log:', logError);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Product created successfully',
@@ -311,6 +342,21 @@ export const updateProduct = async (req: Request, res: Response, _next: NextFunc
       data: mappedUpdate
     });
 
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'product_update',
+        'product',
+        updatedProduct.id,
+        buildProductLogSnapshot(product),
+        buildProductLogSnapshot(updatedProduct),
+        normalizeReason(updateData.reason, 'Updated product'),
+        updatedProduct.outlet_id || product.outlet_id
+      );
+    } catch (logError) {
+      console.error('Failed to create product activity log:', logError);
+    }
+
     res.json({
       success: true,
       message: 'Product updated successfully',
@@ -373,6 +419,21 @@ export const deleteProduct = async (req: Request, res: Response, _next: NextFunc
       where: { id: parseInt(id) },
       data: { is_active: false }
     });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'product_delete',
+        'product',
+        product.id,
+        buildProductLogSnapshot(product),
+        null,
+        normalizeReason(req.body?.reason, 'Soft deleted product'),
+        product.outlet_id
+      );
+    } catch (logError) {
+      console.error('Failed to create product activity log:', logError);
+    }
 
     res.json({
       success: true,
