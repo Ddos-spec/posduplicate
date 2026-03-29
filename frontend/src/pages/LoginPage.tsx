@@ -1,10 +1,25 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import { Eye, EyeOff, Mail, Lock, Shield, Zap, Globe, HelpCircle, CheckCircle, Sun, Moon } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  Shield,
+  Zap,
+  Globe,
+  HelpCircle,
+  CheckCircle,
+  Sun,
+  Moon,
+  Download,
+  Smartphone,
+} from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,6 +30,9 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
   const { isDark, toggleTheme } = useThemeStore();
+  const isNativeApp = Capacitor.isNativePlatform();
+  const androidAppDownloadUrl =
+    import.meta.env.VITE_ANDROID_APP_DOWNLOAD_URL || '/downloads/mypos-latest.apk';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,6 +198,58 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {!isNativeApp && (
+            <div
+              className={`mt-5 rounded-2xl border p-4 ${
+                isDark
+                  ? 'border-slate-700 bg-slate-900/50'
+                  : 'border-indigo-100 bg-indigo-50/70'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={`rounded-xl p-2 ${
+                    isDark ? 'bg-slate-700 text-indigo-300' : 'bg-white text-indigo-600 shadow-sm'
+                  }`}
+                >
+                  <Smartphone className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      Download MyPOS App
+                    </h3>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                        isDark ? 'bg-slate-700 text-slate-200' : 'bg-white text-indigo-600'
+                      }`}
+                    >
+                      Android APK
+                    </span>
+                  </div>
+                  <p className={`mt-1 text-sm leading-5 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Pakai aplikasi Android untuk cetak struk Bluetooth yang lebih stabil. Login tetap
+                    pakai akun yang sama seperti di browser.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <a
+                      href={androidAppDownloadUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download MyPOS App
+                    </a>
+                    <span className={`text-xs self-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Disarankan untuk kasir dan printer Bluetooth.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="relative my-6">

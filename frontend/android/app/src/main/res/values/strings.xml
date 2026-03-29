@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MyPOS</string>
+    <string name="title_activity_main">MyPOS</string>
+    <string name="package_name">com.mypos.app</string>
+    <string name="custom_url_scheme">com.mypos.app</string>
+</resources>
