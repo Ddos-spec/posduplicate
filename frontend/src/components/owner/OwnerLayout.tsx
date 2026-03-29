@@ -27,9 +27,13 @@ export default function OwnerLayout() {
   const { unreadCount, fetchNotifications, togglePanel } = useNotificationStore();
   const { user, logout } = useAuthStore();
 
-  // Fetch notifications on initial load
   useEffect(() => {
-    fetchNotifications();
+    void fetchNotifications();
+    const intervalId = window.setInterval(() => {
+      void fetchNotifications();
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
   }, [fetchNotifications]);
 
   const handleLogout = () => {
@@ -168,7 +172,10 @@ export default function OwnerLayout() {
                 <option>All Outlets</option>
               </select>
               <button
-                onClick={togglePanel}
+                onClick={() => {
+                  void fetchNotifications();
+                  togglePanel();
+                }}
                 className="p-2 rounded-full hover:bg-gray-100 relative"
               >
                 <Bell className="w-5 h-5 text-gray-600" />

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { generateJournalFromPOSTransaction } from '../../../services/autoJournal.service';
 import { safeParseFloat } from '../../../utils/validation';
+import { createActivityLog } from '../../shared/controllers/activity-log.controller';
 
 /**
  * Check stock availability for items before checkout
@@ -797,19 +798,18 @@ export const updateTransactionStatus = async (
       }
     });
 
-    // Log to activity_logs
+    // Log to activity_logs so owner notifications and audit trails stay in sync.
     if (req.userId) {
-      await prisma.activity_logs.create({
-        data: {
-          user_id: req.userId,
-          action_type: 'UPDATE_TRANSACTION_STATUS',
-          entity_type: 'transactions',
-          entity_id: transaction.id,
-          old_value: { status: existingTransaction.status },
-          new_value: { status: status },
-          reason: reason || undefined
-        }
-      });
+      await createActivityLog(
+        req.userId,
+        'UPDATE_TRANSACTION_STATUS',
+        'transactions',
+        transaction.id,
+        { status: existingTransaction.status },
+        { status },
+        reason || null,
+        existingTransaction.outlet_id || null
+      );
     }
 
     res.json({

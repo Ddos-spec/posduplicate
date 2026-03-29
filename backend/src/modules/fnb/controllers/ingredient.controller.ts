@@ -2,10 +2,43 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
 
+const buildIngredientLogSnapshot = (ingredient: any) => ({
+  id: ingredient.id,
+  name: ingredient.name,
+  unit: ingredient.unit,
+  stock: ingredient.stock,
+  min_stock: ingredient.min_stock,
+  cost_per_unit: ingredient.cost_per_unit,
+  outlet_id: ingredient.outlet_id,
+  is_active: ingredient.is_active
+});
+
+const normalizeReason = (value: unknown, fallback: string) => {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
+};
+
+const assertTenantOutletAccess = async (tenantId: number | undefined, outletId: number | null | undefined) => {
+  if (!outletId) {
+    return null;
+  }
+
+  const outlet = await prisma.outlets.findUnique({
+    where: { id: outletId },
+    select: { id: true, tenant_id: true }
+  });
+
+  if (!outlet || (tenantId && outlet.tenant_id !== tenantId)) {
+    return null;
+  }
+
+  return outlet;
+};
+
 export const getIngredients = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, category_id } = req.query;
     const where: any = { is_active: true };
+    let tenantOutletIds: number[] = [];
 
     // Filter by tenant - get all outlets for this tenant
     if (req.tenantId) {
@@ -14,19 +47,28 @@ export const getIngredients = async (req: Request, res: Response, _next: NextFun
         select: { id: true }
       });
 
-      const outletIds = tenantOutlets.map(outlet => outlet.id);
+      tenantOutletIds = tenantOutlets.map(outlet => outlet.id);
 
-      if (outletIds.length > 0) {
-        where.outlet_id = { in: outletIds };
+      if (tenantOutletIds.length > 0) {
+        where.outlet_id = { in: tenantOutletIds };
       } else {
         // No outlets for this tenant, return empty
         return res.json({ success: true, data: [], count: 0 });
       }
     }
 
-    // If specific outlet_id is requested, override tenant filter
+    // If specific outlet_id is requested, only allow outlets inside the same tenant.
     if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+      const parsedOutletId = parseInt(outlet_id as string);
+
+      if (req.tenantId && tenantOutletIds.length > 0 && !tenantOutletIds.includes(parsedOutletId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Access to outlet denied' }
+        });
+      }
+
+      where.outlet_id = parsedOutletId;
     }
 
     if (category_id) {
@@ -50,12 +92,30 @@ export const getIngredients = async (req: Request, res: Response, _next: NextFun
 export const createIngredient = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { name, categoryId, unit, stock, minStock, cost, outletId } = req.body;
+
     if (!name) {
       return res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'Ingredient name is required' }
       });
     }
+
+    if (!outletId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Outlet ID is required' }
+      });
+    }
+
+    const parsedOutletId = parseInt(outletId);
+    const outlet = await assertTenantOutletAccess(req.tenantId, parsedOutletId);
+    if (!outlet) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Access to outlet denied' }
+      });
+    }
+
     const ingredient = await prisma.ingredients.create({
       data: {
         name,
@@ -64,9 +124,25 @@ export const createIngredient = async (req: Request, res: Response, _next: NextF
         stock: stock || 0,
         min_stock: minStock || 0,
         cost_per_unit: cost || 0,
-        outlet_id: outletId
+        outlet_id: parsedOutletId
       }
     });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'ingredient_create',
+        'ingredient',
+        ingredient.id,
+        null,
+        buildIngredientLogSnapshot(ingredient),
+        normalizeReason(req.body.reason, 'Created ingredient'),
+        ingredient.outlet_id
+      );
+    } catch (logError) {
+      console.error('Failed to create ingredient activity log:', logError);
+    }
+
     return res.status(201).json({ success: true, data: ingredient, message: 'Ingredient created successfully' });
   } catch (error) {
     return _next(error);
@@ -77,6 +153,26 @@ export const updateIngredient = async (req: Request, res: Response, _next: NextF
   try {
     const { id } = req.params;
     const { name, unit, stock, minStock, cost, isActive } = req.body;
+
+    const existingIngredient = await prisma.ingredients.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!existingIngredient) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Ingredient not found' }
+      });
+    }
+
+    const outlet = await assertTenantOutletAccess(req.tenantId, existingIngredient.outlet_id);
+    if (!outlet) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Access denied' }
+      });
+    }
+
     const ingredient = await prisma.ingredients.update({
       where: { id: parseInt(id) },
       data: {
@@ -88,6 +184,22 @@ export const updateIngredient = async (req: Request, res: Response, _next: NextF
         ...(isActive !== undefined && { is_active: isActive })
       }
     });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'ingredient_update',
+        'ingredient',
+        ingredient.id,
+        buildIngredientLogSnapshot(existingIngredient),
+        buildIngredientLogSnapshot(ingredient),
+        normalizeReason(req.body.reason, 'Updated ingredient'),
+        ingredient.outlet_id
+      );
+    } catch (logError) {
+      console.error('Failed to create ingredient activity log:', logError);
+    }
+
     return res.json({ success: true, data: ingredient, message: 'Ingredient updated successfully' });
   } catch (error) {
     return _next(error);
@@ -97,10 +209,46 @@ export const updateIngredient = async (req: Request, res: Response, _next: NextF
 export const deleteIngredient = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { id } = req.params;
+
+    const existingIngredient = await prisma.ingredients.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!existingIngredient) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Ingredient not found' }
+      });
+    }
+
+    const outlet = await assertTenantOutletAccess(req.tenantId, existingIngredient.outlet_id);
+    if (!outlet) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Access denied' }
+      });
+    }
+
     await prisma.ingredients.update({
       where: { id: parseInt(id) },
       data: { is_active: false }
     });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'ingredient_delete',
+        'ingredient',
+        existingIngredient.id,
+        buildIngredientLogSnapshot(existingIngredient),
+        null,
+        normalizeReason(req.body?.reason, 'Soft deleted ingredient'),
+        existingIngredient.outlet_id
+      );
+    } catch (logError) {
+      console.error('Failed to create ingredient delete activity log:', logError);
+    }
+
     return res.json({ success: true, message: 'Ingredient deleted successfully' });
   } catch (error) {
     return _next(error);
@@ -142,6 +290,14 @@ export const adjustIngredientStock = async (req: Request, res: Response, _next: 
       return res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Ingredient not found' }
+      });
+    }
+
+    const outlet = await assertTenantOutletAccess(req.tenantId, ingredient.outlet_id);
+    if (!outlet) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Access denied' }
       });
     }
 

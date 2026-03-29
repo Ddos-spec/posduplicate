@@ -138,7 +138,7 @@ router.post('/adjust-stock', adjustIngredientStock); // All roles can adjust sto
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', updateIngredient); // All roles can update stock
+router.put('/:id', ownerOnly, updateIngredient); // Only Owner/Manager can edit ingredient master data
 /**
  * @swagger
  * /api/ingredients/{id}:

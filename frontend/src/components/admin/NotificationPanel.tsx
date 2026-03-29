@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNotificationStore } from '../../store/notificationStore';
 import { Link } from 'react-router-dom';
-import { Bell, AlertTriangle, AlertOctagon } from 'lucide-react';
+import { Activity, Bell, AlertTriangle, AlertOctagon } from 'lucide-react';
 import TransactionDetailModal from '../transaction/TransactionDetailModal';
+import type { AdminNotification } from '../../services/notificationService';
 
 export default function NotificationPanel() {
   const { notifications, isPanelOpen } = useNotificationStore();
@@ -12,7 +13,7 @@ export default function NotificationPanel() {
     return null;
   }
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = (notification: AdminNotification) => {
     if (notification.type === 'transaction_alert' && notification.entityId) {
       setSelectedTransactionId(notification.entityId);
     }
@@ -33,11 +34,10 @@ export default function NotificationPanel() {
           ) : (
             <div className="divide-y">
               {notifications.map(notification => {
-                // Determine styles and icon based on type
                 let bgColor = 'bg-yellow-100';
                 let textColor = 'text-yellow-600';
                 let Icon = AlertTriangle;
-                let linkTo = `/admin/tenants?search=${notification.tenantId}`;
+                let linkTo: string | undefined = `/admin/tenants?search=${notification.tenantId}`;
 
                 if (notification.type === 'overdue') {
                   bgColor = 'bg-red-100';
@@ -51,40 +51,40 @@ export default function NotificationPanel() {
                   bgColor = 'bg-blue-100';
                   textColor = 'text-blue-600';
                   linkTo = '/admin/billing';
+                } else if (notification.type === 'activity_alert') {
+                  bgColor = 'bg-emerald-100';
+                  textColor = 'text-emerald-600';
+                  Icon = Activity;
+                  linkTo = notification.route;
                 }
+
+                const content = (
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-1 p-1.5 rounded-full ${bgColor}`}>
+                      <Icon className={`w-5 h-5 ${textColor}`} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-700">{notification.message}</p>
+                      <p className="text-xs text-gray-500 mt-1">{notification.details}</p>
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        {new Date(notification.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                );
 
                 return (
                   <div
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className="block p-4 hover:bg-gray-50 cursor-pointer"
+                    className={`block p-4 hover:bg-gray-50 ${notification.type === 'transaction_alert' ? 'cursor-pointer' : ''}`}
                   >
-                    {notification.type !== 'transaction_alert' ? (
-                        <Link to={linkTo} className="flex items-start gap-3">
-                            <div className={`mt-1 p-1.5 rounded-full ${bgColor}`}>
-                                <Icon className={`w-5 h-5 ${textColor}`} />
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-700">{notification.message}</p>
-                                <p className="text-xs text-gray-500 mt-1">{notification.details}</p>
-                                <p className="text-[10px] text-gray-400 mt-1">
-                                {new Date(notification.createdAt).toLocaleString()}
-                                </p>
-                            </div>
-                        </Link>
+                    {notification.type === 'transaction_alert' ? (
+                      content
+                    ) : linkTo ? (
+                      <Link to={linkTo}>{content}</Link>
                     ) : (
-                        <div className="flex items-start gap-3">
-                            <div className={`mt-1 p-1.5 rounded-full ${bgColor}`}>
-                                <Icon className={`w-5 h-5 ${textColor}`} />
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-700">{notification.message}</p>
-                                <p className="text-xs text-gray-500 mt-1">{notification.details}</p>
-                                <p className="text-[10px] text-gray-400 mt-1">
-                                {new Date(notification.createdAt).toLocaleString()}
-                                </p>
-                            </div>
-                        </div>
+                      content
                     )}
                   </div>
                 );
@@ -93,9 +93,7 @@ export default function NotificationPanel() {
           )}
         </div>
         <div className="p-2 bg-gray-50 text-center border-t">
-          <Link to="/admin/billing" className="text-sm font-medium text-blue-600 hover:underline">
-            View All Billings
-          </Link>
+          <p className="text-xs text-gray-500">Notifications refresh automatically every 30 seconds.</p>
         </div>
       </div>
 

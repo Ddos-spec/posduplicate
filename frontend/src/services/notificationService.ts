@@ -2,12 +2,16 @@ import api from './api';
 
 export interface AdminNotification {
   id: string;
-  type: 'expiring' | 'overdue' | 'billing' | 'transaction_alert';
+  type: 'expiring' | 'overdue' | 'billing' | 'transaction_alert' | 'activity_alert';
   message: string;
   details: string;
   tenantId: number;
   createdAt: string;
   entityId?: number;
+  entityType?: string;
+  actionType?: string;
+  actorName?: string;
+  route?: string;
 }
 
 export const notificationService = {
