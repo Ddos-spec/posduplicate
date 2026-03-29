@@ -3,9 +3,9 @@ import { useThemeStore } from '../../store/themeStore';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
-  Search, Download, RefreshCw, Loader2, Plus,
+  Search, Loader2, Plus,
   Building2, Truck, Monitor, Package, Trash2,
-  ChevronLeft, ChevronRight, X, Calculator, History
+  ChevronLeft, ChevronRight, X, Calculator
 } from 'lucide-react';
 
 interface Asset {

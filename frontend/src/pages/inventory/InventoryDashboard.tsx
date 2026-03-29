@@ -41,7 +41,7 @@ export default function InventoryDashboard() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const outletId = user?.outlet_id;
+        const outletId = user?.outletId;
 
         const [statsRes, alertsRes, forecastRes] = await Promise.all([
           inventoryService.getStats(outletId),
@@ -60,7 +60,7 @@ export default function InventoryDashboard() {
     };
 
     fetchData();
-  }, [isDemo, user?.outlet_id]);
+  }, [isDemo, user?.outletId]);
 
   // Map alerts to display format
   const displayAlerts = isDemo ? MOCK_ALERTS : alertsData.map(a => ({

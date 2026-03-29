@@ -3,7 +3,7 @@ import { useThemeStore } from '../../store/themeStore';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
-  Calculator, TrendingUp, TrendingDown, AlertTriangle, CheckCircle,
+  Calculator, TrendingUp, TrendingDown, AlertTriangle,
   Star, Target, HelpCircle, Trash2, RefreshCw, DollarSign, PieChart,
   BarChart3, Zap, Package
 } from 'lucide-react';
