@@ -1,6 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { safeParseInt } from '../../../utils/validation';
+import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+
+const buildTableLogSnapshot = (table: any) => ({
+  id: table.id,
+  name: table.name,
+  capacity: table.capacity,
+  status: table.status,
+  outlet_id: table.outlet_id,
+  is_active: table.is_active
+});
+
+const normalizeReason = (value: unknown, fallback: string) => {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
+};
 
 /**
  * Get tenant outlet IDs for isolation
@@ -185,7 +199,76 @@ export const createTable = async (req: Request, res: Response, next: NextFunctio
       }
     });
 
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'table_create',
+        'table',
+        table.id,
+        null,
+        buildTableLogSnapshot(table),
+        normalizeReason(req.body.reason, 'Created table'),
+        table.outlet_id
+      );
+    } catch (logError) {
+      console.error('Failed to create table activity log:', logError);
+    }
+
     res.status(201).json({ success: true, data: table, message: 'Table created successfully' });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const updateTable = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { name, capacity } = req.body;
+    const tableId = safeParseInt(id);
+
+    const existing = await prisma.tables.findUnique({
+      where: { id: tableId },
+      include: { outlets: true }
+    });
+
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Table not found' }
+      });
+    }
+
+    if (req.tenantId && existing.outlets && existing.outlets.tenant_id !== req.tenantId) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Access denied' }
+      });
+    }
+
+    const table = await prisma.tables.update({
+      where: { id: tableId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(capacity !== undefined && { capacity: safeParseInt(capacity, existing.capacity || 4) })
+      }
+    });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'table_update',
+        'table',
+        table.id,
+        buildTableLogSnapshot(existing),
+        buildTableLogSnapshot(table),
+        normalizeReason(req.body.reason, 'Updated table'),
+        table.outlet_id ?? existing.outlet_id
+      );
+    } catch (logError) {
+      console.error('Failed to create table update log:', logError);
+    }
+
+    res.json({ success: true, data: table, message: 'Table updated successfully' });
   } catch (error) {
     return next(error);
   }
@@ -223,6 +306,21 @@ export const deleteTable = async (req: Request, res: Response, next: NextFunctio
       where: { id: tableId },
       data: { is_active: false }
     });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'table_delete',
+        'table',
+        existing.id,
+        buildTableLogSnapshot(existing),
+        null,
+        normalizeReason(req.body?.reason, 'Deleted table'),
+        existing.outlet_id
+      );
+    } catch (logError) {
+      console.error('Failed to create table delete log:', logError);
+    }
 
     res.json({ success: true, message: 'Table deleted successfully' });
   } catch (error) {

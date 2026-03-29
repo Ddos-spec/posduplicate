@@ -1,5 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
+import { createActivityLog } from './activity-log.controller';
+
+const normalizeReason = (value: unknown, fallback: string) => {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
+};
+
+const buildOutletLogSnapshot = (outlet: any) => ({
+  id: outlet.id,
+  tenant_id: outlet.tenant_id,
+  name: outlet.name,
+  address: outlet.address,
+  phone: outlet.phone,
+  email: outlet.email,
+  npwp: outlet.npwp,
+  settings: outlet.settings,
+  is_active: outlet.is_active
+});
 
 /**
  * Get all outlets (filtered by tenant)
@@ -206,6 +223,21 @@ export const createOutlet = async (
       }
     });
 
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'outlet_create',
+        'outlet',
+        outlet.id,
+        null,
+        buildOutletLogSnapshot(outlet),
+        normalizeReason(req.body.reason, 'Created outlet'),
+        outlet.id
+      );
+    } catch (logError) {
+      console.error('Failed to create outlet activity log:', logError);
+    }
+
     res.status(201).json({
       success: true,
       data: outlet.tenants
@@ -283,6 +315,21 @@ export const updateOutlet = async (
       }
     });
 
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'outlet_update',
+        'outlet',
+        outlet.id,
+        buildOutletLogSnapshot(existing),
+        buildOutletLogSnapshot(outlet),
+        normalizeReason(req.body.reason, 'Updated outlet'),
+        outlet.id
+      );
+    } catch (logError) {
+      console.error('Failed to create outlet update log:', logError);
+    }
+
     res.json({
       success: true,
       data: outlet.tenants
@@ -342,6 +389,21 @@ export const deleteOutlet = async (
       data: { is_active: false }
     });
 
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'outlet_delete',
+        'outlet',
+        existing.id,
+        buildOutletLogSnapshot(existing),
+        null,
+        normalizeReason(req.body?.reason, 'Deactivated outlet'),
+        existing.id
+      );
+    } catch (logError) {
+      console.error('Failed to create outlet delete log:', logError);
+    }
+
     res.json({
       success: true,
       message: 'Outlet deactivated successfully'
@@ -366,6 +428,7 @@ export const getOutletSettings = async (
       where: { id: parseInt(id) },
       select: {
         id: true,
+        tenant_id: true,
         name: true,
         settings: true
       }
@@ -381,9 +444,23 @@ export const getOutletSettings = async (
       });
     }
 
+    if (req.tenantId && outlet.tenant_id !== req.tenantId) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Access denied'
+        }
+      });
+    }
+
     res.json({
       success: true,
-      data: outlet
+      data: {
+        id: outlet.id,
+        name: outlet.name,
+        settings: outlet.settings
+      }
     });
   } catch (error) {
     return _next(error);
@@ -400,12 +477,51 @@ export const updateOutletSettings = async (
 ) => {
   try {
     const { id } = req.params;
-    const settings = req.body;
+    const { reason, ...settings } = req.body;
+
+    const existing = await prisma.outlets.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'OUTLET_NOT_FOUND',
+          message: 'Outlet not found'
+        }
+      });
+    }
+
+    if (req.tenantId && existing.tenant_id !== req.tenantId) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Access denied'
+        }
+      });
+    }
 
     const outlet = await prisma.outlets.update({
       where: { id: parseInt(id) },
       data: { settings }
     });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'outlet_update',
+        'outlet',
+        outlet.id,
+        buildOutletLogSnapshot(existing),
+        buildOutletLogSnapshot(outlet),
+        normalizeReason(reason, 'Updated outlet settings'),
+        outlet.id
+      );
+    } catch (logError) {
+      console.error('Failed to create outlet settings log:', logError);
+    }
 
     res.json({
       success: true,

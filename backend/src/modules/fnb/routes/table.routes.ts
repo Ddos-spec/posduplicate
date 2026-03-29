@@ -3,7 +3,9 @@ import {
   getTables,
   getAvailableTables,
   updateTableStatus,
-  createTable
+  createTable,
+  updateTable,
+  deleteTable
 } from '../controllers/table.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
@@ -95,6 +97,19 @@ router.get('/available', getAvailableTables);
 router.post('/', createTable);
 /**
  * @swagger
+ * /api/tables/{id}:
+ *   put:
+ *     tags: [Tables]
+ *     summary: Update table
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Table updated
+ */
+router.put('/:id', updateTable);
+/**
+ * @swagger
  * /api/tables/{id}/status:
  *   put:
  *     tags: [Tables]
@@ -127,5 +142,18 @@ router.post('/', createTable);
  *               $ref: '#/components/schemas/Error'
  */
 router.put('/:id/status', updateTableStatus);
+/**
+ * @swagger
+ * /api/tables/{id}:
+ *   delete:
+ *     tags: [Tables]
+ *     summary: Delete table
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Table deleted
+ */
+router.delete('/:id', deleteTable);
 
 export default router;

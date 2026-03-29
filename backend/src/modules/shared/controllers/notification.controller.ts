@@ -7,6 +7,18 @@ const IMPORTANT_ACTIVITY_ACTIONS = [
   'product_create',
   'product_update',
   'product_delete',
+  'table_create',
+  'table_update',
+  'table_delete',
+  'category_create',
+  'category_update',
+  'category_delete',
+  'modifier_create',
+  'modifier_update',
+  'modifier_delete',
+  'variant_create',
+  'variant_update',
+  'variant_delete',
   'ingredient_create',
   'ingredient_update',
   'ingredient_delete',
@@ -21,6 +33,13 @@ const IMPORTANT_ACTIVITY_ACTIONS = [
   'supplier_create',
   'supplier_update',
   'supplier_delete',
+  'user_create',
+  'user_update',
+  'user_delete',
+  'user_password_reset',
+  'outlet_create',
+  'outlet_update',
+  'outlet_delete',
 ];
 
 const toRecord = (value: unknown): Record<string, any> | null => {
@@ -94,15 +113,36 @@ const buildActivityDetails = (log: any) => {
 const getActivityRoute = (actionType: string) => {
   if (
     actionType.startsWith('product_') ||
+    actionType.startsWith('table_') ||
+    actionType.startsWith('category_') ||
+    actionType.startsWith('modifier_') ||
+    actionType.startsWith('variant_') ||
     actionType.startsWith('ingredient_') ||
     actionType.startsWith('stock_') ||
     actionType.startsWith('supplier_')
   ) {
+    if (
+      actionType.startsWith('table_') ||
+      actionType.startsWith('category_') ||
+      actionType.startsWith('modifier_') ||
+      actionType.startsWith('variant_')
+    ) {
+      return '/cashier';
+    }
+
     return '/owner/inventory';
   }
 
   if (actionType.startsWith('expense_')) {
     return '/owner/reports?tab=expenses';
+  }
+
+  if (actionType.startsWith('user_')) {
+    return '/owner/users';
+  }
+
+  if (actionType.startsWith('outlet_')) {
+    return '/owner/outlets';
   }
 
   return undefined;
@@ -142,6 +182,18 @@ const formatActivityNotification = (tenantId: number, log: any) => {
     product_create: `${actorName} menambahkan menu${inventoryTarget}`,
     product_update: `${actorName} mengubah menu${inventoryTarget}`,
     product_delete: `${actorName} menghapus menu${inventoryTarget}`,
+    table_create: `${actorName} menambahkan meja${inventoryTarget}`,
+    table_update: `${actorName} mengubah meja${inventoryTarget}`,
+    table_delete: `${actorName} menghapus meja${inventoryTarget}`,
+    category_create: `${actorName} menambahkan kategori${inventoryTarget}`,
+    category_update: `${actorName} mengubah kategori${inventoryTarget}`,
+    category_delete: `${actorName} menghapus kategori${inventoryTarget}`,
+    modifier_create: `${actorName} menambahkan modifier${inventoryTarget}`,
+    modifier_update: `${actorName} mengubah modifier${inventoryTarget}`,
+    modifier_delete: `${actorName} menghapus modifier${inventoryTarget}`,
+    variant_create: `${actorName} menambahkan varian${inventoryTarget}`,
+    variant_update: `${actorName} mengubah varian${inventoryTarget}`,
+    variant_delete: `${actorName} menghapus varian${inventoryTarget}`,
     ingredient_create: `${actorName} menambahkan bahan baku${inventoryTarget}`,
     ingredient_update: `${actorName} mengubah bahan baku${inventoryTarget}`,
     ingredient_delete: `${actorName} menghapus bahan baku${inventoryTarget}`,
@@ -156,6 +208,13 @@ const formatActivityNotification = (tenantId: number, log: any) => {
     supplier_create: `${actorName} menambahkan supplier${inventoryTarget}`,
     supplier_update: `${actorName} mengubah supplier${inventoryTarget}`,
     supplier_delete: `${actorName} menghapus supplier${inventoryTarget}`,
+    user_create: `${actorName} membuat akun pengguna${inventoryTarget}`,
+    user_update: `${actorName} mengubah akun pengguna${inventoryTarget}`,
+    user_delete: `${actorName} menonaktifkan atau menghapus pengguna${inventoryTarget}`,
+    user_password_reset: `${actorName} mereset password pengguna${inventoryTarget}`,
+    outlet_create: `${actorName} menambahkan outlet${inventoryTarget}`,
+    outlet_update: `${actorName} mengubah outlet${inventoryTarget}`,
+    outlet_delete: `${actorName} menonaktifkan outlet${inventoryTarget}`,
   };
 
   const message = messageMap[actionType];
@@ -264,6 +323,8 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
     }
 
     const now = new Date();
+    const privilegedRoles = new Set(['Owner', 'Manager', 'Super Admin', 'Admin']);
+    const canViewManagementAlerts = privilegedRoles.has(req.userRole || '');
 
     // Get subscription-related notifications for this tenant
     const tenant = await prisma.tenants.findUnique({
@@ -373,6 +434,11 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
       });
 
       for (const log of recentActivityLogs) {
+        const isManagementAlert = log.action_type.startsWith('user_') || log.action_type.startsWith('outlet_');
+        if (isManagementAlert && !canViewManagementAlerts) {
+          continue;
+        }
+
         const formattedNotification = formatActivityNotification(tenant.id, log);
         if (formattedNotification) {
           notifications.push(formattedNotification);

@@ -4,6 +4,7 @@ import {
   login,
   register,
   getMe,
+  updateMe,
   changePassword
 } from '../controllers/auth.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
@@ -134,6 +135,7 @@ router.post('/register', authLimiter, validateRegister, register);
  *         description: User info retrieved
  */
 router.get('/me', authMiddleware, getMe);
+router.put('/me', authMiddleware, updateMe);
 
 /**
  * @swagger

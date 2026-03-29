@@ -344,14 +344,9 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
 
     setIsUpdatingName(true);
     try {
-      // Update user name in the backend
-      await api.put(`/users/${user?.id}`, { name: cashierName });
+      const response = await api.put('/auth/me', { name: cashierName });
 
-      // Update auth store
-      // We don't need to update localStorage manually as zustand persist handles it
-      // useAuthStore.setState({ user: { ...user!, name: cashierName } });
-      // Better to fetch me again or just update store optimistically if we are sure
-      const updatedUser = { ...user!, name: cashierName };
+      const updatedUser = response.data?.data || { ...user!, name: cashierName };
       useAuthStore.setState({ user: updatedUser });
 
       toast.success('Nama kasir berhasil diperbarui');

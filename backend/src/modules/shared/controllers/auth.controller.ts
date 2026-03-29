@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { createActivityLog } from './activity-log.controller';
 
 // const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Using inline for now as in original code
 
@@ -215,6 +216,91 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
     res.json({
       success: true,
       data: userWithoutPassword
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Update current user profile
+ */
+export const updateMe = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name } = req.body;
+
+    if (typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Name is required' }
+      });
+    }
+
+    const existingUser = await prisma.users.findUnique({
+      where: { id: req.userId },
+      include: {
+        roles: true,
+        tenants_users_tenant_idTotenants: true,
+        outlets: true
+      }
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'User not found' }
+      });
+    }
+
+    const updatedUser = await prisma.users.update({
+      where: { id: existingUser.id },
+      data: { name: name.trim() },
+      include: {
+        roles: true,
+        tenants_users_tenant_idTotenants: true,
+        outlets: true
+      }
+    });
+
+    try {
+      await createActivityLog(
+        req.userId || 0,
+        'user_update',
+        'user',
+        updatedUser.id,
+        {
+          id: existingUser.id,
+          name: existingUser.name,
+          email: existingUser.email,
+          role_id: existingUser.role_id,
+          role_name: existingUser.roles?.name ?? null,
+          outlet_id: existingUser.outlet_id ?? null,
+          outlet_name: existingUser.outlets?.name ?? null,
+          is_active: existingUser.is_active
+        },
+        {
+          id: updatedUser.id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          role_id: updatedUser.role_id,
+          role_name: updatedUser.roles?.name ?? null,
+          outlet_id: updatedUser.outlet_id ?? null,
+          outlet_name: updatedUser.outlets?.name ?? null,
+          is_active: updatedUser.is_active
+        },
+        'Updated own profile name',
+        updatedUser.outlet_id ?? null
+      );
+    } catch (logError) {
+      console.error('Failed to create self profile update log:', logError);
+    }
+
+    const { password_hash, ...userWithoutPassword } = updatedUser;
+
+    res.json({
+      success: true,
+      data: userWithoutPassword,
+      message: 'Profile updated successfully'
     });
   } catch (error) {
     return next(error);

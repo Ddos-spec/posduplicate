@@ -9,7 +9,7 @@ import {
   updateOutletSettings
 } from '../controllers/outlet.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { ownerOnly, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 
 const router = Router();
 
@@ -123,7 +123,7 @@ router.get('/:id', getOutletById);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', createOutlet);
+router.post('/', ownerOnly, createOutlet);
 
 /**
  * PUT /api/outlets/:id
@@ -159,7 +159,7 @@ router.post('/', createOutlet);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', updateOutlet);
+router.put('/:id', ownerOnly, updateOutlet);
 
 /**
  * DELETE /api/outlets/:id
@@ -190,7 +190,7 @@ router.put('/:id', updateOutlet);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id', deleteOutlet);
+router.delete('/:id', ownerOnly, deleteOutlet);
 
 /**
  * GET /api/outlets/:id/settings
@@ -260,6 +260,6 @@ router.get('/:id/settings', getOutletSettings);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id/settings', updateOutletSettings);
+router.put('/:id/settings', ownerOnly, updateOutletSettings);
 
 export default router;

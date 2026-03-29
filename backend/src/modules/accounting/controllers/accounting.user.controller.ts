@@ -2,6 +2,35 @@ import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import bcrypt from 'bcrypt';
+import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+
+const normalizeReason = (value: unknown, fallback: string) => {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
+};
+
+const buildUserLogSnapshot = (user: any) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  role_id: user.role_id ?? user.roles?.id ?? null,
+  role_name: user.roles?.name ?? null,
+  outlet_id: user.outlet_id ?? null,
+  outlet_name: user.outlets?.name ?? user.outlet?.name ?? null,
+  is_active: user.is_active
+});
+
+const ensureTenantOutletAccess = async (tenantId: number, outletId: number | null | undefined) => {
+  if (!outletId) {
+    return true;
+  }
+
+  const outlet = await prisma.outlets.findUnique({
+    where: { id: outletId },
+    select: { id: true, tenant_id: true, name: true }
+  });
+
+  return Boolean(outlet && outlet.tenant_id === tenantId);
+};
 
 /**
  * Get Users with Stats
@@ -170,6 +199,15 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     const rawPassword = typeof password === 'string' ? password.trim() : '';
     const tempPassword = rawPassword || `Temp${Math.floor(Math.random() * 10000)}!`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const normalizedOutletId = outletId ? Number(outletId) : null;
+
+    const canAccessOutlet = await ensureTenantOutletAccess(tenantId, normalizedOutletId);
+    if (!canAccessOutlet) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Access to outlet denied' }
+      });
+    }
 
     const user = await prisma.users.create({
         data: {
@@ -178,10 +216,29 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
             email,
             password_hash: passwordHash,
             role_id: roleRecord.id,
-            outlet_id: outletId ? Number(outletId) : null,
+            outlet_id: normalizedOutletId,
             is_active: true,
+        },
+        include: {
+            roles: { select: { id: true, name: true } },
+            outlets: { select: { id: true, name: true } }
         }
     });
+
+    try {
+        await createActivityLog(
+            req.userId || 0,
+            'user_create',
+            'user',
+            user.id,
+            null,
+            buildUserLogSnapshot(user),
+            normalizeReason(req.body.reason, 'Created accounting user'),
+            user.outlet_id ?? null
+        );
+    } catch (logError) {
+        console.error('Failed to create accounting user log:', logError);
+    }
 
     // 4. Send Email (Mock)
     if (sendEmailNotification) {
@@ -215,7 +272,13 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
         const { name, email, role, outletId, is_active, password } = req.body;
         const tenantId = req.tenantId!;
 
-        const user = await prisma.users.findUnique({ where: { id: Number(id) } });
+        const user = await prisma.users.findUnique({
+            where: { id: Number(id) },
+            include: {
+                roles: { select: { id: true, name: true } },
+                outlets: { select: { id: true, name: true } }
+            }
+        });
 
         if (!user || user.tenant_id !== tenantId) {
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
@@ -280,7 +343,15 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
         }
 
         if ('outletId' in req.body) {
-            updates.outlet_id = outletId ? Number(outletId) : null;
+            const normalizedOutletId = outletId ? Number(outletId) : null;
+            const canAccessOutlet = await ensureTenantOutletAccess(tenantId, normalizedOutletId);
+            if (!canAccessOutlet) {
+                return res.status(403).json({
+                    success: false,
+                    error: { code: 'ACCESS_DENIED', message: 'Access to outlet denied' }
+                });
+            }
+            updates.outlet_id = normalizedOutletId;
         }
 
         if (typeof is_active === 'boolean') {
@@ -300,8 +371,27 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
 
         const updated = await prisma.users.update({
             where: { id: user.id },
-            data: updates
+            data: updates,
+            include: {
+                roles: { select: { id: true, name: true } },
+                outlets: { select: { id: true, name: true } }
+            }
         });
+
+        try {
+            await createActivityLog(
+                req.userId || 0,
+                'user_update',
+                'user',
+                updated.id,
+                buildUserLogSnapshot(user),
+                buildUserLogSnapshot(updated),
+                normalizeReason(req.body.reason, 'Updated accounting user'),
+                updated.outlet_id ?? user.outlet_id ?? null
+            );
+        } catch (logError) {
+            console.error('Failed to create accounting user update log:', logError);
+        }
 
         return res.json({ success: true, data: updated });
 
@@ -318,7 +408,13 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
         const { id } = req.params;
         const tenantId = req.tenantId!;
 
-        const user = await prisma.users.findUnique({ where: { id: Number(id) } });
+        const user = await prisma.users.findUnique({
+            where: { id: Number(id) },
+            include: {
+                roles: { select: { id: true, name: true } },
+                outlets: { select: { id: true, name: true } }
+            }
+        });
 
         if (!user || user.tenant_id !== tenantId) {
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
@@ -333,6 +429,16 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
 
         try {
             await prisma.users.delete({ where: { id: user.id } });
+            await createActivityLog(
+                req.userId || 0,
+                'user_delete',
+                'user',
+                user.id,
+                buildUserLogSnapshot(user),
+                null,
+                normalizeReason(req.body?.reason, 'Deleted accounting user'),
+                user.outlet_id ?? null
+            );
             return res.json({ success: true });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {

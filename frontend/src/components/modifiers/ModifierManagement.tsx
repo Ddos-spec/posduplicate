@@ -4,12 +4,12 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { X, Plus, Edit, Trash2, Tag } from 'lucide-react';
 import useConfirmationStore from '../../store/confirmationStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface Modifier {
   id: number;
   name: string;
   price: number;
-  category?: string;
   isActive: boolean;
 }
 
@@ -22,9 +22,10 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingModifier, setEditingModifier] = useState<Modifier | null>(null);
-  const [form, setForm] = useState({ name: '', price: '0', category: 'addon' });
+  const [form, setForm] = useState({ name: '', price: '0' });
   const [isProcessing, setIsProcessing] = useState(false);
   const { showConfirmation } = useConfirmationStore();
+  const { user } = useAuthStore();
 
   useEffect(() => {
     loadModifiers();
@@ -52,12 +53,11 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
       setEditingModifier(modifier);
       setForm({
         name: modifier.name,
-        price: modifier.price.toString(),
-        category: modifier.category || 'addon'
+        price: modifier.price.toString()
       });
     } else {
       setEditingModifier(null);
-      setForm({ name: '', price: '0', category: 'addon' });
+      setForm({ name: '', price: '0' });
     }
     setShowForm(true);
   };
@@ -68,12 +68,18 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
       return;
     }
 
+    const outletId = user?.outletId || user?.outlets?.id;
+    if (!outletId) {
+      toast.error('Outlet ID missing. Please log in again.');
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const data = {
         name: form.name,
         price: parseFloat(form.price),
-        category: form.category
+        outletId
       };
 
       if (editingModifier) {
@@ -134,17 +140,6 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
     );
   };
 
-  const getCategoryBadge = (category?: string) => {
-    const colors: Record<string, string> = {
-      addon: 'bg-blue-100 text-blue-700',
-      size: 'bg-purple-100 text-purple-700',
-      temperature: 'bg-orange-100 text-orange-700',
-      spice: 'bg-red-100 text-red-700',
-      topping: 'bg-green-100 text-green-700'
-    };
-    return colors[category || 'addon'] || 'bg-gray-100 text-gray-700';
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-[90vw] max-w-5xl h-[85vh] flex flex-col">
@@ -183,7 +178,6 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Category</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Price</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Actions</th>
@@ -193,11 +187,6 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
                   {modifiers.map((modifier) => (
                     <tr key={modifier.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium">{modifier.name}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${getCategoryBadge(modifier.category)}`}>
-                          {modifier.category || 'addon'}
-                        </span>
-                      </td>
                       <td className="px-4 py-3 text-blue-600 font-semibold">
                         {modifier.price > 0 ? `+Rp ${modifier.price.toLocaleString('id-ID')}` : 'Free'}
                       </td>
@@ -277,21 +266,6 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g., Extra Shot, Large Size"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Category</label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="addon">Add-on</option>
-                  <option value="size">Size</option>
-                  <option value="temperature">Temperature</option>
-                  <option value="spice">Spice Level</option>
-                  <option value="topping">Topping</option>
-                </select>
               </div>
 
               <div>
