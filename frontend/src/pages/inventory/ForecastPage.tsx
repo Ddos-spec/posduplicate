@@ -26,7 +26,7 @@ export default function ForecastPage() {
     const fetchForecast = async () => {
       try {
         setLoading(true);
-        const response = await inventoryService.getForecast(user?.outlet_id, 7);
+        const response = await inventoryService.getForecast(user?.outletId, 7);
         if (response.success) {
           setForecastData(response.data);
         }
@@ -38,7 +38,7 @@ export default function ForecastPage() {
     };
 
     fetchForecast();
-  }, [isDemo, user?.outlet_id]);
+  }, [isDemo, user?.outletId]);
 
   if (loading) {
     return (

@@ -8,7 +8,7 @@ import {
   LayoutDashboard, BarChart3,
   Users, Settings, LogOut, Bell, Search, Menu, X,
   Sun, Moon, ChevronDown, Calculator, ShoppingCart,
-  Package, Wallet, Building2, CreditCard, Receipt, Landmark, PiggyBank
+  Package, Wallet, Building2
 } from 'lucide-react';
 
 interface MenuItem {

@@ -7,7 +7,7 @@ import { MOCK_PHARMACY_ITEMS, MOCK_RETAIL_ITEMS } from './mockVariantsData';
 import { inventoryService } from '../../services/inventoryService';
 import type { InventoryItem } from '../../services/inventoryService';
 import {
-  Search, Filter, Edit2, History, AlertCircle, CheckCircle, XCircle, ScanBarcode, Truck, Store, Loader2, Plus
+  Search, Filter, Edit2, History, AlertCircle, CheckCircle, XCircle, ScanBarcode, Truck, Store, Loader2
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -45,7 +45,7 @@ export default function StockPage() {
       try {
         setLoading(true);
         const response = await inventoryService.getAll({
-          outlet_id: user?.outlet_id,
+          outlet_id: user?.outletId,
           business_type: businessType
         });
 
@@ -81,7 +81,7 @@ export default function StockPage() {
     };
 
     fetchInventory();
-  }, [isDemo, businessType, user?.outlet_id]);
+  }, [isDemo, businessType, user?.outletId]);
 
   const [editItem, setEditItem] = useState<any | null>(null);
   const [adjustQty, setAdjustQty] = useState<string>('');

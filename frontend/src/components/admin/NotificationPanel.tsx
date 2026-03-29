@@ -38,7 +38,6 @@ export default function NotificationPanel() {
                 let textColor = 'text-yellow-600';
                 let Icon = AlertTriangle;
                 let linkTo = `/admin/tenants?search=${notification.tenantId}`;
-                let isClickable = true;
 
                 if (notification.type === 'overdue') {
                   bgColor = 'bg-red-100';

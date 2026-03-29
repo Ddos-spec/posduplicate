@@ -28,7 +28,7 @@ export default function InventorySettings() {
     const fetchSettings = async () => {
       try {
         setLoading(true);
-        const response = await inventorySettingsService.get(user?.outlet_id!);
+        const response = await inventorySettingsService.get(user?.outletId!);
         if (response.success && response.data) {
           const data = response.data;
           setSettings(data);
@@ -48,7 +48,7 @@ export default function InventorySettings() {
     };
 
     fetchSettings();
-  }, [isDemo, user?.outlet_id]);
+  }, [isDemo, user?.outletId]);
 
   const handleSave = async () => {
     if (isDemo) {
@@ -58,7 +58,7 @@ export default function InventorySettings() {
 
     try {
       setSaving(true);
-      const response = await inventorySettingsService.update(user?.outlet_id!, {
+      const response = await inventorySettingsService.update(user?.outletId!, {
         track_expiry: expiryAlert,
         settings: {
           ...settings.settings,

@@ -3,7 +3,7 @@ import { useThemeStore } from '../../store/themeStore';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
-  Search, Download, RefreshCw, Loader2, Plus,
+  Search, Download, RefreshCw, Loader2,
   CreditCard, AlertTriangle, CheckCircle, Clock,
   ChevronLeft, ChevronRight, X
 } from 'lucide-react';

@@ -46,7 +46,7 @@ export default function ReorderPage() {
     const fetchSuggestions = async () => {
       try {
         setLoading(true);
-        const response = await purchaseOrderService.getSuggestions(user?.outlet_id);
+        const response = await purchaseOrderService.getSuggestions(user?.outletId);
         if (response.success) {
           const cartItems: CartItem[] = response.data.map((item: POSuggestion) => ({
             id: item.inventoryId,
@@ -70,7 +70,7 @@ export default function ReorderPage() {
     };
 
     fetchSuggestions();
-  }, [isDemo, user?.outlet_id]);
+  }, [isDemo, user?.outletId]);
 
   const updateQty = (id: string | number, newQty: number) => {
     setCart(prev => prev.map(item => item.id === id ? { ...item, suggestedQty: newQty } : item));
@@ -94,7 +94,7 @@ export default function ReorderPage() {
       }));
 
       const response = await purchaseOrderService.create({
-        outletId: user?.outlet_id!,
+        outletId: user?.outletId!,
         items
       });
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { X, Clock, User, MessageSquare, Printer, DollarSign } from 'lucide-react';
+import { X, Clock, MessageSquare, Printer, DollarSign } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
