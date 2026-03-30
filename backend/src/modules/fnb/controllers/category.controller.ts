@@ -1,6 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+import {
+  ensureOperationalChangeAccess,
+  ensureOperationalReason,
+  maybeQueueOperationalChange
+} from './changeControl.helpers';
 
 const buildCategoryLogSnapshot = (category: any) => ({
   id: category.id,
@@ -138,6 +143,13 @@ export const createCategory = async (
     const { name, type, outletId } = req.body;
     const tenantId = req.tenantId; // Get tenantId from middleware
 
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+    if (!ensureOperationalReason(req, res, req.body.reason)) {
+      return;
+    }
+
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -163,6 +175,24 @@ export const createCategory = async (
           }
         });
       }
+    }
+
+    if (await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'category',
+      actionType: 'category_create',
+      entityLabel: String(name),
+      reason: req.body.reason,
+      payload: req.body,
+      summary: {
+        name,
+        type: type || 'item',
+        outletId: outletId || null
+      },
+      message: 'Permintaan kategori baru dikirim untuk approval owner.'
+    })) {
+      return;
     }
 
     const category = await prisma.categories.create({
@@ -210,6 +240,13 @@ export const updateCategory = async (
     const { id } = req.params;
     const { name, type, isActive, outletId } = req.body;
     const tenantId = req.tenantId; // Get tenantId from middleware
+
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+    if (!ensureOperationalReason(req, res, req.body.reason)) {
+      return;
+    }
 
     // Verify the category belongs to tenant's outlet
     const category = await prisma.categories.findUnique({
@@ -264,6 +301,29 @@ export const updateCategory = async (
       }
     }
 
+    if (await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'category',
+      actionType: 'category_update',
+      entityId: category.id,
+      entityLabel: String(name || category.name || `#${category.id}`),
+      reason: req.body.reason,
+      payload: {
+        ...req.body,
+        id: category.id
+      },
+      summary: {
+        name: name || category.name,
+        type: type || category.type,
+        changes: ['name', 'type', 'isActive', 'outletId'].filter((key) => req.body[key] !== undefined),
+        outletId: outletId ?? category.outlet_id ?? null
+      },
+      message: 'Perubahan kategori dikirim untuk approval owner.'
+    })) {
+      return;
+    }
+
     const updatedCategory = await prisma.categories.update({
       where: { id: parseInt(id) },
       data: {
@@ -312,6 +372,13 @@ export const deleteCategory = async (
     const { id } = req.params;
     const tenantId = req.tenantId; // Get tenantId from middleware
 
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+    if (!ensureOperationalReason(req, res, req.body?.reason)) {
+      return;
+    }
+
     // Verify the category belongs to tenant's outlet
     const category = await prisma.categories.findUnique({
       where: { id: parseInt(id) }
@@ -345,6 +412,28 @@ export const deleteCategory = async (
         });
         return;
       }
+    }
+
+    if (await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'category',
+      actionType: 'category_delete',
+      entityId: category.id,
+      entityLabel: category.name,
+      reason: req.body.reason,
+      payload: {
+        id: category.id,
+        reason: req.body.reason
+      },
+      summary: {
+        name: category.name,
+        type: category.type,
+        outletId: category.outlet_id ?? null
+      },
+      message: 'Permintaan hapus kategori dikirim untuk approval owner.'
+    })) {
+      return;
     }
 
     await prisma.categories.update({

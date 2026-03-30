@@ -1,6 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+import {
+  ensureOperationalChangeAccess,
+  ensureOperationalReason,
+  maybeQueueOperationalChange
+} from './changeControl.helpers';
 
 const buildIngredientLogSnapshot = (ingredient: any) => ({
   id: ingredient.id,
@@ -259,6 +264,13 @@ export const adjustIngredientStock = async (req: Request, res: Response, _next: 
   try {
     const { ingredientId, quantity, type, reason, notes } = req.body;
 
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+    if (!ensureOperationalReason(req, res, reason)) {
+      return;
+    }
+
     if (!ingredientId || !quantity || !type) {
       return res.status(400).json({
         success: false,
@@ -301,16 +313,49 @@ export const adjustIngredientStock = async (req: Request, res: Response, _next: 
       });
     }
 
-    const oldStock = Number(ingredient.stock);
-    const adjustmentQty = parseFloat(quantity);
-    const newStock = type === 'in' ? oldStock + adjustmentQty : oldStock - adjustmentQty;
+    const actionType = type === 'in' ? 'stock_in' : 'stock_out';
+    const currentStock = Number(ingredient.stock);
+    const requestedQty = parseFloat(quantity);
+    const projectedStock = type === 'in' ? currentStock + requestedQty : currentStock - requestedQty;
 
-    if (newStock < 0) {
+    if (projectedStock < 0) {
       return res.status(400).json({
         success: false,
         error: { code: 'INVALID_STOCK', message: 'Stock cannot be negative' }
       });
     }
+
+    if (await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'ingredient',
+      actionType,
+      entityId: ingredient.id,
+      entityLabel: ingredient.name,
+      reason,
+      payload: {
+        ingredientId: ingredient.id,
+        quantity: parseFloat(quantity),
+        type,
+        reason,
+        notes: notes || null
+      },
+      summary: {
+        ingredientName: ingredient.name,
+        quantity: requestedQty,
+        type,
+        currentStock,
+        projectedStock,
+        outletId: ingredient.outlet_id
+      },
+      message: 'Penyesuaian stok dikirim untuk approval owner.'
+    })) {
+      return;
+    }
+
+    const oldStock = currentStock;
+    const adjustmentQty = requestedQty;
+    const newStock = projectedStock;
 
     await prisma.ingredients.update({
       where: { id: parseInt(ingredientId) },
@@ -321,7 +366,7 @@ export const adjustIngredientStock = async (req: Request, res: Response, _next: 
     try {
       await createActivityLog(
         req.userId!,
-        type === 'in' ? 'stock_in' : 'stock_out',
+        actionType,
         'ingredient',
         ingredient.id,
         { stock: oldStock },

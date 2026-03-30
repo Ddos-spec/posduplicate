@@ -185,12 +185,12 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       onConfirm: async (reason) => {
         setIsProcessing(true);
         try {
-          await api.put(`/transactions/${transaction.id}/status`, {
+          const response = await api.put(`/transactions/${transaction.id}/status`, {
             status: 'cancelled',
             reason: reason
           });
 
-          toast.success('Transaksi berhasil dibatalkan');
+          toast.success(response.data.message || 'Transaksi berhasil dibatalkan');
           setReasonDialog(prev => ({ ...prev, isOpen: false }));
           loadTransactions();
         } catch (error: unknown) {
@@ -266,12 +266,12 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       onConfirm: async (reason) => {
         setIsProcessing(true);
         try {
-          await api.put(`/transactions/${transaction.id}/status`, {
+          const response = await api.put(`/transactions/${transaction.id}/status`, {
             status: newStatus,
             reason: reason
           });
 
-          toast.success(`Status transaksi berhasil diubah menjadi ${newStatus}`);
+          toast.success(response.data.message || `Status transaksi berhasil diubah menjadi ${newStatus}`);
           setReasonDialog(prev => ({ ...prev, isOpen: false }));
           loadTransactions();
         } catch (error: unknown) {

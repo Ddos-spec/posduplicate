@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
+import { getPendingOperationalChangeNotifications } from '../services/changeApproval.service';
 
 const RECENT_ACTIVITY_WINDOW_HOURS = 72;
 const IMPORTANT_ACTIVITY_ACTIONS = [
@@ -237,6 +238,42 @@ const formatActivityNotification = (tenantId: number, log: any) => {
   };
 };
 
+const formatOperationalChangeNotification = (tenantId: number, request: any) => {
+  const actorName = request.requesterName || 'Seseorang';
+  const entityLabel = request.entityLabel ? ` ${request.entityLabel}` : '';
+  const actionMap: Record<string, string> = {
+    product_create: `mengajukan menu baru${entityLabel}`,
+    product_update: `mengajukan perubahan menu${entityLabel}`,
+    product_delete: `mengajukan hapus menu${entityLabel}`,
+    category_create: `mengajukan kategori baru${entityLabel}`,
+    category_update: `mengajukan perubahan kategori${entityLabel}`,
+    category_delete: `mengajukan hapus kategori${entityLabel}`,
+    modifier_create: `mengajukan modifier baru${entityLabel}`,
+    modifier_update: `mengajukan perubahan modifier${entityLabel}`,
+    modifier_delete: `mengajukan hapus modifier${entityLabel}`,
+    table_create: `mengajukan meja baru${entityLabel}`,
+    table_update: `mengajukan perubahan meja${entityLabel}`,
+    table_delete: `mengajukan hapus meja${entityLabel}`,
+    stock_in: `mengajukan penambahan stok${entityLabel}`,
+    stock_out: `mengajukan pengurangan stok${entityLabel}`,
+    UPDATE_TRANSACTION_STATUS: `mengajukan perubahan status transaksi${entityLabel}`,
+  };
+
+  return {
+    id: `change-request-${request.id}`,
+    type: 'approval_request',
+    message: `${actorName} ${actionMap[request.actionType] || 'mengajukan perubahan operasional'}`,
+    details: `Alasan: ${request.reason}`,
+    tenantId,
+    createdAt: request.createdAt,
+    entityId: request.id,
+    entityType: 'change_request',
+    actionType: request.actionType,
+    actorName,
+    route: '/owner/approvals',
+  };
+};
+
 export const getAdminNotifications = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const now = new Date();
@@ -443,6 +480,13 @@ export const getTenantNotifications = async (req: Request, res: Response, next: 
         if (formattedNotification) {
           notifications.push(formattedNotification);
         }
+      }
+    }
+
+    if (canViewManagementAlerts) {
+      const pendingChangeRequests = await getPendingOperationalChangeNotifications(tenant.id, 15);
+      for (const request of pendingChangeRequests) {
+        notifications.push(formatOperationalChangeNotification(tenant.id, request));
       }
     }
 

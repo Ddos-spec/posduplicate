@@ -12,7 +12,8 @@ import {
   X,
   Bell,
   Package,
-  Plug
+  Plug,
+  ClipboardCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -48,6 +49,7 @@ export default function OwnerLayout() {
     { icon: UserCircle, label: 'Users', path: '/owner/users' },
     { icon: Store, label: 'Outlets', path: '/owner/outlets' },
     { icon: BarChart3, label: 'Reports', path: '/owner/reports' },
+    { icon: ClipboardCheck, label: 'Approvals', path: '/owner/approvals' },
     { icon: Plug, label: 'Integrasi', path: '/owner/integrations' },
     { icon: Settings, label: 'Settings', path: '/owner/settings' },
     { icon: ShoppingCart, label: 'Go to POS', path: '/cashier' }

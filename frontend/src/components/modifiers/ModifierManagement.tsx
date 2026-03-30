@@ -5,6 +5,7 @@ import axios from 'axios';
 import { X, Plus, Edit, Trash2, Tag } from 'lucide-react';
 import useConfirmationStore from '../../store/confirmationStore';
 import { useAuthStore } from '../../store/authStore';
+import ReasonInputDialog from '../common/ReasonInputDialog';
 
 interface Modifier {
   id: number;
@@ -22,8 +23,21 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingModifier, setEditingModifier] = useState<Modifier | null>(null);
-  const [form, setForm] = useState({ name: '', price: '0' });
+  const [form, setForm] = useState({ name: '', price: '0', reason: '' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [reasonDialog, setReasonDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    onConfirm: (reason: string) => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Simpan',
+    onConfirm: () => {}
+  });
   const { showConfirmation } = useConfirmationStore();
   const { user } = useAuthStore();
 
@@ -53,18 +67,19 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
       setEditingModifier(modifier);
       setForm({
         name: modifier.name,
-        price: modifier.price.toString()
+        price: modifier.price.toString(),
+        reason: ''
       });
     } else {
       setEditingModifier(null);
-      setForm({ name: '', price: '0' });
+      setForm({ name: '', price: '0', reason: '' });
     }
     setShowForm(true);
   };
 
   const handleSave = async () => {
-    if (!form.name) {
-      toast.error('Modifier name is required');
+    if (!form.name || !form.reason.trim()) {
+      toast.error('Nama modifier dan alasan perubahan wajib diisi');
       return;
     }
 
@@ -79,18 +94,20 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
       const data = {
         name: form.name,
         price: parseFloat(form.price),
-        outletId
+        outletId,
+        reason: form.reason.trim()
       };
 
       if (editingModifier) {
-        await api.put(`/modifiers/${editingModifier.id}`, data);
-        toast.success('Modifier updated successfully');
+        const response = await api.put(`/modifiers/${editingModifier.id}`, data);
+        toast.success(response.data.message || 'Modifier updated successfully');
       } else {
-        await api.post('/modifiers', data);
-        toast.success('Modifier created successfully');
+        const response = await api.post('/modifiers', data);
+        toast.success(response.data.message || 'Modifier created successfully');
       }
 
       setShowForm(false);
+      setForm({ name: '', price: '0', reason: '' });
       loadModifiers();
     } catch (error: unknown) {
       console.error('Error saving modifier:', error);
@@ -105,18 +122,30 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
   };
 
   const handleToggleStatus = async (modifierId: number, currentStatus: boolean) => {
-    try {
-      await api.put(`/modifiers/${modifierId}`, { isActive: !currentStatus });
-      toast.success(`Modifier ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-      loadModifiers();
-    } catch (error: unknown) {
-      console.error('Error toggling modifier status:', error);
-      let errorMessage = 'Failed to update modifier status';
-      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-        errorMessage = error.response.data.error.message;
+    setReasonDialog({
+      isOpen: true,
+      title: currentStatus ? 'Nonaktifkan Modifier' : 'Aktifkan Modifier',
+      message: 'Tulis alasan perubahan status modifier ini.',
+      confirmText: currentStatus ? 'Nonaktifkan' : 'Aktifkan',
+      onConfirm: async (reason) => {
+        try {
+          const response = await api.put(`/modifiers/${modifierId}`, {
+            isActive: !currentStatus,
+            reason
+          });
+          toast.success(response.data.message || `Modifier ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+          setReasonDialog((prev) => ({ ...prev, isOpen: false }));
+          loadModifiers();
+        } catch (error: unknown) {
+          console.error('Error toggling modifier status:', error);
+          let errorMessage = 'Failed to update modifier status';
+          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+            errorMessage = error.response.data.error.message;
+          }
+          toast.error(errorMessage);
+        }
       }
-      toast.error(errorMessage);
-    }
+    });
   };
 
   const handleDelete = (modifierId: number) => {
@@ -124,18 +153,27 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
       'Delete Modifier',
       'Are you sure you want to delete this modifier?',
       async () => {
-        try {
-          await api.delete(`/modifiers/${modifierId}`);
-          toast.success('Modifier deleted successfully');
-          loadModifiers();
-        } catch (error: unknown) {
-          console.error('Error deleting modifier:', error);
-          let errorMessage = 'Failed to delete modifier';
-          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-            errorMessage = error.response.data.error.message;
+        setReasonDialog({
+          isOpen: true,
+          title: 'Hapus Modifier',
+          message: 'Jelaskan kenapa modifier ini harus dihapus.',
+          confirmText: 'Hapus Modifier',
+          onConfirm: async (reason) => {
+            try {
+              const response = await api.delete(`/modifiers/${modifierId}`, { data: { reason } });
+              toast.success(response.data.message || 'Modifier deleted successfully');
+              setReasonDialog((prev) => ({ ...prev, isOpen: false }));
+              loadModifiers();
+            } catch (error: unknown) {
+              console.error('Error deleting modifier:', error);
+              let errorMessage = 'Failed to delete modifier';
+              if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+                errorMessage = error.response.data.error.message;
+              }
+              toast.error(errorMessage);
+            }
           }
-          toast.error(errorMessage);
-        }
+        });
       }
     );
   };
@@ -286,6 +324,17 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
                 <p className="text-xs text-gray-500 mt-1">Masukkan 0 untuk modifier gratis</p>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium mb-2">Alasan Perubahan *</label>
+                <textarea
+                  value={form.reason}
+                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Contoh: tambah opsi topping baru atau rapikan harga modifier."
+                />
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <button
                   onClick={() => setShowForm(false)}
@@ -305,6 +354,15 @@ export default function ModifierManagement({ onClose }: ModifierManagementProps)
           </div>
         </div>
       )}
+
+      <ReasonInputDialog
+        isOpen={reasonDialog.isOpen}
+        onClose={() => setReasonDialog((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={(reason) => reasonDialog.onConfirm(reason)}
+        title={reasonDialog.title}
+        message={reasonDialog.message}
+        confirmText={reasonDialog.confirmText}
+      />
     </div>
   );
 }

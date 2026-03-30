@@ -16,6 +16,7 @@ import { settingsService } from '../services/settingsService';
 import type { TenantSettings } from '../services/settingsService';
 import useConfirmationStore from '../store/confirmationStore';
 import { formatCurrency } from '../utils/format';
+import ReasonInputDialog from '../components/common/ReasonInputDialog';
 
 interface Product {
   id: number;
@@ -81,7 +82,8 @@ export default function CashierPage() {
     categoryId: '',
     price: '',
     image: '',
-    description: ''
+    description: '',
+    reason: ''
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
@@ -91,7 +93,21 @@ export default function CashierPage() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryForm, setCategoryForm] = useState({
     name: '',
-    type: 'item'
+    type: 'item',
+    reason: ''
+  });
+  const [reasonDialog, setReasonDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    onConfirm: (reason: string) => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Simpan',
+    onConfirm: () => {}
   });
 
   // Transaction history state
@@ -449,7 +465,8 @@ export default function CashierPage() {
         categoryId: catId,
         price: product.price.toString(),
         image: product.image || '',
-        description: product.description || ''
+        description: product.description || '',
+        reason: ''
       });
       setImagePreview(product.image || '');
     } else {
@@ -459,7 +476,8 @@ export default function CashierPage() {
         categoryId: '',
         price: '',
         image: '',
-        description: ''
+        description: '',
+        reason: ''
       });
       setImagePreview('');
     }
@@ -467,8 +485,8 @@ export default function CashierPage() {
   };
 
   const handleSaveProduct = async () => {
-    if (!productForm.name || !productForm.categoryId || !productForm.price) {
-      toast.error('Please fill all required fields');
+    if (!productForm.name || !productForm.categoryId || !productForm.price || !productForm.reason.trim()) {
+      toast.error('Please fill all required fields, including the reason');
       return;
     }
 
@@ -490,18 +508,27 @@ export default function CashierPage() {
         image: productForm.image || null,
         description: productForm.description || null,
         isActive: true,
-        outletId: outletId
+        outletId: outletId,
+        reason: productForm.reason.trim()
       };
 
       if (editingProduct) {
-        await api.put(`/products/${editingProduct.id}`, data);
-        toast.success('Product updated successfully');
+        const response = await api.put(`/products/${editingProduct.id}`, data);
+        toast.success(response.data.message || 'Product updated successfully');
       } else {
-        await api.post('/products', data);
-        toast.success('Product created successfully');
+        const response = await api.post('/products', data);
+        toast.success(response.data.message || 'Product created successfully');
       }
 
       setShowProductForm(false);
+      setProductForm({
+        name: '',
+        categoryId: '',
+        price: '',
+        image: '',
+        description: '',
+        reason: ''
+      });
       loadProducts();
     } catch (error: unknown) {
       console.error('Error saving product:', error);
@@ -520,18 +547,27 @@ export default function CashierPage() {
       'Delete Product',
       'Are you sure you want to delete this product?',
       async () => {
-        try {
-          await api.delete(`/products/${productId}`);
-          toast.success('Product deleted successfully');
-          loadProducts();
-        } catch (error: unknown) {
-          console.error('Error deleting product:', error);
-          let errorMessage = 'Failed to delete product';
-          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-            errorMessage = error.response.data.error.message;
+        setReasonDialog({
+          isOpen: true,
+          title: 'Delete Product',
+          message: 'Tuliskan alasan kenapa menu ini harus dihapus.',
+          confirmText: 'Delete Product',
+          onConfirm: async (reason) => {
+            try {
+              const response = await api.delete(`/products/${productId}`, { data: { reason } });
+              toast.success(response.data.message || 'Product deleted successfully');
+              setReasonDialog((prev) => ({ ...prev, isOpen: false }));
+              loadProducts();
+            } catch (error: unknown) {
+              console.error('Error deleting product:', error);
+              let errorMessage = 'Failed to delete product';
+              if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+                errorMessage = error.response.data.error.message;
+              }
+              toast.error(errorMessage);
+            }
           }
-          toast.error(errorMessage);
-        }
+        });
       }
     );
   };
@@ -542,21 +578,23 @@ export default function CashierPage() {
       setEditingCategory(category);
       setCategoryForm({
         name: category.name,
-        type: 'item'
+        type: 'item',
+        reason: ''
       });
     } else {
       setEditingCategory(null);
       setCategoryForm({
         name: '',
-        type: 'item'
+        type: 'item',
+        reason: ''
       });
     }
     setShowCategoryForm(true);
   };
 
   const handleSaveCategory = async () => {
-    if (!categoryForm.name) {
-      toast.error('Category name is required');
+    if (!categoryForm.name || !categoryForm.reason.trim()) {
+      toast.error('Category name and reason are required');
       return;
     }
 
@@ -574,18 +612,24 @@ export default function CashierPage() {
       const data = {
         name: categoryForm.name,
         type: categoryForm.type,
-        outletId: outletId
+        outletId: outletId,
+        reason: categoryForm.reason.trim()
       };
 
       if (editingCategory) {
-        await api.put(`/categories/${editingCategory.id}`, data);
-        toast.success('Category updated successfully');
+        const response = await api.put(`/categories/${editingCategory.id}`, data);
+        toast.success(response.data.message || 'Category updated successfully');
       } else {
-        await api.post('/categories', data);
-        toast.success('Category created successfully');
+        const response = await api.post('/categories', data);
+        toast.success(response.data.message || 'Category created successfully');
       }
 
       setShowCategoryForm(false);
+      setCategoryForm({
+        name: '',
+        type: 'item',
+        reason: ''
+      });
       loadCategories();
     } catch (error: unknown) {
       console.error('Error saving category:', error);
@@ -604,21 +648,30 @@ export default function CashierPage() {
       'Delete Category',
       'Are you sure you want to delete this category?',
       async () => {
-        try {
-          await api.delete(`/categories/${categoryId}`);
-          toast.success('Category deleted successfully');
-          loadCategories();
-          if (selectedCategory === categoryId) {
-            setSelectedCategory(null);
+        setReasonDialog({
+          isOpen: true,
+          title: 'Delete Category',
+          message: 'Tuliskan alasan kenapa kategori ini harus dihapus.',
+          confirmText: 'Delete Category',
+          onConfirm: async (reason) => {
+            try {
+              const response = await api.delete(`/categories/${categoryId}`, { data: { reason } });
+              toast.success(response.data.message || 'Category deleted successfully');
+              setReasonDialog((prev) => ({ ...prev, isOpen: false }));
+              loadCategories();
+              if (selectedCategory === categoryId) {
+                setSelectedCategory(null);
+              }
+            } catch (error: unknown) {
+              console.error('Error deleting category:', error);
+              let errorMessage = 'Failed to delete category';
+              if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+                errorMessage = error.response.data.error.message;
+              }
+              toast.error(errorMessage);
+            }
           }
-        } catch (error: unknown) {
-          console.error('Error deleting category:', error);
-          let errorMessage = 'Failed to delete category';
-          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-            errorMessage = error.response.data.error.message;
-          }
-          toast.error(errorMessage);
-        }
+        });
       }
     );
   };
@@ -1289,6 +1342,17 @@ export default function CashierPage() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium mb-2">Reason *</label>
+                <textarea
+                  value={categoryForm.reason}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, reason: e.target.value })}
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Contoh: rapikan kategori minuman atau pisahkan kategori promo."
+                />
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <button
                   onClick={() => setShowCategoryForm(false)}
@@ -1424,6 +1488,17 @@ export default function CashierPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium mb-2">Reason *</label>
+                <textarea
+                  value={productForm.reason}
+                  onChange={(e) => setProductForm({ ...productForm, reason: e.target.value })}
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Contoh: tambah menu baru, koreksi harga, atau update deskripsi menu."
+                />
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <button
                   onClick={() => setShowProductForm(false)}
@@ -1443,6 +1518,15 @@ export default function CashierPage() {
           </div>
         </div>
       )}
+
+      <ReasonInputDialog
+        isOpen={reasonDialog.isOpen}
+        onClose={() => setReasonDialog((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={(reason) => reasonDialog.onConfirm(reason)}
+        title={reasonDialog.title}
+        message={reasonDialog.message}
+        confirmText={reasonDialog.confirmText}
+      />
 
       {/* Mobile Cart Drawer */}
       {showMobileCart && (

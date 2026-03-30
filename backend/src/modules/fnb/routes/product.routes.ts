@@ -7,7 +7,7 @@ import {
   deleteProduct
 } from '../controllers/product.controller';
 import { authMiddleware, optionalAuth } from '../../../middlewares/auth.middleware';
-import { ownerOnly, tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
 
 const router = Router();
 
@@ -113,7 +113,7 @@ router.get('/:id', optionalAuth, getProductById);
  *       201:
  *         description: Product created
  */
-router.post('/', authMiddleware, tenantMiddleware, ownerOnly, createProduct);
+router.post('/', authMiddleware, tenantMiddleware, createProduct);
 
 /**
  * @swagger
@@ -139,7 +139,7 @@ router.post('/', authMiddleware, tenantMiddleware, ownerOnly, createProduct);
  *       200:
  *         description: Product updated
  */
-router.put('/:id', authMiddleware, tenantMiddleware, ownerOnly, updateProduct);
+router.put('/:id', authMiddleware, tenantMiddleware, updateProduct);
 
 /**
  * @swagger
@@ -159,7 +159,7 @@ router.put('/:id', authMiddleware, tenantMiddleware, ownerOnly, updateProduct);
  *       200:
  *         description: Product deleted
  */
-router.delete('/:id', authMiddleware, tenantMiddleware, ownerOnly, deleteProduct);
+router.delete('/:id', authMiddleware, tenantMiddleware, deleteProduct);
 
 
 export default router;

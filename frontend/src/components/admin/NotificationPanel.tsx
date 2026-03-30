@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNotificationStore } from '../../store/notificationStore';
 import { Link } from 'react-router-dom';
-import { Activity, Bell, AlertTriangle, AlertOctagon } from 'lucide-react';
+import { Activity, Bell, AlertTriangle, AlertOctagon, ClipboardCheck } from 'lucide-react';
 import TransactionDetailModal from '../transaction/TransactionDetailModal';
 import type { AdminNotification } from '../../services/notificationService';
 
@@ -56,6 +56,11 @@ export default function NotificationPanel() {
                   textColor = 'text-emerald-600';
                   Icon = Activity;
                   linkTo = notification.route;
+                } else if (notification.type === 'approval_request') {
+                  bgColor = 'bg-blue-100';
+                  textColor = 'text-blue-600';
+                  Icon = ClipboardCheck;
+                  linkTo = notification.route || '/owner/approvals';
                 }
 
                 const content = (
