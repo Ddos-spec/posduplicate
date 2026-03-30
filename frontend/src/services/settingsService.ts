@@ -21,12 +21,20 @@ export interface TenantSettings {
   enableServiceCharge: boolean | null;
   showLogoOnReceipt: boolean | null;
   printerWidth: string | null;
+  notificationEmail: string | null;
   emailNotifications: boolean | null;
+  approvalEmailAlerts: boolean | null;
   lowStockAlerts: boolean | null;
   dailySalesReport: boolean | null;
   whatsappNotifications: boolean | null;
+  notificationDeliveryStatus?: NotificationDeliveryStatus;
   approvalSettings: ApprovalSettings;
   accountingSettings?: AccountingSettings;
+}
+
+export interface NotificationDeliveryStatus {
+  emailConfigured: boolean;
+  whatsappConfigured: boolean;
 }
 
 export interface ApprovalSettings {
@@ -64,7 +72,9 @@ export interface UpdateSettingsData {
   enableServiceCharge?: boolean;
   showLogoOnReceipt?: boolean;
   printerWidth?: string;
+  notificationEmail?: string | null;
   emailNotifications?: boolean;
+  approvalEmailAlerts?: boolean;
   lowStockAlerts?: boolean;
   dailySalesReport?: boolean;
   whatsappNotifications?: boolean;
@@ -90,6 +100,11 @@ export const settingsService = {
 
   async changePassword(data: ChangePasswordData) {
     const response = await api.post<{ success: boolean; message: string }>('/settings/change-password', data);
+    return response.data;
+  },
+
+  async sendTestNotificationEmail() {
+    const response = await api.post<{ success: boolean; message: string }>('/settings/test-notification-email');
     return response.data;
   }
 };

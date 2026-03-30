@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Save, Upload, Loader2, X, ShieldCheck, ShieldAlert, CircleAlert, ClipboardList } from 'lucide-react';
+import { Save, Upload, Loader2, X, ShieldCheck, ShieldAlert, CircleAlert, ClipboardList, Mail, BellRing, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { settingsService } from '../../services/settingsService';
@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'business' | 'tax' | 'receipt' | 'notifications' | 'approval' | 'system' | 'password'>('business');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [settings, setSettings] = useState<TenantSettings | null>(null);
 
   // Logo upload state
@@ -184,6 +185,41 @@ export default function SettingsPage() {
     return <div className="text-center py-8 text-gray-500">Failed to load settings</div>;
   }
 
+  const buildNotificationSettingsPayload = () => ({
+    notificationEmail: settings.notificationEmail?.trim() || null,
+    emailNotifications: Boolean(settings.emailNotifications),
+    approvalEmailAlerts: Boolean(settings.approvalEmailAlerts),
+    lowStockAlerts: Boolean(settings.lowStockAlerts),
+    dailySalesReport: Boolean(settings.dailySalesReport),
+    whatsappNotifications: false
+  });
+
+  const handleSendTestNotificationEmail = async () => {
+    const recipient = settings.notificationEmail?.trim() || settings.email?.trim();
+
+    if (!recipient) {
+      toast.error('Isi email notifikasi dulu sebelum kirim test email.');
+      return;
+    }
+
+    try {
+      setSendingTestEmail(true);
+      await settingsService.updateSettings(buildNotificationSettingsPayload());
+      const result = await settingsService.sendTestNotificationEmail();
+      toast.success(result.message);
+      await fetchSettings();
+    } catch (error: unknown) {
+      console.error('Error sending test notification email:', error);
+      let errorMessage = 'Gagal mengirim test email';
+      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      }
+      toast.error(errorMessage);
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
+
   const approvalSettings = settings.approvalSettings || DEFAULT_APPROVAL_SETTINGS;
   const isApprovalMode = approvalSettings.changeControlMode === 'approval';
   const approvalModeCards = [
@@ -233,6 +269,9 @@ export default function SettingsPage() {
         'Tim yang butuh perubahan langsung tanpa antre approval.',
         'Owner yang cukup memantau via notifikasi dan histori alasan.'
       ];
+  const notificationRecipient = settings.notificationEmail ?? settings.email ?? '';
+  const emailDeliveryConfigured = Boolean(settings.notificationDeliveryStatus?.emailConfigured);
+  const approvalEmailEnabled = Boolean(settings.emailNotifications) && Boolean(settings.approvalEmailAlerts);
 
   return (
     <div>
@@ -631,15 +670,164 @@ export default function SettingsPage() {
         )}
 
         {activeTab === 'notifications' && (
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg mb-4">Notification Settings</h3>
-            {['Email notifications', 'Low stock alerts', 'Daily sales report', 'WhatsApp notifications'].map((item) => (
-              <div key={item} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <span>{item}</span>
-                <input type="checkbox" defaultChecked={item !== 'WhatsApp notifications'} className="w-4 h-4" />
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-slate-50 p-5">
+              <div className="flex items-start gap-3">
+                <BellRing className="mt-0.5 h-5 w-5 text-blue-600" />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Notifikasi Owner</h3>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Masukkan email asli owner supaya approval penting benar-benar masuk ke inbox mereka.
+                    MyPOS hanya mengirim email ke alamat ini, bukan meminta password Gmail siapa pun.
+                  </p>
+                </div>
               </div>
-            ))}
-            <button onClick={() => handleSave({})} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save Changes</button>
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)]">
+              <div className="space-y-5 rounded-2xl border border-gray-200 bg-white p-5">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Email penerima notifikasi</label>
+                  <input
+                    type="email"
+                    value={notificationRecipient}
+                    onChange={(e) => setSettings({ ...settings, notificationEmail: e.target.value })}
+                    placeholder="owner@tokokamu.com"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <p className="mt-2 text-sm text-gray-500">
+                    Gunakan email yang benar-benar aktif dibuka owner. Kalau dikosongkan, sistem akan fallback ke email akun bisnis yang tersimpan.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-gray-200 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-xl bg-blue-50 p-2">
+                          <Mail className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900">Aktifkan email notifikasi</h4>
+                          <p className="mt-1 text-sm leading-6 text-gray-600">
+                            Saat aktif, MyPOS boleh mengirim email ke owner untuk event yang sudah didukung sistem.
+                          </p>
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(settings.emailNotifications)}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            emailNotifications: e.target.checked
+                          })
+                        }
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-200 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Approval request via email</h4>
+                        <p className="mt-1 text-sm leading-6 text-gray-600">
+                          Ini yang sudah live sekarang. Owner akan dapat email saat ada perubahan sensitif yang menunggu approve, di-approve, atau ditolak.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(settings.approvalEmailAlerts)}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            approvalEmailAlerts: e.target.checked
+                          })
+                        }
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => handleSave(buildNotificationSettingsPayload() as Partial<TenantSettings>)}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Simpan Pengaturan Notifikasi
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSendTestNotificationEmail}
+                    disabled={sendingTestEmail || !emailDeliveryConfigured}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-5 py-3 text-sm font-medium text-gray-700 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+                  >
+                    {sendingTestEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                    Kirim Test Email
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className={`rounded-2xl border p-5 ${emailDeliveryConfigured ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+                  <p className="text-sm font-medium text-gray-500">Status pengiriman email</p>
+                  <h4 className="mt-1 text-lg font-semibold text-gray-900">
+                    {emailDeliveryConfigured ? 'Siap kirim email' : 'Sender email belum aktif'}
+                  </h4>
+                  <p className="mt-2 text-sm leading-6 text-gray-700">
+                    {emailDeliveryConfigured
+                      ? 'Server sudah punya sender email, jadi approval request bisa langsung dikirim ke inbox owner.'
+                      : 'Email tujuan sudah bisa disimpan, tapi pengiriman nyata baru aktif setelah SMTP sender dipasang di server.'}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                  <p className="text-sm font-medium text-gray-500">Yang aktif sekarang</p>
+                  <ul className="mt-3 space-y-3 text-sm text-gray-700">
+                    <li className="rounded-xl bg-blue-50 px-4 py-3">
+                      Approval via email: <span className="font-semibold text-gray-900">{approvalEmailEnabled ? 'Aktif' : 'Nonaktif'}</span>
+                    </li>
+                    <li className="rounded-xl bg-gray-50 px-4 py-3">
+                      Email tujuan: <span className="font-semibold text-gray-900 break-all">{notificationRecipient || 'Mengikuti email akun bisnis'}</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                  <div className="flex items-start gap-3">
+                    <MessageSquare className="mt-0.5 h-5 w-5 text-gray-400" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-gray-900">WhatsApp Notification</h4>
+                        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">Coming Soon</span>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-gray-600">
+                        Channel WhatsApp tetap kami tampilkan supaya owner tahu roadmap-nya, tapi sekarang belum bisa dipakai dulu.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-5">
+                  <p className="text-sm font-medium text-gray-700">Event email berikutnya</p>
+                  <div className="mt-3 space-y-3 text-sm text-gray-600">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3">
+                      <span>Low stock alert</span>
+                      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">Coming Soon</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3">
+                      <span>Daily sales report</span>
+                      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">Coming Soon</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
