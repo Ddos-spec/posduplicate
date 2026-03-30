@@ -3,6 +3,10 @@ import prisma from '../../../utils/prisma';
 import { generateJournalFromPOSTransaction } from '../../../services/autoJournal.service';
 import { safeParseFloat } from '../../../utils/validation';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+import {
+  ensureOperationalChangeAccess,
+  maybeQueueOperationalChange
+} from './changeControl.helpers';
 
 /**
  * Check stock availability for items before checkout
@@ -730,6 +734,10 @@ export const updateTransactionStatus = async (
     const { id } = req.params;
     const { status, reason } = req.body;
 
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+
     // Validation for sensitive statuses
     const sensitiveStatuses = ['cancelled', 'void', 'failed', 'refund'];
     if (sensitiveStatuses.includes(status) && !reason) {
@@ -739,6 +747,13 @@ export const updateTransactionStatus = async (
           code: 'REASON_REQUIRED', 
           message: 'Alasan wajib diisi untuk mengubah status ini.' 
         }
+      });
+    }
+
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'User authentication required' }
       });
     }
 
@@ -759,6 +774,31 @@ export const updateTransactionStatus = async (
         success: false,
         error: { code: 'NOT_FOUND', message: 'Transaction not found' }
       });
+    }
+
+    if (sensitiveStatuses.includes(status) && await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'transactions',
+      actionType: 'UPDATE_TRANSACTION_STATUS',
+      entityId: existingTransaction.id,
+      entityLabel: existingTransaction.transaction_number || `#${existingTransaction.id}`,
+      reason,
+      payload: {
+        id: existingTransaction.id,
+        status,
+        reason
+      },
+      summary: {
+        transactionNumber: existingTransaction.transaction_number,
+        currentStatus: existingTransaction.status,
+        nextStatus: status,
+        total: existingTransaction.total,
+        outletId: existingTransaction.outlet_id
+      },
+      message: 'Perubahan status transaksi dikirim untuk approval owner.'
+    })) {
+      return;
     }
 
     // If cancelling a completed transaction, restore stock

@@ -2,6 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { safeParseInt } from '../../../utils/validation';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+import {
+  ensureOperationalChangeAccess,
+  ensureOperationalReason,
+  maybeQueueOperationalChange
+} from './changeControl.helpers';
 
 const buildTableLogSnapshot = (table: any) => ({
   id: table.id,
@@ -160,6 +165,13 @@ export const createTable = async (req: Request, res: Response, next: NextFunctio
   try {
     const { name, capacity, outletId } = req.body;
 
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+    if (!ensureOperationalReason(req, res, req.body.reason)) {
+      return;
+    }
+
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -187,6 +199,24 @@ export const createTable = async (req: Request, res: Response, next: NextFunctio
           error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
         });
       }
+    }
+
+    if (await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'table',
+      actionType: 'table_create',
+      entityLabel: String(name),
+      reason: req.body.reason,
+      payload: req.body,
+      summary: {
+        name,
+        capacity: safeParseInt(capacity, 4),
+        outletId: parsedOutletId
+      },
+      message: 'Permintaan meja baru dikirim untuk approval owner.'
+    })) {
+      return;
     }
 
     const table = await prisma.tables.create({
@@ -226,6 +256,13 @@ export const updateTable = async (req: Request, res: Response, next: NextFunctio
     const { name, capacity } = req.body;
     const tableId = safeParseInt(id);
 
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+    if (!ensureOperationalReason(req, res, req.body.reason)) {
+      return;
+    }
+
     const existing = await prisma.tables.findUnique({
       where: { id: tableId },
       include: { outlets: true }
@@ -243,6 +280,29 @@ export const updateTable = async (req: Request, res: Response, next: NextFunctio
         success: false,
         error: { code: 'ACCESS_DENIED', message: 'Access denied' }
       });
+    }
+
+    if (await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'table',
+      actionType: 'table_update',
+      entityId: existing.id,
+      entityLabel: String(name || existing.name || `#${existing.id}`),
+      reason: req.body.reason,
+      payload: {
+        ...req.body,
+        id: existing.id
+      },
+      summary: {
+        name: name || existing.name,
+        capacity: capacity ?? existing.capacity,
+        changes: ['name', 'capacity'].filter((key) => req.body[key] !== undefined),
+        outletId: existing.outlet_id
+      },
+      message: 'Perubahan meja dikirim untuk approval owner.'
+    })) {
+      return;
     }
 
     const table = await prisma.tables.update({
@@ -279,6 +339,13 @@ export const deleteTable = async (req: Request, res: Response, next: NextFunctio
     const { id } = req.params;
     const tableId = safeParseInt(id);
 
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+    if (!ensureOperationalReason(req, res, req.body?.reason)) {
+      return;
+    }
+
     // Validate table exists and belongs to tenant
     const existing = await prisma.tables.findUnique({
       where: { id: tableId },
@@ -300,6 +367,28 @@ export const deleteTable = async (req: Request, res: Response, next: NextFunctio
           error: { code: 'ACCESS_DENIED', message: 'Access denied' }
         });
       }
+    }
+
+    if (await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'table',
+      actionType: 'table_delete',
+      entityId: existing.id,
+      entityLabel: existing.name,
+      reason: req.body.reason,
+      payload: {
+        id: existing.id,
+        reason: req.body.reason
+      },
+      summary: {
+        name: existing.name,
+        capacity: existing.capacity,
+        outletId: existing.outlet_id
+      },
+      message: 'Permintaan hapus meja dikirim untuk approval owner.'
+    })) {
+      return;
     }
 
     await prisma.tables.update({

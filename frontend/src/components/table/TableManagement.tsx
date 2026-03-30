@@ -5,6 +5,7 @@ import axios from 'axios';
 import { X, Plus, Edit, Trash2, Users } from 'lucide-react';
 import useConfirmationStore from '../../store/confirmationStore';
 import { useAuthStore } from '../../store/authStore';
+import ReasonInputDialog from '../common/ReasonInputDialog';
 
 interface Table {
   id: number;
@@ -24,8 +25,21 @@ export default function TableManagement({ onClose, onSelectTable }: TableManagem
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingTable, setEditingTable] = useState<Table | null>(null);
-  const [form, setForm] = useState({ name: '', capacity: '4' });
+  const [form, setForm] = useState({ name: '', capacity: '4', reason: '' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [reasonDialog, setReasonDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    onConfirm: (reason: string) => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Simpan',
+    onConfirm: () => {}
+  });
   const { showConfirmation } = useConfirmationStore();
   const { user } = useAuthStore();
 
@@ -53,17 +67,17 @@ export default function TableManagement({ onClose, onSelectTable }: TableManagem
   const handleOpenForm = (table?: Table) => {
     if (table) {
       setEditingTable(table);
-      setForm({ name: table.name, capacity: String(table.capacity) });
+      setForm({ name: table.name, capacity: String(table.capacity), reason: '' });
     } else {
       setEditingTable(null);
-      setForm({ name: '', capacity: '4' });
+      setForm({ name: '', capacity: '4', reason: '' });
     }
     setShowForm(true);
   };
 
   const handleSave = async () => {
-    if (!form.name || !form.capacity) {
-      toast.error('Table name and capacity are required');
+    if (!form.name || !form.capacity || !form.reason.trim()) {
+      toast.error('Nama meja, kapasitas, dan alasan perubahan wajib diisi');
       return;
     }
 
@@ -78,17 +92,19 @@ export default function TableManagement({ onClose, onSelectTable }: TableManagem
       const data = {
         name: form.name,
         capacity: form.capacity,
+        reason: form.reason.trim(),
         ...(outletId && { outletId })
       };
 
       if (editingTable) {
-        await api.put(`/tables/${editingTable.id}`, data);
-        toast.success('Table updated successfully');
+        const response = await api.put(`/tables/${editingTable.id}`, data);
+        toast.success(response.data.message || 'Table updated successfully');
       } else {
-        await api.post('/tables', data);
-        toast.success('Table added successfully');
+        const response = await api.post('/tables', data);
+        toast.success(response.data.message || 'Table added successfully');
       }
       setShowForm(false);
+      setForm({ name: '', capacity: '4', reason: '' });
       loadTables();
     } catch (error: unknown) {
       console.error('Error saving table:', error);
@@ -107,18 +123,27 @@ export default function TableManagement({ onClose, onSelectTable }: TableManagem
       'Delete Table',
       'Are you sure you want to delete this table?',
       async () => {
-        try {
-          await api.delete(`/tables/${tableId}`);
-          toast.success('Table deleted successfully');
-          loadTables();
-        } catch (error: unknown) {
-          console.error('Error deleting table:', error);
-          let errorMessage = 'Failed to delete table';
-          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-            errorMessage = error.response.data.error.message;
+        setReasonDialog({
+          isOpen: true,
+          title: 'Hapus Meja',
+          message: 'Tulis alasan kenapa meja ini harus dihapus.',
+          confirmText: 'Hapus Meja',
+          onConfirm: async (reason) => {
+            try {
+              const response = await api.delete(`/tables/${tableId}`, { data: { reason } });
+              toast.success(response.data.message || 'Table deleted successfully');
+              setReasonDialog((prev) => ({ ...prev, isOpen: false }));
+              loadTables();
+            } catch (error: unknown) {
+              console.error('Error deleting table:', error);
+              let errorMessage = 'Failed to delete table';
+              if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+                errorMessage = error.response.data.error.message;
+              }
+              toast.error(errorMessage);
+            }
           }
-          toast.error(errorMessage);
-        }
+        });
       }
     );
   };
@@ -308,6 +333,17 @@ export default function TableManagement({ onClose, onSelectTable }: TableManagem
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium mb-2">Alasan Perubahan *</label>
+                <textarea
+                  value={form.reason}
+                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                  className="w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Contoh: tambah meja baru untuk area smoking atau rapikan penamaan meja VIP."
+                />
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <button
                   onClick={() => setShowForm(false)}
@@ -327,6 +363,15 @@ export default function TableManagement({ onClose, onSelectTable }: TableManagem
           </div>
         </div>
       )}
+
+      <ReasonInputDialog
+        isOpen={reasonDialog.isOpen}
+        onClose={() => setReasonDialog((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={(reason) => reasonDialog.onConfirm(reason)}
+        title={reasonDialog.title}
+        message={reasonDialog.message}
+        confirmText={reasonDialog.confirmText}
+      />
     </div>
   );
 }

@@ -22,6 +22,7 @@ const UserManagementPage = lazy(() => import('./pages/owner/UserManagementPage')
 const OutletManagementPage = lazy(() => import('./pages/owner/OutletManagementPage'));
 const ReportsPage = lazy(() => import('./pages/owner/ReportsPage'));
 const SettingsPage = lazy(() => import('./pages/owner/SettingsPage'));
+const ChangeApprovalPage = lazy(() => import('./pages/owner/ChangeApprovalPage'));
 const ProductManagementPage = lazy(() => import('./pages/owner/ProductManagementPage'));
 const TransactionDetailPage = lazy(() => import('./pages/owner/TransactionDetailPage'));
 const IntegrationsPage = lazy(() => import('./pages/owner/IntegrationsPage'));
@@ -295,6 +296,7 @@ function App() {
           <Route path="outlets" element={<OutletManagementPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="approvals" element={<ChangeApprovalPage />} />
           <Route path="inventory" element={<ProductManagementPage />} />
           <Route path="products" element={<Navigate to="/owner/inventory" />} />
           <Route path="transactions/:id" element={<TransactionDetailPage />} />

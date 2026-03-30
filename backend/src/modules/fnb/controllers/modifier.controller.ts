@@ -2,6 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { safeParseInt } from '../../../utils/validation';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+import {
+  ensureOperationalChangeAccess,
+  ensureOperationalReason,
+  maybeQueueOperationalChange
+} from './changeControl.helpers';
 
 const buildModifierLogSnapshot = (modifier: any) => ({
   id: modifier.id,
@@ -75,6 +80,13 @@ export const createModifier = async (req: Request, res: Response, _next: NextFun
   try {
     const { name, price, outletId } = req.body;
 
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+    if (!ensureOperationalReason(req, res, req.body.reason)) {
+      return;
+    }
+
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -100,6 +112,24 @@ export const createModifier = async (req: Request, res: Response, _next: NextFun
           error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
         });
       }
+    }
+
+    if (await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'modifier',
+      actionType: 'modifier_create',
+      entityLabel: String(name),
+      reason: req.body.reason,
+      payload: req.body,
+      summary: {
+        name,
+        price: price || 0,
+        outletId: safeParseInt(outletId)
+      },
+      message: 'Permintaan modifier baru dikirim untuk approval owner.'
+    })) {
+      return;
     }
 
     const modifier = await prisma.modifiers.create({
@@ -138,6 +168,13 @@ export const updateModifier = async (req: Request, res: Response, _next: NextFun
     const { name, price, isActive } = req.body;
     const modifierId = safeParseInt(id);
 
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+    if (!ensureOperationalReason(req, res, req.body.reason)) {
+      return;
+    }
+
     // Check modifier exists and belongs to tenant
     const existing = await prisma.modifiers.findUnique({
       where: { id: modifierId },
@@ -159,6 +196,29 @@ export const updateModifier = async (req: Request, res: Response, _next: NextFun
           error: { code: 'ACCESS_DENIED', message: 'Access denied' }
         });
       }
+    }
+
+    if (await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'modifier',
+      actionType: 'modifier_update',
+      entityId: existing.id,
+      entityLabel: String(name || existing.name || `#${existing.id}`),
+      reason: req.body.reason,
+      payload: {
+        ...req.body,
+        id: existing.id
+      },
+      summary: {
+        name: name || existing.name,
+        price: price ?? existing.price,
+        changes: ['name', 'price', 'isActive'].filter((key) => req.body[key] !== undefined),
+        outletId: existing.outlet_id
+      },
+      message: 'Perubahan modifier dikirim untuk approval owner.'
+    })) {
+      return;
     }
 
     const modifier = await prisma.modifiers.update({
@@ -196,6 +256,13 @@ export const deleteModifier = async (req: Request, res: Response, _next: NextFun
     const { id } = req.params;
     const modifierId = safeParseInt(id);
 
+    if (!ensureOperationalChangeAccess(req, res)) {
+      return;
+    }
+    if (!ensureOperationalReason(req, res, req.body?.reason)) {
+      return;
+    }
+
     // Check modifier exists and belongs to tenant
     const existing = await prisma.modifiers.findUnique({
       where: { id: modifierId },
@@ -217,6 +284,28 @@ export const deleteModifier = async (req: Request, res: Response, _next: NextFun
           error: { code: 'ACCESS_DENIED', message: 'Access denied' }
         });
       }
+    }
+
+    if (await maybeQueueOperationalChange({
+      req,
+      res,
+      entityType: 'modifier',
+      actionType: 'modifier_delete',
+      entityId: existing.id,
+      entityLabel: existing.name,
+      reason: req.body.reason,
+      payload: {
+        id: existing.id,
+        reason: req.body.reason
+      },
+      summary: {
+        name: existing.name,
+        price: existing.price,
+        outletId: existing.outlet_id
+      },
+      message: 'Permintaan hapus modifier dikirim untuk approval owner.'
+    })) {
+      return;
     }
 
     await prisma.modifiers.update({

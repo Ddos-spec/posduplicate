@@ -12,6 +12,7 @@ import apiKeyRoutes from './routes/apiKey.routes';
 import notificationRoutes from './routes/notification.routes';
 import activityLogRoutes from './routes/activity-log.routes';
 import ownerApiRoutes from './routes/ownerApi.routes';
+import changeApprovalRoutes from './routes/changeApproval.routes';
 
 const router = Router();
 
@@ -29,5 +30,6 @@ router.use('/api-keys', apiKeyRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/activity-logs', activityLogRoutes);
 router.use('/owner', ownerApiRoutes);
+router.use('/change-approvals', changeApprovalRoutes);
 
 export default router;

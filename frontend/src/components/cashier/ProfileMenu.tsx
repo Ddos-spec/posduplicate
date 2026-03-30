@@ -130,7 +130,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
 
     setIsAdjusting(true);
     try {
-      await api.post('/ingredients/adjust-stock', {
+      const response = await api.post('/ingredients/adjust-stock', {
         ingredientId: selectedIngredient.id,
         quantity: parseFloat(quantity),
         type: adjustmentType,
@@ -138,7 +138,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
         notes: notes.trim() || null,
       });
 
-      toast.success('Stok berhasil disesuaikan!');
+      toast.success(response.data.message || 'Stok berhasil disesuaikan!');
       setSelectedIngredient(null);
       setQuantity('');
       setReason('');
