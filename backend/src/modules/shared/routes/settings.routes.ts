@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getSettings, updateSettings, changePassword } from '../controllers/settings.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { ownerOnly, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 
 const router = Router();
 
@@ -56,7 +56,7 @@ router.get('/', tenantMiddleware, getSettings);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/', tenantMiddleware, updateSettings);
+router.put('/', tenantMiddleware, ownerOnly, updateSettings);
 
 // Password change (any authenticated user)
 /**

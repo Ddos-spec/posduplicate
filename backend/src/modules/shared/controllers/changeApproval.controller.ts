@@ -5,6 +5,16 @@ import {
   listOperationalChangeRequests,
   rejectOperationalChangeRequest
 } from '../services/changeApproval.service';
+import prisma from '../../../utils/prisma';
+
+const resolveApproverName = async (userId: number, fallback: string) => {
+  const user = await prisma.users.findUnique({
+    where: { id: userId },
+    select: { name: true }
+  });
+
+  return user?.name || fallback;
+};
 
 export const getOperationalChangeRequests = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -57,7 +67,10 @@ export const approveOperationalChange = async (req: Request, res: Response, next
       });
     }
 
-    const approverName = req.body?.approverName || req.userRole || 'Owner';
+    const approverName = await resolveApproverName(
+      req.userId,
+      String(req.body?.approverName || req.userRole || 'Owner')
+    );
     const requestId = Number(req.params.id);
     const result = await approveOperationalChangeRequest(req.tenantId, requestId, req.userId, String(approverName));
 
@@ -88,7 +101,10 @@ export const rejectOperationalChange = async (req: Request, res: Response, next:
       });
     }
 
-    const approverName = req.body?.approverName || req.userRole || 'Owner';
+    const approverName = await resolveApproverName(
+      req.userId,
+      String(req.body?.approverName || req.userRole || 'Owner')
+    );
     const requestId = Number(req.params.id);
     const result = await rejectOperationalChangeRequest(req.tenantId, requestId, req.userId, String(approverName), rejectionReason);
 
