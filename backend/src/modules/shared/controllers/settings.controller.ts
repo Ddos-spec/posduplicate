@@ -8,6 +8,22 @@ interface AuthRequest extends Request {
   userRole?: string;
 }
 
+const DEFAULT_APPROVAL_SETTINGS = {
+  changeControlMode: 'direct'
+};
+
+const normalizeApprovalSettings = (value: unknown) => {
+  const candidate = value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+
+  const changeControlMode = candidate.changeControlMode === 'approval' ? 'approval' : 'direct';
+
+  return {
+    changeControlMode
+  };
+};
+
 // Get tenant settings
 export const getSettings = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -49,6 +65,7 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
 
     // Merge tenant data with settings JSON
     const settingsData = typeof tenant.settings === 'object' ? tenant.settings : {};
+    const approvalSettings = normalizeApprovalSettings((settingsData as any).approvalSettings);
 
     res.json({
       success: true,
@@ -59,7 +76,8 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
         email: tenant.email,
         phone: tenant.phone,
         address: tenant.address,
-        ...settingsData
+        ...settingsData,
+        approvalSettings
       }
     });
   } catch (error) {
@@ -102,6 +120,11 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
 
     // Separate tenant fields from settings fields
     Object.keys(updateData).forEach(key => {
+      if (key === 'approvalSettings') {
+        settingsData.approvalSettings = normalizeApprovalSettings(updateData[key]);
+        return;
+      }
+
       const mappedKey = tenantFieldMap[key];
       if (mappedKey) {
         tenantData[mappedKey] = updateData[key];
@@ -130,7 +153,8 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
         email: updatedTenant.email,
         phone: updatedTenant.phone,
         address: updatedTenant.address,
-        ...settingsData
+        ...settingsData,
+        approvalSettings: normalizeApprovalSettings(settingsData.approvalSettings || DEFAULT_APPROVAL_SETTINGS)
       }
     });
   } catch (error) {

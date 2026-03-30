@@ -1,13 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Save, Upload, Loader2, X } from 'lucide-react';
+import { Save, Upload, Loader2, X, ShieldCheck, ShieldAlert, CircleAlert, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { settingsService } from '../../services/settingsService';
-import type { TenantSettings } from '../../services/settingsService';
+import type { ApprovalSettings, TenantSettings } from '../../services/settingsService';
 import api, { getFullUrl } from '../../services/api';
 
+const DEFAULT_APPROVAL_SETTINGS: ApprovalSettings = {
+  changeControlMode: 'direct'
+};
+
+const normalizeApprovalSettings = (value?: Partial<ApprovalSettings> | null): ApprovalSettings => ({
+  changeControlMode: value?.changeControlMode === 'approval' ? 'approval' : 'direct'
+});
+
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'business' | 'tax' | 'receipt' | 'notifications' | 'system' | 'password'>('business');
+  const [activeTab, setActiveTab] = useState<'business' | 'tax' | 'receipt' | 'notifications' | 'approval' | 'system' | 'password'>('business');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<TenantSettings | null>(null);
@@ -27,7 +35,10 @@ export default function SettingsPage() {
     try {
       setLoading(true);
       const result = await settingsService.getSettings();
-      setSettings(result.data);
+      setSettings({
+        ...result.data,
+        approvalSettings: normalizeApprovalSettings(result.data.approvalSettings)
+      });
       // Convert relative logo path to full URL if it exists
       const logoUrl = result.data.logo ? getFullUrl(result.data.logo) : '';
       setLogoPreview(logoUrl);
@@ -173,6 +184,56 @@ export default function SettingsPage() {
     return <div className="text-center py-8 text-gray-500">Failed to load settings</div>;
   }
 
+  const approvalSettings = settings.approvalSettings || DEFAULT_APPROVAL_SETTINGS;
+  const isApprovalMode = approvalSettings.changeControlMode === 'approval';
+  const approvalModeCards = [
+    {
+      key: 'direct' as const,
+      icon: ShieldCheck,
+      title: 'Langsung dengan alasan',
+      subtitle: 'Cocok untuk owner yang percaya penuh ke tim operasional.',
+      accent: 'emerald',
+      bullets: [
+        'Perubahan dari kasir langsung berlaku saat disimpan.',
+        'Alasan perubahan tetap wajib supaya jejak audit rapi.',
+        'Owner cukup memantau lewat notifikasi dan histori aktivitas.'
+      ]
+    },
+    {
+      key: 'approval' as const,
+      icon: ShieldAlert,
+      title: 'Harus approval owner',
+      subtitle: 'Cocok untuk toko yang ingin semua perubahan sensitif dicek dulu.',
+      accent: 'amber',
+      bullets: [
+        'Kasir hanya mengajukan perubahan, belum langsung mengubah data.',
+        'Owner atau atasan memutuskan approve atau reject.',
+        'Semua pengajuan tetap menyimpan alasan agar konteksnya jelas.'
+      ]
+    }
+  ];
+  const controlledActions = [
+    'Menu dan produk',
+    'Kategori, modifier, dan varian',
+    'Bahan baku dan penyesuaian stok',
+    'Meja operasional',
+    'User dan outlet'
+  ];
+  const currentModeSummary = isApprovalMode
+    ? 'Perubahan sensitif dari kasir akan ditahan dulu sampai owner menyetujui.'
+    : 'Perubahan sensitif dari kasir langsung berlaku, tetapi alasan dan notifikasi tetap dicatat.';
+  const recommendedFor = isApprovalMode
+    ? [
+        'Toko dengan risiko fraud atau pegawai yang masih perlu diawasi ketat.',
+        'Owner yang ingin perubahan penting dicek satu per satu.',
+        'Operasional yang siap menunggu persetujuan sebelum data berubah.'
+      ]
+    : [
+        'Toko yang operasionalnya cepat dan owner percaya ke kasir.',
+        'Tim yang butuh perubahan langsung tanpa antre approval.',
+        'Owner yang cukup memantau via notifikasi dan histori alasan.'
+      ];
+
   return (
     <div>
       <div className="mb-6">
@@ -188,6 +249,7 @@ export default function SettingsPage() {
             { key: 'tax', label: 'Tax & Charges' },
             { key: 'receipt', label: 'Receipt' },
             { key: 'notifications', label: 'Notifications' },
+            { key: 'approval', label: 'Kontrol Perubahan' },
             { key: 'system', label: 'System' },
             { key: 'password', label: 'Password' }
           ].map((tab) => (
@@ -578,6 +640,145 @@ export default function SettingsPage() {
               </div>
             ))}
             <button onClick={() => handleSave({})} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save Changes</button>
+          </div>
+        )}
+
+        {activeTab === 'approval' && (
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-slate-50 p-5">
+              <div className="flex items-start gap-3">
+                <ClipboardList className="mt-0.5 h-5 w-5 text-blue-600" />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Kontrol Perubahan Kasir</h3>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Pilih cara toko Anda memproses perubahan sensitif dari kasir. Setting ini dibuat sesederhana mungkin
+                    supaya owner langsung paham tanpa baca aturan teknis.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <div className="flex items-start gap-3">
+                <CircleAlert className={`mt-0.5 h-5 w-5 ${isApprovalMode ? 'text-amber-500' : 'text-emerald-500'}`} />
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Mode aktif sekarang</p>
+                  <h4 className="mt-1 text-xl font-semibold text-gray-900">
+                    {isApprovalMode ? 'Harus approval owner' : 'Langsung dengan alasan'}
+                  </h4>
+                  <p className="mt-2 text-sm leading-6 text-gray-600">{currentModeSummary}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              {approvalModeCards.map((mode) => {
+                const isSelected = approvalSettings.changeControlMode === mode.key;
+                const Icon = mode.icon;
+                const ringClass = isSelected
+                  ? mode.accent === 'amber'
+                    ? 'border-amber-400 bg-amber-50 shadow-sm'
+                    : 'border-emerald-400 bg-emerald-50 shadow-sm'
+                  : 'border-gray-200 bg-white hover:border-blue-200 hover:bg-blue-50/40';
+                const iconClass = mode.accent === 'amber' ? 'text-amber-600' : 'text-emerald-600';
+
+                return (
+                  <button
+                    key={mode.key}
+                    type="button"
+                    onClick={() =>
+                      setSettings({
+                        ...settings,
+                        approvalSettings: {
+                          ...approvalSettings,
+                          changeControlMode: mode.key
+                        }
+                      })
+                    }
+                    className={`w-full rounded-2xl border p-5 text-left transition ${ringClass}`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-xl bg-white p-2 shadow-sm">
+                          <Icon className={`h-5 w-5 ${iconClass}`} />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900">{mode.title}</h4>
+                          <p className="mt-1 text-sm leading-6 text-gray-600">{mode.subtitle}</p>
+                        </div>
+                      </div>
+                      <div
+                        className={`mt-1 h-5 w-5 rounded-full border-2 ${
+                          isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300 bg-white'
+                        }`}
+                      />
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      {mode.bullets.map((bullet) => (
+                        <div key={bullet} className="flex items-start gap-2 text-sm text-gray-700">
+                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                          <span>{bullet}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                <h4 className="text-base font-semibold text-gray-900">Perubahan sensitif yang ikut aturan ini</h4>
+                <p className="mt-1 text-sm text-gray-600">
+                  Jadi owner tidak perlu menebak-nebak mode ini akan berlaku ke mana saja.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {controlledActions.map((action) => (
+                    <span
+                      key={action}
+                      className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700"
+                    >
+                      {action}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                <h4 className="text-base font-semibold text-gray-900">Cocok dipakai untuk</h4>
+                <div className="mt-4 space-y-3">
+                  {recommendedFor.map((item) => (
+                    <div key={item} className="flex items-start gap-2 text-sm text-gray-700">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-500" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-5">
+              <h4 className="text-base font-semibold text-gray-900">Catatan owner</h4>
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                Walau mode <span className="font-medium text-gray-900">Langsung dengan alasan</span> dipakai, owner tetap
+                menerima jejak alasan dan notifikasi aktivitas. Jadi kalau suatu saat ingin operasional lebih ketat, cukup
+                pindah mode ke <span className="font-medium text-gray-900">Harus approval owner</span>.
+              </p>
+            </div>
+
+            <button
+              onClick={() =>
+                handleSave({
+                  approvalSettings: normalizeApprovalSettings(approvalSettings)
+                })
+              }
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? 'Menyimpan...' : 'Simpan Kontrol Perubahan'}
+            </button>
           </div>
         )}
 

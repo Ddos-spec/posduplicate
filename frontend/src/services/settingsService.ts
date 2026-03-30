@@ -25,7 +25,12 @@ export interface TenantSettings {
   lowStockAlerts: boolean | null;
   dailySalesReport: boolean | null;
   whatsappNotifications: boolean | null;
+  approvalSettings: ApprovalSettings;
   accountingSettings?: AccountingSettings;
+}
+
+export interface ApprovalSettings {
+  changeControlMode: 'direct' | 'approval';
 }
 
 export interface AccountingSettings {
@@ -63,6 +68,7 @@ export interface UpdateSettingsData {
   lowStockAlerts?: boolean;
   dailySalesReport?: boolean;
   whatsappNotifications?: boolean;
+  approvalSettings?: ApprovalSettings;
   accountingSettings?: AccountingSettings;
 }
 
