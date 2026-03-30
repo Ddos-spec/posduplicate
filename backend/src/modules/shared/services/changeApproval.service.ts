@@ -1,6 +1,11 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import { createActivityLog } from '../controllers/activity-log.controller';
+import {
+  getTenantNotificationPreferences,
+  isEmailDeliveryConfigured,
+  sendEmail
+} from './emailNotification.service';
 
 export type ChangeControlMode = 'direct' | 'approval';
 export type OperationalChangeStatus = 'pending' | 'approved' | 'rejected';
@@ -74,6 +79,13 @@ const toRecord = (value: unknown): Record<string, any> => {
 
 const normalizeMode = (value: unknown): ChangeControlMode => value === 'approval' ? 'approval' : 'direct';
 
+const escapeHtml = (value: string) => value
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 const mapRequestRow = (row: any): OperationalChangeRequestRecord => ({
   id: Number(row.id),
   tenantId: Number(row.tenant_id),
@@ -101,6 +113,169 @@ const mapRequestRow = (row: any): OperationalChangeRequestRecord => ({
 });
 
 const buildApprovedReason = (reason: string, approverName: string) => `${reason} | Approved by ${approverName}`;
+
+const formatChangeLabel = (request: OperationalChangeRequestRecord) => {
+  if (request.entityLabel) {
+    return request.entityLabel;
+  }
+
+  const summaryName = typeof request.summary.name === 'string' ? request.summary.name : null;
+  if (summaryName) {
+    return summaryName;
+  }
+
+  if (request.entityId) {
+    return `${request.entityType} #${request.entityId}`;
+  }
+
+  return request.entityType;
+};
+
+const formatActionLabel = (actionType: string) => {
+  switch (actionType) {
+    case 'product_create':
+    case 'category_create':
+    case 'modifier_create':
+    case 'ingredient_create':
+    case 'table_create':
+    case 'variant_create':
+    case 'outlet_create':
+    case 'user_create':
+      return 'create';
+    case 'product_update':
+    case 'category_update':
+    case 'modifier_update':
+    case 'ingredient_update':
+    case 'table_update':
+    case 'variant_update':
+    case 'outlet_update':
+    case 'user_update':
+    case 'UPDATE_TRANSACTION_STATUS':
+      return 'update';
+    case 'product_delete':
+    case 'category_delete':
+    case 'modifier_delete':
+    case 'ingredient_delete':
+    case 'table_delete':
+    case 'variant_delete':
+    case 'outlet_delete':
+    case 'user_delete':
+      return 'delete';
+    default:
+      return actionType.toLowerCase().replace(/_/g, ' ');
+  }
+};
+
+const sendApprovalLifecycleEmail = async (
+  tenantId: number,
+  request: OperationalChangeRequestRecord,
+  event: 'requested' | 'approved' | 'rejected',
+  meta?: {
+    approverName?: string;
+    rejectionReason?: string | null;
+  }
+) => {
+  if (!isEmailDeliveryConfigured()) {
+    return;
+  }
+
+  const tenantNotification = await getTenantNotificationPreferences(tenantId);
+  const { notificationEmail, emailNotifications, approvalEmailAlerts } = tenantNotification.preferences;
+
+  if (!notificationEmail || !emailNotifications || !approvalEmailAlerts) {
+    return;
+  }
+
+  const businessName = tenantNotification.businessName;
+  const changeLabel = formatChangeLabel(request);
+  const actionLabel = formatActionLabel(request.actionType);
+  const safeBusinessName = escapeHtml(businessName);
+  const safeChangeLabel = escapeHtml(changeLabel);
+  const safeReason = escapeHtml(request.reason);
+  const safeRequesterName = escapeHtml(request.requesterName);
+  const safeRequesterRole = escapeHtml(request.requesterRole);
+  const safeApproverName = escapeHtml(meta?.approverName || '-');
+  const safeRejectionReason = escapeHtml(meta?.rejectionReason || '-');
+
+  let subject = '';
+  let intro = '';
+  let detail = '';
+
+  switch (event) {
+    case 'requested':
+      subject = `[${businessName}] Approval baru menunggu persetujuan`;
+      intro = `${request.requesterName} mengajukan ${actionLabel} untuk ${changeLabel}.`;
+      detail = 'Buka menu approval di owner dashboard untuk approve atau reject perubahan ini.';
+      break;
+    case 'approved':
+      subject = `[${businessName}] Perubahan sudah di-approve`;
+      intro = `Perubahan ${actionLabel} untuk ${changeLabel} sudah di-approve oleh ${meta?.approverName || 'owner'}.`;
+      detail = 'Perubahan sekarang sudah diterapkan ke data operasional toko.';
+      break;
+    case 'rejected':
+      subject = `[${businessName}] Perubahan ditolak`;
+      intro = `Perubahan ${actionLabel} untuk ${changeLabel} ditolak oleh ${meta?.approverName || 'owner'}.`;
+      detail = meta?.rejectionReason
+        ? `Alasan penolakan: ${meta.rejectionReason}`
+        : 'Silakan cek detail pengajuan di dashboard untuk melihat alasan penolakan.';
+      break;
+  }
+
+  await sendEmail({
+    to: notificationEmail,
+    subject,
+    text: [
+      `Halo ${businessName},`,
+      '',
+      intro,
+      `Requester: ${request.requesterName} (${request.requesterRole})`,
+      `Alasan: ${request.reason}`,
+      event !== 'requested' ? `Diproses oleh: ${meta?.approverName || '-'}` : '',
+      event === 'rejected' ? `Catatan reject: ${meta?.rejectionReason || '-'}` : '',
+      '',
+      detail,
+      '',
+      'Salam,',
+      'MyPOS'
+    ].filter(Boolean).join('\n'),
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #1f2937;">
+        <h2 style="margin: 0 0 12px;">${safeBusinessName}</h2>
+        <p style="margin: 0 0 12px;">${escapeHtml(intro)}</p>
+        <table style="border-collapse: collapse; margin: 16px 0;">
+          <tbody>
+            <tr>
+              <td style="padding: 4px 12px 4px 0; color: #6b7280;">Perubahan</td>
+              <td style="padding: 4px 0;"><strong>${safeChangeLabel}</strong></td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 12px 4px 0; color: #6b7280;">Requester</td>
+              <td style="padding: 4px 0;">${safeRequesterName} (${safeRequesterRole})</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 12px 4px 0; color: #6b7280;">Alasan</td>
+              <td style="padding: 4px 0;">${safeReason}</td>
+            </tr>
+            ${event !== 'requested' ? `
+              <tr>
+                <td style="padding: 4px 12px 4px 0; color: #6b7280;">Diproses oleh</td>
+                <td style="padding: 4px 0;">${safeApproverName}</td>
+              </tr>
+            ` : ''}
+            ${event === 'rejected' ? `
+              <tr>
+                <td style="padding: 4px 12px 4px 0; color: #6b7280;">Catatan reject</td>
+                <td style="padding: 4px 0;">${safeRejectionReason}</td>
+              </tr>
+            ` : ''}
+          </tbody>
+        </table>
+        <p style="margin: 16px 0 0;">${escapeHtml(detail)}</p>
+        <p style="margin: 24px 0 0;">Salam,<br />MyPOS</p>
+      </div>
+    `
+  });
+};
 
 const buildProductSnapshot = (product: any) => ({
   id: product.id,
@@ -278,6 +453,12 @@ export const createOperationalChangeRequest = async (input: CreateOperationalCha
     );
   } catch (logError) {
     console.error('Failed to create change request activity log:', logError);
+  }
+
+  try {
+    await sendApprovalLifecycleEmail(input.tenantId, record, 'requested');
+  } catch (emailError) {
+    console.error('Failed to send approval request email:', emailError);
   }
 
   return record;
@@ -956,7 +1137,19 @@ export const approveOperationalChangeRequest = async (
     console.error('Failed to create approval resolution activity log:', logError);
   }
 
-  return getOperationalChangeRequestById(tenantId, requestId);
+  const updatedRequest = await getOperationalChangeRequestById(tenantId, requestId);
+
+  if (updatedRequest) {
+    try {
+      await sendApprovalLifecycleEmail(tenantId, updatedRequest, 'approved', {
+        approverName
+      });
+    } catch (emailError) {
+      console.error('Failed to send approved change email:', emailError);
+    }
+  }
+
+  return updatedRequest;
 };
 
 export const rejectOperationalChangeRequest = async (
@@ -1007,5 +1200,18 @@ export const rejectOperationalChangeRequest = async (
     console.error('Failed to create rejection activity log:', logError);
   }
 
-  return getOperationalChangeRequestById(tenantId, requestId);
+  const updatedRequest = await getOperationalChangeRequestById(tenantId, requestId);
+
+  if (updatedRequest) {
+    try {
+      await sendApprovalLifecycleEmail(tenantId, updatedRequest, 'rejected', {
+        approverName,
+        rejectionReason
+      });
+    } catch (emailError) {
+      console.error('Failed to send rejected change email:', emailError);
+    }
+  }
+
+  return updatedRequest;
 };

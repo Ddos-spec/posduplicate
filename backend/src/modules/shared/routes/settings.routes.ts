@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getSettings, updateSettings, changePassword } from '../controllers/settings.controller';
+import { getSettings, updateSettings, changePassword, sendTestNotificationEmail } from '../controllers/settings.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { ownerOnly, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 
@@ -57,6 +57,8 @@ router.get('/', tenantMiddleware, getSettings);
  *               $ref: '#/components/schemas/Error'
  */
 router.put('/', tenantMiddleware, ownerOnly, updateSettings);
+
+router.post('/test-notification-email', tenantMiddleware, ownerOnly, sendTestNotificationEmail);
 
 // Password change (any authenticated user)
 /**
