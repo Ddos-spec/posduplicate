@@ -11,9 +11,24 @@ import prisma from '../../src/utils/prisma';
 
 describe('🔥 Smoke Tests - All Modules', () => {
   let authToken: string;
+  let cashierAuthToken: string;
   let testUserId: number;
+  let cashierUserId: number;
   let testTenantId: number;
   let testOutletId: number;
+  let ownerRoleCreated = false;
+  let cashierRoleCreated = false;
+  let approvalRequestId: number | null = null;
+  let approvedCategoryId: number | null = null;
+  const approvalCategoryName = `Approval Smoke ${Date.now()}`;
+
+  const login = async (email: string, password: string) => {
+    const response = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password });
+
+    return response.body.data.token as string;
+  };
 
   // Setup: Create test user & get auth token
   beforeAll(async () => {
@@ -21,10 +36,19 @@ describe('🔥 Smoke Tests - All Modules', () => {
     await prisma.users.deleteMany({ where: { email: 'smoke@test.com' } });
 
     // Create test role if not exists
-    let testRole = await prisma.roles.findFirst({ where: { name: 'Owner' } });
-    if (!testRole) {
-      testRole = await prisma.roles.create({
+    let ownerRole = await prisma.roles.findFirst({ where: { name: 'Owner' } });
+    if (!ownerRole) {
+      ownerRoleCreated = true;
+      ownerRole = await prisma.roles.create({
         data: { name: 'Owner', permissions: {} }
+      });
+    }
+
+    let cashierRole = await prisma.roles.findFirst({ where: { name: 'Cashier' } });
+    if (!cashierRole) {
+      cashierRoleCreated = true;
+      cashierRole = await prisma.roles.create({
+        data: { name: 'Cashier', permissions: {} }
       });
     }
 
@@ -35,7 +59,12 @@ describe('🔥 Smoke Tests - All Modules', () => {
         owner_name: 'Smoke Tester',
         email: 'smoke-tenant@test.com',
         subscription_status: 'active',
-        is_active: true
+        is_active: true,
+        settings: {
+          approvalSettings: {
+            changeControlMode: 'direct'
+          }
+        }
       }
     });
     testTenantId = tenant.id;
@@ -59,7 +88,7 @@ describe('🔥 Smoke Tests - All Modules', () => {
         email: 'smoke@test.com',
         password_hash: hashedPassword,
         name: 'Smoke Tester',
-        role_id: testRole.id,
+        role_id: ownerRole.id,
         tenant_id: testTenantId,
         outlet_id: testOutletId,
         is_active: true
@@ -67,19 +96,54 @@ describe('🔥 Smoke Tests - All Modules', () => {
     });
     testUserId = user.id;
 
-    // Login to get token
-    const loginRes = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'smoke@test.com', password: 'testpassword123' });
+    const cashierUser = await prisma.users.create({
+      data: {
+        email: 'smoke-cashier@test.com',
+        password_hash: hashedPassword,
+        name: 'Smoke Cashier',
+        role_id: cashierRole.id,
+        tenant_id: testTenantId,
+        outlet_id: testOutletId,
+        is_active: true
+      }
+    });
+    cashierUserId = cashierUser.id;
 
-    authToken = loginRes.body.data.token;
+    // Login to get token
+    authToken = await login('smoke@test.com', 'testpassword123');
+    cashierAuthToken = await login('smoke-cashier@test.com', 'testpassword123');
   });
 
   afterAll(async () => {
     // Cleanup
-    await prisma.users.deleteMany({ where: { email: 'smoke@test.com' } });
-    await prisma.outlets.deleteMany({ where: { id: testOutletId } });
-    await prisma.tenants.deleteMany({ where: { id: testTenantId } });
+    try {
+      await prisma.$executeRawUnsafe(`DELETE FROM public.operational_change_requests WHERE tenant_id = ${testTenantId}`);
+    } catch (_error) {
+      // Table is lazily created, so ignore cleanup failures when it doesn't exist.
+    }
+
+    await prisma.categories.deleteMany({
+      where: {
+        outlet_id: testOutletId,
+        name: {
+          contains: 'Approval Smoke'
+        }
+      }
+    });
+
+    await prisma.users.deleteMany({ where: { email: { in: ['smoke@test.com', 'smoke-cashier@test.com'] } } });
+    if (testOutletId) {
+      await prisma.outlets.deleteMany({ where: { id: testOutletId } });
+    }
+    if (testTenantId) {
+      await prisma.tenants.deleteMany({ where: { id: testTenantId } });
+    }
+    if (cashierRoleCreated) {
+      await prisma.roles.deleteMany({ where: { name: 'Cashier' } });
+    }
+    if (ownerRoleCreated) {
+      await prisma.roles.deleteMany({ where: { name: 'Owner' } });
+    }
     await prisma.$disconnect();
   });
 
@@ -288,6 +352,114 @@ describe('🔥 Smoke Tests - All Modules', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+    });
+
+    test('PUT /api/settings - Cashier should not be able to change tenant settings', async () => {
+      const res = await request(app)
+        .put('/api/settings')
+        .set('Authorization', `Bearer ${cashierAuthToken}`)
+        .send({
+          approvalSettings: {
+            changeControlMode: 'approval'
+          }
+        });
+
+      expect(res.status).toBe(403);
+    });
+
+    test('Approval mode should queue cashier category changes until owner approves', async () => {
+      const updateSettingsRes = await request(app)
+        .put('/api/settings')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          approvalSettings: {
+            changeControlMode: 'approval'
+          }
+        });
+
+      expect(updateSettingsRes.status).toBe(200);
+      expect(updateSettingsRes.body.data.approvalSettings.changeControlMode).toBe('approval');
+
+      const createCategoryRes = await request(app)
+        .post('/api/categories')
+        .set('Authorization', `Bearer ${cashierAuthToken}`)
+        .send({
+          name: approvalCategoryName,
+          type: 'item',
+          outletId: testOutletId,
+          reason: 'Tambah kategori seasonal untuk promo'
+        });
+
+      expect(createCategoryRes.status).toBe(202);
+      expect(createCategoryRes.body.approvalRequired).toBe(true);
+      approvalRequestId = createCategoryRes.body.data.id;
+
+      const categoriesBeforeApproval = await request(app)
+        .get('/api/categories')
+        .set('Authorization', `Bearer ${cashierAuthToken}`);
+
+      expect(categoriesBeforeApproval.status).toBe(200);
+      expect(
+        categoriesBeforeApproval.body.data.some((category: any) => category.name === approvalCategoryName)
+      ).toBe(false);
+
+      const tenantNotificationsRes = await request(app)
+        .get('/api/notifications/tenant')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(tenantNotificationsRes.status).toBe(200);
+      expect(
+        tenantNotificationsRes.body.data.some(
+          (notification: any) =>
+            notification.type === 'approval_request' &&
+            String(notification.message || '').includes('approval')
+        )
+      ).toBe(true);
+
+      const pendingRequestsRes = await request(app)
+        .get('/api/change-approvals?status=pending')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(pendingRequestsRes.status).toBe(200);
+      expect(
+        pendingRequestsRes.body.data.some(
+          (approval: any) =>
+            approval.id === approvalRequestId &&
+            approval.entityType === 'category' &&
+            approval.status === 'pending'
+        )
+      ).toBe(true);
+
+      const approveRes = await request(app)
+        .post(`/api/change-approvals/${approvalRequestId}/approve`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({});
+
+      expect(approveRes.status).toBe(200);
+      expect(approveRes.body.data.status).toBe('approved');
+      approvedCategoryId = approveRes.body.data.appliedEntityId;
+
+      const categoriesAfterApproval = await request(app)
+        .get('/api/categories')
+        .set('Authorization', `Bearer ${cashierAuthToken}`);
+
+      expect(categoriesAfterApproval.status).toBe(200);
+      expect(
+        categoriesAfterApproval.body.data.some((category: any) => category.name === approvalCategoryName)
+      ).toBe(true);
+
+      const approvalActivityLog = await prisma.activity_logs.findFirst({
+        where: {
+          action_type: 'category_create',
+          entity_type: 'category',
+          entity_id: approvedCategoryId || undefined
+        },
+        orderBy: { created_at: 'desc' }
+      });
+
+      expect(approvalActivityLog).toBeTruthy();
+      expect(approvalActivityLog?.user_id).toBe(cashierUserId);
+      expect(String(approvalActivityLog?.reason || '')).toContain('Approved by Smoke Tester');
     });
   });
 
