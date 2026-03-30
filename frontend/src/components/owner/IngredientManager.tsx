@@ -21,6 +21,26 @@ interface Ingredient {
   is_active: boolean;
 }
 
+const toNumber = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeIngredient = (ingredient: any): Ingredient => ({
+  id: toNumber(ingredient?.id),
+  name: typeof ingredient?.name === 'string' ? ingredient.name : '',
+  unit: typeof ingredient?.unit === 'string' ? ingredient.unit : '',
+  stock: toNumber(ingredient?.stock),
+  min_stock: toNumber(ingredient?.min_stock ?? ingredient?.minStock),
+  cost_per_unit: toNumber(ingredient?.cost_per_unit ?? ingredient?.costPerUnit ?? ingredient?.cost),
+  outlet_id: toNumber(ingredient?.outlet_id ?? ingredient?.outletId),
+  is_active: ingredient?.is_active ?? ingredient?.isActive ?? true
+});
+
 export default function IngredientManager() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,10 +75,12 @@ export default function IngredientManager() {
       const response = await api.get('/ingredients', {
         params: { outlet_id: outletId }
       });
-      setIngredients(response.data.data);
+      const rawIngredients = Array.isArray(response.data?.data) ? response.data.data : [];
+      setIngredients(rawIngredients.map(normalizeIngredient));
     } catch (error) {
       console.error('Failed to load ingredients:', error);
       toast.error('Failed to load ingredients');
+      setIngredients([]);
     } finally {
       setLoading(false);
     }
@@ -70,7 +92,7 @@ export default function IngredientManager() {
 
   // Filter ingredients
   const filteredIngredients = ingredients.filter(ing =>
-    ing.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (ing.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleFormChange = (field: string, value: string) => {
@@ -234,12 +256,12 @@ export default function IngredientManager() {
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         ing.stock <= ing.min_stock ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                       }`}>
-                        {ing.stock}
+                        {toNumber(ing.stock).toLocaleString('id-ID')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-500">{ing.unit}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                      Rp {ing.cost_per_unit.toLocaleString('id-ID')}
+                      Rp {toNumber(ing.cost_per_unit).toLocaleString('id-ID')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button onClick={() => handleOpenForm(ing)} className="text-indigo-600 hover:text-indigo-900 mr-4">

@@ -30,6 +30,31 @@ interface InventoryItem {
   updatedAt: string;
 }
 
+const toNumber = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeInventoryItem = (item: any): InventoryItem => ({
+  id: toNumber(item?.id),
+  name: typeof item?.name === 'string' ? item.name : '',
+  category: typeof item?.category === 'string' ? item.category : '',
+  unit: typeof item?.unit === 'string' ? item.unit : '',
+  currentStock: toNumber(item?.currentStock ?? item?.current_stock),
+  alert: Boolean(item?.alert),
+  stockAlert: toNumber(item?.stockAlert ?? item?.stock_alert),
+  trackCost: Boolean(item?.trackCost ?? item?.track_cost),
+  costAmount: toNumber(item?.costAmount ?? item?.cost_amount),
+  outletId: item?.outletId ?? item?.outlet_id ?? null,
+  isActive: item?.isActive ?? item?.is_active ?? true,
+  createdAt: item?.createdAt ?? item?.created_at ?? '',
+  updatedAt: item?.updatedAt ?? item?.updated_at ?? ''
+});
+
 export default function InventoryTab() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,10 +92,12 @@ export default function InventoryTab() {
       if (showLowStockOnly) params.low_stock = 'true';
 
       const response = await api.get('/inventory-module', { params });
-      setInventory(response.data.data || []);
+      const rawInventory = Array.isArray(response.data?.data) ? response.data.data : [];
+      setInventory(rawInventory.map(normalizeInventoryItem));
     } catch (error) {
       console.error('Failed to load inventory:', error);
       toast.error('Gagal memuat data inventory');
+      setInventory([]);
     } finally {
       setLoading(false);
     }
@@ -81,13 +108,13 @@ export default function InventoryTab() {
   }, [loadInventory]);
 
   // Get unique categories
-  const categories = Array.from(new Set(inventory.map(item => item.category))).filter(Boolean);
+  const categories = Array.from(new Set(inventory.map(item => item.category).filter(Boolean)));
 
   // Filter inventory
   const filteredInventory = inventory.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (item.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !categoryFilter || item.category === categoryFilter;
-    const matchesLowStock = !showLowStockOnly || (item.alert && item.currentStock <= item.stockAlert);
+    const matchesLowStock = !showLowStockOnly || (item.alert && toNumber(item.currentStock) <= toNumber(item.stockAlert));
     return matchesSearch && matchesCategory && matchesLowStock;
   });
 
@@ -193,11 +220,11 @@ export default function InventoryTab() {
       style: 'currency',
       currency: 'IDR',
       minimumFractionDigits: 0
-    }).format(amount);
+    }).format(toNumber(amount));
   };
 
   const isLowStock = (item: InventoryItem) => {
-    return item.alert && item.currentStock <= item.stockAlert;
+    return item.alert && toNumber(item.currentStock) <= toNumber(item.stockAlert);
   };
 
   return (
@@ -358,7 +385,7 @@ export default function InventoryTab() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          {item.currentStock > item.stockAlert ? (
+                          {toNumber(item.currentStock) > toNumber(item.stockAlert) ? (
                             <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
                           ) : (
                             <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
@@ -366,7 +393,7 @@ export default function InventoryTab() {
                           <span className={`text-sm font-semibold ${
                             isLowStock(item) ? 'text-red-600' : 'text-gray-900'
                           }`}>
-                            {item.currentStock.toLocaleString()}
+                            {toNumber(item.currentStock).toLocaleString('id-ID')}
                           </span>
                         </div>
                       </td>
