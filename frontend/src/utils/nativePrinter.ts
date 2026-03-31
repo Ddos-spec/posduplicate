@@ -1,14 +1,18 @@
 import {
   DEFAULT_PRINTER_ADDRESS_KEY,
   NativeBluetoothPrinter,
+  type PrinterSlot,
   getSavedPrinterSelection,
   isNativeAndroidApp,
 } from '../plugins/nativeBluetoothPrinter';
 
 interface ReceiptItem {
+  itemId?: number;
   name: string;
   quantity: number;
   price: number;
+  categoryId?: number | null;
+  categoryName?: string | null;
   modifiers?: { id: number; name: string; price: number }[];
   notes?: string;
 }
@@ -75,7 +79,8 @@ const buildPriceRow = (label: string, value: string, lineWidth: number) => {
   return `[L]${left}[R]${value}\n`;
 };
 
-export const hasSavedNativePrinter = () => Boolean(localStorage.getItem(DEFAULT_PRINTER_ADDRESS_KEY));
+export const hasSavedNativePrinter = (slot: PrinterSlot = 'cashier') =>
+  Boolean(getSavedPrinterSelection(slot).address || (slot === 'cashier' && localStorage.getItem(DEFAULT_PRINTER_ADDRESS_KEY)));
 
 export const printNativeReceipt = async (
   transactionData: NativeReceiptData,
@@ -186,6 +191,90 @@ export const printNativeReceipt = async (
     lines.push('[C]Terima kasih atas kunjungan Anda!\n');
     lines.push('[C]Barang yang sudah dibeli tidak dapat ditukar\n');
   }
+
+  await NativeBluetoothPrinter.printFormattedText({
+    address,
+    text: lines.join(''),
+    printerDpi: 203,
+    printerWidthMm: profile.printerWidthMm,
+    printerNbrCharactersPerLine: profile.printerNbrCharactersPerLine,
+    feedPaperMm: 18,
+    cutPaper: false,
+  });
+
+  return true;
+};
+
+interface NativeKitchenTicketData {
+  transactionNumber?: string;
+  orderType?: string;
+  cashierName?: string;
+  outletName?: string;
+  kitchenCategoryIds: number[];
+  items: ReceiptItem[];
+}
+
+export const printNativeKitchenTicket = async (
+  ticketData: NativeKitchenTicketData,
+  settings?: NativeReceiptSettings,
+) => {
+  if (!isNativeAndroidApp()) {
+    return false;
+  }
+
+  const { address } = getSavedPrinterSelection('kitchen');
+  if (!address) {
+    return false;
+  }
+
+  const matchedItems = ticketData.items.filter((item) =>
+    item.categoryId != null && ticketData.kitchenCategoryIds.includes(Number(item.categoryId))
+  );
+
+  if (matchedItems.length === 0) {
+    return false;
+  }
+
+  const permissionResult = await NativeBluetoothPrinter.ensurePermissions();
+  if (!permissionResult.granted) {
+    throw new Error('Izin Bluetooth belum diberikan');
+  }
+
+  const profile = getPrinterProfile(settings?.printerWidth);
+  const lineWidth = profile.printerNbrCharactersPerLine;
+  const divider = '='.repeat(lineWidth);
+  const dashedDivider = '-'.repeat(lineWidth);
+  const lines: string[] = [];
+
+  lines.push(`[C]<b>${sanitizeLine(ticketData.outletName || settings?.businessName || 'MyPOS')}</b>\n`);
+  lines.push('[C]<b>TIKET DAPUR</b>\n');
+  lines.push(`[C]${divider}\n`);
+  lines.push(`[L]No: ${sanitizeLine(ticketData.transactionNumber || `TRX-${Date.now()}`)}\n`);
+  lines.push(`[L]Kasir: ${sanitizeLine(ticketData.cashierName || '-')}\n`);
+  lines.push(`[L]Order: ${sanitizeLine(ticketData.orderType || '-')}\n`);
+  lines.push(`[L]Tgl: ${new Date().toLocaleString('id-ID')}\n`);
+  lines.push(`[C]${dashedDivider}\n`);
+
+  for (const item of matchedItems) {
+    lines.push(`[L]<b>${item.quantity}x ${sanitizeLine(item.name)}</b>\n`);
+
+    if (item.categoryName) {
+      lines.push(`[L]  Kategori: ${sanitizeLine(item.categoryName)}\n`);
+    }
+
+    for (const modifier of item.modifiers || []) {
+      lines.push(`[L]  + ${sanitizeLine(modifier.name)}\n`);
+    }
+
+    if (item.notes) {
+      lines.push(`[L]  * ${sanitizeLine(item.notes)}\n`);
+    }
+
+    lines.push('[L]\n');
+  }
+
+  lines.push(`[C]${divider}\n`);
+  lines.push('[C]Cetak otomatis untuk dapur\n');
 
   await NativeBluetoothPrinter.printFormattedText({
     address,

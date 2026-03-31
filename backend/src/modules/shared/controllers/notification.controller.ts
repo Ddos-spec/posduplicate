@@ -34,6 +34,10 @@ const IMPORTANT_ACTIVITY_ACTIONS = [
   'supplier_create',
   'supplier_update',
   'supplier_delete',
+  'cart_item_removed',
+  'cart_quantity_reduced',
+  'cart_cleared',
+  'delete_transaction',
   'user_create',
   'user_update',
   'user_delete',
@@ -74,8 +78,8 @@ const extractEntityName = (log: any) => {
   const newValue = toRecord(log.new_value);
 
   return (
-    pickStringValue(newValue, ['name', 'itemName', 'category', 'description']) ||
-    pickStringValue(oldValue, ['name', 'itemName', 'category', 'description']) ||
+    pickStringValue(newValue, ['entityLabel', 'name', 'itemName', 'category', 'description', 'transactionNumber']) ||
+    pickStringValue(oldValue, ['entityLabel', 'name', 'itemName', 'category', 'description', 'transactionNumber']) ||
     (log.entity_id ? `#${log.entity_id}` : null)
   );
 };
@@ -120,13 +124,15 @@ const getActivityRoute = (actionType: string) => {
     actionType.startsWith('variant_') ||
     actionType.startsWith('ingredient_') ||
     actionType.startsWith('stock_') ||
-    actionType.startsWith('supplier_')
+    actionType.startsWith('supplier_') ||
+    actionType.startsWith('cart_')
   ) {
     if (
       actionType.startsWith('table_') ||
       actionType.startsWith('category_') ||
       actionType.startsWith('modifier_') ||
-      actionType.startsWith('variant_')
+      actionType.startsWith('variant_') ||
+      actionType.startsWith('cart_')
     ) {
       return '/cashier';
     }
@@ -136,6 +142,10 @@ const getActivityRoute = (actionType: string) => {
 
   if (actionType.startsWith('expense_')) {
     return '/owner/reports?tab=expenses';
+  }
+
+  if (actionType === 'delete_transaction') {
+    return '/cashier';
   }
 
   if (actionType.startsWith('user_')) {
@@ -209,6 +219,10 @@ const formatActivityNotification = (tenantId: number, log: any) => {
     supplier_create: `${actorName} menambahkan supplier${inventoryTarget}`,
     supplier_update: `${actorName} mengubah supplier${inventoryTarget}`,
     supplier_delete: `${actorName} menghapus supplier${inventoryTarget}`,
+    cart_item_removed: `${actorName} menghapus item dari keranjang${inventoryTarget}`,
+    cart_quantity_reduced: `${actorName} mengurangi qty item di keranjang${inventoryTarget}`,
+    cart_cleared: `${actorName} mengosongkan keranjang kasir`,
+    delete_transaction: `${actorName} menghapus transaksi${inventoryTarget}`,
     user_create: `${actorName} membuat akun pengguna${inventoryTarget}`,
     user_update: `${actorName} mengubah akun pengguna${inventoryTarget}`,
     user_delete: `${actorName} menonaktifkan atau menghapus pengguna${inventoryTarget}`,

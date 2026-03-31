@@ -12,11 +12,14 @@ import ProductCustomizeModal from '../components/cashier/ProductCustomizeModal';
 import ProfileMenu from '../components/cashier/ProfileMenu';
 import RunningLogo from '../components/RunningLogo';
 import { printReceipt } from '../utils/exportUtils';
+import { printNativeKitchenTicket } from '../utils/nativePrinter';
 import { settingsService } from '../services/settingsService';
 import type { TenantSettings } from '../services/settingsService';
 import useConfirmationStore from '../store/confirmationStore';
 import { formatCurrency } from '../utils/format';
 import ReasonInputDialog from '../components/common/ReasonInputDialog';
+import SupervisorPinDialog from '../components/common/SupervisorPinDialog';
+import { getUserRoleName, requiresCashierSupervisorPin } from '../utils/cashierSecurity';
 
 interface Product {
   id: number;
@@ -131,9 +134,24 @@ export default function CashierPage() {
   const [qrisImage, setQrisImage] = useState<string | null>(null);
   const [activeIntegrations, setActiveIntegrations] = useState<string[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+  const user = useAuthStore((state) => state.user);
 
   const { items, addItem, updateQuantity, removeItem, clearCart, getTotal, getSubtotal } = useCartStore();
   const { showConfirmation } = useConfirmationStore();
+  const [isAuthorizingSupervisorPin, setIsAuthorizingSupervisorPin] = useState(false);
+  const [supervisorPinDialog, setSupervisorPinDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    onConfirm: (pin: string) => Promise<void> | void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Verifikasi PIN',
+    onConfirm: () => {}
+  });
 
   const loadIntegrations = async () => {
     try {
@@ -213,6 +231,224 @@ export default function CashierPage() {
     loadIntegrations();
   }, [loadProducts, loadCategories]);
 
+  const roleName = getUserRoleName(user);
+  const supervisorPinRequired = requiresCashierSupervisorPin(settings, roleName);
+  const resolvedOutletId = user?.outletId || user?.outlets?.id || null;
+
+  const getCartLineTotal = (item: typeof items[number]) =>
+    (item.price + (item.modifiers?.reduce((sum, modifier) => sum + modifier.price, 0) || 0)) * item.quantity;
+
+  const closeSupervisorPinDialog = () => {
+    if (isAuthorizingSupervisorPin) {
+      return;
+    }
+
+    setSupervisorPinDialog((current) => ({ ...current, isOpen: false }));
+  };
+
+  const requestSupervisorAuthorization = ({
+    title,
+    message,
+    confirmText,
+    actionType,
+    entityId,
+    entityLabel,
+    reason,
+    summary,
+    metadata,
+    onAuthorized,
+    successMessage
+  }: {
+    title: string;
+    message: string;
+    confirmText: string;
+    actionType: string;
+    entityId?: number | null;
+    entityLabel?: string | null;
+    reason: string;
+    summary: Record<string, unknown>;
+    metadata: Record<string, unknown>;
+    onAuthorized: () => void;
+    successMessage: string;
+  }) => {
+    if (!supervisorPinRequired) {
+      onAuthorized();
+      return;
+    }
+
+    if (!resolvedOutletId) {
+      toast.error('Outlet kasir tidak ditemukan, jadi otorisasi supervisor tidak bisa dijalankan.');
+      return;
+    }
+
+    const authorizeAndRun = async (
+      pin: string,
+      options?: {
+        suppressPinRequiredToast?: boolean;
+        showSuccessToast?: boolean;
+        closeDialogAfterSuccess?: boolean;
+      }
+    ) => {
+      setIsAuthorizingSupervisorPin(true);
+      try {
+        await settingsService.authorizeSupervisorAction({
+          pin,
+          actionType,
+          outletId: resolvedOutletId,
+          entityId: entityId ?? null,
+          entityLabel: entityLabel ?? null,
+          reason,
+          summary,
+          metadata
+        });
+
+        onAuthorized();
+
+        if (options?.closeDialogAfterSuccess) {
+          setSupervisorPinDialog((current) => ({ ...current, isOpen: false }));
+        }
+
+        if (options?.showSuccessToast) {
+          toast.success(successMessage);
+        }
+      } catch (error: unknown) {
+        console.error('Supervisor authorization failed:', error);
+        const errorCode = axios.isAxiosError(error) ? error.response?.data?.error?.code : undefined;
+        let errorMessage = 'PIN supervisor tidak valid';
+        if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+          errorMessage = error.response.data.error.message;
+        }
+
+        const shouldSilenceToast =
+          options?.suppressPinRequiredToast === true && errorCode === 'SUPERVISOR_PIN_INVALID';
+
+        if (!shouldSilenceToast) {
+          toast.error(errorMessage);
+        }
+
+        throw error;
+      } finally {
+        setIsAuthorizingSupervisorPin(false);
+      }
+    };
+
+    const openSupervisorPinPrompt = () => {
+      setSupervisorPinDialog({
+        isOpen: true,
+        title,
+        message,
+        confirmText,
+        onConfirm: async (pin: string) => {
+          try {
+            await authorizeAndRun(pin, {
+              showSuccessToast: true,
+              closeDialogAfterSuccess: true
+            });
+          } catch {
+            return;
+          }
+        }
+      });
+    };
+
+    if (!supervisorPinRequired) {
+      void authorizeAndRun('', {
+        suppressPinRequiredToast: true,
+        showSuccessToast: false,
+        closeDialogAfterSuccess: false
+      }).catch((error: unknown) => {
+        const errorCode = axios.isAxiosError(error) ? error.response?.data?.error?.code : undefined;
+        if (errorCode === 'SUPERVISOR_PIN_INVALID') {
+          openSupervisorPinPrompt();
+        }
+      });
+      return;
+    }
+
+    openSupervisorPinPrompt();
+  };
+
+  const handleRemoveCartItem = (item: typeof items[number]) => {
+    requestSupervisorAuthorization({
+      title: 'PIN supervisor untuk hapus item',
+      message: `${item.name} akan dihapus dari keranjang. Minta owner atau orang kepercayaan untuk memasukkan PIN supervisor.`,
+      confirmText: 'Buka Hapus Item',
+      actionType: 'cart_item_removed',
+      entityId: item.itemId,
+      entityLabel: item.name,
+      reason: `Supervisor PIN digunakan untuk menghapus ${item.name} dari keranjang.`,
+      summary: {
+        cartTotalBefore: getTotal(),
+        itemCountBefore: items.length,
+        targetItem: {
+          itemId: item.itemId,
+          name: item.name,
+          quantity: item.quantity,
+          lineTotal: getCartLineTotal(item),
+          categoryName: item.categoryName || null
+        }
+      },
+      metadata: {
+        targetItem: {
+          itemId: item.itemId,
+          name: item.name,
+          quantityBefore: item.quantity,
+          quantityAfter: 0,
+          categoryId: item.categoryId ?? null,
+          categoryName: item.categoryName || null
+        },
+        cartItemsBefore: items.map((cartItem) => ({
+          itemId: cartItem.itemId,
+          name: cartItem.name,
+          quantity: cartItem.quantity,
+          lineTotal: getCartLineTotal(cartItem)
+        }))
+      },
+      onAuthorized: () => removeItem(item.id),
+      successMessage: `${item.name} dihapus dari keranjang`
+    });
+  };
+
+  const handleDecreaseCartItem = (item: typeof items[number]) => {
+    if (item.quantity <= 1) {
+      handleRemoveCartItem(item);
+      return;
+    }
+
+    requestSupervisorAuthorization({
+      title: 'PIN supervisor untuk kurangi qty',
+      message: `Qty ${item.name} akan dikurangi dari ${item.quantity} menjadi ${item.quantity - 1}.`,
+      confirmText: 'Buka Kurangi Qty',
+      actionType: 'cart_quantity_reduced',
+      entityId: item.itemId,
+      entityLabel: item.name,
+      reason: `Supervisor PIN digunakan untuk mengurangi qty ${item.name} dari ${item.quantity} ke ${item.quantity - 1}.`,
+      summary: {
+        cartTotalBefore: getTotal(),
+        itemCountBefore: items.length,
+        targetItem: {
+          itemId: item.itemId,
+          name: item.name,
+          quantityBefore: item.quantity,
+          quantityAfter: item.quantity - 1,
+          lineTotalBefore: getCartLineTotal(item)
+        }
+      },
+      metadata: {
+        targetItem: {
+          itemId: item.itemId,
+          name: item.name,
+          quantityBefore: item.quantity,
+          quantityAfter: item.quantity - 1,
+          categoryId: item.categoryId ?? null,
+          categoryName: item.categoryName || null
+        }
+      },
+      onAuthorized: () => updateQuantity(item.id, item.quantity - 1),
+      successMessage: `Qty ${item.name} berhasil dikurangi`
+    });
+  };
+
   const handleProductClick = (product: Product) => {
     if (managementMode) return;
     // Show customize modal
@@ -224,10 +460,14 @@ export default function CashierPage() {
     modifiers: { id: number; name: string; price: number }[] = [],
     notes: string = ''
   ) => {
+    const resolvedCategory = product.category || product.categories;
+
     addItem({
       itemId: product.id,
       name: product.name,
       price: parseFloat(product.price.toString()),
+      categoryId: resolvedCategory?.id ?? null,
+      categoryName: resolvedCategory?.name ?? null,
       priceGofood: product.priceGofood ? parseFloat(product.priceGofood.toString()) : null,
       priceGrabfood: product.priceGrabfood ? parseFloat(product.priceGrabfood.toString()) : null,
       priceShopeefood: product.priceShopeefood ? parseFloat(product.priceShopeefood.toString()) : null,
@@ -357,38 +597,59 @@ export default function CashierPage() {
 
       toast.success('Payment successful!');
 
-      // Generate and print receipt
-      await printReceipt(
-        {
-          transactionNumber: transactionData?.transactionNumber,
-          items: items.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            modifiers: item.modifiers,
-            notes: item.notes
-          })),
-          subtotal: subtotal,
-          discountAmount: 0,
-          taxAmount: taxAmount,
-          serviceCharge: serviceChargeAmount,
-          total: subtotal + taxAmount + serviceChargeAmount,
-          payments: finalPayments,
-          cashierName: useAuthStore.getState().user?.name,
-          outletName: undefined
-        },
-        settings ? {
-          businessName: settings.businessName,
-          address: settings.address || undefined,
-          phone: settings.phone || undefined,
-          receiptHeader: settings.receiptHeader || undefined,
-          receiptFooter: settings.receiptFooter || undefined,
-          printerWidth: settings.printerWidth || undefined,
-          logo: settings.logo ? getFullUrl(settings.logo) : undefined,
-          showLogoOnReceipt: settings.showLogoOnReceipt || false,
-          taxName: settings.taxName || undefined
-        } : undefined
-      );
+      const receiptPayload = {
+        transactionNumber: transactionData?.transactionNumber,
+        items: items.map(item => ({
+          itemId: item.itemId,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          categoryId: item.categoryId ?? null,
+          categoryName: item.categoryName ?? null,
+          modifiers: item.modifiers,
+          notes: item.notes
+        })),
+        subtotal: subtotal,
+        discountAmount: 0,
+        taxAmount: taxAmount,
+        serviceCharge: serviceChargeAmount,
+        total: subtotal + taxAmount + serviceChargeAmount,
+        payments: finalPayments,
+        cashierName: user?.name,
+        outletName: settings?.businessName || undefined
+      };
+
+      const receiptSettings = settings ? {
+        businessName: settings.businessName,
+        address: settings.address || undefined,
+        phone: settings.phone || undefined,
+        receiptHeader: settings.receiptHeader || undefined,
+        receiptFooter: settings.receiptFooter || undefined,
+        printerWidth: settings.printerWidth || undefined,
+        logo: settings.logo ? getFullUrl(settings.logo) : undefined,
+        showLogoOnReceipt: settings.showLogoOnReceipt || false,
+        taxName: settings.taxName || undefined
+      } : undefined;
+
+      try {
+        if (settings?.printerRouting?.cashierAutoPrint !== false) {
+          await printReceipt(receiptPayload, receiptSettings);
+        }
+
+        if (settings?.printerRouting?.kitchenAutoPrint) {
+          await printNativeKitchenTicket({
+            transactionNumber: transactionData?.transactionNumber,
+            orderType,
+            cashierName: user?.name,
+            outletName: settings?.businessName || undefined,
+            kitchenCategoryIds: settings.printerRouting.kitchenCategoryIds || [],
+            items: receiptPayload.items
+          }, receiptSettings);
+        }
+      } catch (printError) {
+        console.error('Printing failed after successful payment:', printError);
+        toast.error('Pembayaran berhasil, tapi proses cetak gagal. Cek printer kasir atau dapur.');
+      }
 
       clearCart();
       setShowPayment(false);
@@ -990,14 +1251,14 @@ export default function CashierPage() {
                         <p className="text-xs text-gray-500 italic mt-1">Note: {item.notes}</p>
                       )}
                     </div>
-                    <button onClick={() => removeItem(item.id)} className="text-red-500">
+                    <button onClick={() => handleRemoveCartItem(item)} className="text-red-500">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => handleDecreaseCartItem(item)}
                         className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center hover:bg-gray-300"
                       >
                         <Minus className="w-4 h-4" />
@@ -1528,6 +1789,16 @@ export default function CashierPage() {
         confirmText={reasonDialog.confirmText}
       />
 
+      <SupervisorPinDialog
+        isOpen={supervisorPinDialog.isOpen}
+        onClose={closeSupervisorPinDialog}
+        onConfirm={(pin) => supervisorPinDialog.onConfirm(pin)}
+        title={supervisorPinDialog.title}
+        message={supervisorPinDialog.message}
+        confirmText={supervisorPinDialog.confirmText}
+        isLoading={isAuthorizingSupervisorPin}
+      />
+
       {/* Mobile Cart Drawer */}
       {showMobileCart && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden">
@@ -1573,14 +1844,14 @@ export default function CashierPage() {
                             <p className="text-xs text-gray-500 italic mt-1">Note: {item.notes}</p>
                           )}
                         </div>
-                        <button onClick={() => removeItem(item.id)} className="text-red-500">
+                        <button onClick={() => handleRemoveCartItem(item)} className="text-red-500">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() => handleDecreaseCartItem(item)}
                             className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center"
                           >
                             <Minus className="w-4 h-4" />
@@ -1695,7 +1966,10 @@ export default function CashierPage() {
 
       {/* Transaction History Modal */}
       {showTransactionHistory && (
-        <TransactionHistory onClose={() => setShowTransactionHistory(false)} />
+        <TransactionHistory
+          onClose={() => setShowTransactionHistory(false)}
+          settings={settings}
+        />
       )}
 
       {/* Table Management Modal */}

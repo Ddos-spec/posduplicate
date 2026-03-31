@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { getSettings, updateSettings, changePassword, sendTestNotificationEmail } from '../controllers/settings.controller';
+import {
+  authorizeSupervisorAction,
+  getSettings,
+  updateSettings,
+  changePassword,
+  sendTestNotificationEmail
+} from '../controllers/settings.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { ownerOnly, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 
@@ -59,6 +65,7 @@ router.get('/', tenantMiddleware, getSettings);
 router.put('/', tenantMiddleware, ownerOnly, updateSettings);
 
 router.post('/test-notification-email', tenantMiddleware, ownerOnly, sendTestNotificationEmail);
+router.post('/authorize-supervisor-action', tenantMiddleware, authorizeSupervisorAction);
 
 // Password change (any authenticated user)
 /**

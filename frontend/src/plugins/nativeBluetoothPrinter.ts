@@ -57,20 +57,43 @@ export const NativeBluetoothPrinter = registerPlugin<NativeBluetoothPrinterPlugi
 export const isNativeAndroidApp = () =>
   Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
+export type PrinterSlot = 'cashier' | 'kitchen';
+
 export const DEFAULT_PRINTER_ADDRESS_KEY = 'defaultBluetoothPrinterAddress';
 export const DEFAULT_PRINTER_NAME_KEY = 'defaultBluetoothPrinterName';
+export const KITCHEN_PRINTER_ADDRESS_KEY = 'kitchenBluetoothPrinterAddress';
+export const KITCHEN_PRINTER_NAME_KEY = 'kitchenBluetoothPrinterName';
 
-export const getSavedPrinterSelection = () => ({
-  address: localStorage.getItem(DEFAULT_PRINTER_ADDRESS_KEY) || '',
-  name: localStorage.getItem(DEFAULT_PRINTER_NAME_KEY) || '',
-});
+const getSlotKeys = (slot: PrinterSlot) => slot === 'kitchen'
+  ? {
+      address: KITCHEN_PRINTER_ADDRESS_KEY,
+      name: KITCHEN_PRINTER_NAME_KEY
+    }
+  : {
+      address: DEFAULT_PRINTER_ADDRESS_KEY,
+      name: DEFAULT_PRINTER_NAME_KEY
+    };
 
-export const savePrinterSelection = (printer: { address: string; name: string }) => {
-  localStorage.setItem(DEFAULT_PRINTER_ADDRESS_KEY, printer.address);
-  localStorage.setItem(DEFAULT_PRINTER_NAME_KEY, printer.name);
+export const getSavedPrinterSelection = (slot: PrinterSlot = 'cashier') => {
+  const keys = getSlotKeys(slot);
+
+  return {
+    address: localStorage.getItem(keys.address) || '',
+    name: localStorage.getItem(keys.name) || '',
+  };
 };
 
-export const clearPrinterSelection = () => {
-  localStorage.removeItem(DEFAULT_PRINTER_ADDRESS_KEY);
-  localStorage.removeItem(DEFAULT_PRINTER_NAME_KEY);
+export const savePrinterSelection = (
+  printer: { address: string; name: string },
+  slot: PrinterSlot = 'cashier'
+) => {
+  const keys = getSlotKeys(slot);
+  localStorage.setItem(keys.address, printer.address);
+  localStorage.setItem(keys.name, printer.name);
+};
+
+export const clearPrinterSelection = (slot: PrinterSlot = 'cashier') => {
+  const keys = getSlotKeys(slot);
+  localStorage.removeItem(keys.address);
+  localStorage.removeItem(keys.name);
 };

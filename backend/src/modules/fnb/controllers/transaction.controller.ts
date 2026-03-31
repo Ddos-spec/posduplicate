@@ -7,6 +7,10 @@ import {
   ensureOperationalChangeAccess,
   maybeQueueOperationalChange
 } from './changeControl.helpers';
+import {
+  requiresSupervisorPinForRole,
+  verifyCashierSupervisorPin
+} from '../../shared/services/cashierSecurity.service';
 
 /**
  * Check stock availability for items before checkout
@@ -732,7 +736,7 @@ export const updateTransactionStatus = async (
 ) => {
   try {
     const { id } = req.params;
-    const { status, reason } = req.body;
+    const { status, reason, supervisorPin } = req.body;
 
     if (!ensureOperationalChangeAccess(req, res)) {
       return;
@@ -755,6 +759,33 @@ export const updateTransactionStatus = async (
         success: false,
         error: { code: 'UNAUTHORIZED', message: 'User authentication required' }
       });
+    }
+
+    const requiresSupervisorPin = sensitiveStatuses.includes(status) &&
+      await requiresSupervisorPinForRole(req.tenantId, req.userRole);
+
+    if (requiresSupervisorPin) {
+      const verification = await verifyCashierSupervisorPin(req.tenantId || 0, typeof supervisorPin === 'string' ? supervisorPin : '');
+
+      if (!verification.configured) {
+        return res.status(409).json({
+          success: false,
+          error: {
+            code: 'SUPERVISOR_PIN_NOT_CONFIGURED',
+            message: 'PIN supervisor belum disetel oleh owner.'
+          }
+        });
+      }
+
+      if (!verification.valid) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'SUPERVISOR_PIN_INVALID',
+            message: 'PIN supervisor tidak valid.'
+          }
+        });
+      }
     }
 
     // Get existing transaction with items
@@ -787,14 +818,16 @@ export const updateTransactionStatus = async (
       payload: {
         id: existingTransaction.id,
         status,
-        reason
+        reason,
+        supervisorPinAuthorized: requiresSupervisorPin
       },
       summary: {
         transactionNumber: existingTransaction.transaction_number,
         currentStatus: existingTransaction.status,
         nextStatus: status,
         total: existingTransaction.total,
-        outletId: existingTransaction.outlet_id
+        outletId: existingTransaction.outlet_id,
+        supervisorPinAuthorized: requiresSupervisorPin
       },
       message: 'Perubahan status transaksi dikirim untuk approval owner.'
     })) {
@@ -846,8 +879,10 @@ export const updateTransactionStatus = async (
         'transactions',
         transaction.id,
         { status: existingTransaction.status },
-        { status },
-        reason || null,
+        { status, supervisorPinAuthorized: requiresSupervisorPin },
+        requiresSupervisorPin
+          ? `${reason || 'Perubahan status sensitif'} (Supervisor PIN digunakan)`
+          : reason || null,
         existingTransaction.outlet_id || null
       );
     }
@@ -872,6 +907,7 @@ export const deleteTransaction = async (
 ) => {
   try {
     const { id } = req.params;
+    const { supervisorPin } = req.body || {};
     const tenantId = req.tenantId;
 
     // Get transaction with outlet info for tenant validation
@@ -895,6 +931,32 @@ export const deleteTransaction = async (
           message: 'Transaction not found'
         }
       });
+    }
+
+    const requiresSupervisorPin = await requiresSupervisorPinForRole(req.tenantId, req.userRole);
+
+    if (requiresSupervisorPin) {
+      const verification = await verifyCashierSupervisorPin(req.tenantId || 0, typeof supervisorPin === 'string' ? supervisorPin : '');
+
+      if (!verification.configured) {
+        return res.status(409).json({
+          success: false,
+          error: {
+            code: 'SUPERVISOR_PIN_NOT_CONFIGURED',
+            message: 'PIN supervisor belum disetel oleh owner.'
+          }
+        });
+      }
+
+      if (!verification.valid) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'SUPERVISOR_PIN_INVALID',
+            message: 'PIN supervisor tidak valid.'
+          }
+        });
+      }
     }
 
     // Verify tenant ownership
@@ -934,6 +996,28 @@ export const deleteTransaction = async (
     await prisma.transactions.delete({
       where: { id: parseInt(id) }
     });
+
+    if (req.userId) {
+      await createActivityLog(
+        req.userId,
+        'delete_transaction',
+        'transactions',
+        transaction.id,
+        {
+          transactionNumber: transaction.transaction_number,
+          status: transaction.status,
+          total: transaction.total
+        },
+        {
+          deleted: true,
+          supervisorPinAuthorized: requiresSupervisorPin
+        },
+        requiresSupervisorPin
+          ? 'Transaksi dihapus setelah otorisasi PIN supervisor.'
+          : 'Transaksi dihapus.',
+        transaction.outlet_id || null
+      );
+    }
 
     res.json({
       success: true,

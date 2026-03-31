@@ -342,7 +342,14 @@ export const getFraudStats = async (req: Request, res: Response, _next: NextFunc
         });
 
         // Get Activity Logs for sensitive actions
-        const riskyActions = ['delete_transaction', 'force_discount', 'open_cash_drawer'];
+        const riskyActions = [
+            'delete_transaction',
+            'force_discount',
+            'open_cash_drawer',
+            'cart_item_removed',
+            'cart_quantity_reduced',
+            'cart_cleared'
+        ];
         const logs = await prisma.activity_logs.findMany({
             where: {
                 created_at: { gte: startDate, lte: endDate },

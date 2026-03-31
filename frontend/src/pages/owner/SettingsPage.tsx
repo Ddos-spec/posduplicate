@@ -1,18 +1,66 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Save, Upload, Loader2, X, ShieldCheck, ShieldAlert, CircleAlert, ClipboardList, Mail, BellRing, MessageSquare } from 'lucide-react';
+import { Save, Upload, Loader2, X, ShieldCheck, ShieldAlert, CircleAlert, ClipboardList, Mail, BellRing, MessageSquare, KeyRound, ChefHat, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { settingsService } from '../../services/settingsService';
-import type { ApprovalSettings, TenantSettings } from '../../services/settingsService';
+import type {
+  ApprovalSettings,
+  CashierSecuritySettings,
+  PrinterRoutingSettings,
+  TenantSettings
+} from '../../services/settingsService';
 import api, { getFullUrl } from '../../services/api';
 
 const DEFAULT_APPROVAL_SETTINGS: ApprovalSettings = {
   changeControlMode: 'direct'
 };
 
+const DEFAULT_CASHIER_SECURITY_SETTINGS: CashierSecuritySettings = {
+  supervisorPinEnabled: false,
+  supervisorPinConfigured: false,
+  protectedActions: [
+    'Hapus item dari keranjang',
+    'Kurangi qty item di keranjang',
+    'Batalkan atau void transaksi',
+    'Refund transaksi',
+    'Hapus transaksi'
+  ]
+};
+
+const DEFAULT_PRINTER_ROUTING: PrinterRoutingSettings = {
+  cashierAutoPrint: true,
+  kitchenAutoPrint: false,
+  kitchenCategoryIds: []
+};
+
 const normalizeApprovalSettings = (value?: Partial<ApprovalSettings> | null): ApprovalSettings => ({
   changeControlMode: value?.changeControlMode === 'approval' ? 'approval' : 'direct'
 });
+
+const normalizeCashierSecuritySettings = (
+  value?: Partial<CashierSecuritySettings> | null
+): CashierSecuritySettings => ({
+  supervisorPinEnabled: value?.supervisorPinEnabled === true,
+  supervisorPinConfigured: value?.supervisorPinConfigured === true,
+  protectedActions: Array.isArray(value?.protectedActions) && value?.protectedActions.length > 0
+    ? value.protectedActions
+    : DEFAULT_CASHIER_SECURITY_SETTINGS.protectedActions
+});
+
+const normalizePrinterRoutingSettings = (
+  value?: Partial<PrinterRoutingSettings> | null
+): PrinterRoutingSettings => ({
+  cashierAutoPrint: value?.cashierAutoPrint !== false,
+  kitchenAutoPrint: value?.kitchenAutoPrint === true,
+  kitchenCategoryIds: Array.isArray(value?.kitchenCategoryIds)
+    ? Array.from(new Set(value.kitchenCategoryIds.map((entry) => Number(entry)).filter((entry) => Number.isInteger(entry) && entry > 0)))
+    : DEFAULT_PRINTER_ROUTING.kitchenCategoryIds
+});
+
+interface CategoryOption {
+  id: number;
+  name: string;
+}
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'business' | 'tax' | 'receipt' | 'notifications' | 'approval' | 'system' | 'password'>('business');
@@ -20,6 +68,11 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [settings, setSettings] = useState<TenantSettings | null>(null);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [supervisorPinForm, setSupervisorPinForm] = useState({
+    pin: '',
+    confirmPin: ''
+  });
 
   // Logo upload state
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -35,11 +88,18 @@ export default function SettingsPage() {
   const fetchSettings = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await settingsService.getSettings();
+      const [result, categoriesResponse] = await Promise.all([
+        settingsService.getSettings(),
+        api.get('/categories')
+      ]);
       setSettings({
         ...result.data,
-        approvalSettings: normalizeApprovalSettings(result.data.approvalSettings)
+        approvalSettings: normalizeApprovalSettings(result.data.approvalSettings),
+        cashierSecurity: normalizeCashierSecuritySettings(result.data.cashierSecurity),
+        printerRouting: normalizePrinterRoutingSettings(result.data.printerRouting)
       });
+      setCategories(Array.isArray(categoriesResponse.data?.data) ? categoriesResponse.data.data : []);
+      setSupervisorPinForm({ pin: '', confirmPin: '' });
       // Convert relative logo path to full URL if it exists
       const logoUrl = result.data.logo ? getFullUrl(result.data.logo) : '';
       setLogoPreview(logoUrl);
@@ -221,6 +281,8 @@ export default function SettingsPage() {
   };
 
   const approvalSettings = settings.approvalSettings || DEFAULT_APPROVAL_SETTINGS;
+  const cashierSecuritySettings = normalizeCashierSecuritySettings(settings.cashierSecurity);
+  const printerRouting = normalizePrinterRoutingSettings(settings.printerRouting);
   const isApprovalMode = approvalSettings.changeControlMode === 'approval';
   const approvalModeCards = [
     {
@@ -255,6 +317,7 @@ export default function SettingsPage() {
     'Meja operasional',
     'User dan outlet'
   ];
+  const kitchenCategorySet = new Set(printerRouting.kitchenCategoryIds);
   const currentModeSummary = isApprovalMode
     ? 'Perubahan sensitif dari kasir akan ditahan dulu sampai owner menyetujui.'
     : 'Perubahan sensitif dari kasir langsung berlaku, tetapi alasan dan notifikasi tetap dicatat.';
@@ -272,6 +335,36 @@ export default function SettingsPage() {
   const notificationRecipient = settings.notificationEmail ?? settings.email ?? '';
   const emailDeliveryConfigured = Boolean(settings.notificationDeliveryStatus?.emailConfigured);
   const approvalEmailEnabled = Boolean(settings.emailNotifications) && Boolean(settings.approvalEmailAlerts);
+
+  const handleSaveApprovalControls = async () => {
+    const nextPin = supervisorPinForm.pin.trim();
+    const confirmPin = supervisorPinForm.confirmPin.trim();
+
+    if ((nextPin || confirmPin) && nextPin !== confirmPin) {
+      toast.error('PIN supervisor dan konfirmasi PIN harus sama.');
+      return;
+    }
+
+    if (nextPin && !/^\d{4,8}$/.test(nextPin)) {
+      toast.error('PIN supervisor harus 4-8 digit angka.');
+      return;
+    }
+
+    if (cashierSecuritySettings.supervisorPinEnabled && !cashierSecuritySettings.supervisorPinConfigured && !nextPin) {
+      toast.error('Isi PIN supervisor dulu sebelum proteksi kasir diaktifkan.');
+      return;
+    }
+
+    await handleSave({
+      approvalSettings: normalizeApprovalSettings(approvalSettings),
+      cashierSecurity: {
+        supervisorPinEnabled: cashierSecuritySettings.supervisorPinEnabled,
+        ...(nextPin ? { supervisorPin: nextPin } : {})
+      }
+    } as any);
+
+    setSupervisorPinForm({ pin: '', confirmPin: '' });
+  };
 
   return (
     <div>
@@ -585,6 +678,124 @@ export default function SettingsPage() {
               </select>
             </div>
 
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+              <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-amber-50 p-2">
+                    <Printer className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-semibold text-gray-900">Printer Kasir</h4>
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      Jalur ini untuk struk pelanggan. Device printer-nya dipilih di HP kasir, sedangkan owner hanya mengatur perilaku cetaknya.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-start justify-between gap-4 rounded-2xl border border-gray-200 p-4">
+                  <div>
+                    <p className="font-semibold text-gray-900">Auto print struk kasir</p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      Saat aktif, checkout akan langsung mencoba cetak struk ke printer kasir yang sudah disimpan di device.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={printerRouting.cashierAutoPrint}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        printerRouting: {
+                          ...printerRouting,
+                          cashierAutoPrint: e.target.checked
+                        }
+                      })
+                    }
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </label>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-slate-50 p-5 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-emerald-50 p-2">
+                    <ChefHat className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-semibold text-gray-900">Printer Dapur</h4>
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      Tiket dapur hanya mencetak item dari kategori yang kamu pilih di bawah. Device printer dapur juga dipilih di HP kasir.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-start justify-between gap-4 rounded-2xl border border-gray-200 bg-white p-4">
+                  <div>
+                    <p className="font-semibold text-gray-900">Auto print tiket dapur</p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      Saat aktif, checkout akan mengirim item kategori terpilih ke printer dapur.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={printerRouting.kitchenAutoPrint}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        printerRouting: {
+                          ...printerRouting,
+                          kitchenAutoPrint: e.target.checked
+                        }
+                      })
+                    }
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </label>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Kategori yang masuk printer dapur</label>
+                  <div className="flex flex-wrap gap-2">
+                    {categories.length > 0 ? categories.map((category) => {
+                      const isSelected = kitchenCategorySet.has(category.id);
+                      return (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => {
+                            const nextCategoryIds = isSelected
+                              ? printerRouting.kitchenCategoryIds.filter((entry) => entry !== category.id)
+                              : [...printerRouting.kitchenCategoryIds, category.id];
+
+                            setSettings({
+                              ...settings,
+                              printerRouting: {
+                                ...printerRouting,
+                                kitchenCategoryIds: nextCategoryIds
+                              }
+                            });
+                          }}
+                          className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-100 text-emerald-800'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-emerald-200 hover:bg-emerald-50'
+                          }`}
+                        >
+                          {category.name}
+                        </button>
+                      );
+                    }) : (
+                      <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-3 text-sm text-gray-500">
+                        Belum ada kategori yang bisa dipilih.
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Contoh: pilih kategori bakaran dan gorengan untuk dapur, sementara minuman tetap hanya muncul di struk kasir.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Logo Upload Section */}
             <div className="bg-gray-50 p-4 rounded-lg space-y-4">
               <h4 className="font-medium">Logo Toko</h4>
@@ -648,6 +859,7 @@ export default function SettingsPage() {
                 receiptHeader: settings.receiptHeader,
                 receiptFooter: settings.receiptFooter,
                 printerWidth: settings.printerWidth,
+                printerRouting,
                 logo: settings.logo || null,
                 showLogoOnReceipt: settings.showLogoOnReceipt
               })}
@@ -946,6 +1158,117 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+              <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-xl bg-rose-50 p-2">
+                    <KeyRound className="h-5 w-5 text-rose-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-semibold text-gray-900">PIN supervisor untuk kasir</h4>
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      Proteksi ini dipakai saat kasir mau mengurangi item, hapus item dari keranjang, membatalkan transaksi, refund, atau hapus transaksi.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-start justify-between gap-4 rounded-2xl border border-gray-200 p-4">
+                  <div>
+                    <p className="font-semibold text-gray-900">Aktifkan PIN supervisor</p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      Saat aktif, kasir harus memanggil owner atau orang kepercayaan untuk memasukkan PIN sebelum aksi sensitif diproses.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={cashierSecuritySettings.supervisorPinEnabled}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        cashierSecurity: {
+                          ...cashierSecuritySettings,
+                          supervisorPinEnabled: e.target.checked
+                        }
+                      })
+                    }
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </label>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Status PIN sekarang</p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {cashierSecuritySettings.supervisorPinConfigured
+                          ? 'PIN supervisor sudah tersimpan. Isi PIN baru kalau owner ingin mengganti.'
+                          : 'Belum ada PIN supervisor tersimpan.'}
+                      </p>
+                    </div>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        cashierSecuritySettings.supervisorPinConfigured
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {cashierSecuritySettings.supervisorPinConfigured ? 'Sudah disetel' : 'Belum disetel'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">PIN supervisor baru</label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      value={supervisorPinForm.pin}
+                      onChange={(e) =>
+                        setSupervisorPinForm((current) => ({
+                          ...current,
+                          pin: e.target.value.replace(/\D/g, '').slice(0, 8)
+                        }))
+                      }
+                      placeholder={cashierSecuritySettings.supervisorPinConfigured ? 'Kosongkan jika tidak ganti PIN' : 'Masukkan PIN 4-8 digit'}
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Ulangi PIN supervisor</label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      value={supervisorPinForm.confirmPin}
+                      onChange={(e) =>
+                        setSupervisorPinForm((current) => ({
+                          ...current,
+                          confirmPin: e.target.value.replace(/\D/g, '').slice(0, 8)
+                        }))
+                      }
+                      placeholder="Ulangi PIN yang sama"
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-slate-50 p-5">
+                <h4 className="text-base font-semibold text-gray-900">Aksi kasir yang wajib PIN</h4>
+                <p className="mt-1 text-sm text-gray-600">
+                  Jadi owner tahu proteksi ini bekerja di titik mana saja.
+                </p>
+                <div className="mt-4 space-y-3">
+                  {cashierSecuritySettings.protectedActions.map((action) => (
+                    <div key={action} className="flex items-start gap-2 text-sm text-gray-700">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-rose-500" />
+                      <span>{action}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-5">
               <h4 className="text-base font-semibold text-gray-900">Catatan owner</h4>
               <p className="mt-2 text-sm leading-6 text-gray-600">
@@ -956,11 +1279,7 @@ export default function SettingsPage() {
             </div>
 
             <button
-              onClick={() =>
-                handleSave({
-                  approvalSettings: normalizeApprovalSettings(approvalSettings)
-                })
-              }
+              onClick={handleSaveApprovalControls}
               disabled={saving}
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
             >

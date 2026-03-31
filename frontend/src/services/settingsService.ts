@@ -29,6 +29,8 @@ export interface TenantSettings {
   whatsappNotifications: boolean | null;
   notificationDeliveryStatus?: NotificationDeliveryStatus;
   approvalSettings: ApprovalSettings;
+  cashierSecurity: CashierSecuritySettings;
+  printerRouting: PrinterRoutingSettings;
   accountingSettings?: AccountingSettings;
 }
 
@@ -39,6 +41,18 @@ export interface NotificationDeliveryStatus {
 
 export interface ApprovalSettings {
   changeControlMode: 'direct' | 'approval';
+}
+
+export interface CashierSecuritySettings {
+  supervisorPinEnabled: boolean;
+  supervisorPinConfigured: boolean;
+  protectedActions: string[];
+}
+
+export interface PrinterRoutingSettings {
+  cashierAutoPrint: boolean;
+  kitchenAutoPrint: boolean;
+  kitchenCategoryIds: number[];
 }
 
 export interface AccountingSettings {
@@ -79,7 +93,20 @@ export interface UpdateSettingsData {
   dailySalesReport?: boolean;
   whatsappNotifications?: boolean;
   approvalSettings?: ApprovalSettings;
+  cashierSecurity?: Partial<CashierSecuritySettings> & { supervisorPin?: string };
+  printerRouting?: PrinterRoutingSettings;
   accountingSettings?: AccountingSettings;
+}
+
+export interface AuthorizeSupervisorActionData {
+  pin: string;
+  actionType: string;
+  outletId?: number | null;
+  entityId?: number | null;
+  entityLabel?: string | null;
+  reason?: string | null;
+  summary?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ChangePasswordData {
@@ -105,6 +132,14 @@ export const settingsService = {
 
   async sendTestNotificationEmail() {
     const response = await api.post<{ success: boolean; message: string }>('/settings/test-notification-email');
+    return response.data;
+  },
+
+  async authorizeSupervisorAction(data: AuthorizeSupervisorActionData) {
+    const response = await api.post<{ success: boolean; authorized: boolean; message: string }>(
+      '/settings/authorize-supervisor-action',
+      data
+    );
     return response.data;
   }
 };
