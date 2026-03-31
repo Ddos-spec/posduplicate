@@ -5,6 +5,8 @@ interface CartItem {
   itemId: number;
   name: string;
   price: number;
+  categoryId?: number | null;
+  categoryName?: string | null;
   priceGofood?: number | null;
   priceGrabfood?: number | null;
   priceShopeefood?: number | null;

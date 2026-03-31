@@ -8,6 +8,14 @@ import {
   normalizeTenantNotificationPreferences,
   sendEmail
 } from '../services/emailNotification.service';
+import {
+  buildCashierSecuritySettingsUpdate,
+  normalizeCashierSecuritySettings,
+  requiresSupervisorPinForRole,
+  verifyCashierSupervisorPin
+} from '../services/cashierSecurity.service';
+import { normalizePrinterRoutingSettings } from '../services/printerRouting.service';
+import { createActivityLog } from './activity-log.controller';
 
 interface AuthRequest extends Request {
   userId?: number;
@@ -95,6 +103,8 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
     const settingsData = typeof tenant.settings === 'object' ? tenant.settings : {};
     const approvalSettings = normalizeApprovalSettings((settingsData as any).approvalSettings);
     const notificationPreferences = normalizeTenantNotificationPreferences(settingsData, tenant.email || null);
+    const cashierSecurity = normalizeCashierSecuritySettings((settingsData as any).cashierSecurity);
+    const printerRouting = normalizePrinterRoutingSettings((settingsData as any).printerRouting);
 
     res.json({
       success: true,
@@ -108,6 +118,8 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
         ...settingsData,
         ...notificationPreferences,
         approvalSettings,
+        cashierSecurity,
+        printerRouting,
         notificationDeliveryStatus: getNotificationDeliveryStatus()
       }
     });
@@ -150,19 +162,32 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
     const settingsData: any = typeof currentTenant?.settings === 'object' ? { ...currentTenant.settings } : {};
 
     // Separate tenant fields from settings fields
-    Object.keys(updateData).forEach(key => {
+    for (const key of Object.keys(updateData)) {
       if (key === 'approvalSettings') {
         settingsData.approvalSettings = normalizeApprovalSettings(updateData[key]);
-        return;
+        continue;
+      }
+
+      if (key === 'cashierSecurity') {
+        settingsData.cashierSecurity = await buildCashierSecuritySettingsUpdate(
+          settingsData.cashierSecurity,
+          updateData[key]
+        );
+        continue;
+      }
+
+      if (key === 'printerRouting') {
+        settingsData.printerRouting = normalizePrinterRoutingSettings(updateData[key]);
+        continue;
       }
 
       if (key === 'notificationDeliveryStatus') {
-        return;
+        continue;
       }
 
       if (NOTIFICATION_SETTING_KEYS.has(key)) {
         settingsData[key] = sanitizeNotificationSettingValue(key, updateData[key]);
-        return;
+        continue;
       }
 
       const mappedKey = tenantFieldMap[key];
@@ -171,7 +196,7 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
       } else {
         settingsData[key] = updateData[key];
       }
-    });
+    }
 
     // Update tenant with both direct fields and merged settings
     const updatedTenant = await prisma.tenants.update({
@@ -196,10 +221,28 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
         ...settingsData,
         ...normalizeTenantNotificationPreferences(settingsData, updatedTenant.email || null),
         approvalSettings: normalizeApprovalSettings(settingsData.approvalSettings || DEFAULT_APPROVAL_SETTINGS),
+        cashierSecurity: normalizeCashierSecuritySettings(settingsData.cashierSecurity),
+        printerRouting: normalizePrinterRoutingSettings(settingsData.printerRouting),
         notificationDeliveryStatus: getNotificationDeliveryStatus()
       }
     });
   } catch (error) {
+    if (
+      error instanceof Error &&
+      (
+        error.message.includes('PIN supervisor') ||
+        error.message.includes('PIN')
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_SUPERVISOR_PIN_SETTINGS',
+          message: error.message
+        }
+      });
+    }
+
     return next(error);
   }
 };
@@ -259,6 +302,109 @@ export const sendTestNotificationEmail = async (req: AuthRequest, res: Response,
     return res.json({
       success: true,
       message: `Test email berhasil dikirim ke ${recipient}.`
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const authorizeSupervisorAction = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = req.tenantId;
+    const userId = req.userId;
+    const userRole = req.userRole;
+    const {
+      pin,
+      actionType,
+      outletId,
+      entityId,
+      entityLabel,
+      reason,
+      summary,
+      metadata
+    } = req.body || {};
+
+    if (!tenantId || !userId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'User authentication required'
+        }
+      });
+    }
+
+    if (typeof actionType !== 'string' || actionType.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'ACTION_TYPE_REQUIRED',
+          message: 'Jenis aksi wajib dikirim.'
+        }
+      });
+    }
+
+    const requiresPin = await requiresSupervisorPinForRole(tenantId, userRole);
+    if (!requiresPin) {
+      return res.json({
+        success: true,
+        authorized: true,
+        bypassed: true,
+        message: 'Role ini tidak memerlukan PIN supervisor untuk aksi tersebut.'
+      });
+    }
+
+    const verification = await verifyCashierSupervisorPin(tenantId, typeof pin === 'string' ? pin : '');
+
+    if (!verification.configured) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          code: 'SUPERVISOR_PIN_NOT_CONFIGURED',
+          message: 'PIN supervisor belum disetel oleh owner.'
+        }
+      });
+    }
+
+    if (!verification.valid) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'SUPERVISOR_PIN_INVALID',
+          message: 'PIN supervisor tidak valid.'
+        }
+      });
+    }
+
+    const rawOutletId = outletId ?? req.outletId ?? req.body?.outlet_id ?? null;
+    const resolvedOutletId = rawOutletId === null || rawOutletId === undefined || rawOutletId === ''
+      ? null
+      : Number(rawOutletId);
+
+    const oldValue = summary && typeof summary === 'object' && !Array.isArray(summary)
+      ? summary
+      : {};
+    const newValue = {
+      ...(metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? metadata : {}),
+      authorizedVia: 'shared_supervisor_pin',
+      entityLabel: typeof entityLabel === 'string' && entityLabel.trim().length > 0 ? entityLabel.trim() : null
+    };
+
+    await createActivityLog(
+      userId,
+      actionType.trim(),
+      'cashier_cart',
+      Number.isFinite(Number(entityId)) ? Number(entityId) : null,
+      oldValue,
+      newValue,
+      typeof reason === 'string' && reason.trim().length > 0 ? reason.trim() : 'Aksi kasir diotorisasi dengan PIN supervisor.',
+      resolvedOutletId !== null && Number.isFinite(resolvedOutletId) ? resolvedOutletId : null
+    );
+
+    return res.json({
+      success: true,
+      authorized: true,
+      message: 'PIN supervisor valid.'
     });
   } catch (error) {
     return next(error);

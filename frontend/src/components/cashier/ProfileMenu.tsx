@@ -24,6 +24,7 @@ import {
   getSavedPrinterSelection,
   isNativeAndroidApp,
   savePrinterSelection,
+  type PrinterSlot,
 } from '../../plugins/nativeBluetoothPrinter';
 import type { BondedPrinterDevice } from '../../plugins/nativeBluetoothPrinter';
 
@@ -49,20 +50,24 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
   const { user, logout } = useAuthStore();
   const { showConfirmation } = useConfirmationStore();
   const nativePrinterMode = isNativeAndroidApp();
-  const savedPrinter = getSavedPrinterSelection();
+  const initialCashierPrinter = getSavedPrinterSelection('cashier');
+  const initialKitchenPrinter = getSavedPrinterSelection('kitchen');
 
   // Profile states
   const [cashierName, setCashierName] = useState(user?.name || '');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
 
   // Settings states
-  const [printerDevice, setPrinterDevice] = useState(localStorage.getItem('defaultPrinterDevice') || '');
+  const [printerDevice, setPrinterDevice] = useState(initialCashierPrinter.name || localStorage.getItem('defaultPrinterDevice') || '');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [nativePrinters, setNativePrinters] = useState<BondedPrinterDevice[]>([]);
-  const [selectedNativePrinterAddress, setSelectedNativePrinterAddress] = useState(savedPrinter.address);
+  const [savedCashierPrinter, setSavedCashierPrinter] = useState(initialCashierPrinter);
+  const [savedKitchenPrinter, setSavedKitchenPrinter] = useState(initialKitchenPrinter);
+  const [selectedCashierPrinterAddress, setSelectedCashierPrinterAddress] = useState(initialCashierPrinter.address);
+  const [selectedKitchenPrinterAddress, setSelectedKitchenPrinterAddress] = useState(initialKitchenPrinter.address);
   const [nativeBluetoothEnabled, setNativeBluetoothEnabled] = useState(false);
   const [isLoadingNativePrinters, setIsLoadingNativePrinters] = useState(false);
-  const [isTestingNativePrinter, setIsTestingNativePrinter] = useState(false);
+  const [isTestingNativePrinterSlot, setIsTestingNativePrinterSlot] = useState<PrinterSlot | null>(null);
 
   // Inventory states
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -202,9 +207,9 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
 
       setNativePrinters(printers);
 
-      const selectedPrinter = printers.find((printer) => printer.address === selectedNativePrinterAddress);
-      if (!selectedPrinter && printers.length === 1) {
-        setSelectedNativePrinterAddress(printers[0].address);
+      const cashierPrinterExists = printers.some((printer) => printer.address === selectedCashierPrinterAddress);
+      if (!cashierPrinterExists && printers.length === 1 && !selectedCashierPrinterAddress) {
+        setSelectedCashierPrinterAddress(printers[0].address);
       }
     } catch (error) {
       console.error('Failed to load bonded Bluetooth printers:', error);
@@ -212,7 +217,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
     } finally {
       setIsLoadingNativePrinters(false);
     }
-  }, [ensureNativePrinterPermissions, nativePrinterMode, selectedNativePrinterAddress]);
+  }, [ensureNativePrinterPermissions, nativePrinterMode, selectedCashierPrinterAddress]);
 
   useEffect(() => {
     if (isOpen && activeTab === 'settings' && nativePrinterMode) {
@@ -244,8 +249,20 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleSaveNativePrinter = () => {
-    const selectedPrinter = nativePrinters.find((printer) => printer.address === selectedNativePrinterAddress);
+  const getSelectedNativePrinterAddress = (slot: PrinterSlot) =>
+    slot === 'kitchen' ? selectedKitchenPrinterAddress : selectedCashierPrinterAddress;
+
+  const setSelectedNativePrinterAddress = (slot: PrinterSlot, address: string) => {
+    if (slot === 'kitchen') {
+      setSelectedKitchenPrinterAddress(address);
+      return;
+    }
+
+    setSelectedCashierPrinterAddress(address);
+  };
+
+  const handleSaveNativePrinter = (slot: PrinterSlot) => {
+    const selectedPrinter = nativePrinters.find((printer) => printer.address === getSelectedNativePrinterAddress(slot));
     if (!selectedPrinter) {
       toast.error('Pilih printer Bluetooth terlebih dahulu');
       return;
@@ -254,18 +271,39 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
     savePrinterSelection({
       address: selectedPrinter.address,
       name: selectedPrinter.name || selectedPrinter.address,
-    });
-    localStorage.setItem('defaultPrinterDevice', selectedPrinter.name || selectedPrinter.address);
-    setPrinterDevice(selectedPrinter.name || selectedPrinter.address);
-    toast.success(`Printer ${selectedPrinter.name || selectedPrinter.address} tersimpan`);
+    }, slot);
+
+    if (slot === 'cashier') {
+      localStorage.setItem('defaultPrinterDevice', selectedPrinter.name || selectedPrinter.address);
+      setPrinterDevice(selectedPrinter.name || selectedPrinter.address);
+      setSavedCashierPrinter({
+        address: selectedPrinter.address,
+        name: selectedPrinter.name || selectedPrinter.address,
+      });
+    } else {
+      setSavedKitchenPrinter({
+        address: selectedPrinter.address,
+        name: selectedPrinter.name || selectedPrinter.address,
+      });
+    }
+
+    toast.success(`Printer ${slot === 'cashier' ? 'kasir' : 'dapur'} ${selectedPrinter.name || selectedPrinter.address} tersimpan`);
   };
 
-  const handleResetNativePrinter = () => {
-    clearPrinterSelection();
-    localStorage.removeItem('defaultPrinterDevice');
-    setSelectedNativePrinterAddress('');
-    setPrinterDevice('');
-    toast.success('Default printer berhasil dihapus');
+  const handleResetNativePrinter = (slot: PrinterSlot) => {
+    clearPrinterSelection(slot);
+
+    if (slot === 'cashier') {
+      localStorage.removeItem('defaultPrinterDevice');
+      setSelectedCashierPrinterAddress('');
+      setSavedCashierPrinter({ address: '', name: '' });
+      setPrinterDevice('');
+    } else {
+      setSelectedKitchenPrinterAddress('');
+      setSavedKitchenPrinter({ address: '', name: '' });
+    }
+
+    toast.success(`Printer ${slot === 'cashier' ? 'kasir' : 'dapur'} berhasil dihapus`);
   };
 
   const handleOpenBluetoothSettings = async () => {
@@ -277,14 +315,14 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleTestNativePrinter = async () => {
-    const selectedPrinter = nativePrinters.find((printer) => printer.address === selectedNativePrinterAddress);
+  const handleTestNativePrinter = async (slot: PrinterSlot) => {
+    const selectedPrinter = nativePrinters.find((printer) => printer.address === getSelectedNativePrinterAddress(slot));
     if (!selectedPrinter) {
       toast.error('Pilih printer Bluetooth terlebih dahulu');
       return;
     }
 
-    setIsTestingNativePrinter(true);
+    setIsTestingNativePrinterSlot(slot);
     try {
       const granted = await ensureNativePrinterPermissions();
       if (!granted) {
@@ -297,6 +335,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
           `[C]<b>MyPOS Test Print</b>\n` +
           `[C]${new Date().toLocaleString('id-ID')}\n` +
           `[C]==============================\n` +
+          `[L]Slot:[R]${slot === 'cashier' ? 'Kasir' : 'Dapur'}\n` +
           `[L]Printer:[R]${selectedPrinter.name || selectedPrinter.address}\n` +
           `[L]Status:[R]Siap digunakan\n` +
           `[C]==============================\n` +
@@ -309,12 +348,12 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
       });
 
       toast.success('Test print berhasil dikirim');
-      handleSaveNativePrinter();
+      handleSaveNativePrinter(slot);
     } catch (error) {
       console.error('Failed to print test receipt:', error);
       toast.error('Test print gagal. Pastikan printer aktif dan sudah paired.');
     } finally {
-      setIsTestingNativePrinter(false);
+      setIsTestingNativePrinterSlot(null);
     }
   };
 
@@ -698,7 +737,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
                     <Bluetooth size={20} />
                     Printer Bluetooth Android
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div className="rounded-lg bg-white border border-blue-100 p-4 space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <div>
@@ -739,78 +778,97 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Printer Tersambung / Paired
-                      </label>
-                      <div className="space-y-2">
-                        {nativePrinters.length > 0 ? (
-                          nativePrinters.map((printer) => (
-                            <label
-                              key={printer.address}
-                              className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
-                                selectedNativePrinterAddress === printer.address
-                                  ? 'border-blue-500 bg-blue-100'
-                                  : 'border-gray-200 bg-white hover:border-blue-200'
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name="native-printer"
-                                value={printer.address}
-                                checked={selectedNativePrinterAddress === printer.address}
-                                onChange={() => setSelectedNativePrinterAddress(printer.address)}
-                                className="h-4 w-4 text-blue-600"
-                              />
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-gray-800 truncate">
-                                  {printer.name || 'Unnamed Printer'}
-                                </p>
-                                <p className="text-xs text-gray-500">{printer.address}</p>
-                              </div>
-                            </label>
-                          ))
-                        ) : (
-                          <div className="rounded-lg border border-dashed border-blue-200 bg-white p-4 text-sm text-gray-600">
-                            Belum ada printer paired yang terdeteksi. Pair printer di Bluetooth Android
-                            dulu, lalu klik <span className="font-semibold">Muat Printer</span>.
-                          </div>
-                        )}
+                    {nativePrinters.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-blue-200 bg-white p-4 text-sm text-gray-600">
+                        Belum ada printer paired yang terdeteksi. Pair printer di Bluetooth Android
+                        dulu, lalu klik <span className="font-semibold">Muat Printer</span>.
                       </div>
-                    </div>
+                    ) : (
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        {[
+                          {
+                            slot: 'cashier' as PrinterSlot,
+                            title: 'Printer Kasir',
+                            description: 'Cetak struk utama untuk pelanggan.',
+                            selectedAddress: selectedCashierPrinterAddress,
+                            savedPrinter: savedCashierPrinter,
+                          },
+                          {
+                            slot: 'kitchen' as PrinterSlot,
+                            title: 'Printer Dapur',
+                            description: 'Cetak tiket dapur sesuai kategori yang dipilih owner.',
+                            selectedAddress: selectedKitchenPrinterAddress,
+                            savedPrinter: savedKitchenPrinter,
+                          },
+                        ].map((slotConfig) => (
+                          <div key={slotConfig.slot} className="rounded-xl border border-blue-100 bg-white p-4 space-y-4">
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-900">{slotConfig.title}</h4>
+                              <p className="mt-1 text-xs leading-5 text-gray-500">{slotConfig.description}</p>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium uppercase tracking-wide text-gray-500 mb-2">
+                                Pilih printer paired
+                              </label>
+                              <select
+                                value={slotConfig.selectedAddress}
+                                onChange={(event) => setSelectedNativePrinterAddress(slotConfig.slot, event.target.value)}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                              >
+                                <option value="">Pilih printer...</option>
+                                {nativePrinters.map((printer) => (
+                                  <option key={`${slotConfig.slot}-${printer.address}`} value={printer.address}>
+                                    {printer.name || 'Unnamed Printer'} - {printer.address}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Printer aktif</p>
+                              <p className="mt-1 text-sm font-semibold text-slate-800">
+                                {slotConfig.savedPrinter.name || 'Belum disimpan'}
+                              </p>
+                              {slotConfig.savedPrinter.address ? (
+                                <p className="text-xs text-slate-500 mt-1">{slotConfig.savedPrinter.address}</p>
+                              ) : null}
+                            </div>
+
+                            <div className="grid gap-2">
+                              <button
+                                onClick={() => handleSaveNativePrinter(slotConfig.slot)}
+                                disabled={!slotConfig.selectedAddress}
+                                className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                              >
+                                <Save size={18} />
+                                Simpan {slotConfig.title}
+                              </button>
+                              <button
+                                onClick={() => handleTestNativePrinter(slotConfig.slot)}
+                                disabled={!slotConfig.selectedAddress || isTestingNativePrinterSlot === slotConfig.slot}
+                                className="w-full bg-emerald-600 text-white py-2.5 rounded-lg hover:bg-emerald-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:bg-emerald-300 disabled:cursor-not-allowed"
+                              >
+                                <Printer size={18} />
+                                {isTestingNativePrinterSlot === slotConfig.slot ? 'Mengirim Test Print...' : `Test ${slotConfig.title}`}
+                              </button>
+                              <button
+                                onClick={() => handleResetNativePrinter(slotConfig.slot)}
+                                className="w-full bg-white border border-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
+                              >
+                                Hapus {slotConfig.title}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="rounded-lg bg-white border border-blue-100 p-4">
-                      <p className="text-sm font-semibold text-gray-800">Default Printer</p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        {printerDevice
-                          ? `Printer aktif: ${printerDevice}`
-                          : 'Belum ada printer default yang disimpan di aplikasi ini.'}
+                      <p className="text-sm font-semibold text-gray-800">Catatan Penting</p>
+                      <p className="mt-1 text-xs leading-5 text-gray-500">
+                        Pilihan device printer disimpan per HP Android ini. Kategori yang harus cetak ke dapur diatur owner dari menu Settings owner.
                       </p>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <button
-                        onClick={handleSaveNativePrinter}
-                        disabled={!selectedNativePrinterAddress}
-                        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:bg-blue-300 disabled:cursor-not-allowed"
-                      >
-                        <Save size={18} />
-                        Simpan Printer Default
-                      </button>
-                      <button
-                        onClick={handleTestNativePrinter}
-                        disabled={!selectedNativePrinterAddress || isTestingNativePrinter}
-                        className="w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:bg-emerald-300 disabled:cursor-not-allowed"
-                      >
-                        <Printer size={18} />
-                        {isTestingNativePrinter ? 'Mengirim Test Print...' : 'Test Print'}
-                      </button>
-                      <button
-                        onClick={handleResetNativePrinter}
-                        className="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
-                      >
-                        Hapus Default Printer
-                      </button>
                     </div>
                   </div>
                 </div>

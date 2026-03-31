@@ -1,15 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
-import api from '../../services/api';
+import api, { getFullUrl } from '../../services/api';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { X, Calendar, DollarSign, User, Clock, Receipt, Trash2, AlertCircle, Printer, FileText, RefreshCw, MessageSquare } from 'lucide-react';
 import ConfirmDialog, { type ConfirmDialogType } from '../common/ConfirmDialog';
 import ReasonSelectDialog from '../common/ReasonSelectDialog';
+import SupervisorPinDialog from '../common/SupervisorPinDialog';
+import { useAuthStore } from '../../store/authStore';
+import type { TenantSettings } from '../../services/settingsService';
+import { printReceipt } from '../../utils/exportUtils';
+import { getUserRoleName, requiresCashierSupervisorPin } from '../../utils/cashierSecurity';
 
 interface Transaction {
   id: number;
   transactionNumber: string;
   orderType: string;
+  subtotal?: number;
+  discountAmount?: number;
+  taxAmount?: number;
+  serviceCharge?: number;
   total: number;
   status: string;
   createdAt: string;
@@ -21,6 +30,8 @@ interface Transaction {
     quantity: number;
     unitPrice: number;
     subtotal: number;
+    notes?: string;
+    modifiers?: Array<{ name: string; price: number }>;
   }>;
   payments: Array<{
     method: string;
@@ -31,6 +42,7 @@ interface Transaction {
 
 interface TransactionHistoryProps {
   onClose: () => void;
+  settings?: TenantSettings | null;
 }
 
 // Constants for Reasons
@@ -70,10 +82,14 @@ const transformTransaction = (data: any): Transaction => {
     id: data.id,
     transactionNumber: data.transaction_number,
     orderType: data.order_type,
+    subtotal: data.subtotal,
+    discountAmount: data.discount_amount,
+    taxAmount: data.tax_amount,
+    serviceCharge: data.service_charge,
     total: data.total,
     status: data.status,
     notes: data.notes,
-    createdAt: data.createdAt,
+    createdAt: data.created_at || data.createdAt,
     cashier: data.users ? { name: data.users.name, email: data.users.email } : undefined,
     table: data.tables ? { name: data.tables.name } : undefined,
     transactionItems: (data.transaction_items || []).map((item: any) => ({
@@ -81,6 +97,11 @@ const transformTransaction = (data: any): Transaction => {
       quantity: item.quantity,
       unitPrice: item.unit_price,
       subtotal: item.subtotal,
+      notes: item.notes,
+      modifiers: (item.transaction_modifiers || []).map((modifier: any) => ({
+        name: modifier.modifier_name || modifier.modifiers?.name || 'Modifier',
+        price: modifier.price
+      })),
     })),
     payments: (data.payments || []).map((payment: any) => ({
       method: payment.method,
@@ -90,7 +111,8 @@ const transformTransaction = (data: any): Transaction => {
   };
 };
 
-export default function TransactionHistory({ onClose }: TransactionHistoryProps) {
+export default function TransactionHistory({ onClose, settings }: TransactionHistoryProps) {
+  const user = useAuthStore((state) => state.user);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -133,6 +155,20 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
   });
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAuthorizingSupervisorPin, setIsAuthorizingSupervisorPin] = useState(false);
+  const [supervisorPinDialog, setSupervisorPinDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    onConfirm: (pin: string) => Promise<void> | void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Verifikasi PIN',
+    onConfirm: () => {}
+  });
 
   const loadTransactions = useCallback(async () => {
     setLoading(true);
@@ -174,6 +210,52 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
     loadTransactions();
   }, [loadTransactions]);
 
+  const roleName = getUserRoleName(user);
+  const supervisorPinRequired = requiresCashierSupervisorPin(settings, roleName);
+
+  const closeSupervisorPinDialog = () => {
+    if (isAuthorizingSupervisorPin) {
+      return;
+    }
+
+    setSupervisorPinDialog((current) => ({ ...current, isOpen: false }));
+  };
+
+  const requestSupervisorPin = ({
+    title,
+    message,
+    confirmText,
+    onAuthorized
+  }: {
+    title: string;
+    message: string;
+    confirmText: string;
+    onAuthorized: (pin?: string) => Promise<void>;
+  }) => {
+    if (!supervisorPinRequired) {
+      void onAuthorized().catch(() => undefined);
+      return;
+    }
+
+    setSupervisorPinDialog({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      onConfirm: async (pin: string) => {
+        setIsAuthorizingSupervisorPin(true);
+        try {
+          await onAuthorized(pin);
+          setSupervisorPinDialog((current) => ({ ...current, isOpen: false }));
+        } catch {
+          return;
+        } finally {
+          setIsAuthorizingSupervisorPin(false);
+        }
+      }
+    });
+  };
+
   const handleVoidTransaction = (transaction: Transaction) => {
     console.log('Opening void transaction dialog');
     setReasonDialog({
@@ -183,26 +265,36 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       reasons: CANCELLATION_REASONS,
       confirmText: 'Konfirmasi Pembatalan',
       onConfirm: async (reason) => {
-        setIsProcessing(true);
-        try {
-          const response = await api.put(`/transactions/${transaction.id}/status`, {
-            status: 'cancelled',
-            reason: reason
-          });
+        setReasonDialog(prev => ({ ...prev, isOpen: false }));
+        requestSupervisorPin({
+          title: 'PIN supervisor untuk batalkan transaksi',
+          message: `Transaksi ${transaction.transactionNumber} akan dibatalkan. Minta owner atau orang kepercayaan memasukkan PIN supervisor.`,
+          confirmText: 'Buka Pembatalan',
+          onAuthorized: async (pin) => {
+            setIsProcessing(true);
+            try {
+              const response = await api.put(`/transactions/${transaction.id}/status`, {
+                status: 'cancelled',
+                reason,
+                ...(pin ? { supervisorPin: pin } : {})
+              });
 
-          toast.success(response.data.message || 'Transaksi berhasil dibatalkan');
-          setReasonDialog(prev => ({ ...prev, isOpen: false }));
-          loadTransactions();
-        } catch (error: unknown) {
-          console.error('Error voiding transaction:', error);
-          let errorMessage = 'Gagal membatalkan transaksi';
-          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-            errorMessage = error.response.data.error.message;
+              toast.success(response.data.message || 'Transaksi berhasil dibatalkan');
+              setReasonDialog(prev => ({ ...prev, isOpen: false }));
+              loadTransactions();
+            } catch (error: unknown) {
+              console.error('Error voiding transaction:', error);
+              let errorMessage = 'Gagal membatalkan transaksi';
+              if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+                errorMessage = error.response.data.error.message;
+              }
+              toast.error(errorMessage);
+              throw error;
+            } finally {
+              setIsProcessing(false);
+            }
           }
-          toast.error(errorMessage);
-        } finally {
-          setIsProcessing(false);
-        }
+        });
       }
     });
   };
@@ -219,24 +311,35 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       ],
       confirmText: 'Ya, Hapus Permanen',
       onConfirm: async () => {
-        setIsProcessing(true);
-        try {
-          await api.delete(`/transactions/${transaction.id}`);
+        setConfirmDialog((current) => ({ ...current, isOpen: false }));
+        requestSupervisorPin({
+          title: 'PIN supervisor untuk hapus transaksi',
+          message: `Transaksi ${transaction.transactionNumber} akan dihapus permanen dari sistem.`,
+          confirmText: 'Buka Hapus Permanen',
+          onAuthorized: async (pin) => {
+            setIsProcessing(true);
+            try {
+              await api.delete(`/transactions/${transaction.id}`, {
+                data: pin ? { supervisorPin: pin } : undefined
+              });
 
-          toast.success('Transaksi berhasil dihapus');
-          loadTransactions(); // Reload transactions
-          setSelectedTransaction(null); // Clear selection
-          setConfirmDialog({ ...confirmDialog, isOpen: false });
-        } catch (error: unknown) {
-          console.error('Error deleting transaction:', error);
-          let errorMessage = 'Gagal menghapus transaksi';
-          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-            errorMessage = error.response.data.error.message;
+              toast.success('Transaksi berhasil dihapus');
+              loadTransactions();
+              setSelectedTransaction(null);
+              setConfirmDialog({ ...confirmDialog, isOpen: false });
+            } catch (error: unknown) {
+              console.error('Error deleting transaction:', error);
+              let errorMessage = 'Gagal menghapus transaksi';
+              if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+                errorMessage = error.response.data.error.message;
+              }
+              toast.error(errorMessage);
+              throw error;
+            } finally {
+              setIsProcessing(false);
+            }
           }
-          toast.error(errorMessage);
-        } finally {
-          setIsProcessing(false);
-        }
+        });
       }
     });
   };
@@ -264,175 +367,87 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
       reasons,
       confirmText: 'Simpan Status',
       onConfirm: async (reason) => {
-        setIsProcessing(true);
-        try {
-          const response = await api.put(`/transactions/${transaction.id}/status`, {
-            status: newStatus,
-            reason: reason
-          });
+        setReasonDialog(prev => ({ ...prev, isOpen: false }));
+        requestSupervisorPin({
+          title: 'PIN supervisor untuk ubah status',
+          message: `Status transaksi ${transaction.transactionNumber} akan diubah ke ${newStatus}.`,
+          confirmText: 'Buka Ubah Status',
+          onAuthorized: async (pin) => {
+            setIsProcessing(true);
+            try {
+              const response = await api.put(`/transactions/${transaction.id}/status`, {
+                status: newStatus,
+                reason,
+                ...(pin ? { supervisorPin: pin } : {})
+              });
 
-          toast.success(response.data.message || `Status transaksi berhasil diubah menjadi ${newStatus}`);
-          setReasonDialog(prev => ({ ...prev, isOpen: false }));
-          loadTransactions();
-        } catch (error: unknown) {
-          console.error('Error updating transaction status:', error);
-          let errorMessage = 'Gagal mengubah status transaksi';
-          if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
-            errorMessage = error.response.data.error.message;
+              toast.success(response.data.message || `Status transaksi berhasil diubah menjadi ${newStatus}`);
+              setReasonDialog(prev => ({ ...prev, isOpen: false }));
+              loadTransactions();
+            } catch (error: unknown) {
+              console.error('Error updating transaction status:', error);
+              let errorMessage = 'Gagal mengubah status transaksi';
+              if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+                errorMessage = error.response.data.error.message;
+              }
+              toast.error(errorMessage);
+              throw error;
+            } finally {
+              setIsProcessing(false);
+            }
           }
-          toast.error(errorMessage);
-        } finally {
-          setIsProcessing(false);
-        }
+        });
       }
     });
   };
 
-  const handlePrintReceipt = (transaction: Transaction) => {
-    const receiptWindow = window.open('', '_blank');
-    if (!receiptWindow) return;
-
-    const receiptHTML = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Receipt - ${transaction.transactionNumber}</title>
-        <style>
-          body {
-            font-family: 'Courier New', monospace;
-            max-width: 300px;
-            margin: 20px auto;
-            padding: 20px;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 10px;
-          }
-          .header img {
-            width: 40px;
-            height: 40px;
-            margin: 0 auto 5px;
-            display: block;
-          }
-          .header h2 {
-            margin: 0;
-            font-size: 18px;
-          }
-          .info {
-            margin-bottom: 10px;
-            font-size: 12px;
-          }
-          .items {
-            margin: 15px 0;
-            border-top: 1px dashed #000;
-            border-bottom: 1px dashed #000;
-            padding: 10px 0;
-          }
-          .item {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-            font-size: 12px;
-          }
-          .totals {
-            margin-top: 10px;
-          }
-          .total-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-            font-size: 12px;
-          }
-          .total-row.grand {
-            font-weight: bold;
-            font-size: 14px;
-            border-top: 2px solid #000;
-            padding-top: 5px;
-          }
-          .footer {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 11px;
-            border-top: 2px dashed #000;
-            padding-top: 10px;
-          }
-          @media print {
-            body { margin: 0; padding: 10px; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <img src="${window.location.origin}/logo.webp" alt="POS E2NK" />
-          <h2>MyPOS</h2>
-          <p>Receipt</p>
-        </div>
-
-        <div class="info">
-          <div><strong>Transaction:</strong> ${transaction.transactionNumber}</div>
-          <div><strong>Date:</strong> ${new Date(transaction.createdAt).toLocaleString()}</div>
-          <div><strong>Cashier:</strong> ${transaction.cashier?.name || 'N/A'}</div>
-          ${transaction.table ? `<div><strong>Table:</strong> ${transaction.table.name}</div>` : ''}
-          <div><strong>Order Type:</strong> ${transaction.orderType}</div>
-        </div>
-
-        <div class="items">
-          ${transaction.transactionItems.map(item => `
-            <div class="item">
-              <span>${item.quantity}x ${item.itemName}</span>
-              <span>Rp ${Number(item.subtotal).toLocaleString('id-ID')}</span>
-            </div>
-          `).join('')}
-        </div>
-
-        <div class="totals">
-          <div class="total-row grand">
-            <span>TOTAL:</span>
-            <span>Rp ${Number(transaction.total).toLocaleString('id-ID')}</span>
-          </div>
-          ${transaction.payments.map(payment => `
-            <div class="total-row">
-              <span>${payment.method.toUpperCase()}:</span>
-              <span>Rp ${Number(payment.amount).toLocaleString('id-ID')}</span>
-            </div>
-            ${payment.changeAmount ? `
-              <div class="total-row">
-                <span>Change:</span>
-                <span>Rp ${Number(payment.changeAmount).toLocaleString('id-ID')}</span>
-              </div>
-            ` : ''}
-          `).join('')}
-        </div>
-
-        <div class="footer">
-          <p>Thank you for your purchase!</p>
-          <p>Powered by MyPOS</p>
-        </div>
-
-        <script>
-          window.onload = function() {
-            // Check if running in PWA mode and has printer device saved
-            const printerDevice = localStorage.getItem('defaultPrinterDevice');
-            if (window.matchMedia('(display-mode: standalone)').matches && printerDevice) {
-              // Try to trigger RawBT print if available
-              if (window.RawBT && window.RawBT.print) {
-                window.RawBT.print(printerDevice);
-              } else {
-                window.print();
-              }
-            } else {
-              window.print();
-            }
-          }
-        </script>
-      </body>
-      </html>
-    `;
-
-    receiptWindow.document.write(receiptHTML);
-    receiptWindow.document.close();
+  const handlePrintReceipt = async (transaction: Transaction) => {
+    try {
+      await printReceipt(
+        {
+          transactionNumber: transaction.transactionNumber,
+          items: transaction.transactionItems.map((item) => ({
+            name: item.itemName,
+            quantity: item.quantity,
+            price: item.unitPrice,
+            modifiers: item.modifiers?.map((modifier, index) => ({
+              id: index,
+              name: modifier.name,
+              price: modifier.price
+            })),
+            notes: item.notes
+          })),
+          subtotal: transaction.subtotal ?? transaction.total,
+          discountAmount: transaction.discountAmount ?? 0,
+          taxAmount: transaction.taxAmount ?? 0,
+          serviceCharge: transaction.serviceCharge ?? 0,
+          total: transaction.total,
+          payments: transaction.payments,
+          cashierName: transaction.cashier?.name,
+          outletName: settings?.businessName
+        },
+        settings ? {
+          businessName: settings.businessName,
+          address: settings.address || undefined,
+          phone: settings.phone || undefined,
+          receiptHeader: settings.receiptHeader || undefined,
+          receiptFooter: settings.receiptFooter || undefined,
+          printerWidth: settings.printerWidth || undefined,
+          logo: settings.logo ? getFullUrl(settings.logo) : undefined,
+          showLogoOnReceipt: settings.showLogoOnReceipt || false,
+          taxName: settings.taxName || undefined
+        } : undefined
+      );
+    } catch (error: unknown) {
+      console.error('Error printing transaction receipt:', error);
+      let errorMessage = 'Gagal mencetak ulang struk';
+      if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message;
+      } else if (error instanceof Error && error.message) {
+        errorMessage = error.message;
+      }
+      toast.error(errorMessage);
+    }
   };
 
   const handlePrintTodayReport = async () => {
@@ -1311,6 +1326,16 @@ export default function TransactionHistory({ onClose }: TransactionHistoryProps)
         reasons={reasonDialog.reasons}
         confirmText={reasonDialog.confirmText}
         isLoading={isProcessing}
+      />
+
+      <SupervisorPinDialog
+        isOpen={supervisorPinDialog.isOpen}
+        onClose={closeSupervisorPinDialog}
+        onConfirm={(pin) => supervisorPinDialog.onConfirm(pin)}
+        title={supervisorPinDialog.title}
+        message={supervisorPinDialog.message}
+        confirmText={supervisorPinDialog.confirmText}
+        isLoading={isAuthorizingSupervisorPin}
       />
     </div>
   );
