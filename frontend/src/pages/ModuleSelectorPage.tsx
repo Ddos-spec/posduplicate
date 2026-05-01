@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
+import MyMedsosLogo from '../components/medsos/MyMedsosLogo';
 import {
   Monitor, Calculator, Package,
   ArrowRight, LogOut, Clock, Sun, Moon, Star,
@@ -54,11 +55,12 @@ export default function ModuleSelectorPage() {
     {
       id: 'medsos',
       name: 'MyMedsos',
-      description: 'Manage your social media presence and engagement.',
+      description: 'Omnichannel workspace for social content, unified inbox, and marketplace ops.',
       icon: Share2,
+      customLogo: true,
       color: 'from-blue-500 to-blue-600',
       iconBg: 'bg-blue-500',
-      features: ['Post Scheduling', 'Analytics', 'Auto-Reply'],
+      features: ['Unified Inbox', 'Campaign Planner', 'Marketplace Watch'],
       status: 'new',
       path: '/medsos/dashboard'
     }
@@ -138,8 +140,10 @@ export default function ModuleSelectorPage() {
               onClick={() => navigate(module.path)}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${module.iconBg}`}>
-                  <module.icon className="w-7 h-7 text-white" />
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden ${'customLogo' in module && module.customLogo ? '' : module.iconBg}`}>
+                  {'customLogo' in module && module.customLogo
+                    ? <MyMedsosLogo size={56} className="rounded-2xl" />
+                    : <module.icon className="w-7 h-7 text-white" />}
                 </div>
                 <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
                   module.status === 'active'
@@ -195,3 +199,4 @@ export default function ModuleSelectorPage() {
     </div>
   );
 }
+

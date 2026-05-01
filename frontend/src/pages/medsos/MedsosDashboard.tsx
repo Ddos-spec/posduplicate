@@ -1,112 +1,530 @@
+import { useMemo } from 'react';
 import { useThemeStore } from '../../store/themeStore';
+import { BrandLogo, resolveBrandKey, type BrandKey } from '../../components/medsos/BrandLogo';
 import {
-  Heart, MessageCircle, Users, Eye
+  AlertTriangle,
+  ArrowRight,
+  BellRing,
+  CalendarClock,
+  CircleAlert,
+  HeartHandshake,
+  Layers3,
+  MessageCircleMore,
+  PackageSearch,
+  Radar,
+  ShieldAlert,
+  ShoppingBag,
+  Sparkles,
+  UsersRound,
+  Zap,
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  attentionItems,
+  campaignPipeline,
+  channelConnections,
+  dashboardAlerts,
+  marketIssues,
+  marketplaceOrders,
+  omniStats,
+  plannerCards,
+  quickActions,
+  scheduleEvents,
+  teamActivityFeed,
+  teamSeats,
+  weeklyReach,
+  workspaceHealth,
+} from '../../data/omnichannelMock';
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
 } from 'recharts';
-
-const ENGAGEMENT_DATA = [
-  { day: 'Senin', likes: 120, comments: 45 },
-  { day: 'Selasa', likes: 150, comments: 55 },
-  { day: 'Rabu', likes: 180, comments: 60 },
-  { day: 'Kamis', likes: 220, comments: 80 },
-  { day: 'Jumat', likes: 300, comments: 120 },
-  { day: 'Sabtu', likes: 450, comments: 200 },
-  { day: 'Minggu', likes: 400, comments: 150 },
-];
-
-const RECENT_COMMENTS = [
-  { id: 1, user: 'budi_kuliner', text: 'Min, cabangnya buka jam berapa?', platform: 'Instagram', time: '5m ago' },
-  { id: 2, user: 'siti.aminah', text: 'Promo buy 1 get 1 masih ada gak?', platform: 'Facebook', time: '12m ago' },
-  { id: 3, user: 'foodie_jkt', text: 'Enak banget kopinya! Wajib coba guys.', platform: 'TikTok', time: '1h ago' },
-];
 
 export default function MedsosDashboard() {
   const { isDark } = useThemeStore();
+  const featuredBrands: BrandKey[] = ['instagram', 'tiktok', 'facebook', 'shopee', 'tokopedia'];
 
-  const stats = [
-    { label: 'Total Followers', value: '12.5K', icon: Users, color: 'blue', grow: '+120' },
-    { label: 'Engagement Rate', value: '4.8%', icon: Heart, color: 'red', grow: '+0.5%' },
-    { label: 'Reach (7d)', value: '45.2K', icon: Eye, color: 'purple', grow: '+15%' },
-    { label: 'Messages', value: '18', icon: MessageCircle, color: 'green', grow: 'New' },
-  ];
+  const toneClasses = {
+    blue: 'bg-blue-100 text-blue-600',
+    green: 'bg-emerald-100 text-emerald-600',
+    purple: 'bg-purple-100 text-purple-600',
+    orange: 'bg-orange-100 text-orange-600',
+    red: 'bg-red-100 text-red-600',
+  } as const;
+
+  const stageSummary = useMemo(() => {
+    const count = (stage: string) => plannerCards.filter((item) => item.stage === stage).length;
+    return [
+      { label: 'Need review', value: count('review'), helper: 'konten menunggu reviewer / owner', icon: ShieldAlert },
+      { label: 'Scheduled', value: count('scheduled'), helper: 'siap publish lintas channel', icon: CalendarClock },
+      { label: 'Published', value: count('published'), helper: 'campaign live & butuh monitoring', icon: Zap },
+    ];
+  }, []);
+
+  const workloadMeter = (input: string) => {
+    const amount = Number(input.match(/\d+/)?.[0] ?? '0');
+    return Math.min(100, 26 + amount * 5);
+  };
+
+  const topRisk = marketIssues[0];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Social Media Overview</h1>
-        <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Pantau performa konten di semua platform.</p>
+      <div className={`rounded-3xl border overflow-hidden ${isDark ? 'border-slate-700 bg-slate-800' : 'border-blue-100 bg-white shadow-sm'}`}>
+        <div className={`p-6 md:p-8 ${isDark ? 'bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_40%),linear-gradient(135deg,_rgba(15,23,42,0.95),_rgba(30,41,59,0.95))]' : 'bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.15),_transparent_40%),linear-gradient(135deg,_rgba(239,246,255,1),_rgba(255,255,255,1))]'}`}>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="max-w-3xl">
+              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${isDark ? 'bg-blue-500/20 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
+                <Sparkles size={14} />
+                Executive + operational frontend prototype
+              </div>
+              <h1 className={`text-3xl md:text-4xl font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Omnichannel war room yang langsung memberi tahu <span className="text-blue-500">apa yang harus dikerjakan sekarang</span>.
+              </h1>
+              <p className={`mt-3 text-sm md:text-base ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                Fokus tampilan dulu, Ainz-sama: alert center, queue prioritas, team workload, campaign pipeline, dan marketplace exception dibuat terasa seperti command center sungguhan.
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3 min-w-[320px]">
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60 text-white' : 'bg-white/90 text-gray-900 shadow-sm'}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <HeartHandshake className="text-blue-500" size={18} />
+                  <span className="text-sm font-semibold">Inbox SLA</span>
+                </div>
+                <p className="text-2xl font-bold">94%</p>
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>5 thread butuh respon cepat &lt; 15 menit</p>
+              </div>
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60 text-white' : 'bg-white/90 text-gray-900 shadow-sm'}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <ShoppingBag className="text-emerald-500" size={18} />
+                  <span className="text-sm font-semibold">Marketplace Risk</span>
+                </div>
+                <p className="text-2xl font-bold">3 hotspot</p>
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>refund risk, late shipment, price mismatch</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 mt-6">
+            {featuredBrands.map((brand) => (
+              <div
+                key={brand}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-white/90 text-gray-700 shadow-sm'}`}
+              >
+                <BrandLogo brand={brand} size={22} className="rounded-lg px-1" withRing />
+                <span className="text-xs font-semibold capitalize">{brand}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {stats.map((stat, idx) => (
+        {omniStats.map((stat, idx) => (
           <div key={idx} className={`p-5 rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
             <div className="flex justify-between items-start mb-2">
-              <div className={`p-2 rounded-lg ${
-                stat.color === 'blue' ? 'bg-blue-100 text-blue-600' :
-                stat.color === 'red' ? 'bg-red-100 text-red-600' :
-                stat.color === 'purple' ? 'bg-purple-100 text-purple-600' :
-                'bg-green-100 text-green-600'
-              }`}>
-                <stat.icon size={20} />
+              <div className={`p-2 rounded-lg ${toneClasses[stat.tone]}`}>
+                {idx === 0 && <MessageCircleMore size={20} />}
+                {idx === 1 && <Layers3 size={20} />}
+                {idx === 2 && <ShoppingBag size={20} />}
+                {idx === 3 && <CircleAlert size={20} />}
               </div>
-              <span className="text-xs font-bold text-green-500 bg-green-100 px-2 py-1 rounded-full">{stat.grow}</span>
+              <span className="text-xs font-bold text-green-500 bg-green-100 px-2 py-1 rounded-full">{stat.delta}</span>
             </div>
             <h3 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{stat.value}</h3>
-            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
+            <p className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{stat.label}</p>
+            <p className={`mt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stat.helper}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Chart */}
-        <div className={`lg:col-span-2 p-6 rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <h3 className={`font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>Engagement Mingguan</h3>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={ENGAGEMENT_DATA}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: isDark ? '#94a3b8' : '#64748b'}} />
-                <Tooltip 
-                  cursor={{fill: 'transparent'}}
-                  contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '8px', border: 'none' }}
-                />
-                <Bar dataKey="likes" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Likes" />
-                <Bar dataKey="comments" fill="#ef4444" radius={[4, 4, 0, 0]} name="Comments" />
-              </BarChart>
-            </ResponsiveContainer>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {workspaceHealth.map((item) => (
+          <div key={item.label} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.label}</p>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.value}</p>
+            <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.helper}</p>
           </div>
-        </div>
+        ))}
+      </div>
 
-        {/* Recent Comments */}
-        <div className={`p-6 rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <h3 className={`font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Komentar Terbaru</h3>
-          <div className="space-y-4">
-            {RECENT_COMMENTS.map((comment) => (
-              <div key={comment.id} className={`p-3 rounded-xl ${isDark ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
-                <div className="flex justify-between items-start mb-1">
-                  <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-800'}`}>@{comment.user}</span>
-                  <span className="text-[10px] text-gray-400">{comment.time}</span>
-                </div>
-                <p className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'} line-clamp-2`}>"{comment.text}"</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className={`text-[10px] px-2 py-0.5 rounded ${
-                    comment.platform === 'Instagram' ? 'bg-purple-100 text-purple-600' :
-                    comment.platform === 'Facebook' ? 'bg-blue-100 text-blue-600' :
-                    'bg-black text-white'
-                  }`}>
-                    {comment.platform}
-                  </span>
-                  <button className="text-[10px] font-bold text-blue-500 hover:underline">Reply</button>
+      <div className="grid xl:grid-cols-[1.15fr_0.95fr_0.9fr] gap-6">
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Alert Center</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Bottleneck, channel warning, dan item yang bisa merusak performa hari ini.</p>
+            </div>
+            <BellRing size={18} className="text-orange-500" />
+          </div>
+
+          <div className="space-y-3">
+            {dashboardAlerts.map((alert) => (
+              <div key={alert.id} className={`rounded-2xl border p-4 ${
+                alert.severity === 'critical'
+                  ? isDark ? 'border-red-500/20 bg-red-500/10' : 'border-red-100 bg-red-50'
+                  : alert.severity === 'warning'
+                    ? isDark ? 'border-amber-500/20 bg-amber-500/10' : 'border-amber-100 bg-amber-50'
+                    : isDark ? 'border-blue-500/20 bg-blue-500/10' : 'border-blue-100 bg-blue-50'
+              }`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${
+                        alert.severity === 'critical'
+                          ? 'bg-red-100 text-red-600'
+                          : alert.severity === 'warning'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-blue-100 text-blue-600'
+                      }`}>
+                        {alert.severity}
+                      </span>
+                      <span className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>owner {alert.owner}</span>
+                    </div>
+                    <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{alert.title}</p>
+                    <p className={`text-sm mt-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{alert.description}</p>
+                  </div>
+                  <button className="text-blue-500 text-sm font-semibold shrink-0">Open</button>
                 </div>
               </div>
             ))}
           </div>
-          <button className="w-full mt-4 py-2 text-sm text-blue-500 font-medium hover:bg-blue-50 rounded-lg transition-colors">
-            Lihat Semua Inbox
-          </button>
+
+          <div className={`mt-5 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle size={16} className="text-red-500" />
+              <p className="font-semibold text-sm">Top risk today</p>
+            </div>
+            <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{topRisk.title}</p>
+            <p className={`mt-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{topRisk.reason}</p>
+            <p className={`mt-2 text-xs ${isDark ? 'text-red-300' : 'text-red-600'}`}>{topRisk.impact}</p>
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>What Needs Attention Now</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Urutan tindakan prioritas agar tim tahu harus bergerak ke mana.</p>
+            </div>
+            <ShieldAlert size={18} className="text-blue-500" />
+          </div>
+          <div className="space-y-3">
+            {attentionItems.map((item) => (
+              <div key={item.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-sm">{item.title}</p>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.type} • owner {item.owner}</p>
+                  </div>
+                  <span className={`text-[10px] px-2 py-1 rounded-full ${item.status.includes('approval') ? 'bg-amber-100 text-amber-700' : item.status.includes('unhandled') ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                    {item.status}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>due {item.due}</span>
+                  <button className="inline-flex items-center gap-1 text-xs font-semibold text-blue-500">
+                    Take action <ArrowRight size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Quick Actions</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Shortcut untuk workflow yang paling sering dipakai supervisor.</p>
+            </div>
+            <Zap size={18} className="text-purple-500" />
+          </div>
+          <div className="space-y-3">
+            {quickActions.map((action) => (
+              <button
+                key={action.id}
+                className={`w-full rounded-2xl border px-4 py-4 text-left transition ${isDark ? 'border-slate-700 bg-slate-900/40 hover:bg-slate-900/80' : 'border-gray-100 bg-gray-50 hover:bg-gray-100'}`}
+              >
+                <p className="font-semibold text-sm">{action.label}</p>
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{action.detail}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-6">
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Executive Pulse</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Reach, inbox pressure, dan order marketplace untuk memantau dampak harian campaign.</p>
+            </div>
+            <Radar size={18} className="text-blue-500" />
+          </div>
+          <div className="h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={weeklyReach}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                <Tooltip
+                  cursor={{ fill: 'transparent' }}
+                  contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }}
+                />
+                <Area type="monotone" dataKey="reach" stroke="#3b82f6" fill="#93c5fd" strokeWidth={3} name="Reach" />
+                <Area type="monotone" dataKey="orders" stroke="#10b981" fill="#a7f3d0" strokeWidth={2} name="Orders" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Team Workload</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Biar terasa sistem dipakai tim sungguhan, bukan sekadar dashboard cantik.</p>
+            </div>
+            <UsersRound size={18} className="text-emerald-500" />
+          </div>
+          <div className="space-y-4">
+            {teamSeats.map((seat) => (
+              <div key={seat.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <p className="font-semibold text-sm">{seat.name}</p>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{seat.role} • {seat.shift}</p>
+                  </div>
+                  <span className={`text-[10px] px-2 py-1 rounded-full ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-white text-gray-600 border border-gray-200'}`}>
+                    {seat.workload}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {seat.channels.map((channel) => (
+                    <span key={channel} className={`text-[10px] px-2 py-1 rounded-full inline-flex items-center gap-1 ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-white text-gray-600 border border-gray-200'}`}>
+                      <BrandLogo brand={resolveBrandKey(channel)} size={16} className="rounded-md" />
+                      {channel}
+                    </span>
+                  ))}
+                </div>
+                <div className={`h-2 rounded-full overflow-hidden ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`}>
+                  <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" style={{ width: `${workloadMeter(seat.workload)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Campaign Performance Snapshot</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Planner, approval, dan live campaign dilihat dalam satu panel.</p>
+            </div>
+            <Layers3 size={18} className="text-purple-500" />
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-3 mb-5">
+            {stageSummary.map((stage) => (
+              <div key={stage.label} className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/50' : 'bg-gray-50'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <stage.icon size={16} className="text-blue-500" />
+                  <p className="text-sm font-semibold">{stage.label}</p>
+                </div>
+                <p className="text-2xl font-bold">{stage.value}</p>
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stage.helper}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {campaignPipeline.map((campaign) => (
+              <div key={campaign.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-sm">{campaign.title}</p>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{campaign.channel} • owner {campaign.owner}</p>
+                    <p className={`text-xs mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{campaign.objective}</p>
+                  </div>
+                  <span className={`text-[10px] px-2 py-1 rounded-full ${campaign.stage === 'live' ? 'bg-emerald-100 text-emerald-600' : campaign.stage === 'approval' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-600'}`}>
+                    {campaign.stage}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>publish {campaign.publishAt}</span>
+                  <button className="text-xs font-semibold text-blue-500">Open brief</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Channel Health</h3>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Performa akun sosial dan toko yang sedang aktif.</p>
+              </div>
+              <Radar size={18} className="text-blue-500" />
+            </div>
+            <div className="space-y-3">
+              {channelConnections.map((channel) => (
+                <div key={channel.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <BrandLogo brand={resolveBrandKey(channel.name)} size={42} className="rounded-2xl px-1" withRing />
+                      <div>
+                        <p className="font-semibold text-sm">{channel.name}</p>
+                        <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{channel.handle}</p>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] px-2 py-1 rounded-full ${
+                      channel.status === 'healthy'
+                        ? 'bg-emerald-100 text-emerald-600'
+                        : channel.status === 'warning'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-red-100 text-red-600'
+                    }`}>
+                      {channel.status}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 mt-4 text-sm">
+                    <div>
+                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Health</p>
+                      <p className="font-bold">{channel.healthScore}/100</p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Unread</p>
+                      <p className="font-bold">{channel.unread}</p>
+                    </div>
+                    <div>
+                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Resp.</p>
+                      <p className="font-bold">{channel.responseTime}</p>
+                    </div>
+                  </div>
+                  <p className={`mt-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {channel.kind === 'social' ? `Followers ${channel.followers}` : channel.syncStatus}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace Exception List</h3>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Fokus ke risiko yang bisa bocor ke revenue atau rating.</p>
+              </div>
+              <PackageSearch size={18} className="text-orange-500" />
+            </div>
+            <div className="space-y-3">
+              {marketIssues.map((issue) => (
+                <div key={issue.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-sm">{issue.title}</p>
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{issue.channel} • {issue.reason}</p>
+                    </div>
+                    <span className="text-[10px] px-2 py-1 rounded-full bg-red-100 text-red-600">watch</span>
+                  </div>
+                  <p className={`text-xs mt-3 ${isDark ? 'text-red-300' : 'text-red-600'}`}>{issue.impact}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid xl:grid-cols-[1fr_1fr_0.9fr] gap-6">
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Activity Feed</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Jejak kerja tim, assign, escalate, dan note internal.</p>
+            </div>
+            <UsersRound size={18} className="text-blue-500" />
+          </div>
+          <div className="space-y-4">
+            {teamActivityFeed.map((activity) => (
+              <div key={activity.id} className="relative pl-5">
+                <span className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full bg-blue-500" />
+                <p className="font-semibold text-sm">{activity.actor} • {activity.action}</p>
+                <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{activity.target}</p>
+                <p className={`text-[11px] mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{activity.time}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Next Queue & Schedule</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Meeting point antara planner, CS, dan launch calendar.</p>
+            </div>
+            <CalendarClock size={18} className="text-purple-500" />
+          </div>
+          <div className="space-y-3 mb-5">
+            {scheduleEvents.slice(0, 4).map((event) => (
+              <div key={event.id} className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/40' : 'bg-gray-50'}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-sm">{event.title}</p>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{event.date} • {event.time} • {event.owner}</p>
+                  </div>
+                  <span className={`text-[10px] px-2 py-1 rounded-full ${event.status === 'review' ? 'bg-amber-100 text-amber-700' : event.status === 'ready' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
+                    {event.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+            <p className="font-semibold text-sm mb-2">Open marketplace orders</p>
+            <div className="space-y-2">
+              {marketplaceOrders.slice(0, 2).map((order) => (
+                <div key={order.id} className="flex items-center justify-between gap-3 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <BrandLogo brand={resolveBrandKey(order.channel)} size={20} className="rounded-md px-1" withRing />
+                    <span className="truncate">{order.id} • {order.customer}</span>
+                  </div>
+                  <span className={`text-[10px] px-2 py-1 rounded-full ${order.status === 'late' || order.status === 'refund_risk' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                    {order.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Volume Inbox Harian</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Komparasi tekanan queue terhadap ritme konten.</p>
+            </div>
+            <MessageCircleMore size={18} className="text-purple-500" />
+          </div>
+          <div className="h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyReach}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }} />
+                <Bar dataKey="inbox" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </div>
