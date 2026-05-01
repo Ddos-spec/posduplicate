@@ -5,7 +5,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import { channelConnections, priorityThreads } from '../../data/omnichannelMock';
 import { BrandLogo } from './BrandLogo';
-import MyMedsosLogo from './MyMedsosLogo';
+import MyCommerSocialLogo from './MyCommerSocialLogo';
 import {
   LayoutDashboard, Calendar, MessageCircle, Share2, Settings,
   Menu, Sun, Moon, ArrowLeft, Plus, Store, LineChart, BellRing
@@ -50,13 +50,13 @@ export default function MedsosLayout() {
       <aside className={`fixed top-0 left-0 z-40 h-screen transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 w-64 border-r ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
         <div className="h-full px-3 py-4 overflow-y-auto">
           <div className="flex items-center gap-3 mb-8 px-2">
-            <MyMedsosLogo size={40} className="rounded-xl shadow-lg shadow-blue-500/30" />
+            <MyCommerSocialLogo size={40} className="shadow-lg shadow-blue-500/30" />
             <div>
-              <h2 className="font-bold text-lg leading-tight">MyMedsos</h2>
+              <h2 className="font-bold text-lg leading-tight">MyCommerSocial</h2>
               <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 {currentRole === 'medsos_manager' ? 'Omnichannel Manager' :
                  currentRole === 'content_creator' ? 'Content Creator' :
-                 currentRole === 'medsos_cs' ? 'Inbox Commander' : 'Social & Marketplace Hub'}
+                 currentRole === 'medsos_cs' ? 'Inbox Commander' : 'Commerce + Social Hub'}
               </p>
               <div className="flex items-center gap-1.5 mt-2">
                 <BrandLogo brand="instagram" size={20} className="rounded-md" />
@@ -143,16 +143,16 @@ export default function MedsosLayout() {
 
           <div className="flex items-center gap-2 ml-auto">
             <div className={`hidden md:flex items-center gap-3 rounded-2xl px-4 py-2 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <div className="flex -space-x-2 mr-1">
-                <BrandLogo brand="instagram" size={28} className="rounded-xl border-2 border-white" />
-                <BrandLogo brand="facebook" size={28} className="rounded-xl border-2 border-white" />
-                <BrandLogo brand="shopee" size={28} className="rounded-xl border-2 border-white" />
-                <BrandLogo brand="tokopedia" size={28} className="rounded-xl border-2 border-white px-1" withRing />
-              </div>
-              <div>
-                <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Mode</p>
-                <p className="text-sm font-semibold">Frontend Prototype</p>
-              </div>
+            <div className="flex -space-x-2 mr-1">
+              <BrandLogo brand="instagram" size={28} className="rounded-xl border-2 border-white" />
+              <BrandLogo brand="facebook" size={28} className="rounded-xl border-2 border-white" />
+              <BrandLogo brand="shopee" size={28} className="rounded-xl border-2 border-white" />
+              <BrandLogo brand="tokopedia" size={28} className="rounded-xl border-2 border-white px-1" withRing />
+            </div>
+            <div>
+              <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Mode</p>
+              <p className="text-sm font-semibold">MyCommerSocial</p>
+            </div>
               <div className={`h-8 w-px ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Focus</p>

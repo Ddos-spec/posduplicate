@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey, type BrandKey } from '../../components/medsos/BrandLogo';
+import MyMedsosLogo from '../../components/medsos/MyMedsosLogo';
 import {
   AlertTriangle,
   ArrowRight,
@@ -82,6 +83,10 @@ export default function MedsosDashboard() {
               <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${isDark ? 'bg-blue-500/20 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
                 <Sparkles size={14} />
                 Executive + operational frontend prototype
+              </div>
+              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ml-2 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-white/90 text-gray-700 shadow-sm'}`}>
+                <MyMedsosLogo size={18} className="rounded-md" />
+                original mark
               </div>
               <h1 className={`text-3xl md:text-4xl font-bold leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Omnichannel war room yang langsung memberi tahu <span className="text-blue-500">apa yang harus dikerjakan sekarang</span>.
