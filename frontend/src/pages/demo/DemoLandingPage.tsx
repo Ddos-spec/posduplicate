@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import MyMedsosLogo from '../../components/medsos/MyMedsosLogo';
+import MyCommerSocialLogo from '../../components/medsos/MyCommerSocialLogo';
 import { 
   ChefHat, ShoppingCart, TrendingUp, Truck, Store, Factory, ArrowRight, 
-  Package, Share2, Pill, Tag, User, Shield, Box 
+  Pill, Tag, Shield, Box 
 } from 'lucide-react';
 import { useDemoUser, type DemoRole } from './demoRoleStore';
 
@@ -26,18 +26,13 @@ export default function DemoLandingPage() {
     { role: 'purchasing', label: 'Purchasing', desc: 'Fokus Belanja: Buat PO & List Supplier.', icon: ShoppingCart }
   ];
 
-  const medsosRoles: RoleOption[] = [
-    { role: 'medsos_manager', label: 'Social Media Manager', desc: 'Full Strategy, Analytics & Reporting.', icon: TrendingUp },
-    { role: 'content_creator', label: 'Content Creator', desc: 'Upload Konten & Calendar Management.', icon: Package },
-    { role: 'medsos_cs', label: 'Customer Service', desc: 'Reply Chat & Komentar Netizen.', icon: User }
-  ];
-
   const handleModuleClick = (item: any) => {
     // If module needs role selection, show modal
     if (item.path.includes('/inventory')) {
       setSelectedModule({ ...item, roles: inventoryRoles });
     } else if (item.path.includes('/medsos')) {
-      setSelectedModule({ ...item, roles: medsosRoles });
+      setRole('medsos_manager');
+      navigate('/demo/medsos/dashboard');
     } else {
       // Direct navigation for old modules (default role)
       setRole('super_admin');
@@ -78,7 +73,7 @@ export default function DemoLandingPage() {
     {
       title: "Digital Engagement",
       items: [
-        { name: "MyMedsos", path: "/demo/medsos", icon: Share2, useCustomLogo: true, desc: "Content Calendar & Engagement Dashboard.", color: "bg-sky-500" }
+        { name: "MyCommerSocial", path: "/demo/medsos", icon: ShoppingCart, useCustomLogo: true, desc: "Unified inbox, content planner, analytics, dan marketplace ops dalam satu dashboard.", color: "bg-sky-500" }
       ]
     }
   ];
@@ -111,7 +106,7 @@ export default function DemoLandingPage() {
                     
                     <div className={`w-12 h-12 ${'useCustomLogo' in item && item.useCustomLogo ? '' : item.color} text-white rounded-xl flex items-center justify-center mb-4 overflow-hidden shadow-lg shadow-${item.color}/20`}>
                       {'useCustomLogo' in item && item.useCustomLogo
-                        ? <MyMedsosLogo size={48} className="rounded-xl" />
+                        ? <MyCommerSocialLogo size={48} />
                         : <item.icon className="w-6 h-6" />}
                     </div>
                     
@@ -157,7 +152,7 @@ export default function DemoLandingPage() {
             <div className="text-center mb-8">
               <div className={`w-16 h-16 ${selectedModule.useCustomLogo ? '' : selectedModule.color} mx-auto rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg overflow-hidden`}>
                 {selectedModule.useCustomLogo
-                  ? <MyMedsosLogo size={64} className="rounded-2xl" />
+                  ? <MyCommerSocialLogo size={64} />
                   : <selectedModule.icon size={32} />}
               </div>
               <h3 className="text-2xl font-bold text-slate-900">Pilih Role Simulasi</h3>
