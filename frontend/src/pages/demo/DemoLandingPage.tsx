@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import MyMedsosLogo from '../../components/medsos/MyMedsosLogo';
 import { 
   ChefHat, ShoppingCart, TrendingUp, Truck, Store, Factory, ArrowRight, 
   Package, Share2, Pill, Tag, User, Shield, Box 
@@ -77,7 +78,7 @@ export default function DemoLandingPage() {
     {
       title: "Digital Engagement",
       items: [
-        { name: "MyMedsos", path: "/demo/medsos", icon: Share2, desc: "Content Calendar & Engagement Dashboard.", color: "bg-sky-500" }
+        { name: "MyMedsos", path: "/demo/medsos", icon: Share2, useCustomLogo: true, desc: "Content Calendar & Engagement Dashboard.", color: "bg-sky-500" }
       ]
     }
   ];
@@ -108,8 +109,10 @@ export default function DemoLandingPage() {
                   >
                     <div className={`absolute top-0 right-0 w-24 h-24 ${item.color} opacity-5 rounded-bl-full transition-transform group-hover:scale-110`}></div>
                     
-                    <div className={`w-12 h-12 ${item.color} text-white rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-${item.color}/20`}>
-                      <item.icon className="w-6 h-6" />
+                    <div className={`w-12 h-12 ${'useCustomLogo' in item && item.useCustomLogo ? '' : item.color} text-white rounded-xl flex items-center justify-center mb-4 overflow-hidden shadow-lg shadow-${item.color}/20`}>
+                      {'useCustomLogo' in item && item.useCustomLogo
+                        ? <MyMedsosLogo size={48} className="rounded-xl" />
+                        : <item.icon className="w-6 h-6" />}
                     </div>
                     
                     <h3 className="text-lg font-bold text-slate-900 mb-2">{item.name}</h3>
@@ -152,8 +155,10 @@ export default function DemoLandingPage() {
             </button>
 
             <div className="text-center mb-8">
-              <div className={`w-16 h-16 ${selectedModule.color} mx-auto rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg`}>
-                <selectedModule.icon size={32} />
+              <div className={`w-16 h-16 ${selectedModule.useCustomLogo ? '' : selectedModule.color} mx-auto rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg overflow-hidden`}>
+                {selectedModule.useCustomLogo
+                  ? <MyMedsosLogo size={64} className="rounded-2xl" />
+                  : <selectedModule.icon size={32} />}
               </div>
               <h3 className="text-2xl font-bold text-slate-900">Pilih Role Simulasi</h3>
               <p className="text-slate-500 mt-2">Anda ingin masuk ke modul {selectedModule.name} sebagai siapa?</p>

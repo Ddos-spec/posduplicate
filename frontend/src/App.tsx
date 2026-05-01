@@ -84,6 +84,8 @@ const MedsosDashboard = lazy(() => import('./pages/medsos/MedsosDashboard'));
 const ContentCalendar = lazy(() => import('./pages/medsos/ContentCalendar'));
 const CreatePost = lazy(() => import('./pages/medsos/CreatePost'));
 const MedsosInbox = lazy(() => import('./pages/medsos/MedsosInbox'));
+const MarketplaceControl = lazy(() => import('./pages/medsos/MarketplaceControl'));
+const MedsosAnalytics = lazy(() => import('./pages/medsos/MedsosAnalytics'));
 const MedsosSettings = lazy(() => import('./pages/medsos/MedsosSettings'));
 
 // Loading fallback
@@ -251,6 +253,8 @@ function App() {
           <Route path="create" element={<CreatePost />} />
           <Route path="calendar" element={<ContentCalendar />} />
           <Route path="inbox" element={<MedsosInbox />} />
+          <Route path="marketplace" element={<MarketplaceControl />} />
+          <Route path="analytics" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />
           <Route index element={<Navigate to="/demo/medsos/dashboard" />} />
         </Route>
@@ -362,6 +366,8 @@ function App() {
           <Route path="create" element={<CreatePost />} />
           <Route path="calendar" element={<ContentCalendar />} />
           <Route path="inbox" element={<MedsosInbox />} />
+          <Route path="marketplace" element={<MarketplaceControl />} />
+          <Route path="analytics" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />
           <Route index element={<Navigate to="/medsos/dashboard" />} />
         </Route>
@@ -501,3 +507,7 @@ function App() {
 }
 
 export default App;
+
+
+
+
