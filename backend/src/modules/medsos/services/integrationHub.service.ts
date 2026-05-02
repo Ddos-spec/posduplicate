@@ -29,6 +29,12 @@ export interface CompleteConnectionInput {
   connectionId?: string;
   workspaceName?: string;
   notes?: string;
+  vendorWorkspaceUrl?: string;
+  vendorWorkspaceEmail?: string;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  renewalDate?: string;
+  billingOwnerName?: string;
   selectedAssets?: ManagedAssetInput[];
 }
 
@@ -277,6 +283,7 @@ function buildConnectionCard(
     slug: definition.slug,
     integrationType: definition.integrationType,
     name: definition.name,
+    workspaceName: String(configuration.workspaceName || '') || null,
     category: definition.category,
     description: definition.description,
     providerName: definition.providerName,
@@ -304,6 +311,13 @@ function buildConnectionCard(
     supportUrl: definition.supportUrl || null,
     callbackUrl: `${getBackendPublicUrl()}/api/medsos/integrations/callback/${definition.slug}`,
     webhookUrl: `${getBackendPublicUrl()}/api/medsos/integrations/webhook/${definition.slug}`,
+    operatorNotes: metadata.notes || null,
+    vendorWorkspaceUrl: metadata.vendorWorkspaceUrl || null,
+    vendorWorkspaceEmail: metadata.vendorWorkspaceEmail || null,
+    subscriptionPlan: metadata.subscriptionPlan || null,
+    subscriptionStatus: metadata.subscriptionStatus || null,
+    renewalDate: metadata.renewalDate || null,
+    billingOwnerName: metadata.billingOwnerName || null,
     lastSyncAt: integrationRow?.last_sync_at?.toISOString() || null,
     connectedAt: integrationRow?.activated_at?.toISOString() || null,
     connectionRefMasked: maskReference(credentials.connectionId || credentials.connectionRef || null),
@@ -571,6 +585,12 @@ export async function completeManagedIntegrationConnect(
       selectedAssets,
       healthScore: metadata.healthScore || defaultHealthScore[definition.slug],
       notes: input.notes || metadata.notes || null,
+      vendorWorkspaceUrl: input.vendorWorkspaceUrl || metadata.vendorWorkspaceUrl || null,
+      vendorWorkspaceEmail: input.vendorWorkspaceEmail || metadata.vendorWorkspaceEmail || null,
+      subscriptionPlan: input.subscriptionPlan || metadata.subscriptionPlan || definition.recommendedPlan || null,
+      subscriptionStatus: input.subscriptionStatus || metadata.subscriptionStatus || 'active',
+      renewalDate: input.renewalDate || metadata.renewalDate || null,
+      billingOwnerName: input.billingOwnerName || metadata.billingOwnerName || null,
       lastError: null,
       lastWebhookEvent: metadata.lastWebhookEvent || null,
       finalizedAt: new Date().toISOString(),

@@ -126,6 +126,12 @@ export const completeConnect = async (req: Request, res: Response, next: NextFun
       connectionId: typeof req.body?.connectionId === 'string' ? req.body.connectionId : undefined,
       workspaceName: typeof req.body?.workspaceName === 'string' ? req.body.workspaceName : undefined,
       notes: typeof req.body?.notes === 'string' ? req.body.notes : undefined,
+      vendorWorkspaceUrl: typeof req.body?.vendorWorkspaceUrl === 'string' ? req.body.vendorWorkspaceUrl : undefined,
+      vendorWorkspaceEmail: typeof req.body?.vendorWorkspaceEmail === 'string' ? req.body.vendorWorkspaceEmail : undefined,
+      subscriptionPlan: typeof req.body?.subscriptionPlan === 'string' ? req.body.subscriptionPlan : undefined,
+      subscriptionStatus: typeof req.body?.subscriptionStatus === 'string' ? req.body.subscriptionStatus : undefined,
+      renewalDate: typeof req.body?.renewalDate === 'string' ? req.body.renewalDate : undefined,
+      billingOwnerName: typeof req.body?.billingOwnerName === 'string' ? req.body.billingOwnerName : undefined,
       selectedAssets: parseSelectedAssets(req.body?.selectedAssets),
     });
 

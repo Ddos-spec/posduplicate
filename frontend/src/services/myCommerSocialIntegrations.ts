@@ -33,6 +33,7 @@ export interface ManagedIntegrationConnector {
   slug: string;
   integrationType: string;
   name: string;
+  workspaceName: string | null;
   category: 'social' | 'marketplace' | 'ads';
   description: string;
   providerName: string;
@@ -60,6 +61,13 @@ export interface ManagedIntegrationConnector {
   supportUrl: string | null;
   callbackUrl: string;
   webhookUrl: string;
+  operatorNotes: string | null;
+  vendorWorkspaceUrl: string | null;
+  vendorWorkspaceEmail: string | null;
+  subscriptionPlan: string | null;
+  subscriptionStatus: string | null;
+  renewalDate: string | null;
+  billingOwnerName: string | null;
   lastSyncAt: string | null;
   connectedAt: string | null;
   connectionRefMasked: string | null;
@@ -121,6 +129,12 @@ export interface CompleteManagedIntegrationPayload {
   connectionId?: string;
   workspaceName?: string;
   notes?: string;
+  vendorWorkspaceUrl?: string;
+  vendorWorkspaceEmail?: string;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  renewalDate?: string;
+  billingOwnerName?: string;
   selectedAssets?: ManagedIntegrationAsset[];
 }
 
