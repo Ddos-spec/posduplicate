@@ -896,3 +896,191 @@ export const slaCompliance = [
   { channel: 'Tokopedia', compliance: 91 },
   { channel: 'Facebook', compliance: 94 },
 ];
+
+export type MetaAdsKpi = {
+  label: string;
+  value: string;
+  delta: string;
+  helper: string;
+};
+
+export type MetaAdsCampaign = {
+  id: number;
+  campaign: string;
+  objective: string;
+  status: 'active' | 'learning' | 'review' | 'scaling';
+  spend: string;
+  roas: string;
+  cpl: string;
+  owner: string;
+  approval: string;
+};
+
+export type MetaAdsCreative = {
+  id: number;
+  name: string;
+  format: string;
+  placements: string[];
+  ctr: string;
+  hookRate: string;
+  winner: boolean;
+};
+
+export type MetaAudienceCluster = {
+  id: number;
+  name: string;
+  source: string;
+  size: string;
+  cpa: string;
+  quality: 'high' | 'medium' | 'watch';
+};
+
+export type MetaAdsAlert = {
+  id: number;
+  severity: 'critical' | 'warning' | 'info';
+  title: string;
+  description: string;
+};
+
+export type MetaBudgetPacing = {
+  id: number;
+  campaign: string;
+  spendRate: string;
+  cap: string;
+  status: 'under pacing' | 'on track' | 'over pacing';
+};
+
+export const metaAdsKpis: MetaAdsKpi[] = [
+  { label: 'Spend 7 Hari', value: 'Rp14,8jt', delta: '+12%', helper: 'gabungan campaign prospecting + retargeting' },
+  { label: 'ROAS', value: '4.7x', delta: '+0.6', helper: 'di atas target blended 4.0x' },
+  { label: 'Qualified Leads', value: '328', delta: '+18%', helper: 'lead masuk ke WA & DM dari Meta Ads' },
+  { label: 'Cost per Lead', value: 'Rp45.200', delta: '-9%', helper: 'lebih efisien dari minggu lalu' },
+];
+
+export const metaAdsTrend = [
+  { day: 'Sen', spend: 1800000, revenue: 7100000, leads: 38 },
+  { day: 'Sel', spend: 1950000, revenue: 7560000, leads: 42 },
+  { day: 'Rab', spend: 2100000, revenue: 9030000, leads: 47 },
+  { day: 'Kam', spend: 2050000, revenue: 8610000, leads: 44 },
+  { day: 'Jum', spend: 2280000, revenue: 10100000, leads: 54 },
+  { day: 'Sab', spend: 2470000, revenue: 11300000, leads: 58 },
+  { day: 'Min', spend: 2150000, revenue: 9640000, leads: 45 },
+];
+
+export const metaAdsCampaigns: MetaAdsCampaign[] = [
+  { id: 1, campaign: 'Cold Brew Lookalike 2%', objective: 'Conversions', status: 'active', spend: 'Rp4,2jt', roas: '5.2x', cpl: 'Rp39k', owner: 'Nisa', approval: 'approved' },
+  { id: 2, campaign: 'Mother’s Day Gift Bundle', objective: 'Sales', status: 'learning', spend: 'Rp3,4jt', roas: '3.9x', cpl: 'Rp48k', owner: 'Raka', approval: 'live learning' },
+  { id: 3, campaign: 'Retargeting Engagers 30D', objective: 'Leads', status: 'scaling', spend: 'Rp2,8jt', roas: '6.1x', cpl: 'Rp28k', owner: 'Alya', approval: 'ready to scale' },
+  { id: 4, campaign: 'Outlet BSD Reservation Leads', objective: 'Messages', status: 'review', spend: 'Rp1,6jt', roas: '2.7x', cpl: 'Rp61k', owner: 'Damar', approval: 'creative refresh needed' },
+];
+
+export const metaAdsCreatives: MetaAdsCreative[] = [
+  { id: 1, name: 'UGC Cold Brew Hook', format: 'Reels 9:16', placements: ['Instagram Reels', 'Facebook Reels'], ctr: '2.9%', hookRate: '34%', winner: true },
+  { id: 2, name: 'Gift Bundle Carousel', format: 'Carousel 4:5', placements: ['Instagram Feed', 'Facebook Feed'], ctr: '1.8%', hookRate: '22%', winner: false },
+  { id: 3, name: 'Reservation Testimonial', format: 'Story CTA', placements: ['Instagram Story'], ctr: '2.4%', hookRate: '27%', winner: true },
+];
+
+export const metaAudienceClusters: MetaAudienceCluster[] = [
+  { id: 1, name: 'Lookalike buyers 2%', source: 'High-value customer seed', size: '1.8 jt', cpa: 'Rp39k', quality: 'high' },
+  { id: 2, name: 'Warm engagers 30D', source: 'IG + FB engagers', size: '86 rb', cpa: 'Rp28k', quality: 'high' },
+  { id: 3, name: 'Broad coffee interest', source: 'Interest stack', size: '4.2 jt', cpa: 'Rp55k', quality: 'medium' },
+  { id: 4, name: 'Outlet reservation test', source: 'Geo + event intent', size: '420 rb', cpa: 'Rp61k', quality: 'watch' },
+];
+
+export const metaAdsAlerts: MetaAdsAlert[] = [
+  { id: 1, severity: 'critical', title: 'BSD reservation CPA naik', description: 'Creative testimonial fatigue. CPA sudah 18% di atas target.' },
+  { id: 2, severity: 'warning', title: 'Gift bundle masih learning limited', description: 'Audience overlap dengan retargeting terlalu tinggi.' },
+  { id: 3, severity: 'info', title: 'Cold brew UGC layak diduplikasi', description: 'CTR dan ROAS paling tinggi 3 hari berturut-turut.' },
+];
+
+export const metaBudgetPacing: MetaBudgetPacing[] = [
+  { id: 1, campaign: 'Cold Brew Lookalike 2%', spendRate: '92%', cap: 'Rp600k / hari', status: 'on track' },
+  { id: 2, campaign: 'Mother’s Day Gift Bundle', spendRate: '74%', cap: 'Rp480k / hari', status: 'under pacing' },
+  { id: 3, campaign: 'Retargeting Engagers 30D', spendRate: '108%', cap: 'Rp350k / hari', status: 'over pacing' },
+];
+
+export const metaAdsFunnel = [
+  { stage: 'Impressions', value: 428000 },
+  { stage: 'Clicks', value: 12640 },
+  { stage: 'Landing Views', value: 8730 },
+  { stage: 'Leads', value: 328 },
+  { stage: 'Purchases', value: 112 },
+];
+
+export type MetaLeadDestination = {
+  id: number;
+  destination: string;
+  leads: number;
+  qualified: number;
+  response: string;
+  note: string;
+};
+
+export type MetaPlacementPulse = {
+  id: number;
+  placement: string;
+  ctr: string;
+  cpc: string;
+  roas: string;
+  note: string;
+};
+
+export type MetaAdsApprovalItem = {
+  id: number;
+  title: string;
+  asset: string;
+  owner: string;
+  reviewer: string;
+  due: string;
+  status: 'ready' | 'review' | 'blocked';
+  note: string;
+};
+
+export type MetaAdsAccountHealth = {
+  id: number;
+  label: string;
+  value: string;
+  helper: string;
+  status: 'healthy' | 'watch' | 'warning';
+};
+
+export type MetaAdsAutomationBridge = {
+  id: number;
+  title: string;
+  description: string;
+  status: 'live' | 'watch' | 'draft';
+};
+
+export const metaLeadDestinations: MetaLeadDestination[] = [
+  { id: 1, destination: 'WhatsApp CS', leads: 124, qualified: 72, response: '6 mnt', note: 'Click-to-chat paling cepat dikonversi ke closing manual.' },
+  { id: 2, destination: 'Instagram DM', leads: 98, qualified: 41, response: '11 mnt', note: 'Banyak pertanyaan promo dan bundling sebelum checkout.' },
+  { id: 3, destination: 'Landing Page', leads: 74, qualified: 55, response: 'n/a', note: 'Dipakai untuk form campaign bundle dan lead capture.' },
+  { id: 4, destination: 'Outlet Reservation', leads: 32, qualified: 19, response: '14 mnt', note: 'Lead geo-target untuk event dan reservasi cabang BSD.' },
+];
+
+export const metaPlacementPulse: MetaPlacementPulse[] = [
+  { id: 1, placement: 'Instagram Reels', ctr: '2.9%', cpc: 'Rp1.8k', roas: '5.4x', note: 'UGC hook masih jadi pembunuh utama untuk prospecting.' },
+  { id: 2, placement: 'Instagram Story', ctr: '2.4%', cpc: 'Rp1.4k', roas: '4.6x', note: 'Paling cocok untuk CTA reservasi dan chat intent tinggi.' },
+  { id: 3, placement: 'Facebook Feed', ctr: '1.8%', cpc: 'Rp2.1k', roas: '3.7x', note: 'Masih cukup kuat untuk audience umur 30+ dan corporate.' },
+  { id: 4, placement: 'Facebook Reels', ctr: '2.1%', cpc: 'Rp1.9k', roas: '4.2x', note: 'Cocok untuk daur ulang creative winner tanpa biaya tinggi.' },
+];
+
+export const metaAdsApprovalQueue: MetaAdsApprovalItem[] = [
+  { id: 1, title: 'Mother’s Day carousel refresh', asset: 'Creative set B', owner: 'Raka', reviewer: 'Brand Lead', due: '13:30', status: 'review', note: 'Angle gifting perlu diperkuat sebelum scale budget.' },
+  { id: 2, title: 'BSD reservation testimonial cutdown', asset: 'Story CTA 15s', owner: 'Dito', reviewer: 'Damar', due: '14:10', status: 'blocked', note: 'Menunggu testimonial legal clearance dari outlet.' },
+  { id: 3, title: 'Cold brew UGC duplication pack', asset: 'Reels + FB variant', owner: 'Nisa', reviewer: 'Owner', due: '16:00', status: 'ready', note: 'Sudah lolos QA dan siap dipakai untuk scale retargeting.' },
+];
+
+export const metaAdsAccountHealth: MetaAdsAccountHealth[] = [
+  { id: 1, label: 'Pixel events', value: 'Healthy', helper: 'Purchase + lead event firing 99.2% 24 jam terakhir.', status: 'healthy' },
+  { id: 2, label: 'CAPI sync', value: 'Watch', helper: 'Ada 2 batch delay pagi tadi, tapi queue sudah normal kembali.', status: 'watch' },
+  { id: 3, label: 'Lead routing', value: 'Live', helper: 'WA CS dan Instagram DM otomatis di-tag ke unified inbox.', status: 'healthy' },
+  { id: 4, label: 'Spend guardrails', value: '2 active rules', helper: 'Auto-warning saat CPL naik >20% dari baseline.', status: 'healthy' },
+];
+
+export const metaAdsAutomationBridge: MetaAdsAutomationBridge[] = [
+  { id: 1, title: 'Lead form → Unified Inbox', description: 'Lead dari Meta form masuk ke queue sales dengan auto-tag per campaign.', status: 'live' },
+  { id: 2, title: 'Comment ad → Community queue', description: 'Komentar iklan yang mengandung intent beli diarahkan ke social CS.', status: 'live' },
+  { id: 3, title: 'Low ROAS → Budget review', description: 'Campaign di bawah guardrail otomatis masuk approval board.', status: 'watch' },
+  { id: 4, title: 'Creative winner → Duplicate brief', description: 'Creative terbaik bisa langsung dibuatkan brief adaptasi channel lain.', status: 'draft' },
+];

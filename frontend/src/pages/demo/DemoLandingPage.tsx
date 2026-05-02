@@ -73,7 +73,7 @@ export default function DemoLandingPage() {
     {
       title: "Digital Engagement",
       items: [
-        { name: "MyCommerSocial", path: "/demo/medsos", icon: ShoppingCart, useCustomLogo: true, desc: "Unified inbox, content planner, analytics, dan marketplace ops dalam satu dashboard.", color: "bg-sky-500" }
+        { name: "MyCommerSocial", path: "/demo/medsos", icon: ShoppingCart, useCustomLogo: true, desc: "Unified inbox, planner, marketplace ops, analytics, dan Meta Ads dalam satu dashboard.", color: "bg-sky-500" }
       ]
     }
   ];
