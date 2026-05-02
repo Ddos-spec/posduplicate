@@ -45,6 +45,13 @@ type ModalState = {
   selectedBrands: ManagedIntegrationBrand[];
 };
 
+type PilotCheckpoint = {
+  key: string;
+  label: string;
+  detail: string;
+  done: boolean;
+};
+
 const demoHub: ManagedIntegrationHub = {
   billing: {
     dashboardFee: {
@@ -381,6 +388,65 @@ function getConnectButtonLabel(connector: ManagedIntegrationConnector) {
   }
 
   return 'Connect';
+}
+
+function getPilotCheckpoints(connector: ManagedIntegrationConnector): PilotCheckpoint[] {
+  return [
+    {
+      key: 'vendor-route',
+      label: 'Vendor route siap',
+      detail: connector.launchUrlConfigured ? 'Hosted flow sudah ada' : connector.vendorPortalUrl ? 'Portal vendor siap dipakai' : 'Masih manual',
+      done: connector.launchUrlConfigured || Boolean(connector.vendorPortalUrl),
+    },
+    {
+      key: 'workspace-profile',
+      label: 'Workspace profile',
+      detail: connector.workspaceName && connector.vendorWorkspaceEmail ? `${connector.workspaceName} • ${connector.vendorWorkspaceEmail}` : 'Label / email operasional belum lengkap',
+      done: Boolean(connector.workspaceName && connector.vendorWorkspaceEmail),
+    },
+    {
+      key: 'plan-recorded',
+      label: 'Plan & billing',
+      detail: connector.subscriptionPlan ? `${connector.subscriptionPlan} • ${connector.subscriptionStatus || 'status belum dicatat'}` : 'Plan vendor belum dicatat',
+      done: Boolean(connector.subscriptionPlan && connector.subscriptionStatus),
+    },
+    {
+      key: 'assets-selected',
+      label: 'Aset aktif',
+      detail: connector.selectedAssets.length > 0 ? `${connector.selectedAssets.length} aset aktif` : 'Belum ada aset dipilih',
+      done: connector.selectedAssets.length > 0,
+    },
+    {
+      key: 'connection-reference',
+      label: 'Reference tersimpan',
+      detail: connector.connectionRefMasked || 'Belum ada reference dari vendor',
+      done: Boolean(connector.connectionRefMasked),
+    },
+    {
+      key: 'connector-status',
+      label: 'Status siap tempur',
+      detail: connector.statusLabel,
+      done: connector.status === 'connected',
+    },
+  ];
+}
+
+function getPilotSnapshot(connector: ManagedIntegrationConnector) {
+  const checkpoints = getPilotCheckpoints(connector);
+  const completed = checkpoints.filter((item) => item.done).length;
+  const total = checkpoints.length;
+  const score = Math.round((completed / total) * 100);
+
+  let label = 'Belum siap';
+  if (score >= 100) {
+    label = 'Ready to test';
+  } else if (score >= 67) {
+    label = 'Hampir siap';
+  } else if (score >= 34) {
+    label = 'Sedang dirapikan';
+  }
+
+  return { checkpoints, completed, total, score, label };
 }
 
 export default function MedsosConnections() {
@@ -801,7 +867,10 @@ export default function MedsosConnections() {
 
       <div className="grid xl:grid-cols-[1.4fr_0.8fr] gap-6">
         <div className="space-y-6">
-          {connectors.map((connector) => (
+          {connectors.map((connector) => {
+            const pilot = getPilotSnapshot(connector);
+
+            return (
             <div key={connector.slug} className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
                 <div className="flex-1">
@@ -829,6 +898,38 @@ export default function MedsosConnections() {
                       {connector.pricingSummary}
                     </div>
                   ) : null}
+
+                  <div className={`mt-5 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                      <div>
+                        <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Pilot readiness</p>
+                        <p className="mt-1 text-lg font-bold">{pilot.label}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">{pilot.score}%</p>
+                        <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{pilot.completed}/{pilot.total} checkpoint selesai</p>
+                      </div>
+                    </div>
+                    <div className={`mt-4 h-2.5 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-white border border-gray-200'}`}>
+                      <div
+                        className={`h-full rounded-full ${pilot.score >= 100 ? 'bg-emerald-500' : pilot.score >= 67 ? 'bg-blue-500' : pilot.score >= 34 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                        style={{ width: `${pilot.score}%` }}
+                      />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-3 mt-4">
+                      {pilot.checkpoints.map((checkpoint) => (
+                        <div key={`${connector.slug}-${checkpoint.key}`} className={`rounded-xl border px-3 py-3 ${isDark ? 'border-slate-700 bg-slate-800/80' : 'border-gray-200 bg-white'}`}>
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-semibold">{checkpoint.label}</p>
+                            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${checkpoint.done ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
+                              {checkpoint.done ? 'done' : 'todo'}
+                            </span>
+                          </div>
+                          <p className={`mt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{checkpoint.detail}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
                   <div className="flex flex-wrap gap-2 mt-4">
                     {connector.supportedChannels.map((channel) => (
@@ -970,6 +1071,9 @@ export default function MedsosConnections() {
                         </li>
                       ))}
                     </ul>
+                    <div className={`mt-3 rounded-xl px-3 py-2 text-xs ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-white text-gray-600 border border-gray-200'}`}>
+                      Pilot score: <span className="font-semibold">{pilot.score}%</span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {connector.vendorPortalUrl ? (
@@ -1009,7 +1113,8 @@ export default function MedsosConnections() {
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         <div className="space-y-6">
