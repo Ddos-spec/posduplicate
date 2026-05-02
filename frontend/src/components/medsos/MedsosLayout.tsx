@@ -8,7 +8,7 @@ import { BrandLogo } from './BrandLogo';
 import MyCommerSocialLogo from './MyCommerSocialLogo';
 import {
   LayoutDashboard, Calendar, MessageCircle, Share2, Settings,
-  Menu, Sun, Moon, ArrowLeft, Plus, Store, LineChart, BellRing, Megaphone
+  Menu, Sun, Moon, ArrowLeft, Plus, Store, LineChart, BellRing, Megaphone, PlugZap
 } from 'lucide-react';
 
 export default function MedsosLayout() {
@@ -23,6 +23,7 @@ export default function MedsosLayout() {
 
   const allMenus = [
     { icon: LayoutDashboard, label: 'Overview', path: `${basePath}/dashboard`, roles: ['all'] },
+    { icon: PlugZap, label: 'Connections', path: `${basePath}/connections`, roles: ['medsos_manager', 'all'] },
     { icon: Calendar, label: 'Planner', path: `${basePath}/calendar`, roles: ['medsos_manager', 'content_creator', 'all'] },
     { icon: MessageCircle, label: 'Unified Inbox', path: `${basePath}/inbox`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
     { icon: Store, label: 'Marketplace', path: `${basePath}/marketplace`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
@@ -157,7 +158,7 @@ export default function MedsosLayout() {
               <div className={`h-8 w-px ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Focus</p>
-                <p className="text-sm font-semibold">UI dulu, backend nanti</p>
+                <p className="text-sm font-semibold">Managed connectors + omnichannel ops</p>
               </div>
             </div>
             <button

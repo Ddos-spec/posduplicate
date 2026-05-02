@@ -64,8 +64,8 @@ export default function MedsosSettings() {
             </p>
           </div>
           <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-blue-50 text-blue-700'}`}>
-            <p className="text-xs uppercase tracking-[0.18em]">Frontend mode</p>
-            <p className="font-semibold text-sm">Semua toggle masih mock, tapi flow-nya sudah nyata.</p>
+            <p className="text-xs uppercase tracking-[0.18em]">Current mode</p>
+            <p className="font-semibold text-sm">Connector hub sudah pakai backend; sebagian besar toggle lain masih mock UI.</p>
           </div>
         </div>
       </div>
