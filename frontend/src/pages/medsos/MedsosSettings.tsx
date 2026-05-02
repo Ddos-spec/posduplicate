@@ -65,9 +65,35 @@ export default function MedsosSettings() {
           </div>
           <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-blue-50 text-blue-700'}`}>
             <p className="text-xs uppercase tracking-[0.18em]">Current mode</p>
-            <p className="font-semibold text-sm">Connector hub sudah pakai backend; sebagian besar toggle lain masih mock UI.</p>
+            <p className="font-semibold text-sm">Connector hub sudah mengunci stack Tapchat + Jubelio + Shown; toggle lain masih frontend-first.</p>
           </div>
         </div>
+      </div>
+
+      <div className="grid xl:grid-cols-3 gap-4">
+        {[
+          {
+            name: 'Tapchat',
+            role: 'Social inbox + lead ads sync',
+            helper: 'User bayar vendor langsung, kita hanya baca status dan workflow.',
+          },
+          {
+            name: 'Jubelio',
+            role: 'Marketplace ops backbone',
+            helper: 'Order, stok, katalog, dan buyer chat akan lewat layer ini.',
+          },
+          {
+            name: 'Shown',
+            role: 'Meta Ads command source',
+            helper: 'Ad account milik user tetap di vendor, dashboard kita hanya memantau dan mengarahkan.',
+          },
+        ].map((item) => (
+          <div key={item.name} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className="text-xs uppercase tracking-[0.18em] text-blue-500">{item.name}</p>
+            <h3 className="mt-2 font-bold">{item.role}</h3>
+            <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.helper}</p>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

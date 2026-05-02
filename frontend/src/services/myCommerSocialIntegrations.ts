@@ -45,12 +45,16 @@ export interface ManagedIntegrationConnector {
   capabilities: string[];
   billingNote: string;
   dashboardFeeNote: string;
+  pricingSummary: string | null;
+  recommendedPlan: string | null;
   selectedAssets: ManagedIntegrationAsset[];
   setupChecklist: string[];
   requiredUserActions: string[];
   nextActions: string[];
   launchMode: 'hosted_link' | 'manual_reference';
   launchUrlConfigured: boolean;
+  vendorPortalUrl: string | null;
+  vendorPortalLabel: string | null;
   pricingUrl: string | null;
   docsUrl: string | null;
   supportUrl: string | null;
@@ -144,4 +148,3 @@ export async function disconnectMyCommerSocialIntegration(slug: string): Promise
   const { data } = await api.post(`/medsos/integrations/${slug}/disconnect`);
   return data.data as ManagedIntegrationConnector;
 }
-

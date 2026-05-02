@@ -158,7 +158,7 @@ export default function MedsosLayout() {
               <div className={`h-8 w-px ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Focus</p>
-                <p className="text-sm font-semibold">Managed connectors + omnichannel ops</p>
+                <p className="text-sm font-semibold">Tapchat + Jubelio + Shown</p>
               </div>
             </div>
             <button

@@ -215,13 +215,26 @@ function mapSelectedAssets(value: unknown): ManagedAssetInput[] {
     }, []);
 }
 
-function buildNextActions(state: IntegrationState, definition: ManagedIntegrationDefinition, hasLaunchUrl: boolean): string[] {
+function buildNextActions(
+  state: IntegrationState,
+  definition: ManagedIntegrationDefinition,
+  hasLaunchUrl: boolean,
+  hasVendorPortalUrl: boolean
+): string[] {
   if (state === 'connected') {
-    return ['Pantau health score', 'Sinkronkan data bila perlu', 'Kelola billing partner langsung dari portal provider'];
+    return ['Pantau health score', 'Sinkronkan data bila perlu', `Kelola billing ${definition.providerName} langsung dari portal vendornya`];
   }
 
   if (state === 'pending_user_action') {
-    return ['Selesaikan login / approval di provider partner', 'Pilih aset yang akan diaktifkan', 'Kembali ke dashboard untuk finalisasi otomatis'];
+    return [`Selesaikan login / approval di ${definition.providerName}`, 'Pilih aset yang akan diaktifkan', 'Kembali ke dashboard untuk finalisasi otomatis'];
+  }
+
+  if (!hasLaunchUrl && hasVendorPortalUrl) {
+    return [
+      `Buka portal ${definition.providerName} lalu aktifkan plan yang direkomendasikan`,
+      'Hubungkan aset yang dibutuhkan dari sisi vendor',
+      'Kembali ke dashboard untuk menyimpan reference dan finalisasi channel aktif',
+    ];
   }
 
   if (!hasLaunchUrl) {
@@ -229,7 +242,7 @@ function buildNextActions(state: IntegrationState, definition: ManagedIntegratio
   }
 
   if (state === 'action_required') {
-    return ['Lakukan reconnect akun di provider', 'Pastikan permission dan billing partner masih aktif'];
+    return [`Lakukan reconnect akun di ${definition.providerName}`, 'Pastikan permission dan billing partner masih aktif'];
   }
 
   return ['Klik Connect untuk memulai onboarding', 'User hanya login dan approve, backend menangani callback serta status'];
@@ -256,6 +269,7 @@ function buildConnectionCard(
   const state = normalizeState(integrationRow?.status, integrationRow?.is_active);
   const selectedAssets = mapSelectedAssets(metadata.selectedAssets);
   const launchUrlConfigured = Boolean(definition.launchUrl);
+  const vendorPortalUrl = definition.vendorPortalUrl || null;
   const healthScore = Number(metadata.healthScore || defaultHealthScore[definition.slug] || 0);
 
   return {
@@ -275,12 +289,16 @@ function buildConnectionCard(
     capabilities: definition.capabilities,
     billingNote: definition.billingNote,
     dashboardFeeNote: definition.dashboardFeeNote,
+    pricingSummary: definition.pricingSummary || null,
+    recommendedPlan: definition.recommendedPlan || null,
     selectedAssets: selectedAssets.length > 0 ? selectedAssets : (state === 'connected' ? buildDefaultAssets(definition) : []),
     setupChecklist: definition.setupChecklist,
     requiredUserActions: definition.requiredUserActions,
-    nextActions: buildNextActions(state, definition, launchUrlConfigured),
+    nextActions: buildNextActions(state, definition, launchUrlConfigured, Boolean(vendorPortalUrl)),
     launchMode: definition.launchMode,
     launchUrlConfigured,
+    vendorPortalUrl,
+    vendorPortalLabel: definition.vendorPortalLabel || null,
     pricingUrl: definition.pricingUrl || null,
     docsUrl: definition.docsUrl || null,
     supportUrl: definition.supportUrl || null,
@@ -385,7 +403,7 @@ export async function getManagedIntegrationHub(tenantId: number) {
       connected: connectors.filter((item) => item.status === 'connected').length,
       pending: connectors.filter((item) => item.status === 'pending_user_action').length,
       actionRequired: connectors.filter((item) => item.status === 'action_required').length,
-      providerLinksConfigured: connectors.filter((item) => item.launchUrlConfigured).length,
+      providerLinksConfigured: connectors.filter((item) => item.launchUrlConfigured || Boolean(item.vendorPortalUrl)).length,
     },
     connectors,
   };
