@@ -460,6 +460,7 @@ export default function MedsosConnections() {
   const [modal, setModal] = useState<ModalState | null>(null);
 
   const connectors = hub?.connectors || [];
+  const tapchatPilot = connectors.find((item) => item.slug === 'social-hub') || null;
 
   const summaryCards = useMemo(() => {
     const activeSummary = hub?.summary || buildDemoSummary(connectors);
@@ -1118,6 +1119,60 @@ export default function MedsosConnections() {
         </div>
 
         <div className="space-y-6">
+          {tapchatPilot ? (
+            <div className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <PlugZap size={18} className="text-blue-500" />
+                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Tapchat pilot pack</h3>
+              </div>
+              <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                Hamba jadikan <span className="font-semibold">Tapchat</span> sebagai jalur tembak pertama: 1 akun, 1–2 channel sosial, risiko kecil, feedback cepat.
+              </p>
+              <div className="grid gap-3 mt-4">
+                {[
+                  'Buka portal Tapchat lalu pilih Create Account.',
+                  'Isi field yang muncul saat ini: name, phone, Business Name, email, password, confirm Password.',
+                  'Setelah akun jadi, hubungkan minimal 1 Instagram Business atau 1 Facebook Page.',
+                  'Kembali ke MyCommerSocial lalu isi finalisasi workspace, email operasional, plan, dan aset aktif.',
+                ].map((step, index) => (
+                  <div key={step} className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
+                    <span className="font-semibold mr-2">{index + 1}.</span>{step}
+                  </div>
+                ))}
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3 mt-4">
+                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-blue-50'}`}>
+                  <p className="font-semibold text-sm">Scope uji yang hamba sarankan</p>
+                  <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Lite plan, 1 workspace, 1 IG Business, 1 FB Page, lalu cek status jadi connected.</p>
+                </div>
+                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-white'}`}>
+                  <p className="font-semibold text-sm">Target selesai</p>
+                  <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Pilot score Tapchat naik ke 100%, reference tersimpan, dan operator note terisi.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-4">
+                {tapchatPilot.vendorPortalUrl ? (
+                  <a
+                    href={tapchatPilot.vendorPortalUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-semibold"
+                  >
+                    <ExternalLink size={16} />
+                    Buka Tapchat sekarang
+                  </a>
+                ) : null}
+                <button
+                  onClick={() => openFinalizeModal(tapchatPilot)}
+                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 font-semibold ${isDark ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+                >
+                  <BadgeCheck size={16} />
+                  Siapkan finalisasi Tapchat
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <div className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
             <div className="flex items-center gap-2 mb-4">
               <Workflow size={18} className="text-blue-500" />
