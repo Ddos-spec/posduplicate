@@ -36,6 +36,12 @@ type ModalState = {
   workspaceName: string;
   connectionId: string;
   notes: string;
+  vendorWorkspaceUrl: string;
+  vendorWorkspaceEmail: string;
+  subscriptionPlan: string;
+  subscriptionStatus: string;
+  renewalDate: string;
+  billingOwnerName: string;
   selectedBrands: ManagedIntegrationBrand[];
 };
 
@@ -64,6 +70,7 @@ const demoHub: ManagedIntegrationHub = {
       slug: 'social-hub',
       integrationType: 'managed_social_hub',
       name: 'Social Hub',
+      workspaceName: 'Ares Social War Room',
       category: 'social',
       description: 'Tapchat menangani social inbox, lead ads sync, dan approval channel agar user biasa cukup daftar lalu hubungkan akun sosial.',
       providerName: 'Tapchat',
@@ -103,6 +110,13 @@ const demoHub: ManagedIntegrationHub = {
       supportUrl: 'https://tapchat.id/',
       callbackUrl: 'https://api.example.com/api/medsos/integrations/callback/social-hub',
       webhookUrl: 'https://api.example.com/api/medsos/integrations/webhook/social-hub',
+      operatorNotes: 'Dipakai untuk inbox harian dan lead ads ringan.',
+      vendorWorkspaceUrl: 'https://app.tapchat.id/',
+      vendorWorkspaceEmail: 'ops@arescoffee.id',
+      subscriptionPlan: 'Lite Rp49.000/bulan',
+      subscriptionStatus: 'active',
+      renewalDate: '2026-06-02',
+      billingOwnerName: 'Nadia - Ops',
       lastSyncAt: new Date().toISOString(),
       connectedAt: new Date().toISOString(),
       connectionRefMasked: 'soc_••••8341',
@@ -126,6 +140,7 @@ const demoHub: ManagedIntegrationHub = {
       slug: 'marketplace-hub',
       integrationType: 'managed_marketplace_hub',
       name: 'Marketplace Hub',
+      workspaceName: 'Ares Commerce Core',
       category: 'marketplace',
       description: 'Jubelio dipakai untuk order, stok, katalog, dan chat marketplace sehingga seller tinggal daftar dan hubungkan toko.',
       providerName: 'Jubelio',
@@ -160,6 +175,13 @@ const demoHub: ManagedIntegrationHub = {
       supportUrl: 'https://jubelio.com/en/api-integration/',
       callbackUrl: 'https://api.example.com/api/medsos/integrations/callback/marketplace-hub',
       webhookUrl: 'https://api.example.com/api/medsos/integrations/webhook/marketplace-hub',
+      operatorNotes: 'Menunggu seller approve dua toko utama.',
+      vendorWorkspaceUrl: 'https://v2.jubelio.com/',
+      vendorWorkspaceEmail: 'marketplace@arescoffee.id',
+      subscriptionPlan: 'Starter Rp150/order',
+      subscriptionStatus: 'pending',
+      renewalDate: '2026-05-15',
+      billingOwnerName: 'Rafi - Marketplace Lead',
       lastSyncAt: null,
       connectedAt: null,
       connectionRefMasked: null,
@@ -186,6 +208,7 @@ const demoHub: ManagedIntegrationHub = {
       slug: 'meta-ads-hub',
       integrationType: 'managed_meta_ads_hub',
       name: 'Meta Ads Hub',
+      workspaceName: 'Ares Growth Desk',
       category: 'ads',
       description: 'Shown menangani lapisan ads supaya user bisa pakai akun iklan sendiri lalu MyCommerSocial cukup membaca hasil dan lead flow-nya.',
       providerName: 'Shown',
@@ -222,6 +245,13 @@ const demoHub: ManagedIntegrationHub = {
       supportUrl: 'https://help.shown.io/',
       callbackUrl: 'https://api.example.com/api/medsos/integrations/callback/meta-ads-hub',
       webhookUrl: 'https://api.example.com/api/medsos/integrations/webhook/meta-ads-hub',
+      operatorNotes: 'Dipakai read-heavy untuk pacing dan lead handoff.',
+      vendorWorkspaceUrl: 'https://app.shown.io/',
+      vendorWorkspaceEmail: 'growth@arescoffee.id',
+      subscriptionPlan: 'Starter $29/bulan',
+      subscriptionStatus: 'active',
+      renewalDate: '2026-06-08',
+      billingOwnerName: 'Diva - Growth',
       lastSyncAt: new Date().toISOString(),
       connectedAt: new Date().toISOString(),
       connectionRefMasked: 'ads_••••5502',
@@ -252,6 +282,15 @@ const statusStyles: Record<ManagedIntegrationStatus, string> = {
   not_connected: 'bg-slate-200 text-slate-700',
 };
 
+const subscriptionStyles: Record<string, string> = {
+  active: 'bg-emerald-100 text-emerald-700',
+  pending: 'bg-amber-100 text-amber-700',
+  trial: 'bg-blue-100 text-blue-700',
+  overdue: 'bg-rose-100 text-rose-700',
+  paused: 'bg-orange-100 text-orange-700',
+  cancelled: 'bg-slate-200 text-slate-700',
+};
+
 const summaryTone = [
   'from-blue-500 to-cyan-500',
   'from-emerald-500 to-teal-500',
@@ -274,6 +313,23 @@ function formatRelativeDate(value: string | null): string {
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+  });
+}
+
+function formatDateOnly(value: string | null): string {
+  if (!value) {
+    return '-';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   });
 }
 
@@ -408,9 +464,15 @@ export default function MedsosConnections() {
 
     setModal({
       connector,
-      workspaceName: connector.name,
+      workspaceName: connector.workspaceName || connector.name,
       connectionId: '',
-      notes: '',
+      notes: connector.operatorNotes || '',
+      vendorWorkspaceUrl: connector.vendorWorkspaceUrl || '',
+      vendorWorkspaceEmail: connector.vendorWorkspaceEmail || '',
+      subscriptionPlan: connector.subscriptionPlan || connector.recommendedPlan || '',
+      subscriptionStatus: connector.subscriptionStatus || 'active',
+      renewalDate: connector.renewalDate || '',
+      billingOwnerName: connector.billingOwnerName || '',
       selectedBrands,
     });
   };
@@ -579,6 +641,7 @@ export default function MedsosConnections() {
         item.slug === modal.connector.slug
           ? {
               ...item,
+              workspaceName: modal.workspaceName || item.workspaceName,
               status: 'connected' as ManagedIntegrationStatus,
               statusLabel: 'Connected',
               isActive: true,
@@ -586,6 +649,13 @@ export default function MedsosConnections() {
               connectedAt: new Date().toISOString(),
               lastSyncAt: new Date().toISOString(),
               selectedAssets,
+              operatorNotes: modal.notes || item.operatorNotes,
+              vendorWorkspaceUrl: modal.vendorWorkspaceUrl || item.vendorWorkspaceUrl,
+              vendorWorkspaceEmail: modal.vendorWorkspaceEmail || item.vendorWorkspaceEmail,
+              subscriptionPlan: modal.subscriptionPlan || item.subscriptionPlan,
+              subscriptionStatus: modal.subscriptionStatus || item.subscriptionStatus,
+              renewalDate: modal.renewalDate || item.renewalDate,
+              billingOwnerName: modal.billingOwnerName || item.billingOwnerName,
               connectionRefMasked: modal.connectionId ? `${modal.connectionId.slice(0, 4)}••••${modal.connectionId.slice(-2)}` : item.connectionRefMasked || 'demo••••live',
               launchSession: null,
             }
@@ -608,6 +678,12 @@ export default function MedsosConnections() {
         connectionId: modal.connectionId || undefined,
         workspaceName: modal.workspaceName || undefined,
         notes: modal.notes || undefined,
+        vendorWorkspaceUrl: modal.vendorWorkspaceUrl || undefined,
+        vendorWorkspaceEmail: modal.vendorWorkspaceEmail || undefined,
+        subscriptionPlan: modal.subscriptionPlan || undefined,
+        subscriptionStatus: modal.subscriptionStatus || undefined,
+        renewalDate: modal.renewalDate || undefined,
+        billingOwnerName: modal.billingOwnerName || undefined,
         selectedAssets,
       });
       toast.success('Connector berhasil difinalisasi');
@@ -781,6 +857,33 @@ export default function MedsosConnections() {
                     </div>
                   </div>
 
+                  <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mt-5">
+                    <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                      <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Workspace</p>
+                      <p className="mt-2 text-sm font-semibold">{connector.workspaceName || '-'}</p>
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>label workspace vendor</p>
+                    </div>
+                    <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                      <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Billing owner</p>
+                      <p className="mt-2 text-sm font-semibold">{connector.billingOwnerName || '-'}</p>
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{connector.vendorWorkspaceEmail || 'belum ada email operasional'}</p>
+                    </div>
+                    <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                      <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Plan</p>
+                      <p className="mt-2 text-sm font-semibold">{connector.subscriptionPlan || connector.recommendedPlan || '-'}</p>
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>renewal {formatDateOnly(connector.renewalDate)}</p>
+                    </div>
+                    <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                      <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Subscription</p>
+                      <div className="mt-2">
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${subscriptionStyles[connector.subscriptionStatus || ''] || 'bg-slate-200 text-slate-700'}`}>
+                          {connector.subscriptionStatus || 'unknown'}
+                        </span>
+                      </div>
+                      <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>status vendor workspace</p>
+                    </div>
+                  </div>
+
                   <div className="grid xl:grid-cols-[1.1fr_0.9fr] gap-4 mt-5">
                     <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
                       <div className="flex items-center gap-2 mb-3">
@@ -814,6 +917,11 @@ export default function MedsosConnections() {
                       ) : (
                         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada aset aktif. Setelah user approve, aset akan masuk otomatis atau bisa difinalisasi di modal.</p>
                       )}
+                      {connector.operatorNotes ? (
+                        <div className={`mt-4 rounded-xl px-3 py-3 text-xs ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-white text-gray-600 border border-gray-200'}`}>
+                          <span className="font-semibold">Operator note:</span> {connector.operatorNotes}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -957,7 +1065,10 @@ export default function MedsosConnections() {
                       {connector.statusLabel}
                     </span>
                   </div>
-                  <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{connector.lastError || connector.pricingSummary || connector.billingNote}</p>
+                  <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{connector.lastError || connector.operatorNotes || connector.pricingSummary || connector.billingNote}</p>
+                  <p className={`text-[11px] mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {connector.billingOwnerName || 'Belum ada PIC billing'} • {connector.subscriptionPlan || connector.recommendedPlan || 'plan belum dicatat'}
+                  </p>
                 </div>
               ))}
             </div>
@@ -1003,6 +1114,70 @@ export default function MedsosConnections() {
                     placeholder="conn_..., ref_..., atau id dari partner"
                   />
                 </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Vendor workspace URL</label>
+                  <input
+                    value={modal.vendorWorkspaceUrl}
+                    onChange={(event) => setModal((current) => current ? { ...current, vendorWorkspaceUrl: event.target.value } : current)}
+                    className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
+                    placeholder="https://app.tapchat.id/..., https://v2.jubelio.com/..., dst."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Vendor workspace email</label>
+                  <input
+                    value={modal.vendorWorkspaceEmail}
+                    onChange={(event) => setModal((current) => current ? { ...current, vendorWorkspaceEmail: event.target.value } : current)}
+                    className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
+                    placeholder="ops@brand.com"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Subscription plan</label>
+                  <input
+                    value={modal.subscriptionPlan}
+                    onChange={(event) => setModal((current) => current ? { ...current, subscriptionPlan: event.target.value } : current)}
+                    className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
+                    placeholder="Lite Rp49.000/bulan, Starter $29/bulan, dst."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Subscription status</label>
+                  <select
+                    value={modal.subscriptionStatus}
+                    onChange={(event) => setModal((current) => current ? { ...current, subscriptionStatus: event.target.value } : current)}
+                    className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
+                  >
+                    {['active', 'pending', 'trial', 'paused', 'overdue', 'cancelled'].map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Renewal date</label>
+                  <input
+                    type="date"
+                    value={modal.renewalDate}
+                    onChange={(event) => setModal((current) => current ? { ...current, renewalDate: event.target.value } : current)}
+                    className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2">Billing owner</label>
+                <input
+                  value={modal.billingOwnerName}
+                  onChange={(event) => setModal((current) => current ? { ...current, billingOwnerName: event.target.value } : current)}
+                  className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
+                  placeholder="Nama PIC yang memegang billing vendor"
+                />
               </div>
 
               <div>
