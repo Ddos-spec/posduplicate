@@ -65,9 +65,9 @@ const demoHub: ManagedIntegrationHub = {
       integrationType: 'managed_social_hub',
       name: 'Social Hub',
       category: 'social',
-      description: 'Komentar, DM, publishing, dan analytics sosial lewat partner managed connector.',
-      providerName: 'Managed Social Connector',
-      providerKey: 'managed_social_connector',
+      description: 'Tapchat menangani social inbox, lead ads sync, dan approval channel agar user biasa cukup daftar lalu hubungkan akun sosial.',
+      providerName: 'Tapchat',
+      providerKey: 'tapchat',
       status: 'connected',
       statusLabel: 'Connected',
       isActive: true,
@@ -79,24 +79,28 @@ const demoHub: ManagedIntegrationHub = {
         { brand: 'youtube', label: 'YouTube Channel' },
       ],
       capabilities: ['unified inbox', 'comment + DM sync', 'content publish', 'approval workflow', 'analytics pull'],
-      billingNote: 'Customer membayar connector sosial langsung ke partner. MyCommerSocial hanya menarik biaya workspace.',
+      billingNote: 'User membayar Tapchat langsung. MyCommerSocial hanya menarik biaya workspace dan workflow.',
       dashboardFeeNote: 'Rp300.000 / bulan untuk dashboard orchestration.',
+      pricingSummary: 'Tapchat Lite mulai Rp49.000/bulan dengan omnichannel chat, IG/FB/TikTok, dan lead ads sync.',
+      recommendedPlan: 'Lite Rp49.000/bulan',
       selectedAssets: [
         { id: 'ig-1', label: '@ares.coffee', kind: 'instagram', status: 'connected' },
         { id: 'fb-1', label: 'Ares Coffee Official', kind: 'facebook', status: 'connected' },
       ],
       setupChecklist: [
-        'Klik connect lalu login partner connector.',
-        'Pilih page/channel yang ingin diaktifkan.',
+        'Klik connect lalu buka portal Tapchat.',
+        'Daftar / login lalu pilih page/channel yang ingin diaktifkan.',
         'Callback dan status health masuk otomatis ke dashboard.',
       ],
-      requiredUserActions: ['Login akun social', 'Pilih page/account', 'Klik allow / approve'],
+      requiredUserActions: ['Daftar / login Tapchat', 'Pilih page/account', 'Klik allow / approve'],
       nextActions: ['Pantau SLA inbox', 'Gunakan Sync Now kalau partner sudah menambahkan aset baru'],
-      launchMode: 'hosted_link',
-      launchUrlConfigured: true,
-      pricingUrl: 'https://partner.example/social/pricing',
-      docsUrl: 'https://partner.example/social/docs',
-      supportUrl: 'https://partner.example/social/support',
+      launchMode: 'manual_reference',
+      launchUrlConfigured: false,
+      vendorPortalUrl: 'https://app.tapchat.id/register',
+      vendorPortalLabel: 'Buka portal Tapchat',
+      pricingUrl: 'https://tapchat.id/',
+      docsUrl: 'https://tapchat.id/',
+      supportUrl: 'https://tapchat.id/',
       callbackUrl: 'https://api.example.com/api/medsos/integrations/callback/social-hub',
       webhookUrl: 'https://api.example.com/api/medsos/integrations/webhook/social-hub',
       lastSyncAt: new Date().toISOString(),
@@ -123,9 +127,9 @@ const demoHub: ManagedIntegrationHub = {
       integrationType: 'managed_marketplace_hub',
       name: 'Marketplace Hub',
       category: 'marketplace',
-      description: 'Buyer chat, order queue, dan catalog health dikelola lewat partner connector.',
-      providerName: 'Managed Commerce Connector',
-      providerKey: 'managed_marketplace_connector',
+      description: 'Jubelio dipakai untuk order, stok, katalog, dan chat marketplace sehingga seller tinggal daftar dan hubungkan toko.',
+      providerName: 'Jubelio',
+      providerKey: 'jubelio',
       status: 'pending_user_action',
       statusLabel: 'Waiting for user approval',
       isActive: false,
@@ -135,21 +139,25 @@ const demoHub: ManagedIntegrationHub = {
         { brand: 'tokopedia', label: 'Tokopedia' },
       ],
       capabilities: ['buyer chat sync', 'order queue', 'catalog health', 'stock mismatch alert', 'pricing exception'],
-      billingNote: 'Biaya partner commerce dibayar user langsung. Dashboard hanya menjadi command center.',
+      billingNote: 'User membayar Jubelio langsung. MyCommerSocial hanya menjadi command center, alert, dan workflow internal.',
       dashboardFeeNote: 'Rp300.000 / bulan untuk orchestration dan alert.',
+      pricingSummary: 'Jubelio mulai Rp150/order untuk order sync, inventory, catalog, dan chat marketplace.',
+      recommendedPlan: 'Mulai Rp150/order',
       selectedAssets: [],
       setupChecklist: [
-        'Klik connect lalu login seller center via partner.',
-        'Approve toko yang ingin diaktifkan.',
+        'Klik connect lalu buka portal Jubelio.',
+        'Daftar / login dan hubungkan toko yang ingin diaktifkan.',
         'Order dan buyer chat akan muncul di dashboard setelah callback selesai.',
       ],
-      requiredUserActions: ['Login seller center', 'Pilih toko', 'Approve akses partner'],
-      nextActions: ['Selesaikan approval seller center', 'Setelah itu klik Complete setup bila callback belum otomatis'],
-      launchMode: 'hosted_link',
-      launchUrlConfigured: true,
-      pricingUrl: 'https://partner.example/commerce/pricing',
-      docsUrl: 'https://partner.example/commerce/docs',
-      supportUrl: 'https://partner.example/commerce/support',
+      requiredUserActions: ['Daftar / login Jubelio', 'Pilih toko', 'Approve akses marketplace'],
+      nextActions: ['Selesaikan aktivasi toko di Jubelio', 'Setelah itu klik Complete setup bila callback belum otomatis'],
+      launchMode: 'manual_reference',
+      launchUrlConfigured: false,
+      vendorPortalUrl: 'https://v2.jubelio.com/auth/register',
+      vendorPortalLabel: 'Buka portal Jubelio',
+      pricingUrl: 'https://jubelio.com/en/pricing/',
+      docsUrl: 'https://docs-wms.jubelio.com/',
+      supportUrl: 'https://jubelio.com/en/api-integration/',
       callbackUrl: 'https://api.example.com/api/medsos/integrations/callback/marketplace-hub',
       webhookUrl: 'https://api.example.com/api/medsos/integrations/webhook/marketplace-hub',
       lastSyncAt: null,
@@ -158,7 +166,7 @@ const demoHub: ManagedIntegrationHub = {
       launchSession: {
         state: 'demo-state',
         createdAt: new Date().toISOString(),
-        launchUrl: 'https://partner.example/commerce/connect',
+        launchUrl: 'https://v2.jubelio.com/auth/register',
         returnPath: '/demo/medsos/connections',
         callbackUrl: 'https://api.example.com/api/medsos/integrations/callback/marketplace-hub',
       },
@@ -179,9 +187,9 @@ const demoHub: ManagedIntegrationHub = {
       integrationType: 'managed_meta_ads_hub',
       name: 'Meta Ads Hub',
       category: 'ads',
-      description: 'Meta Ads dikelola partner connector agar user cukup approve Business Manager dan ad account.',
-      providerName: 'Managed Ads Connector',
-      providerKey: 'managed_ads_connector',
+      description: 'Shown menangani lapisan ads supaya user bisa pakai akun iklan sendiri lalu MyCommerSocial cukup membaca hasil dan lead flow-nya.',
+      providerName: 'Shown',
+      providerKey: 'shown',
       status: 'connected',
       statusLabel: 'Connected',
       isActive: true,
@@ -191,23 +199,27 @@ const demoHub: ManagedIntegrationHub = {
         { brand: 'instagram', label: 'Instagram Ads' },
       ],
       capabilities: ['account health', 'campaign snapshot', 'budget pacing', 'lead sync', 'creative workflow'],
-      billingNote: 'Biaya connector dan spend iklan dibayar langsung ke provider / Meta.',
+      billingNote: 'User membayar Shown dan spend iklan langsung ke vendor / Meta.',
       dashboardFeeNote: 'Rp300.000 / bulan untuk command center dan workflow.',
+      pricingSummary: 'Shown Starter $29/bulan, dan 0% komisi bila user menghubungkan ad account miliknya sendiri.',
+      recommendedPlan: 'Starter $29/bulan',
       selectedAssets: [
         { id: 'ad-1', label: 'Ares Main Ad Account', kind: 'facebook', status: 'connected' },
       ],
       setupChecklist: [
-        'Login Business Manager via partner link.',
-        'Pilih ad account dan approve permission.',
+        'Buka portal Shown lalu buat akun / login.',
+        'Hubungkan ad account dan approve permission.',
         'Campaign health dan lead destination tampil di dashboard.',
       ],
-      requiredUserActions: ['Login Business Manager', 'Pilih ad account', 'Approve permission'],
+      requiredUserActions: ['Daftar / login Shown', 'Pilih ad account', 'Approve permission'],
       nextActions: ['Pantau budget pacing', 'Gunakan Sync Now saat creative baru sudah tayang di partner'],
-      launchMode: 'hosted_link',
-      launchUrlConfigured: true,
-      pricingUrl: 'https://partner.example/ads/pricing',
-      docsUrl: 'https://partner.example/ads/docs',
-      supportUrl: 'https://partner.example/ads/support',
+      launchMode: 'manual_reference',
+      launchUrlConfigured: false,
+      vendorPortalUrl: 'https://app.shown.io/create-account?lang=en',
+      vendorPortalLabel: 'Buka portal Shown',
+      pricingUrl: 'https://shown.io/en/pricing',
+      docsUrl: 'https://shown.io/en/api',
+      supportUrl: 'https://help.shown.io/',
       callbackUrl: 'https://api.example.com/api/medsos/integrations/callback/meta-ads-hub',
       webhookUrl: 'https://api.example.com/api/medsos/integrations/webhook/meta-ads-hub',
       lastSyncAt: new Date().toISOString(),
@@ -271,8 +283,48 @@ function buildDemoSummary(connectors: ManagedIntegrationConnector[]) {
     connected: connectors.filter((item) => item.status === 'connected').length,
     pending: connectors.filter((item) => item.status === 'pending_user_action').length,
     actionRequired: connectors.filter((item) => item.status === 'action_required').length,
-    providerLinksConfigured: connectors.filter((item) => item.launchUrlConfigured).length,
+    providerLinksConfigured: connectors.filter((item) => item.launchUrlConfigured || Boolean(item.vendorPortalUrl)).length,
   };
+}
+
+function getConnectorAccessLabel(connector: ManagedIntegrationConnector) {
+  if (connector.launchUrlConfigured) {
+    return 'Hosted connect ready';
+  }
+
+  if (connector.vendorPortalUrl) {
+    return 'Vendor portal ready';
+  }
+
+  return 'Manual finalize fallback';
+}
+
+function getConnectorAccessTone(connector: ManagedIntegrationConnector) {
+  if (connector.launchUrlConfigured) {
+    return 'bg-blue-100 text-blue-700';
+  }
+
+  if (connector.vendorPortalUrl) {
+    return 'bg-violet-100 text-violet-700';
+  }
+
+  return 'bg-slate-200 text-slate-700';
+}
+
+function getConnectButtonLabel(connector: ManagedIntegrationConnector) {
+  if (connector.status === 'connected') {
+    return 'Reconnect / add assets';
+  }
+
+  if (connector.launchUrlConfigured) {
+    return 'Connect';
+  }
+
+  if (connector.vendorPortalUrl) {
+    return `Buka ${connector.providerName}`;
+  }
+
+  return 'Connect';
 }
 
 export default function MedsosConnections() {
@@ -292,10 +344,31 @@ export default function MedsosConnections() {
     return [
       { label: 'Connector Terkoneksi', value: `${activeSummary.connected}/${activeSummary.total}`, helper: 'partner yang sudah hidup', icon: BadgeCheck },
       { label: 'Menunggu Approval', value: String(activeSummary.pending), helper: 'tinggal login / allow', icon: CircleAlert },
-      { label: 'Link Provider Siap', value: String(activeSummary.providerLinksConfigured), helper: 'hosted connect URL terpasang', icon: PlugZap },
+      { label: 'Link Provider Siap', value: String(activeSummary.providerLinksConfigured), helper: 'hosted flow atau portal vendor tersedia', icon: PlugZap },
       { label: 'Dashboard Fee', value: hub?.billing.dashboardFee.label || 'Rp300.000 / bulan', helper: 'biaya workspace saja', icon: Wallet },
     ];
   }, [connectors, hub]);
+
+  const stackHighlights = useMemo(() => [
+    {
+      provider: 'Tapchat',
+      role: 'Social inbox + lead ads sync',
+      price: 'Mulai Rp49.000/bulan',
+      helper: 'IG, FB, TikTok, Shopee, Tokopedia chat',
+    },
+    {
+      provider: 'Jubelio',
+      role: 'Marketplace ops backbone',
+      price: 'Mulai Rp150/order',
+      helper: 'Order, inventory, katalog, multi-channel',
+    },
+    {
+      provider: 'Shown',
+      role: 'Meta Ads layer',
+      price: 'Starter $29/bulan',
+      helper: '0% komisi bila user pakai ad account sendiri',
+    },
+  ], []);
 
   useEffect(() => {
     if (!isDemo) {
@@ -344,6 +417,10 @@ export default function MedsosConnections() {
 
   const handleConnect = async (connector: ManagedIntegrationConnector) => {
     if (isDemo) {
+      if (connector.vendorPortalUrl) {
+        window.open(connector.vendorPortalUrl, '_blank', 'noopener,noreferrer');
+      }
+
       const nextConnectors = connectors.map((item) =>
         item.slug === connector.slug
           ? {
@@ -353,7 +430,7 @@ export default function MedsosConnections() {
               launchSession: {
                 state: `demo-${Date.now()}`,
                 createdAt: new Date().toISOString(),
-                launchUrl: 'https://partner.example/connect',
+                launchUrl: connector.vendorPortalUrl,
                 returnPath: '/demo/medsos/connections',
                 callbackUrl: item.callbackUrl,
               },
@@ -366,7 +443,7 @@ export default function MedsosConnections() {
         connectors: nextConnectors,
         summary: buildDemoSummary(nextConnectors),
       } : current);
-      toast.success('Demo connect dimulai. Hamba buka finalisasi agar flow terlihat nyata.');
+      toast.success(`Demo connect ${connector.providerName} dimulai. Portal vendor dibuka lalu finalisasi disiapkan.`);
       openFinalizeModal({
         ...connector,
         status: 'pending_user_action',
@@ -382,7 +459,12 @@ export default function MedsosConnections() {
         window.open(result.launchUrl, '_blank', 'noopener,noreferrer');
         toast.success('Hosted connector dibuka. User tinggal login dan approve.');
       } else {
-        toast.success('Hosted link belum diisi. Hamba buka finalisasi manual yang tetap ramah user.');
+        if (connector.vendorPortalUrl) {
+          window.open(connector.vendorPortalUrl, '_blank', 'noopener,noreferrer');
+          toast.success(`Portal ${connector.providerName} dibuka. Setelah vendor aktif, finalisasi cukup dari dashboard ini.`);
+        } else {
+          toast.success('Hosted link belum diisi. Hamba buka finalisasi manual yang tetap ramah user.');
+        }
         openFinalizeModal(connector);
       }
       await loadHub();
@@ -571,8 +653,20 @@ export default function MedsosConnections() {
             </div>
             <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Connections Hub</h1>
             <p className={`mt-2 max-w-3xl ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Hamba pindahkan kerumitan OAuth, token refresh, webhook, dan retry sync ke partner connector. User biasa cukup klik connect, login, pilih aset, lalu MyCommerSocial menjadi command center.
+              Hamba kunci stack MVP Indonesia ke <span className="font-semibold">Tapchat + Jubelio + Shown</span>. Kerumitan OAuth, token refresh, webhook, dan retry sync tetap di sisi vendor; user cukup daftar, login, lalu hubungkan aset.
             </p>
+            <div className="grid md:grid-cols-3 gap-3 mt-5">
+              {stackHighlights.map((item) => (
+                <div key={item.provider} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold">{item.provider}</p>
+                    <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-semibold text-blue-700">{item.price}</span>
+                  </div>
+                  <p className={`mt-2 text-sm ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{item.role}</p>
+                  <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.helper}</p>
+                </div>
+              ))}
+            </div>
             <div className="grid sm:grid-cols-3 gap-4 mt-6">
               {summaryCards.map((card, index) => (
                 <div key={card.label} className={`rounded-2xl bg-gradient-to-br ${summaryTone[index % summaryTone.length]} p-[1px]`}>
@@ -605,7 +699,7 @@ export default function MedsosConnections() {
               <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
                 <p className="font-semibold">Connector & spend vendor</p>
                 <p className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Customer membayar partner connector dan biaya platform langsung ke vendor masing-masing. MyCommerSocial hanya menjadi wadah kontrol, workflow, dan analytics.
+                  Customer membayar vendor langsung: Tapchat untuk inbox sosial, Jubelio untuk marketplace ops, dan Shown untuk Meta Ads. MyCommerSocial hanya menjadi wadah kontrol, workflow, dan analytics.
                 </p>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -641,19 +735,24 @@ export default function MedsosConnections() {
                     </div>
                     <div>
                       <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{connector.name}</h3>
-                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{connector.providerName}</p>
+                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {connector.providerName}{connector.recommendedPlan ? ` • ${connector.recommendedPlan}` : ''}
+                      </p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[connector.status]}`}>
                       {connector.statusLabel}
                     </span>
-                    {connector.launchUrlConfigured ? (
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Hosted link ready</span>
-                    ) : (
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">Manual finalize fallback</span>
-                    )}
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getConnectorAccessTone(connector)}`}>
+                      {getConnectorAccessLabel(connector)}
+                    </span>
                   </div>
 
                   <p className={`mt-4 text-sm leading-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{connector.description}</p>
+                  {connector.pricingSummary ? (
+                    <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900/50 text-gray-200' : 'border-blue-100 bg-blue-50 text-blue-700'}`}>
+                      {connector.pricingSummary}
+                    </div>
+                  ) : null}
 
                   <div className="flex flex-wrap gap-2 mt-4">
                     {connector.supportedChannels.map((channel) => (
@@ -726,7 +825,7 @@ export default function MedsosConnections() {
                     className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
                   >
                     {busySlug === connector.slug ? <Loader2 size={16} className="animate-spin" /> : <PlugZap size={16} />}
-                    {connector.status === 'connected' ? 'Reconnect / add assets' : 'Connect'}
+                    {getConnectButtonLabel(connector)}
                   </button>
                   <button
                     onClick={() => openFinalizeModal(connector)}
@@ -765,6 +864,21 @@ export default function MedsosConnections() {
                     </ul>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
+                    {connector.vendorPortalUrl ? (
+                      <a
+                        href={connector.vendorPortalUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`rounded-2xl border px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2 ${isDark ? 'border-slate-700 bg-slate-900 hover:bg-slate-800' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+                      >
+                        <ExternalLink size={15} />
+                        {connector.providerName}
+                      </a>
+                    ) : (
+                      <div className={`rounded-2xl border px-4 py-3 text-center text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
+                        Portal unset
+                      </div>
+                    )}
                     {connector.pricingUrl ? (
                       <a
                         href={connector.pricingUrl}
@@ -780,9 +894,9 @@ export default function MedsosConnections() {
                         Pricing unset
                       </div>
                     )}
-                    <div className={`rounded-2xl border px-4 py-3 text-center text-xs ${isDark ? 'border-slate-700 bg-slate-900 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
-                      Callback & webhook ready
-                    </div>
+                  </div>
+                  <div className={`rounded-2xl border px-4 py-3 text-center text-xs ${isDark ? 'border-slate-700 bg-slate-900 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
+                    Callback & webhook ready
                   </div>
                 </div>
               </div>
@@ -799,9 +913,9 @@ export default function MedsosConnections() {
             <div className="space-y-4">
               {[
                 'User klik Connect dari dashboard.',
-                'Partner hosted connector membuka login + approval.',
-                'Backend menerima callback, menyimpan reference, lalu memperbarui health status.',
-                'Jika partner belum mengembalikan aset otomatis, operator cukup finalisasi nama workspace dan channel aktif.',
+                'Portal vendor yang relevan dibuka: Tapchat, Jubelio, atau Shown.',
+                'User login, memilih aset, lalu vendor menangani billing serta koneksi teknis.',
+                'Jika reference belum kembali otomatis, operator cukup finalisasi nama workspace dan channel aktif.',
               ].map((step, index) => (
                 <div key={step} className="flex gap-3">
                   <div className="h-8 w-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center text-sm font-bold shrink-0">{index + 1}</div>
@@ -820,7 +934,7 @@ export default function MedsosConnections() {
               {[
                 'OAuth client, redirect URI, webhook secret, token refresh',
                 'Health monitoring, callback routing, retry sync, masking connection reference',
-                'Pricing split: dashboard fee tetap terpisah dari biaya connector vendor',
+                'Pricing split: fee dashboard tetap terpisah dari biaya Tapchat / Jubelio / Shown',
               ].map((item) => (
                 <div key={item} className={`rounded-2xl px-4 py-3 text-sm ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
                   {item}
@@ -843,7 +957,7 @@ export default function MedsosConnections() {
                       {connector.statusLabel}
                     </span>
                   </div>
-                  <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{connector.lastError || connector.billingNote}</p>
+                  <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{connector.lastError || connector.pricingSummary || connector.billingNote}</p>
                 </div>
               ))}
             </div>
@@ -860,7 +974,7 @@ export default function MedsosConnections() {
                   <p className="text-xs uppercase tracking-[0.18em] text-blue-500">Complete setup</p>
                   <h3 className="text-xl font-bold mt-1">{modal.connector.name}</h3>
                   <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-sm mt-2`}>
-                    Form ini tetap ringan untuk user biasa: cukup nama workspace, aset yang ingin diaktifkan, dan optional reference jika partner belum mengirim callback otomatis.
+                    Form ini tetap ringan untuk user biasa: cukup nama workspace, aset yang ingin diaktifkan, dan optional reference jika {modal.connector.providerName} belum mengirim callback otomatis.
                   </p>
                 </div>
                 <button onClick={() => setModal(null)} className={`rounded-xl px-3 py-2 ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-100 hover:bg-gray-200'}`}>
@@ -925,6 +1039,18 @@ export default function MedsosConnections() {
                 />
               </div>
 
+              {modal.connector.vendorPortalUrl ? (
+                <a
+                  href={modal.connector.vendorPortalUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+                >
+                  <ExternalLink size={15} />
+                  {modal.connector.vendorPortalLabel || `Buka ${modal.connector.providerName}`}
+                </a>
+              ) : null}
+
               <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-blue-50 text-blue-700'}`}>
                 Callback target: <span className="font-semibold">{modal.connector.callbackUrl}</span>
               </div>
@@ -953,4 +1079,3 @@ export default function MedsosConnections() {
     </div>
   );
 }
-
