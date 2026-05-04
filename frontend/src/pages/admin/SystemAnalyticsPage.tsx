@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   LineChart,
   Line,
@@ -12,15 +13,33 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Users, Building2, DollarSign, Loader2 } from 'lucide-react';
+import {
+  TrendingUp,
+  Users,
+  Building2,
+  DollarSign,
+  Loader2,
+  ArrowRight,
+  Monitor,
+  Calculator,
+  Package,
+  Share2,
+  CreditCard,
+  Key,
+  Book
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { adminAnalyticsService } from '../../services/adminAnalyticsService';
 import type { TenantGrowthData, RevenueData, TenantStatusData, TopTenant } from '../../services/adminAnalyticsService';
+import { useAuthStore } from '../../store/authStore';
 
 export default function SystemAnalyticsPage() {
   const [dateRange, setDateRange] = useState('month');
   const [loading, setLoading] = useState(true);
+  const user = useAuthStore((state) => state.user);
+  const roleName = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+  const isSuperAdmin = roleName === 'super admin' || roleName === 'super_admin';
 
   // State for API data
   const [tenantGrowthData, setTenantGrowthData] = useState<TenantGrowthData[]>([]);
@@ -93,6 +112,20 @@ export default function SystemAnalyticsPage() {
     }
   };
 
+  const controlTowerActions = [
+    { icon: Building2, title: 'Tenant Management', description: 'Kelola tenant, subscription, dan status akun.', path: '/admin/tenants' },
+    ...(isSuperAdmin ? [{ icon: CreditCard, title: 'Billing Management', description: 'Pantau billing, jatuh tempo, dan pembayaran tenant.', path: '/admin/billing' }] : []),
+    { icon: Key, title: 'API Key Management', description: 'Atur API key, akses integrasi, dan dokumentasi teknis.', path: '/admin/api-keys' },
+    { icon: Book, title: 'API Documentation', description: 'Buka pusat dokumentasi endpoint dan referensi developer.', path: '/admin/api-docs' },
+  ];
+
+  const businessModules = [
+    { icon: Monitor, title: 'MyPOS', description: 'Masuk ke operasi kasir, outlet, dan transaksi.', path: '/owner/dashboard', accent: 'bg-emerald-100 text-emerald-600' },
+    { icon: Calculator, title: 'MyAkuntan', description: 'Akses pembukuan, ledger, budget, dan laporan.', path: '/accounting/dashboard', accent: 'bg-purple-100 text-purple-600' },
+    { icon: Package, title: 'MyInventory', description: 'Pantau stok, forecast, reorder, dan analitik gudang.', path: '/inventory/dashboard', accent: 'bg-orange-100 text-orange-600' },
+    { icon: Share2, title: 'MyCommerSocial', description: 'Buka omnichannel, marketplace, inbox, dan Meta Ads.', path: '/medsos/dashboard', accent: 'bg-blue-100 text-blue-600' },
+  ];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -107,7 +140,11 @@ export default function SystemAnalyticsPage() {
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">System Analytics</h1>
-          <p className="text-gray-600">Monitor overall system performance</p>
+          <p className="text-gray-600">
+            {isSuperAdmin
+              ? 'Control tower untuk seluruh tenant sekaligus pintu masuk ke semua modul bisnis.'
+              : 'Monitor overall system performance'}
+          </p>
         </div>
         <select
           value={dateRange}
@@ -119,6 +156,70 @@ export default function SystemAnalyticsPage() {
           <option value="year">This Year</option>
         </select>
       </div>
+
+      {isSuperAdmin && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Control Tower</h2>
+                <p className="text-sm text-gray-500">Jalur cepat untuk urusan sistem, tenant, dan billing.</p>
+              </div>
+              <div className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-semibold">
+                Super Admin
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {controlTowerActions.map((action) => (
+                <Link
+                  key={action.path}
+                  to={action.path}
+                  className="rounded-2xl border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center">
+                      <action.icon className="w-5 h-5 text-slate-700" />
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-gray-400" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">{action.title}</h3>
+                  <p className="text-sm text-gray-500 mt-2">{action.description}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Business Modules</h2>
+                <p className="text-sm text-gray-500">Super admin kini bisa lompat langsung ke seluruh kerajaan modul.</p>
+              </div>
+              <div className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+                Full Access
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {businessModules.map((module) => (
+                <Link
+                  key={module.path}
+                  to={module.path}
+                  className="rounded-2xl border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${module.accent}`}>
+                      <module.icon className="w-5 h-5" />
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-gray-400" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">{module.title}</h3>
+                  <p className="text-sm text-gray-500 mt-2">{module.description}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">

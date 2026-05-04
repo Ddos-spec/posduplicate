@@ -16,6 +16,7 @@ const TenantManagementPage = lazy(() => import('./pages/admin/TenantManagementPa
 const SystemAnalyticsPage = lazy(() => import('./pages/admin/SystemAnalyticsPage'));
 const ApiDocumentationPage = lazy(() => import('./pages/admin/ApiDocumentationPage'));
 const ApiKeyManagementPage = lazy(() => import('./pages/admin/ApiKeyManagementPage'));
+const BillingManagementPage = lazy(() => import('./pages/admin/BillingManagementPage'));
 const OwnerLayout = lazy(() => import('./components/owner/OwnerLayout'));
 const OwnerDashboardPage = lazy(() => import('./pages/owner/OwnerDashboardPage'));
 const UserManagementPage = lazy(() => import('./pages/owner/UserManagementPage'));
@@ -285,6 +286,7 @@ function App() {
           <Route path="dashboard" element={<SystemAnalyticsPage />} />
           <Route path="tenants" element={<TenantManagementPage />} />
           <Route path="analytics" element={<SystemAnalyticsPage />} />
+          <Route path="billing" element={<BillingManagementPage />} />
           <Route path="api-keys" element={<ApiKeyManagementPage />} />
           <Route path="api-docs" element={<ApiDocumentationPage />} />
           <Route index element={<Navigate to="/admin/dashboard" />} />

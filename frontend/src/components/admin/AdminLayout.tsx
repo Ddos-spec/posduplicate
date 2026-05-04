@@ -10,7 +10,13 @@ import {
   Bell,
   User,
   Book,
-  Key
+  Key,
+  CreditCard,
+  Monitor,
+  Calculator,
+  Package,
+  Share2,
+  Crown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -24,6 +30,8 @@ export default function AdminLayout() {
   const location = useLocation();
   const { unreadCount, fetchNotifications, togglePanel } = useNotificationStore();
   const { user, logout } = useAuthStore();
+  const roleName = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+  const isSuperAdmin = roleName === 'super admin' || roleName === 'super_admin';
 
   useEffect(() => {
     void fetchNotifications();
@@ -40,18 +48,47 @@ export default function AdminLayout() {
     navigate('/admin/login');
   };
 
-  const menuItems = [
+  const controlMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: Building2, label: 'Tenant Management', path: '/admin/tenants' },
     { icon: TrendingUp, label: 'System Analytics', path: '/admin/analytics' },
-    // Billing removed as requested
+    ...(isSuperAdmin ? [{ icon: CreditCard, label: 'Billing Management', path: '/admin/billing' }] : []),
     { icon: Key, label: 'API Key Management', path: '/admin/api-keys' },
     { icon: Book, label: 'API Documentation', path: '/admin/api-docs' },
   ];
 
+  const businessModuleItems = isSuperAdmin
+    ? [
+        { icon: Monitor, label: 'MyPOS', path: '/owner/dashboard' },
+        { icon: Calculator, label: 'MyAkuntan', path: '/accounting/dashboard' },
+        { icon: Package, label: 'MyInventory', path: '/inventory/dashboard' },
+        { icon: Share2, label: 'MyCommerSocial', path: '/medsos/dashboard' },
+      ]
+    : [];
+
   const isActivePath = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
+
+  const renderMenuLink = (item: { icon: typeof LayoutDashboard; label: string; path: string }, closeMobile = false) => (
+    <Link
+      key={item.path}
+      to={item.path}
+      onClick={() => {
+        if (closeMobile) {
+          setMobileMenuOpen(false);
+        }
+      }}
+      className={`flex items-center gap-3 p-3 rounded-lg transition ${
+        isActivePath(item.path)
+          ? 'bg-blue-600 text-white'
+          : 'hover:bg-gray-800 text-gray-300'
+      }`}
+    >
+      <item.icon className="w-5 h-5 shrink-0" />
+      {sidebarOpen || closeMobile ? <span>{item.label}</span> : null}
+    </Link>
+  );
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -79,23 +116,31 @@ export default function AdminLayout() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-          <nav className="space-y-2">
-            {menuItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 p-3 rounded-lg transition ${
-                  isActivePath(item.path)
-                    ? 'bg-blue-600 text-white'
-                    : 'hover:bg-gray-800 text-gray-300'
-                }`}
-              >
-                <item.icon className="w-5 h-5 shrink-0" />
-                {sidebarOpen && <span>{item.label}</span>}
-              </Link>
-            ))}
-          </nav>
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+          <div>
+            {sidebarOpen && (
+              <div className="mb-3 px-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Control Tower</p>
+              </div>
+            )}
+            <nav className="space-y-2">
+              {controlMenuItems.map((item) => renderMenuLink(item))}
+            </nav>
+          </div>
+
+          {businessModuleItems.length > 0 && (
+            <div>
+              {sidebarOpen && (
+                <div className="mb-3 px-3 flex items-center gap-2 text-amber-400">
+                  <Crown className="w-4 h-4" />
+                  <p className="text-xs uppercase tracking-[0.2em] text-amber-400">Business Modules</p>
+                </div>
+              )}
+              <nav className="space-y-2">
+                {businessModuleItems.map((item) => renderMenuLink(item))}
+              </nav>
+            </div>
+          )}
         </div>
 
         <div className="p-4 border-t border-gray-800 shrink-0">
@@ -126,24 +171,27 @@ export default function AdminLayout() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4">
-              <nav className="space-y-2">
-                {menuItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 p-3 rounded-lg transition ${
-                      isActivePath(item.path)
-                        ? 'bg-blue-600 text-white'
-                        : 'hover:bg-gray-800 text-gray-300'
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span>{item.label}</span>
-                  </Link>
-                ))}
-              </nav>
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              <div>
+                <div className="mb-3 px-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Control Tower</p>
+                </div>
+                <nav className="space-y-2">
+                  {controlMenuItems.map((item) => renderMenuLink(item, true))}
+                </nav>
+              </div>
+
+              {businessModuleItems.length > 0 && (
+                <div>
+                  <div className="mb-3 px-3 flex items-center gap-2 text-amber-400">
+                    <Crown className="w-4 h-4" />
+                    <p className="text-xs uppercase tracking-[0.2em] text-amber-400">Business Modules</p>
+                  </div>
+                  <nav className="space-y-2">
+                    {businessModuleItems.map((item) => renderMenuLink(item, true))}
+                  </nav>
+                </div>
+              )}
             </div>
             
             <div className="p-4 border-t border-gray-800 shrink-0">
@@ -195,7 +243,9 @@ export default function AdminLayout() {
               <div className="flex items-center gap-3">
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-medium text-gray-700">{user?.name || 'Admin'}</p>
-                  <p className="text-xs text-gray-500">{user?.email || 'admin@mypos.com'}</p>
+                  <p className="text-xs text-gray-500">
+                    {isSuperAdmin ? 'Super Admin • Supreme Access' : (user?.email || 'admin@mypos.com')}
+                  </p>
                 </div>
                 <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center">
                   <User className="w-5 h-5 text-white" />
