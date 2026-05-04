@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import prisma from '../../../utils/prisma';
 import { createActivityLog } from './activity-log.controller';
+import { normalizeEmailIdentity } from '../../../utils/email';
 
 const normalizeReason = (value: unknown, fallback: string) => {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
@@ -138,7 +139,8 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 // Create new user
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, password, roleId, outletId } = req.body;
+    const { name, password, roleId, outletId } = req.body;
+    const email = normalizeEmailIdentity(req.body.email);
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -238,7 +240,8 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { name, email, password, roleId, outletId, isActive } = req.body;
+    const { name, password, roleId, outletId, isActive } = req.body;
+    const email = typeof req.body.email === 'string' ? normalizeEmailIdentity(req.body.email) : undefined;
 
     const data: any = {};
 
@@ -276,7 +279,7 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
 
     if (name) data.name = name;
     if (email) {
-      const normalizedEmail = String(email).trim();
+      const normalizedEmail = email;
       const emailOwner = await prisma.users.findUnique({
         where: { email: normalizedEmail },
         select: { id: true }
