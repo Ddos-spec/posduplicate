@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo } from '../../components/medsos/BrandLogo';
+import { IntegrationEmptyState } from '../../components/medsos/IntegrationEmptyState';
 import {
   metaAdsAccountHealth,
   metaAdsAlerts,
@@ -47,6 +49,9 @@ import {
 
 export default function MetaAdsControl() {
   const { isDark } = useThemeStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isDemo = location.pathname.startsWith('/demo');
   const [focusView, setFocusView] = useState<'all' | 'lead' | 'sales' | 'retarget'>('all');
 
   const focusOptions = [
@@ -128,6 +133,18 @@ export default function MetaAdsControl() {
     medium: 'bg-blue-100 text-blue-600',
     watch: 'bg-amber-100 text-amber-700',
   } as const;
+
+  if (!isDemo) {
+    return (
+      <IntegrationEmptyState
+        isDark={isDark}
+        title="Meta Ads Control membutuhkan Shown"
+        description="Hubungkan Meta Ads Hub (Shown) untuk memantau campaign performance, budget pacing, lead sync, dan creative approval dari Facebook & Instagram Ads."
+        integration="Shown"
+        onSetup={() => navigate('/medsos/connections')}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

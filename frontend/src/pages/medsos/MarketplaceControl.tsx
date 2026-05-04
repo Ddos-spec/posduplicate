@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
+import { IntegrationEmptyState } from '../../components/medsos/IntegrationEmptyState';
 import {
   buyerQueue,
   catalogIssues,
@@ -25,6 +27,9 @@ import {
 
 export default function MarketplaceControl() {
   const { isDark } = useThemeStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isDemo = location.pathname.startsWith('/demo');
   const marketplaces = channelConnections.filter((item) => item.kind === 'marketplace');
 
   const summary = useMemo(() => ({
@@ -39,6 +44,18 @@ export default function MarketplaceControl() {
     medium: 'bg-amber-100 text-amber-700',
     low: 'bg-emerald-100 text-emerald-600',
   } as const;
+
+  if (!isDemo) {
+    return (
+      <IntegrationEmptyState
+        isDark={isDark}
+        title="Marketplace Control membutuhkan Jubelio"
+        description="Hubungkan Marketplace Hub (Jubelio) untuk memantau order, buyer chat, katalog, dan stock dari Shopee & Tokopedia."
+        integration="Jubelio"
+        onSetup={() => navigate('/medsos/connections')}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
