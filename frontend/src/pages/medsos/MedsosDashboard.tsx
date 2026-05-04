@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey, type BrandKey } from '../../components/medsos/BrandLogo';
 import MyMedsosLogo from '../../components/medsos/MyMedsosLogo';
@@ -10,8 +11,10 @@ import {
   CircleAlert,
   HeartHandshake,
   Layers3,
+  Loader2,
   MessageCircleMore,
   PackageSearch,
+  PlugZap,
   Radar,
   ShieldAlert,
   ShoppingBag,
@@ -36,6 +39,10 @@ import {
   workspaceHealth,
 } from '../../data/omnichannelMock';
 import {
+  getMyCommerSocialIntegrationHub,
+  type ManagedIntegrationHub,
+} from '../../services/myCommerSocialIntegrations';
+import {
   Area,
   AreaChart,
   Bar,
@@ -46,9 +53,124 @@ import {
   XAxis,
 } from 'recharts';
 
+const statusStyles: Record<string, string> = {
+  connected: 'bg-emerald-100 text-emerald-700',
+  pending_user_action: 'bg-amber-100 text-amber-700',
+  action_required: 'bg-rose-100 text-rose-700',
+  syncing: 'bg-blue-100 text-blue-700',
+  degraded: 'bg-orange-100 text-orange-700',
+  not_connected: 'bg-slate-200 text-slate-700',
+};
+
+function LiveDashboard({ hub, isDark, navigate }: { hub: ManagedIntegrationHub; isDark: boolean; navigate: ReturnType<typeof useNavigate> }) {
+  const connectedCount = hub.summary.connected;
+  const totalCount = hub.summary.total;
+
+  return (
+    <div className="space-y-6">
+      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-blue-100 bg-white shadow-sm'}`}>
+        <div className="flex items-center gap-3 mb-4">
+          <MyMedsosLogo size={36} className="rounded-xl" />
+          <div>
+            <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>MyCommerSocial</h1>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Omnichannel command center</p>
+          </div>
+        </div>
+        <div className="grid md:grid-cols-3 gap-4 mt-4">
+          <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Connected</p>
+            <p className="mt-2 text-3xl font-bold">{connectedCount}<span className={`text-base font-normal ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>/{totalCount}</span></p>
+            <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>integration aktif</p>
+          </div>
+          <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Pending</p>
+            <p className="mt-2 text-3xl font-bold">{hub.summary.pending}</p>
+            <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>menunggu approval</p>
+          </div>
+          <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Dashboard fee</p>
+            <p className="mt-2 text-xl font-bold">{hub.billing.dashboardFee.label}</p>
+            <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>biaya workspace saja</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {hub.connectors.map((connector) => (
+          <div key={connector.slug} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="font-bold">{connector.name}</p>
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{connector.providerName}</p>
+              </div>
+              <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${statusStyles[connector.status] ?? statusStyles.not_connected}`}>
+                {connector.statusLabel}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {connector.supportedChannels.map((ch) => (
+                <BrandLogo key={ch.brand} brand={ch.brand} size={22} className="rounded-md" withRing={ch.brand === 'tokopedia'} />
+              ))}
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Health: <span className="font-semibold">{connector.isActive ? `${connector.healthScore}` : '—'}</span></p>
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Aset: <span className="font-semibold">{connector.selectedAssets.length > 0 ? connector.selectedAssets.length : '—'}</span>
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {connectedCount === 0 && (
+        <div className={`rounded-3xl border p-8 text-center ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <PlugZap size={40} className="mx-auto text-blue-500 mb-4" />
+          <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Belum ada integrasi aktif</h2>
+          <p className={`text-sm mb-6 max-w-md mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            Hubungkan Tapchat, Jubelio, atau Shown untuk mulai mengelola social media, marketplace, dan Meta Ads dari satu dashboard.
+          </p>
+          <button
+            onClick={() => navigate('/medsos/connections')}
+            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold"
+          >
+            <PlugZap size={18} />
+            Setup Connections
+          </button>
+        </div>
+      )}
+
+      {connectedCount > 0 && (
+        <div className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-blue-50 bg-white shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <Radar size={18} className="text-blue-500" />
+            <p className="font-semibold">Data real-time</p>
+          </div>
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            Dashboard metrics (inbox, GMV, campaign) akan tersedia setelah partner mengirimkan data via webhook. Gunakan menu Connections untuk memantau status sync.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MedsosDashboard() {
   const { isDark } = useThemeStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isDemo = location.pathname.startsWith('/demo');
+  const [hub, setHub] = useState<ManagedIntegrationHub | null>(null);
+  const [loading, setLoading] = useState(!isDemo);
   const featuredBrands: BrandKey[] = ['instagram', 'tiktok', 'facebook', 'shopee', 'tokopedia'];
+
+  useEffect(() => {
+    if (!isDemo) {
+      getMyCommerSocialIntegrationHub()
+        .then((data) => setHub(data))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, [isDemo]);
 
   const toneClasses = {
     blue: 'bg-blue-100 text-blue-600',
@@ -73,6 +195,19 @@ export default function MedsosDashboard() {
   };
 
   const topRisk = marketIssues[0];
+
+  if (!isDemo) {
+    if (loading) {
+      return (
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      );
+    }
+    if (hub) {
+      return <LiveDashboard hub={hub} isDark={isDark} navigate={navigate} />;
+    }
+  }
 
   return (
     <div className="space-y-6">
