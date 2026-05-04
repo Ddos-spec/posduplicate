@@ -759,6 +759,49 @@ export async function handleManagedIntegrationCallback(slug: string, payload: Ca
   };
 }
 
+export async function proxySocialHubStats(tenantId: number) {
+  const definition = getManagedIntegrationDefinition('social-hub')!;
+
+  const row = await prisma.integrations.findUnique({
+    where: {
+      tenant_id_integration_type: {
+        tenant_id: tenantId,
+        integration_type: definition.integrationType,
+      },
+    },
+    select: { status: true, is_active: true, credentials: true, metadata: true },
+  });
+
+  if (!row?.is_active) {
+    return null;
+  }
+
+  const credentials = decryptCredentials(row.credentials);
+  const metadata = asRecord(row.metadata);
+  const apiKey = credentials.connectionId as string | undefined;
+  const baseUrl = (metadata.vendorWorkspaceUrl as string | undefined)?.replace(/\/$/, '');
+
+  if (!apiKey || !baseUrl) {
+    return null;
+  }
+
+  const response = await fetch(`${baseUrl}/api/v1/external/stats`, {
+    headers: { 'X-Tenant-Key': apiKey },
+    signal: AbortSignal.timeout(8000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`CRM stats returned ${response.status}`);
+  }
+
+  const json = await response.json() as { status: string; data: Record<string, unknown> };
+  if (json.status !== 'success') {
+    throw new Error('CRM stats response error');
+  }
+
+  return json.data;
+}
+
 export async function handleManagedIntegrationWebhook(slug: string, headers: Record<string, string | string[] | undefined>, body: unknown) {
   const definition = getManagedIntegrationDefinition(slug);
   if (!definition) {

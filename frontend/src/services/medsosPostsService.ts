@@ -68,3 +68,20 @@ export async function getSocialAccounts(): Promise<SocialAccount[]> {
   const { data } = await api.get('/medsos/accounts');
   return (data.data ?? []) as SocialAccount[];
 }
+
+export interface WACrmStats {
+  totalCustomers: number;
+  openChats: number;
+  pendingChats: number;
+  totalUnread: number;
+  openEscalations: number;
+  todayChats: number;
+  todayMessages: number;
+  totalUsers: number;
+  tenant?: { company_name: string; session_id: string | null };
+}
+
+export async function getWACrmStats(): Promise<WACrmStats | null> {
+  const { data } = await api.get('/medsos/integrations/proxy/social-hub/stats');
+  return (data.data ?? null) as WACrmStats | null;
+}
