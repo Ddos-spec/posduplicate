@@ -3,16 +3,68 @@ import prisma from '../../../utils/prisma';
 import bcrypt from 'bcrypt';
 import { generateApiKey, hashApiKey } from '../../../utils/apiKeyGenerator';
 
+type ModuleKey = 'pos' | 'accounting' | 'inventory' | 'commerSocial';
+
+const defaultModuleFlags: Record<ModuleKey, boolean> = {
+  pos: true,
+  accounting: true,
+  inventory: true,
+  commerSocial: true,
+};
+
+const toModuleFlags = (
+  rawFeatures: unknown,
+  fallback: Record<ModuleKey, boolean> = defaultModuleFlags
+): Record<ModuleKey, boolean> => {
+  const source =
+    rawFeatures && typeof rawFeatures === 'object' && !Array.isArray(rawFeatures)
+      ? rawFeatures as Record<string, any>
+      : {};
+
+  const explicitModules =
+    source.modules && typeof source.modules === 'object' && !Array.isArray(source.modules)
+      ? source.modules as Record<string, any>
+      : source;
+
+  return {
+    pos: explicitModules.pos ?? fallback.pos,
+    accounting: explicitModules.accounting ?? fallback.accounting,
+    inventory: explicitModules.inventory ?? fallback.inventory,
+    commerSocial: explicitModules.commerSocial ?? fallback.commerSocial,
+  };
+};
+
+const buildTenantFeaturesPayload = (rawFeatures: unknown) => {
+  const modules = toModuleFlags(rawFeatures);
+
+  return {
+    ...(rawFeatures && typeof rawFeatures === 'object' && !Array.isArray(rawFeatures)
+      ? rawFeatures as Record<string, unknown>
+      : {}),
+    pos: modules.pos,
+    accounting: modules.accounting,
+    inventory: modules.inventory,
+    commerSocial: modules.commerSocial,
+    reports: true,
+    multiOutlet: true,
+    analytics: true,
+    modules,
+  };
+};
+
 /**
  * Get all tenants (Super Admin only)
  */
 export const getAllTenants = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { status, search } = req.query;
+    const { status, search, plan } = req.query;
     const where: any = { deleted_at: null };
 
     if (status && status !== 'all') {
       where.subscription_status = status as string;
+    }
+    if (plan && plan !== 'all') {
+      where.subscription_plan = plan as string;
     }
     if (search) {
       where.OR = [
@@ -55,12 +107,35 @@ export const getTenantById = async (req: Request, res: Response, next: NextFunct
  */
 export const createTenant = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { businessName, ownerName, email, password, phone, address } = req.body;
+    const {
+      businessName,
+      ownerName,
+      email,
+      password,
+      phone,
+      address,
+      subscriptionPlan,
+      subscriptionStatus,
+      maxOutlets,
+      maxUsers,
+      businessType,
+      billingEmail,
+      paymentMethod,
+      features,
+    } = req.body;
 
     if (!businessName || !ownerName || !email || !password) {
       return res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'Business name, owner name, email, and password are required' },
+      });
+    }
+
+    const normalizedFeatures = buildTenantFeaturesPayload(features);
+    if (!Object.values(normalizedFeatures.modules).some(Boolean)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'At least one product module must be enabled for a tenant' },
       });
     }
 
@@ -79,6 +154,9 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
       const firstBillingDate = new Date();
       firstBillingDate.setMonth(firstBillingDate.getMonth() + 1);
 
+      const safeMaxOutlets = Number.isFinite(Number(maxOutlets)) ? Number(maxOutlets) : 999;
+      const safeMaxUsers = Number.isFinite(Number(maxUsers)) ? Number(maxUsers) : 999;
+
       const tenant = await tx.tenants.create({
         data: {
           business_name: businessName,
@@ -86,20 +164,17 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
           email,
           phone,
           address,
-          subscription_plan: 'standard',
-          subscription_status: 'active',
+          subscription_plan: subscriptionPlan || 'standard',
+          subscription_status: subscriptionStatus || 'active',
           subscription_starts_at: now,
           subscription_expires_at: firstBillingDate,
           next_billing_date: firstBillingDate,
-          max_outlets: 999,
-          max_users: 999,
-          features: {
-            pos: true,
-            inventory: true,
-            reports: true,
-            multiOutlet: true,
-            analytics: true,
-          },
+          max_outlets: safeMaxOutlets,
+          max_users: safeMaxUsers,
+          business_type: businessType || 'general',
+          billing_email: billingEmail || email,
+          payment_method: paymentMethod || 'manual',
+          features: normalizedFeatures,
         },
       });
 
@@ -173,6 +248,7 @@ export const updateTenant = async (req: Request, res: Response, next: NextFuncti
       maxUsers: 'max_users',
       billingEmail: 'billing_email',
       paymentMethod: 'payment_method',
+      businessType: 'business_type',
       isActive: 'is_active',
       onboardingCompleted: 'onboarding_completed',
       onboardingStep: 'onboarding_step'
@@ -181,6 +257,27 @@ export const updateTenant = async (req: Request, res: Response, next: NextFuncti
     Object.entries(updateData).forEach(([key, value]) => {
       mappedUpdate[fieldMap[key] || key] = value;
     });
+
+    if (mappedUpdate.features !== undefined) {
+      const normalizedFeatures = buildTenantFeaturesPayload(mappedUpdate.features);
+
+      if (!Object.values(normalizedFeatures.modules).some(Boolean)) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'At least one product module must remain enabled' },
+        });
+      }
+
+      mappedUpdate.features = normalizedFeatures;
+    }
+
+    if (mappedUpdate.max_outlets !== undefined) {
+      mappedUpdate.max_outlets = Number(mappedUpdate.max_outlets);
+    }
+
+    if (mappedUpdate.max_users !== undefined) {
+      mappedUpdate.max_users = Number(mappedUpdate.max_users);
+    }
 
     const tenant = await prisma.tenants.update({
       where: { id: parseInt(id) },
@@ -226,9 +323,12 @@ export const toggleTenantStatus = async (req: Request, res: Response, next: Next
 export const updateSubscription = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { status, expiresAt } = req.body;
+    const { plan, status, expiresAt } = req.body;
     const updateData: any = {};
 
+    if (plan) {
+      updateData.subscription_plan = plan;
+    }
     if (status) {
       updateData.subscription_status = status;
     }

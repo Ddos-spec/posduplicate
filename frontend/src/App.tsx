@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
+import { useTenantProfileStore } from './store/tenantProfileStore';
+import { hasTenantModuleAccess } from './utils/tenantModules';
+import type { TenantModuleKey } from './utils/tenantModules';
 import { Toaster } from 'react-hot-toast';
 import ConfirmationModal from './components/common/ConfirmationModal';
 import PWARefreshPrompt from './components/common/PWARefreshPrompt';
@@ -181,6 +184,46 @@ function CashierRoute({ children }: { children: React.ReactNode }) {
   return token ? <>{children}</> : <Navigate to="/login" />;
 }
 
+function TenantModuleRoute({
+  moduleKey,
+  children,
+}: {
+  moduleKey: TenantModuleKey;
+  children: React.ReactNode;
+}) {
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+  const { tenant, loading, loadedTenantId, fetchMyTenant } = useTenantProfileStore();
+
+  const roleName = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+  const isSuperAdmin = roleName === 'super admin' || roleName === 'super_admin' || roleName === 'admin';
+  const tenantId = user?.tenant?.id ?? user?.tenant_id ?? null;
+
+  useEffect(() => {
+    if (token && !isSuperAdmin && tenantId && loadedTenantId !== tenantId) {
+      void fetchMyTenant();
+    }
+  }, [fetchMyTenant, isSuperAdmin, loadedTenantId, tenantId, token]);
+
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+
+  if (isSuperAdmin) {
+    return <>{children}</>;
+  }
+
+  if (tenantId && loading && loadedTenantId !== tenantId) {
+    return <PageLoader />;
+  }
+
+  if (tenantId && tenant && !hasTenantModuleAccess(tenant.features, moduleKey)) {
+    return <Navigate to="/module-selector" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -296,9 +339,11 @@ function App() {
         <Route
           path="/owner"
           element={
-            <OwnerRoute>
-              <OwnerLayout />
-            </OwnerRoute>
+            <TenantModuleRoute moduleKey="pos">
+              <OwnerRoute>
+                <OwnerLayout />
+              </OwnerRoute>
+            </TenantModuleRoute>
           }
         >
           <Route path="dashboard" element={<OwnerDashboardPage />} />
@@ -319,9 +364,11 @@ function App() {
         <Route
           path="/accounting"
           element={
-            <AccountingRoute>
-              <AccountingLayout />
-            </AccountingRoute>
+            <TenantModuleRoute moduleKey="accounting">
+              <AccountingRoute>
+                <AccountingLayout />
+              </AccountingRoute>
+            </TenantModuleRoute>
           }
         >
           <Route path="dashboard" element={<DashboardAkuntansiPage />} />
@@ -344,9 +391,11 @@ function App() {
         <Route
           path="/inventory"
           element={
-            <ProtectedRoute>
-              <InventoryLayout />
-            </ProtectedRoute>
+            <TenantModuleRoute moduleKey="inventory">
+              <ProtectedRoute>
+                <InventoryLayout />
+              </ProtectedRoute>
+            </TenantModuleRoute>
           }
         >
           <Route path="dashboard" element={<InventoryDashboard />} />
@@ -363,9 +412,11 @@ function App() {
         <Route
           path="/medsos"
           element={
-            <ProtectedRoute>
-              <MedsosLayout />
-            </ProtectedRoute>
+            <TenantModuleRoute moduleKey="commerSocial">
+              <ProtectedRoute>
+                <MedsosLayout />
+              </ProtectedRoute>
+            </TenantModuleRoute>
           }
         >
           <Route path="dashboard" element={<MedsosDashboard />} />
@@ -384,9 +435,11 @@ function App() {
         <Route
           path="/accounting/retail"
           element={
-            <AccountingRoute>
-              <AccountingLayout variant="retail" />
-            </AccountingRoute>
+            <TenantModuleRoute moduleKey="accounting">
+              <AccountingRoute>
+                <AccountingLayout variant="retail" />
+              </AccountingRoute>
+            </TenantModuleRoute>
           }
         >
           <Route index element={<DashboardRetailPage />} />
@@ -424,9 +477,11 @@ function App() {
         <Route
           path="/accounting/distributor"
           element={
-            <AccountingRoute>
-              <AccountingLayout variant="distributor" />
-            </AccountingRoute>
+            <TenantModuleRoute moduleKey="accounting">
+              <AccountingRoute>
+                <AccountingLayout variant="distributor" />
+              </AccountingRoute>
+            </TenantModuleRoute>
           }
         >
           <Route index element={<DashboardDistributorPage />} />
@@ -464,9 +519,11 @@ function App() {
         <Route
           path="/accounting/produsen"
           element={
-            <AccountingRoute>
-              <AccountingLayout variant="produsen" />
-            </AccountingRoute>
+            <TenantModuleRoute moduleKey="accounting">
+              <AccountingRoute>
+                <AccountingLayout variant="produsen" />
+              </AccountingRoute>
+            </TenantModuleRoute>
           }
         >
           <Route index element={<DashboardProdusenPage />} />
@@ -496,9 +553,11 @@ function App() {
         <Route
           path="/cashier"
           element={
-            <CashierRoute>
-              <CashierPage />
-            </CashierRoute>
+            <TenantModuleRoute moduleKey="pos">
+              <CashierRoute>
+                <CashierPage />
+              </CashierRoute>
+            </TenantModuleRoute>
           }
         />
 

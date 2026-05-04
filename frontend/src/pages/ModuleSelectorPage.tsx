@@ -1,22 +1,43 @@
+import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
+import { useTenantProfileStore } from '../store/tenantProfileStore';
 import MyCommerSocialLogo from '../components/medsos/MyCommerSocialLogo';
+import { normalizeTenantModules } from '../utils/tenantModules';
 import {
   Monitor, Calculator, Package,
   ArrowRight, LogOut, Clock, Sun, Moon, Star,
-  ShoppingCart, Share2
+  ShoppingCart, Share2, Loader2
 } from 'lucide-react';
 
 export default function ModuleSelectorPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
+  const { tenant, loading, fetchMyTenant, loadedTenantId } = useTenantProfileStore();
+  const roleName = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+  const isSuperAdmin = roleName === 'super admin' || roleName === 'super_admin' || roleName === 'admin';
+  const tenantId = user?.tenant?.id ?? user?.tenant_id ?? null;
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  useEffect(() => {
+    if (!isSuperAdmin && tenantId && loadedTenantId !== tenantId) {
+      void fetchMyTenant();
+    }
+  }, [fetchMyTenant, isSuperAdmin, loadedTenantId, tenantId]);
+
+  const enabledModules = useMemo(() => {
+    if (isSuperAdmin) {
+      return normalizeTenantModules(null);
+    }
+
+    return normalizeTenantModules(tenant?.features ?? null);
+  }, [isSuperAdmin, tenant?.features]);
 
   const modules = [
     {
@@ -64,7 +85,25 @@ export default function ModuleSelectorPage() {
       status: 'new',
       path: '/medsos/dashboard'
     }
-  ];
+  ].filter((module) => {
+    if (isSuperAdmin) return true;
+    if (module.id === 'pos') return enabledModules.pos;
+    if (module.id === 'accounting') return enabledModules.accounting;
+    if (module.id === 'inventory') return enabledModules.inventory;
+    if (module.id === 'medsos') return enabledModules.commerSocial;
+    return true;
+  });
+
+  if (!isSuperAdmin && tenantId && loading && loadedTenantId !== tenantId) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin mx-auto text-blue-500" />
+          <p className={`mt-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Menyiapkan akses modul tenant...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
@@ -89,7 +128,7 @@ export default function ModuleSelectorPage() {
             </button>
             <div className="flex items-center gap-3">
               <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user?.name || 'User'}</span>
-              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Owner</span>
+              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{isSuperAdmin ? 'Super Admin' : 'Owner'}</span>
               <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white font-medium">
                 {user?.name?.charAt(0) || 'U'}
               </div>
@@ -108,9 +147,11 @@ export default function ModuleSelectorPage() {
             </h1>
             <div className="flex items-center gap-3">
               <span className="bg-emerald-500 text-white text-xs font-medium px-3 py-1 rounded-full">
-                OWNER
+                {isSuperAdmin ? 'SUPER ADMIN' : 'OWNER'}
               </span>
-              <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Choose a module to continue</span>
+              <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {isSuperAdmin ? 'Akses semua modul aktif di kerajaan ini' : 'Choose a module to continue'}
+              </span>
               <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
                 <Clock className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
                 <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Last login: Today at 09:45 AM</span>
@@ -182,6 +223,12 @@ export default function ModuleSelectorPage() {
             </div>
           ))}
         </div>
+
+        {!modules.length && (
+          <div className={`rounded-2xl p-8 text-center ${isDark ? 'bg-slate-800 border border-slate-700 text-gray-300' : 'bg-white shadow text-gray-600'}`}>
+            Tenant ini belum memiliki modul aktif. Minta super admin mengaktifkan produk dari Tenant Management.
+          </div>
+        )}
 
         {/* Coming Soon Section Removed */}
       </div>
