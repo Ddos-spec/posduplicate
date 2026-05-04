@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import bcrypt from 'bcrypt';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
+import { normalizeEmailIdentity } from '../../../utils/email';
 
 const normalizeReason = (value: unknown, fallback: string) => {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
@@ -135,7 +136,8 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
  */
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, password, role, outletId, sendEmailNotification } = req.body;
+    const { name, password, role, outletId, sendEmailNotification } = req.body;
+    const email = normalizeEmailIdentity(req.body.email);
     const tenantId = req.tenantId!;
 
     if (!name || !email || !role) {
@@ -269,7 +271,8 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        const { name, email, role, outletId, is_active, password } = req.body;
+        const { name, role, outletId, is_active, password } = req.body;
+        const email = typeof req.body.email === 'string' ? normalizeEmailIdentity(req.body.email) : undefined;
         const tenantId = req.tenantId!;
 
         const user = await prisma.users.findUnique({

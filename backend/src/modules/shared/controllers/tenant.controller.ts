@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import bcrypt from 'bcrypt';
 import { generateApiKey, hashApiKey } from '../../../utils/apiKeyGenerator';
+import { normalizeEmailIdentity } from '../../../utils/email';
 
 type ModuleKey = 'pos' | 'accounting' | 'inventory' | 'commerSocial';
 
@@ -110,7 +111,7 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
     const {
       businessName,
       ownerName,
-      email,
+      email: rawEmail,
       password,
       phone,
       address,
@@ -123,6 +124,8 @@ export const createTenant = async (req: Request, res: Response, next: NextFuncti
       paymentMethod,
       features,
     } = req.body;
+
+    const email = normalizeEmailIdentity(rawEmail);
 
     if (!businessName || !ownerName || !email || !password) {
       return res.status(400).json({

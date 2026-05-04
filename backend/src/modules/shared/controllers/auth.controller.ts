@@ -3,6 +3,7 @@ import prisma from '../../../utils/prisma';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { createActivityLog } from './activity-log.controller';
+import { normalizeEmailIdentity } from '../../../utils/email';
 
 // const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Using inline for now as in original code
 
@@ -11,7 +12,8 @@ import { createActivityLog } from './activity-log.controller';
  */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = normalizeEmailIdentity(req.body.email);
 
     if (!email || !password) {
       return res.status(400).json({
@@ -137,7 +139,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
  */
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, name, roleId, tenantId, outletId } = req.body;
+    const { password, name, roleId, tenantId, outletId } = req.body;
+    const email = normalizeEmailIdentity(req.body.email);
 
     if (!email || !password || !name) {
       return res.status(400).json({

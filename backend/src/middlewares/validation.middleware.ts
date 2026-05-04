@@ -1,5 +1,6 @@
 import { body, param, validationResult } from 'express-validator';
 import { Request, Response, NextFunction } from 'express';
+import { normalizeEmailIdentity } from '../utils/email';
 
 /**
  * Middleware to handle validation errors
@@ -30,7 +31,7 @@ export const validateLogin = [
   body('email')
     .isEmail()
     .withMessage('Valid email is required')
-    .normalizeEmail(),
+    .customSanitizer(normalizeEmailIdentity),
   body('password')
     .isString()
     .notEmpty()
@@ -44,7 +45,7 @@ export const validateRegister = [
   body('email')
     .isEmail()
     .withMessage('Valid email is required')
-    .normalizeEmail(),
+    .customSanitizer(normalizeEmailIdentity),
   body('password')
     .isString()
     .notEmpty()
@@ -161,7 +162,7 @@ export const validateEmail = [
   body('email')
     .isEmail()
     .withMessage('Valid email is required')
-    .normalizeEmail(),
+    .customSanitizer(normalizeEmailIdentity),
   handleValidationErrors
 ];
 
