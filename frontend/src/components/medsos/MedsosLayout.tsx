@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import { channelConnections, priorityThreads } from '../../data/omnichannelMock';
+import { getMyCommerSocialIntegrationHub } from '../../services/myCommerSocialIntegrations';
 import { BrandLogo } from './BrandLogo';
 import MyCommerSocialLogo from './MyCommerSocialLogo';
 import {
@@ -20,6 +21,16 @@ export default function MedsosLayout() {
 
   const isDemo = location.pathname.startsWith('/demo');
   const basePath = isDemo ? '/demo/medsos' : '/medsos';
+
+  const [liveActiveChannels, setLiveActiveChannels] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isDemo) {
+      getMyCommerSocialIntegrationHub()
+        .then((hub) => setLiveActiveChannels(hub.summary.connected))
+        .catch(() => setLiveActiveChannels(0));
+    }
+  }, [isDemo]);
 
   const allMenus = [
     { icon: LayoutDashboard, label: 'Overview', path: `${basePath}/dashboard`, roles: ['all'] },
@@ -39,12 +50,14 @@ export default function MedsosLayout() {
   });
 
   const inboxCount = useMemo(
-    () => priorityThreads.reduce((total, item) => total + item.unread, 0),
-    []
+    () => isDemo ? priorityThreads.reduce((total, item) => total + item.unread, 0) : 0,
+    [isDemo]
   );
   const activeChannels = useMemo(
-    () => channelConnections.filter(item => item.status !== 'offline').length,
-    []
+    () => isDemo
+      ? channelConnections.filter(item => item.status !== 'offline').length
+      : (liveActiveChannels ?? '…'),
+    [isDemo, liveActiveChannels]
   );
 
   return (
