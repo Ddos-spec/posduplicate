@@ -85,3 +85,38 @@ export async function getWACrmStats(): Promise<WACrmStats | null> {
   const { data } = await api.get('/medsos/integrations/proxy/social-hub/stats');
   return (data.data ?? null) as WACrmStats | null;
 }
+
+export interface MetaCampaignRow {
+  id: string;
+  name: string;
+  status: string;
+  objective: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  ctr: string;
+  cpm: string;
+  dailyBudget: number | null;
+  lifetimeBudget: number | null;
+}
+
+export interface MetaAdsSummary {
+  metaUserName: string | null;
+  adAccounts: Array<{ id: string; name: string; currency: string }>;
+  activeCampaigns: number;
+  totalCampaigns: number;
+  campaigns: MetaCampaignRow[];
+  totals: { spend: number; impressions: number; clicks: number };
+}
+
+export async function getMetaOAuthStartUrl(): Promise<string> {
+  const { data } = await api.get('/medsos/meta-oauth/start-url', {
+    params: { returnPath: '/medsos/meta-ads' },
+  });
+  return (data.data as { oauthUrl: string }).oauthUrl;
+}
+
+export async function getMetaAdsSummary(): Promise<MetaAdsSummary | null> {
+  const { data } = await api.get('/medsos/meta-oauth/summary');
+  return (data.data ?? null) as MetaAdsSummary | null;
+}

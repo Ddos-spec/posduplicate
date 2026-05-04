@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo } from '../../components/medsos/BrandLogo';
-import { IntegrationEmptyState } from '../../components/medsos/IntegrationEmptyState';
+import { getMetaAdsSummary, getMetaOAuthStartUrl, type MetaAdsSummary } from '../../services/medsosPostsService';
 import {
   metaAdsAccountHealth,
   metaAdsAlerts,
@@ -21,9 +21,12 @@ import {
 import {
   ArrowUpRight,
   BarChart3,
+  ExternalLink,
   Images,
   LineChart as LineChartIcon,
+  Loader2,
   Megaphone,
+  PlugZap,
   Radar,
   ShieldCheck,
   SlidersHorizontal,
@@ -46,6 +49,148 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+
+function LiveMetaAdsPanel({ isDark }: { isDark: boolean }) {
+  const [summary, setSummary] = useState<MetaAdsSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getMetaAdsSummary()
+      .then((data) => { if (!cancelled) { setSummary(data); setLoading(false); } })
+      .catch(() => { if (!cancelled) { setLoading(false); } });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const url = await getMetaOAuthStartUrl();
+      window.location.href = url;
+    } catch {
+      setError('Gagal memulai koneksi Meta. Pastikan META_APP_ID sudah diset.');
+      setConnecting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="animate-spin text-blue-500" size={32} />
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div className={`rounded-3xl border p-10 flex flex-col items-center text-center max-w-lg mx-auto mt-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className="flex gap-3 mb-5">
+          <BrandLogo brand="facebook" size={48} className="rounded-2xl" />
+          <BrandLogo brand="instagram" size={48} className="rounded-2xl" />
+        </div>
+        <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Hubungkan Meta Ads</h2>
+        <p className={`text-sm max-w-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+          Login dengan akun Facebook — pilih Business Manager dan Ad Account, beres. Tidak perlu buat token manual.
+        </p>
+        {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+        <button
+          onClick={handleConnect}
+          disabled={connecting}
+          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold disabled:opacity-60"
+        >
+          {connecting ? <Loader2 size={18} className="animate-spin" /> : <PlugZap size={18} />}
+          {connecting ? 'Membuka Meta...' : 'Hubungkan Meta Ads'}
+        </button>
+      </div>
+    );
+  }
+
+  const fmt = (n: number) => n.toLocaleString('id-ID');
+  const fmtCurrency = (n: number, currency = 'USD') =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex -space-x-2">
+            <BrandLogo brand="facebook" size={40} className="rounded-2xl ring-2 ring-white" />
+            <BrandLogo brand="instagram" size={40} className="rounded-2xl ring-2 ring-white" />
+          </div>
+          <div>
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Meta Ads{summary.metaUserName ? ` — ${summary.metaUserName}` : ''}
+            </h2>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              {summary.adAccounts[0]?.name ?? 'Ad Account'} • {summary.activeCampaigns} campaign aktif
+            </p>
+          </div>
+        </div>
+        <a
+          href="https://ads.facebook.com"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 text-sm font-semibold"
+        >
+          <ExternalLink size={15} />
+          Buka Ads Manager
+        </a>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Spend', value: fmtCurrency(summary.totals.spend, summary.adAccounts[0]?.currency), color: 'blue' },
+          { label: 'Impresi', value: fmt(summary.totals.impressions), color: 'purple' },
+          { label: 'Klik', value: fmt(summary.totals.clicks), color: 'emerald' },
+          { label: 'Campaign Aktif', value: String(summary.activeCampaigns), color: 'orange' },
+        ].map((card) => (
+          <div key={card.label} className={`rounded-2xl p-5 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
+            <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{card.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className={`rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className="px-5 py-4 border-b border-inherit">
+          <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Campaign ({summary.totalCampaigns})</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className={`${isDark ? 'bg-slate-900/40 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
+                {['Nama', 'Status', 'Objektif', 'Spend', 'Impresi', 'Klik', 'CTR'].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left font-medium text-xs">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-inherit">
+              {summary.campaigns.length === 0 ? (
+                <tr><td colSpan={7} className={`px-4 py-6 text-center text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Tidak ada campaign ditemukan</td></tr>
+              ) : summary.campaigns.map((c) => (
+                <tr key={c.id} className={`${isDark ? 'hover:bg-slate-700/40' : 'hover:bg-gray-50'}`}>
+                  <td className={`px-4 py-3 font-medium max-w-[180px] truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{c.name}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${c.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {c.status}
+                    </span>
+                  </td>
+                  <td className={`px-4 py-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{c.objective}</td>
+                  <td className={`px-4 py-3 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{fmtCurrency(c.spend, summary.adAccounts[0]?.currency)}</td>
+                  <td className={`px-4 py-3 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{fmt(c.impressions)}</td>
+                  <td className={`px-4 py-3 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{fmt(c.clicks)}</td>
+                  <td className={`px-4 py-3 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>{parseFloat(c.ctr).toFixed(2)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function MetaAdsControl() {
   const { isDark } = useThemeStore();
@@ -135,15 +280,7 @@ export default function MetaAdsControl() {
   } as const;
 
   if (!isDemo) {
-    return (
-      <IntegrationEmptyState
-        isDark={isDark}
-        title="Meta Ads Control membutuhkan Shown"
-        description="Hubungkan Meta Ads Hub (Shown) untuk memantau campaign performance, budget pacing, lead sync, dan creative approval dari Facebook & Instagram Ads."
-        integration="Shown"
-        onSetup={() => navigate('/medsos/connections')}
-      />
-    );
+    return <LiveMetaAdsPanel isDark={isDark} />;
   }
 
   return (
