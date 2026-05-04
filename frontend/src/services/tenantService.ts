@@ -1,5 +1,22 @@
 import api from './api';
 
+export interface TenantFeatures {
+  pos?: boolean;
+  accounting?: boolean;
+  inventory?: boolean;
+  commerSocial?: boolean;
+  reports?: boolean;
+  multiOutlet?: boolean;
+  analytics?: boolean;
+  modules?: {
+    pos?: boolean;
+    accounting?: boolean;
+    inventory?: boolean;
+    commerSocial?: boolean;
+  };
+  [key: string]: unknown;
+}
+
 export interface Tenant {
   id: number;
   businessName: string;
@@ -15,6 +32,10 @@ export interface Tenant {
   maxOutlets?: number;
   maxUsers?: number;
   isActive: boolean;
+  businessType?: string;
+  billingEmail?: string;
+  paymentMethod?: string;
+  features?: TenantFeatures | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -39,6 +60,10 @@ const mapTenant = (data: any): Tenant => ({
   maxOutlets: data.max_outlets || data.maxOutlets,
   maxUsers: data.max_users || data.maxUsers,
   isActive: data.is_active ?? data.isActive,
+  businessType: data.business_type || data.businessType,
+  billingEmail: data.billing_email || data.billingEmail,
+  paymentMethod: data.payment_method || data.paymentMethod,
+  features: data.features || null,
   createdAt: data.created_at || data.createdAt,
   updatedAt: data.updated_at || data.updatedAt,
   _count: data._count,
@@ -51,6 +76,14 @@ export interface CreateTenantData {
   password?: string;
   phone?: string;
   address?: string;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  maxOutlets?: number;
+  maxUsers?: number;
+  businessType?: string;
+  billingEmail?: string;
+  paymentMethod?: string;
+  features?: TenantFeatures;
 }
 
 export interface UpdateTenantData {
@@ -59,6 +92,17 @@ export interface UpdateTenantData {
   phone?: string;
   address?: string;
   isActive?: boolean;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  subscriptionStartsAt?: string;
+  subscriptionExpiresAt?: string;
+  nextBillingDate?: string;
+  maxOutlets?: number;
+  maxUsers?: number;
+  businessType?: string;
+  billingEmail?: string;
+  paymentMethod?: string;
+  features?: TenantFeatures;
 }
 
 export const tenantService = {
@@ -77,6 +121,11 @@ export const tenantService = {
 
   async getById(id: number) {
     const response = await api.get<{ success: boolean; data: any }>(`/tenants/${id}`);
+    return mapTenant(response.data.data);
+  },
+
+  async getMyTenant() {
+    const response = await api.get<{ success: boolean; data: any }>('/tenants/me');
     return mapTenant(response.data.data);
   },
 

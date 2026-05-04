@@ -16,6 +16,8 @@ interface User {
   role?: { name: string };
   roles?: { name: string };
   tenant?: TenantInfo;
+  tenant_id?: number;
+  tenants_users_tenant_idTotenants?: any;
   outletId?: number;
   outlets?: any;
 }
