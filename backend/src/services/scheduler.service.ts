@@ -1,5 +1,16 @@
 import cron from 'node-cron';
+import { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
+
+let socialTableWarningShown = false;
+
+function isMissingSocialPostsTable(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2021' &&
+    (error.meta?.modelName === 'social_posts' || error.meta?.table === 'public.social_posts')
+  );
+}
 
 // Helper: Generate inventory alerts for all outlets
 async function generateInventoryAlerts() {
@@ -245,6 +256,14 @@ const socialScheduler = cron.schedule('* * * * *', async () => {
     }
 
   } catch (error) {
+    if (isMissingSocialPostsTable(error)) {
+      if (!socialTableWarningShown) {
+        console.warn('[Scheduler] social_posts table is missing. Social scheduler will stay idle until the database schema is repaired.');
+        socialTableWarningShown = true;
+      }
+      return;
+    }
+
     console.error('[Scheduler] Social posts error:', error);
   }
 });
