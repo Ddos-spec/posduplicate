@@ -1238,8 +1238,8 @@ export default function MedsosConnections() {
 
       {modal && (
         <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`w-full max-w-2xl rounded-3xl border ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-100 text-gray-900'} shadow-2xl`}>
-            <div className="px-6 py-5 border-b border-inherit">
+          <div className={`w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl border ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-100 text-gray-900'} shadow-2xl`}>
+            <div className="px-6 py-5 border-b border-inherit flex-shrink-0">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-blue-500">Complete setup</p>
@@ -1254,7 +1254,7 @@ export default function MedsosConnections() {
               </div>
             </div>
 
-            <form onSubmit={handleFinalizeSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleFinalizeSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Workspace label</label>
@@ -1300,12 +1300,27 @@ export default function MedsosConnections() {
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Subscription plan</label>
-                  <input
+                  <select
                     value={modal.subscriptionPlan}
                     onChange={(event) => setModal((current) => current ? { ...current, subscriptionPlan: event.target.value } : current)}
-                    className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
-                    placeholder="Lite Rp49.000/bulan, Starter $29/bulan, dst."
-                  />
+                    className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                  >
+                    <option value="">-- Pilih plan --</option>
+                    {(modal.connector.slug === 'social-hub' ? [
+                      { value: 'lite', label: 'Lite – Rp49.000/bln' },
+                      { value: 'pro', label: 'Pro – Rp199.000/bln' },
+                      { value: 'business', label: 'Business (custom)' },
+                    ] : modal.connector.slug === 'marketplace-hub' ? [
+                      { value: 'starter', label: 'Starter – Rp150/order' },
+                      { value: 'pro', label: 'Pro (custom)' },
+                    ] : [
+                      { value: 'starter', label: 'Starter – $29/bln' },
+                      { value: 'growth', label: 'Growth – $79/bln' },
+                      { value: 'scale', label: 'Scale (custom)' },
+                    ]).map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Subscription status</label>
@@ -1368,7 +1383,7 @@ export default function MedsosConnections() {
                 <textarea
                   value={modal.notes}
                   onChange={(event) => setModal((current) => current ? { ...current, notes: event.target.value } : current)}
-                  rows={4}
+                  rows={2}
                   className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
                   placeholder="Misal: buyer chat diprioritaskan dulu, ads read-only dulu, dst."
                 />
@@ -1385,10 +1400,6 @@ export default function MedsosConnections() {
                   {modal.connector.vendorPortalLabel || `Buka ${modal.connector.providerName}`}
                 </a>
               ) : null}
-
-              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-blue-50 text-blue-700'}`}>
-                Callback target: <span className="font-semibold">{modal.connector.callbackUrl}</span>
-              </div>
 
               <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
                 <button
