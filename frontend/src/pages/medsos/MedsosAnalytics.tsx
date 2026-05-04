@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import {
@@ -13,10 +15,12 @@ import {
   BarChart3,
   Clock3,
   LineChart as LineChartIcon,
+  Loader2,
   MessageCircleHeart,
   ShieldCheck,
   TrendingUp,
 } from 'lucide-react';
+import { getPosts, type SocialPost } from '../../services/medsosPostsService';
 import {
   Area,
   AreaChart,
@@ -32,8 +36,106 @@ import {
   YAxis,
 } from 'recharts';
 
+function LiveAnalytics({ posts, isDark }: { posts: SocialPost[]; isDark: boolean }) {
+  const published = posts.filter((p) => p.status === 'published');
+  const scheduled = posts.filter((p) => p.status === 'scheduled');
+  const draft = posts.filter((p) => p.status === 'draft');
+
+  const totalImpressions = published.reduce((sum, p) => sum + (p.social_analytics?.impressions ?? 0), 0);
+  const totalLikes = published.reduce((sum, p) => sum + (p.social_analytics?.likes ?? 0), 0);
+  const totalComments = published.reduce((sum, p) => sum + (p.social_analytics?.comments ?? 0), 0);
+
+  const platformCount: Record<string, number> = {};
+  for (const p of posts) {
+    platformCount[p.platform] = (platformCount[p.platform] ?? 0) + 1;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics</h1>
+        <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Berdasarkan {posts.length} post yang tersimpan</p>
+      </div>
+
+      <div className="grid md:grid-cols-4 gap-4">
+        {[
+          { label: 'Published', value: published.length, helper: 'post live' },
+          { label: 'Scheduled', value: scheduled.length, helper: 'siap publish' },
+          { label: 'Draft', value: draft.length, helper: 'belum publish' },
+          { label: 'Total Posts', value: posts.length, helper: 'semua status' },
+        ].map((stat) => (
+          <div key={stat.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
+            <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+            <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stat.helper}</p>
+          </div>
+        ))}
+      </div>
+
+      {published.length > 0 && (
+        <div className="grid md:grid-cols-3 gap-4">
+          {[
+            { label: 'Total Impressions', value: totalImpressions.toLocaleString('id-ID') },
+            { label: 'Total Likes', value: totalLikes.toLocaleString('id-ID') },
+            { label: 'Total Comments', value: totalComments.toLocaleString('id-ID') },
+          ].map((stat) => (
+            <div key={stat.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+              <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
+              <p className="mt-2 text-2xl font-bold">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {Object.keys(platformCount).length > 0 && (
+        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <p className={`font-semibold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>Post per Platform</p>
+          <div className="flex flex-wrap gap-3">
+            {Object.entries(platformCount).map(([plat, count]) => (
+              <div key={plat} className={`rounded-2xl px-4 py-3 flex items-center gap-2 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
+                <span className="capitalize text-sm font-semibold">{plat}</span>
+                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{count} post</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {published.length === 0 && (
+        <div className={`rounded-2xl border p-6 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Analytics detail akan tersedia setelah post dipublish dan data diambil dari platform.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MedsosAnalytics() {
   const { isDark } = useThemeStore();
+  const location = useLocation();
+  const isDemo = location.pathname.startsWith('/demo');
+  const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [loading, setLoading] = useState(!isDemo);
+
+  useEffect(() => {
+    if (!isDemo) {
+      getPosts()
+        .then(setPosts)
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, [isDemo]);
+
+  if (!isDemo) {
+    if (loading) {
+      return (
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      );
+    }
+    return <LiveAnalytics posts={posts} isDark={isDark} />;
+  }
 
   return (
     <div className="space-y-6">

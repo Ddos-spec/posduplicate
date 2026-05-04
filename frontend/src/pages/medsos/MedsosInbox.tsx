@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
+import { IntegrationEmptyState } from '../../components/medsos/IntegrationEmptyState';
 import {
   conversationMessages,
   inboxFilters,
@@ -27,6 +29,9 @@ import {
 
 export default function MedsosInbox() {
   const { isDark } = useThemeStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isDemo = location.pathname.startsWith('/demo');
   const [selectedChat, setSelectedChat] = useState(priorityThreads[0]);
   const [reply, setReply] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -47,6 +52,18 @@ export default function MedsosInbox() {
     medium: 'bg-amber-100 text-amber-700',
     low: 'bg-emerald-100 text-emerald-600',
   } as const;
+
+  if (!isDemo) {
+    return (
+      <IntegrationEmptyState
+        isDark={isDark}
+        title="Unified Inbox membutuhkan Tapchat"
+        description="Hubungkan Social Hub (Tapchat) untuk mulai menerima pesan dari Instagram, TikTok, Facebook, dan marketplace dalam satu inbox."
+        integration="Tapchat"
+        onSetup={() => navigate('/medsos/connections')}
+      />
+    );
+  }
 
   return (
     <div className={`h-[calc(100vh-100px)] grid lg:grid-cols-[330px_minmax(0,1fr)] xl:grid-cols-[330px_minmax(0,1fr)_340px] rounded-3xl border overflow-hidden ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>

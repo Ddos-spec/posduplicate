@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import {
@@ -16,11 +17,14 @@ import {
   Clock3,
   Eye,
   FileStack,
+  Loader2,
   MessageSquareMore,
   Plus,
   Sparkles,
   UserRoundCheck,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { getPosts, deletePost, publishPost, type SocialPost } from '../../services/medsosPostsService';
 
 const stageConfig = [
   { id: 'idea', label: 'Idea', tone: 'bg-slate-100 text-slate-700' },
@@ -61,8 +65,148 @@ function createFallbackBrief(card: typeof plannerCards[number]): CampaignBrief {
   };
 }
 
+const statusToStage: Record<string, string> = {
+  draft: 'draft',
+  scheduled: 'scheduled',
+  published: 'published',
+  failed: 'failed',
+};
+
+function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
+  posts: SocialPost[];
+  isDark: boolean;
+  navigate: ReturnType<typeof useNavigate>;
+  onRefresh: () => void;
+}) {
+  const [busy, setBusy] = useState<number | null>(null);
+
+  const grouped = useMemo(() => {
+    const order = ['draft', 'scheduled', 'published', 'failed'];
+    const map: Record<string, SocialPost[]> = {};
+    for (const status of order) map[status] = [];
+    for (const post of posts) {
+      const key = post.status in map ? post.status : 'draft';
+      map[key].push(post);
+    }
+    return order.map((status) => ({ status, posts: map[status] }));
+  }, [posts]);
+
+  const handlePublish = async (post: SocialPost) => {
+    setBusy(post.id);
+    try {
+      await publishPost(post.id);
+      toast.success('Post dipublish');
+      onRefresh();
+    } catch {
+      toast.error('Gagal publish post');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDelete = async (post: SocialPost) => {
+    if (!window.confirm('Hapus post ini?')) return;
+    setBusy(post.id);
+    try {
+      await deletePost(post.id);
+      toast.success('Post dihapus');
+      onRefresh();
+    } catch {
+      toast.error('Gagal hapus post');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const stageLabel: Record<string, { label: string; tone: string }> = {
+    draft: { label: 'Draft', tone: 'bg-slate-100 text-slate-700' },
+    scheduled: { label: 'Scheduled', tone: 'bg-emerald-100 text-emerald-600' },
+    published: { label: 'Published', tone: 'bg-cyan-100 text-cyan-700' },
+    failed: { label: 'Failed', tone: 'bg-red-100 text-red-600' },
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Content Planner</h1>
+            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{posts.length} post tersimpan</p>
+          </div>
+          <button
+            onClick={() => navigate('/medsos/create')}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
+          >
+            <Plus size={18} /> New Post
+          </button>
+        </div>
+      </div>
+
+      {posts.length === 0 ? (
+        <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <CalendarRange size={40} className="mx-auto text-blue-500 mb-4" />
+          <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Belum ada post</h2>
+          <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Buat post pertama kamu dari menu Create.</p>
+          <button onClick={() => navigate('/medsos/create')} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 text-white px-5 py-3 font-semibold">
+            <Plus size={16} /> Create Post
+          </button>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-4 gap-4">
+          {grouped.map(({ status, posts: colPosts }) => (
+            <div key={status} className={`rounded-2xl border p-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className={`text-xs px-2 py-1 rounded-full font-semibold ${stageLabel[status]?.tone ?? 'bg-slate-100 text-slate-700'}`}>
+                  {stageLabel[status]?.label ?? status}
+                </span>
+                <span className={`text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{colPosts.length}</span>
+              </div>
+              <div className="space-y-3">
+                {colPosts.map((post) => (
+                  <div key={post.id} className={`rounded-xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                    <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{post.content || '(no caption)'}</p>
+                    <p className={`text-xs mt-1 capitalize ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{post.platform}</p>
+                    {post.scheduled_at && (
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {new Date(post.scheduled_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                    <div className="flex gap-2 mt-2">
+                      {post.status === 'draft' || post.status === 'scheduled' ? (
+                        <button
+                          onClick={() => handlePublish(post)}
+                          disabled={busy === post.id}
+                          className="text-xs text-blue-500 font-semibold disabled:opacity-60"
+                        >
+                          {busy === post.id ? '…' : 'Publish'}
+                        </button>
+                      ) : null}
+                      <button
+                        onClick={() => handleDelete(post)}
+                        disabled={busy === post.id}
+                        className="text-xs text-red-400 font-semibold disabled:opacity-60 ml-auto"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ContentCalendar() {
   const { isDark } = useThemeStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isDemo = location.pathname.startsWith('/demo');
+  const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [loading, setLoading] = useState(!isDemo);
   const [selectedId, setSelectedId] = useState(plannerCards[0].id);
   const selectedCard = plannerCards.find((item) => item.id === selectedId) ?? plannerCards[0];
   const briefMap = campaignBriefs as Record<number, CampaignBrief | undefined>;
@@ -73,6 +217,32 @@ export default function ContentCalendar() {
     scheduled: plannerCards.filter((item) => item.stage === 'scheduled').length,
     published: plannerCards.filter((item) => item.stage === 'published').length,
   }), []);
+
+  const loadPosts = async () => {
+    try {
+      const data = await getPosts();
+      setPosts(data);
+    } catch {
+      toast.error('Gagal memuat posts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isDemo) void loadPosts();
+  }, [isDemo]);
+
+  if (!isDemo) {
+    if (loading) {
+      return (
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      );
+    }
+    return <LiveCalendar posts={posts} isDark={isDark} navigate={navigate} onRefresh={loadPosts} />;
+  }
 
   return (
     <div className="space-y-6">

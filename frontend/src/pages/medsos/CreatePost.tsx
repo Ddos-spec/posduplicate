@@ -1,12 +1,57 @@
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
-import { CalendarClock, CheckCircle2, Image as ImageIcon, MessageSquareQuote, Send, ShoppingBag, Sparkles } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Image as ImageIcon, Loader2, MessageSquareQuote, Send, ShoppingBag, Sparkles } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { createPost } from '../../services/medsosPostsService';
 
 export default function CreatePost() {
   const { isDark } = useThemeStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isDemo = location.pathname.startsWith('/demo');
   const [caption, setCaption] = useState('');
   const [platform, setPlatform] = useState<'instagram' | 'tiktok' | 'shopee' | 'tokopedia'>('instagram');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const apiPlatform = (platform === 'shopee' || platform === 'tokopedia') ? 'instagram' : platform as 'instagram' | 'tiktok';
+
+  const handleSaveDraft = async () => {
+    if (isDemo) { toast.success('Draft disimpan (demo)'); return; }
+    if (!caption.trim()) { toast.error('Caption tidak boleh kosong'); return; }
+    setSaving(true);
+    try {
+      await createPost({ content: caption, platform: apiPlatform, status: 'draft' });
+      toast.success('Draft disimpan');
+      navigate('/medsos/calendar');
+    } catch {
+      toast.error('Gagal menyimpan draft');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleQueue = async () => {
+    if (isDemo) { toast.success('Campaign di-queue (demo)'); return; }
+    if (!caption.trim()) { toast.error('Caption tidak boleh kosong'); return; }
+    setSaving(true);
+    try {
+      await createPost({
+        content: caption,
+        platform: apiPlatform,
+        status: scheduledAt ? 'scheduled' : 'draft',
+        scheduledAt: scheduledAt || undefined,
+      });
+      toast.success(scheduledAt ? 'Post dijadwalkan' : 'Post disimpan sebagai draft');
+      navigate('/medsos/calendar');
+    } catch {
+      toast.error('Gagal menyimpan post');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="h-[calc(100vh-100px)] grid lg:grid-cols-2 gap-6">
@@ -89,8 +134,19 @@ export default function CreatePost() {
               <CalendarClock size={16} className="text-blue-500" />
               <p className="font-semibold text-sm">Jadwal Publish</p>
             </div>
-            <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Rabu, 07 Mei 2026 • 19:00 WIB</p>
-            <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Slot terbaik berdasarkan mock insight engagement</p>
+            {isDemo ? (
+              <>
+                <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Rabu, 07 Mei 2026 • 19:00 WIB</p>
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Slot terbaik berdasarkan mock insight engagement</p>
+              </>
+            ) : (
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className={`w-full rounded-lg px-3 py-2 border text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+              />
+            )}
           </div>
           <div className={`rounded-xl p-4 border ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
             <div className="flex items-center gap-2 mb-2">
@@ -127,11 +183,19 @@ export default function CreatePost() {
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
-          <button className={`px-6 py-3 rounded-xl font-bold border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}>
-            Save Draft
+          <button
+            onClick={handleSaveDraft}
+            disabled={saving}
+            className={`px-6 py-3 rounded-xl font-bold border disabled:opacity-60 ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}
+          >
+            {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save Draft'}
           </button>
-          <button className="px-6 py-3 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
-            <Send size={18} /> Queue Campaign
+          <button
+            onClick={handleQueue}
+            disabled={saving}
+            className="px-6 py-3 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
+          >
+            {saving ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Queue Campaign</>}
           </button>
         </div>
       </div>
