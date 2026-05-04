@@ -8,6 +8,7 @@ import {
   disconnect,
   getIntegrationDetail,
   getIntegrationHub,
+  proxyStats,
   syncNow,
   webhook,
 } from '../controllers/integrationHub.controller';
@@ -21,6 +22,7 @@ router.use(authMiddleware);
 router.use(tenantMiddleware);
 
 router.get('/hub', getIntegrationHub);
+router.get('/proxy/social-hub/stats', proxyStats);
 router.get('/:slug', getIntegrationDetail);
 router.post('/:slug/connect', beginConnect);
 router.post('/:slug/complete', completeConnect);

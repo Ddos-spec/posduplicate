@@ -7,6 +7,7 @@ import {
   getManagedIntegrationHub,
   handleManagedIntegrationCallback,
   handleManagedIntegrationWebhook,
+  proxySocialHubStats,
   syncManagedIntegration,
   type ManagedAssetInput,
 } from '../services/integrationHub.service';
@@ -216,6 +217,25 @@ export const callback = async (req: Request, res: Response, next: NextFunction) 
     });
 
     res.redirect(result.redirectUrl);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const proxyStats = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.tenantId) {
+      res.status(400).json({ success: false, error: { code: 'NO_TENANT', message: 'Tenant context is required' } });
+      return;
+    }
+
+    const data = await proxySocialHubStats(req.tenantId);
+    if (!data) {
+      res.json({ success: true, data: null, message: 'WA CRM not connected or missing credentials' });
+      return;
+    }
+
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }

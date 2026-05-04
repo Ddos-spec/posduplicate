@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
-import { IntegrationEmptyState } from '../../components/medsos/IntegrationEmptyState';
+import { getWACrmStats, type WACrmStats } from '../../services/medsosPostsService';
+import { getMyCommerSocialIntegrationHub } from '../../services/myCommerSocialIntegrations';
 import {
   conversationMessages,
   inboxFilters,
@@ -12,13 +13,17 @@ import {
   threadDetails,
 } from '../../data/omnichannelMock';
 import {
+  AlertTriangle,
   Bot,
   ChevronDown,
   Clock3,
+  ExternalLink,
+  Loader2,
   MessageSquareQuote,
   MoreVertical,
   NotebookPen,
   Paperclip,
+  PlugZap,
   Search,
   Send,
   ShieldAlert,
@@ -26,6 +31,149 @@ import {
   Tag,
   UserRoundCheck,
 } from 'lucide-react';
+
+function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void }) {
+  const [stats, setStats] = useState<WACrmStats | null>(null);
+  const [crmUrl, setCrmUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [statsData, hub] = await Promise.all([
+          getWACrmStats(),
+          getMyCommerSocialIntegrationHub(),
+        ]);
+        if (cancelled) return;
+        setStats(statsData);
+        const socialHub = hub?.connectors?.find((c: { slug: string }) => c.slug === 'social-hub');
+        setCrmUrl(socialHub?.vendorWorkspaceUrl ?? null);
+      } catch {
+        if (!cancelled) setError('Gagal memuat stats dari WA CRM.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="animate-spin text-blue-500" size={32} />
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className={`rounded-3xl border p-10 flex flex-col items-center text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-2xl p-4 mb-5 ${isDark ? 'bg-amber-500/20' : 'bg-amber-50'}`}>
+          {error ? <AlertTriangle size={36} className="text-amber-500" /> : <PlugZap size={36} className="text-blue-500" />}
+        </div>
+        <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          {error ? 'Tidak bisa menjangkau WA CRM' : 'WA Inbox belum dikonfigurasi'}
+        </h2>
+        <p className={`text-sm max-w-md mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+          {error
+            ? 'Pastikan instance CRM sedang berjalan dan URL + API key sudah benar di halaman Connections.'
+            : 'Isi URL instance CRM dan API key di halaman Connections untuk mengaktifkan inbox live.'}
+        </p>
+        <button
+          onClick={onSetup}
+          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold"
+        >
+          <PlugZap size={18} />
+          Lengkapi Setup
+        </button>
+      </div>
+    );
+  }
+
+  const statCards = [
+    { label: 'Chat aktif', value: stats.openChats, color: 'blue' },
+    { label: 'Pending reply', value: stats.pendingChats, color: 'amber' },
+    { label: 'Pesan belum dibaca', value: stats.totalUnread, color: 'red' },
+    { label: 'Eskalasi terbuka', value: stats.openEscalations, color: 'orange' },
+    { label: 'Chat masuk hari ini', value: stats.todayChats, color: 'emerald' },
+    { label: 'Total kontak', value: stats.totalCustomers, color: 'slate' },
+  ];
+
+  const colorMap: Record<string, string> = {
+    blue: isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700',
+    amber: isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-50 text-amber-700',
+    red: isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-50 text-red-700',
+    orange: isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-50 text-orange-700',
+    emerald: isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-50 text-emerald-700',
+    slate: isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-50 text-gray-700',
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <BrandLogo brand="whatsapp" size={44} className="rounded-2xl" />
+          <div>
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              WA Inbox{stats.tenant?.company_name ? ` — ${stats.tenant.company_name}` : ''}
+            </h2>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Live data dari Customer Service CRM
+              {stats.tenant?.session_id
+                ? ` • Session ${stats.tenant.session_id}`
+                : ' • Session tidak aktif'}
+            </p>
+          </div>
+        </div>
+        {crmUrl && (
+          <a
+            href={crmUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-semibold text-sm"
+          >
+            <ExternalLink size={16} />
+            Buka CRM
+          </a>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {statCards.map((card) => (
+          <div
+            key={card.label}
+            className={`rounded-2xl p-5 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}
+          >
+            <p className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
+            <p className={`text-3xl font-bold ${colorMap[card.color]?.split(' ')[1] ?? ''}`}>{card.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <p className={`text-sm font-semibold mb-3 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Agent online</p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
+            {stats.agentCount ?? stats.totalUsers} agent aktif
+          </span>
+          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            Pesan hari ini: {stats.todayMessages}
+          </span>
+        </div>
+      </div>
+
+      {crmUrl && (
+        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800/60 border-slate-700' : 'bg-blue-50 border-blue-100'}`}>
+          <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-blue-800'}`}>
+            Untuk membalas chat, assign agent, dan mengelola eskalasi, klik tombol <strong>Buka CRM</strong> di atas. Semua operasional dikelola langsung dari Customer Service CRM.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function MedsosInbox() {
   const { isDark } = useThemeStore();
@@ -55,13 +203,9 @@ export default function MedsosInbox() {
 
   if (!isDemo) {
     return (
-      <IntegrationEmptyState
-        isDark={isDark}
-        title="Unified Inbox membutuhkan Tapchat"
-        description="Hubungkan Social Hub (Tapchat) untuk mulai menerima pesan dari Instagram, TikTok, Facebook, dan marketplace dalam satu inbox."
-        integration="Tapchat"
-        onSetup={() => navigate('/medsos/connections')}
-      />
+      <div className={`p-6 rounded-3xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <WACrmPanel isDark={isDark} onSetup={() => navigate('/medsos/connections')} />
+      </div>
     );
   }
 

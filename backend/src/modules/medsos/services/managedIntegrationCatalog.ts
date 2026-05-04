@@ -8,7 +8,8 @@ export type ManagedChannelBrand =
   | 'tiktok'
   | 'youtube'
   | 'shopee'
-  | 'tokopedia';
+  | 'tokopedia'
+  | 'whatsapp';
 
 export interface ManagedChannelDefinition {
   brand: ManagedChannelBrand;
@@ -42,12 +43,12 @@ export interface ManagedIntegrationDefinition {
 }
 
 const socialLaunchUrl = process.env.MCS_SOCIAL_CONNECT_URL;
-const socialProviderName = process.env.MCS_SOCIAL_PROVIDER_NAME || 'Tapchat';
-const socialPricingUrl = process.env.MCS_SOCIAL_PRICING_URL || 'https://tapchat.id/';
-const socialDocsUrl = process.env.MCS_SOCIAL_DOCS_URL || 'https://tapchat.id/';
-const socialSupportUrl = process.env.MCS_SOCIAL_SUPPORT_URL || 'https://tapchat.id/';
-const socialPortalUrl = process.env.MCS_SOCIAL_VENDOR_PORTAL_URL || 'https://app.tapchat.id/register';
-const socialPortalLabel = process.env.MCS_SOCIAL_VENDOR_PORTAL_LABEL || 'Buka portal Tapchat';
+const socialProviderName = process.env.MCS_SOCIAL_PROVIDER_NAME || 'WA CRM';
+const socialPricingUrl = process.env.MCS_SOCIAL_PRICING_URL || '';
+const socialDocsUrl = process.env.MCS_SOCIAL_DOCS_URL || '';
+const socialSupportUrl = process.env.MCS_SOCIAL_SUPPORT_URL || '';
+const socialPortalUrl = process.env.MCS_SOCIAL_VENDOR_PORTAL_URL || '';
+const socialPortalLabel = process.env.MCS_SOCIAL_VENDOR_PORTAL_LABEL || 'Buka WA CRM';
 
 const marketplaceLaunchUrl = process.env.MCS_MARKETPLACE_CONNECT_URL;
 const marketplaceProviderName = process.env.MCS_MARKETPLACE_PROVIDER_NAME || 'Jubelio';
@@ -70,36 +71,33 @@ export const managedIntegrationsCatalog: Record<ManagedIntegrationSlug, ManagedI
     slug: 'social-hub',
     integrationType: 'managed_social_hub',
     category: 'social',
-    name: 'Social Hub',
-    description: 'Social inbox dan lead capture dijalankan via Tapchat agar user cukup daftar, login, lalu approve aset sosial tanpa setup teknis.',
+    name: 'WA Inbox',
+    description: 'Chat inbox berbasis WhatsApp — sambungkan ke instance Customer Service CRM untuk sinkronkan pesan masuk, stats, dan eskalasi langsung dari dashboard.',
     providerName: socialProviderName,
-    providerKey: 'tapchat',
+    providerKey: 'wa_crm',
     launchMode: socialLaunchUrl ? 'hosted_link' : 'manual_reference',
     launchUrl: socialLaunchUrl,
-    vendorPortalUrl: socialPortalUrl,
+    vendorPortalUrl: socialPortalUrl || undefined,
     vendorPortalLabel: socialPortalLabel,
-    pricingSummary: 'Tapchat Lite mulai Rp49.000/bulan untuk omnichannel chat dan lead ads sync.',
-    recommendedPlan: 'Lite Rp49.000/bulan',
-    pricingUrl: socialPricingUrl,
-    docsUrl: socialDocsUrl,
-    supportUrl: socialSupportUrl,
+    pricingSummary: undefined,
+    recommendedPlan: undefined,
+    pricingUrl: socialPricingUrl || undefined,
+    docsUrl: socialDocsUrl || undefined,
+    supportUrl: socialSupportUrl || undefined,
     webhookSecret: process.env.MCS_SOCIAL_WEBHOOK_SECRET,
-    billingNote: 'Biaya Tapchat dibayar langsung oleh user. MyCommerSocial hanya menarik biaya dashboard dan workflow internal.',
-    dashboardFeeNote: 'Rp300.000/bulan untuk orchestration, routing, analytics, dan war room omnichannel.',
+    billingNote: 'Biaya hosting CRM ditanggung sendiri. MyCommerSocial hanya menjadi command center dan routing layer.',
+    dashboardFeeNote: 'Rp300.000/bulan untuk dashboard orchestration, stats, dan eskalasi.',
     supportedChannels: [
-      { brand: 'instagram', label: 'Instagram Business' },
-      { brand: 'facebook', label: 'Facebook Page' },
-      { brand: 'tiktok', label: 'TikTok Business' },
-      { brand: 'youtube', label: 'YouTube Channel' },
+      { brand: 'whatsapp', label: 'WhatsApp Inbox' },
     ],
-    capabilities: ['unified inbox', 'comment + DM sync', 'content publish', 'approval workflow', 'analytics pull'],
+    capabilities: ['unified WA inbox', 'live chat stats', 'eskalasi alert', 'blast campaign', 'lead tracking'],
     setupChecklist: [
-      'User klik connect lalu masuk ke portal Tapchat.',
-      'User login, memilih channel sosial, lalu mengaktifkan inbox/comment flow yang dibutuhkan.',
-      'Backend menyimpan reference koneksi, callback, dan status health secara otomatis.',
-      'Inbox, planner, dan analytics membaca data yang sudah dinormalisasi.',
+      'Pastikan instance Customer Service CRM sudah berjalan dan aktif.',
+      'Salin API key tenant dari panel admin CRM (Settings → API Key).',
+      'Masukkan URL instance CRM dan API key ke form finalisasi di dashboard ini.',
+      'Dashboard akan langsung membaca stats dan chat aktif dari CRM.',
     ],
-    requiredUserActions: ['Daftar / login Tapchat', 'Hubungkan akun social', 'Klik allow / approve'],
+    requiredUserActions: ['Jalankan instance CRM', 'Salin API key', 'Isi URL + key di form'],
   },
   'marketplace-hub': {
     slug: 'marketplace-hub',

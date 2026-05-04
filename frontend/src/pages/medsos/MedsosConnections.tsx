@@ -1266,24 +1266,28 @@ export default function MedsosConnections() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Connection reference (opsional)</label>
+                  <label className="block text-sm font-semibold mb-2">
+                    {modal.connector.slug === 'social-hub' ? 'API Key (dari CRM)' : 'Connection reference (opsional)'}
+                  </label>
                   <input
                     value={modal.connectionId}
                     onChange={(event) => setModal((current) => current ? { ...current, connectionId: event.target.value } : current)}
                     className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
-                    placeholder="conn_..., ref_..., atau id dari partner"
+                    placeholder={modal.connector.slug === 'social-hub' ? 'API key dari Settings → API Key di CRM' : 'conn_..., ref_..., atau id dari partner'}
                   />
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Vendor workspace URL</label>
+                  <label className="block text-sm font-semibold mb-2">
+                    {modal.connector.slug === 'social-hub' ? 'URL Instance CRM' : 'Vendor workspace URL'}
+                  </label>
                   <input
                     value={modal.vendorWorkspaceUrl}
                     onChange={(event) => setModal((current) => current ? { ...current, vendorWorkspaceUrl: event.target.value } : current)}
                     className={`w-full rounded-2xl px-4 py-3 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
-                    placeholder="https://app.tapchat.id/..., https://v2.jubelio.com/..., dst."
+                    placeholder={modal.connector.slug === 'social-hub' ? 'https://crm.yourdomain.com atau http://localhost:3001' : 'https://v2.jubelio.com/..., dst.'}
                   />
                 </div>
                 <div>
@@ -1307,9 +1311,9 @@ export default function MedsosConnections() {
                   >
                     <option value="">-- Pilih plan --</option>
                     {(modal.connector.slug === 'social-hub' ? [
-                      { value: 'lite', label: 'Lite – Rp49.000/bln' },
-                      { value: 'pro', label: 'Pro – Rp199.000/bln' },
-                      { value: 'business', label: 'Business (custom)' },
+                      { value: 'self-hosted', label: 'Self-hosted (gratis)' },
+                      { value: 'managed', label: 'Managed (berbayar)' },
+                      { value: 'trial', label: 'Trial / Dev' },
                     ] : modal.connector.slug === 'marketplace-hub' ? [
                       { value: 'starter', label: 'Starter – Rp150/order' },
                       { value: 'pro', label: 'Pro (custom)' },
