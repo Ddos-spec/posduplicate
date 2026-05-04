@@ -7,6 +7,7 @@ import {
   type ManagedIntegrationDefinition,
   type ManagedIntegrationSlug,
 } from './managedIntegrationCatalog';
+import { buildMetaOAuthStartUrl, getMetaCallbackUrl } from './metaOAuth.service';
 
 type IntegrationState =
   | 'not_connected'
@@ -462,6 +463,25 @@ export async function beginManagedIntegrationConnect(
   const definition = getManagedIntegrationDefinition(slug);
   if (!definition) {
     throw new Error('Managed integration not found');
+  }
+
+  // Meta Ads: use our own OAuth flow instead of a third-party hosted link
+  if (slug === 'meta-ads-hub') {
+    const oauthUrl = buildMetaOAuthStartUrl(tenantId, userId, input.returnPath);
+    return {
+      slug,
+      providerName: definition.providerName,
+      launchMode: 'redirect' as const,
+      launchUrl: oauthUrl,
+      callbackUrl: getMetaCallbackUrl(),
+      returnUrl: `${getFrontendBaseUrl()}${input.returnPath || '/medsos/connections'}`,
+      instructions: [
+        'Klik Connect — Anda akan diarahkan ke halaman login Meta.',
+        'Login dengan akun Facebook yang terhubung ke Business Manager.',
+        'Pilih Ad Account yang ingin diintegrasikan lalu klik Continue.',
+        'Setelah selesai, dashboard akan otomatis menampilkan data campaign.',
+      ],
+    };
   }
 
   const row = await prisma.integrations.findUnique({
