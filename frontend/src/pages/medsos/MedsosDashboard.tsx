@@ -127,7 +127,7 @@ function LiveDashboard({ hub, isDark, navigate }: { hub: ManagedIntegrationHub; 
           <PlugZap size={40} className="mx-auto text-blue-500 mb-4" />
           <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Belum ada integrasi aktif</h2>
           <p className={`text-sm mb-6 max-w-md mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Hubungkan Tapchat, Jubelio, atau Shown untuk mulai mengelola social media, marketplace, dan Meta Ads dari satu dashboard.
+            Hubungkan WA CRM, Jubelio, atau Meta Ads untuk mulai mengelola inbox, marketplace, dan iklan dari satu dashboard.
           </p>
           <button
             onClick={() => navigate('/medsos/connections')}

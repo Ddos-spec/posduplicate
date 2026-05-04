@@ -76,12 +76,12 @@ const demoHub: ManagedIntegrationHub = {
       id: 1,
       slug: 'social-hub',
       integrationType: 'managed_social_hub',
-      name: 'Social Hub',
-      workspaceName: 'Ares Social War Room',
+      name: 'WA Inbox',
+      workspaceName: 'Ares WA Inbox',
       category: 'social',
-      description: 'Tapchat menangani social inbox, lead ads sync, dan approval channel agar user biasa cukup daftar lalu hubungkan akun sosial.',
-      providerName: 'Tapchat',
-      providerKey: 'tapchat',
+      description: 'WA CRM menangani inbox WhatsApp, lead tracking, dan blast campaign sehingga tim cukup connect sekali lalu semua chat masuk ke satu dashboard.',
+      providerName: 'WA CRM',
+      providerKey: 'wa_crm',
       status: 'connected',
       statusLabel: 'Connected',
       isActive: true,
@@ -93,34 +93,33 @@ const demoHub: ManagedIntegrationHub = {
         { brand: 'youtube', label: 'YouTube Channel' },
       ],
       capabilities: ['unified inbox', 'comment + DM sync', 'content publish', 'approval workflow', 'analytics pull'],
-      billingNote: 'User membayar Tapchat langsung. MyCommerSocial hanya menarik biaya workspace dan workflow.',
+      billingNote: 'Biaya hosting CRM ditanggung sendiri. MyCommerSocial hanya menjadi command center dan routing layer.',
       dashboardFeeNote: 'Rp300.000 / bulan untuk dashboard orchestration.',
-      pricingSummary: 'Tapchat Lite mulai Rp49.000/bulan dengan omnichannel chat, IG/FB/TikTok, dan lead ads sync.',
-      recommendedPlan: 'Lite Rp49.000/bulan',
+      pricingSummary: undefined,
+      recommendedPlan: undefined,
       selectedAssets: [
-        { id: 'ig-1', label: '@ares.coffee', kind: 'instagram', status: 'connected' },
-        { id: 'fb-1', label: 'Ares Coffee Official', kind: 'facebook', status: 'connected' },
+        { id: 'wa-1', label: 'WhatsApp Inbox', kind: 'whatsapp', status: 'connected' },
       ],
       setupChecklist: [
-        'Klik connect lalu buka portal Tapchat.',
-        'Daftar / login lalu pilih page/channel yang ingin diaktifkan.',
-        'Callback dan status health masuk otomatis ke dashboard.',
+        'Pastikan instance Customer Service CRM sudah berjalan.',
+        'Salin API key dari Settings → API Key di CRM.',
+        'Masukkan URL instance dan API key ke form finalisasi.',
       ],
-      requiredUserActions: ['Daftar / login Tapchat', 'Pilih page/account', 'Klik allow / approve'],
+      requiredUserActions: ['Jalankan instance CRM', 'Salin API key', 'Isi URL + key di form'],
       nextActions: ['Pantau SLA inbox', 'Gunakan Sync Now kalau partner sudah menambahkan aset baru'],
       launchMode: 'manual_reference',
       launchUrlConfigured: false,
-      vendorPortalUrl: 'https://app.tapchat.id/register',
-      vendorPortalLabel: 'Buka portal Tapchat',
-      pricingUrl: 'https://tapchat.id/',
-      docsUrl: 'https://tapchat.id/',
-      supportUrl: 'https://tapchat.id/',
+      vendorPortalUrl: undefined,
+      vendorPortalLabel: 'Buka WA CRM',
+      pricingUrl: undefined,
+      docsUrl: undefined,
+      supportUrl: undefined,
       callbackUrl: 'https://api.example.com/api/medsos/integrations/callback/social-hub',
       webhookUrl: 'https://api.example.com/api/medsos/integrations/webhook/social-hub',
-      operatorNotes: 'Dipakai untuk inbox harian dan lead ads ringan.',
-      vendorWorkspaceUrl: 'https://app.tapchat.id/',
+      operatorNotes: 'Dipakai untuk inbox harian dan lead tracking.',
+      vendorWorkspaceUrl: 'https://crm.yourdomain.com',
       vendorWorkspaceEmail: 'ops@arescoffee.id',
-      subscriptionPlan: 'Lite Rp49.000/bulan',
+      subscriptionPlan: 'self-hosted',
       subscriptionStatus: 'active',
       renewalDate: '2026-06-02',
       billingOwnerName: 'Nadia - Ops',
@@ -214,12 +213,12 @@ const demoHub: ManagedIntegrationHub = {
       id: 3,
       slug: 'meta-ads-hub',
       integrationType: 'managed_meta_ads_hub',
-      name: 'Meta Ads Hub',
+      name: 'Meta Ads',
       workspaceName: 'Ares Growth Desk',
       category: 'ads',
-      description: 'Shown menangani lapisan ads supaya user bisa pakai akun iklan sendiri lalu MyCommerSocial cukup membaca hasil dan lead flow-nya.',
-      providerName: 'Shown',
-      providerKey: 'shown',
+      description: 'Hubungkan langsung ke Meta Business — login Facebook, pilih Ad Account, selesai. Campaign stats, spend, dan leads tampil di dashboard tanpa setup manual.',
+      providerName: 'Meta',
+      providerKey: 'meta',
       status: 'connected',
       statusLabel: 'Connected',
       isActive: true,
@@ -229,33 +228,34 @@ const demoHub: ManagedIntegrationHub = {
         { brand: 'instagram', label: 'Instagram Ads' },
       ],
       capabilities: ['account health', 'campaign snapshot', 'budget pacing', 'lead sync', 'creative workflow'],
-      billingNote: 'User membayar Shown dan spend iklan langsung ke vendor / Meta.',
+      billingNote: 'User membayar spend iklan langsung ke Meta. Tidak ada biaya third-party.',
       dashboardFeeNote: 'Rp300.000 / bulan untuk command center dan workflow.',
-      pricingSummary: 'Shown Starter $29/bulan, dan 0% komisi bila user menghubungkan ad account miliknya sendiri.',
-      recommendedPlan: 'Starter $29/bulan',
+      pricingSummary: undefined,
+      recommendedPlan: undefined,
       selectedAssets: [
         { id: 'ad-1', label: 'Ares Main Ad Account', kind: 'facebook', status: 'connected' },
       ],
       setupChecklist: [
-        'Buka portal Shown lalu buat akun / login.',
-        'Hubungkan ad account dan approve permission.',
-        'Campaign health dan lead destination tampil di dashboard.',
+        'Klik Connect — akan diarahkan ke login Meta.',
+        'Login dengan akun Facebook yang punya Business Manager.',
+        'Pilih Ad Account yang ingin diintegrasikan lalu klik Continue.',
+        'Dashboard otomatis menampilkan data campaign.',
       ],
-      requiredUserActions: ['Daftar / login Shown', 'Pilih ad account', 'Approve permission'],
+      requiredUserActions: ['Login Facebook', 'Pilih Ad Account', 'Approve permission'],
       nextActions: ['Pantau budget pacing', 'Gunakan Sync Now saat creative baru sudah tayang di partner'],
       launchMode: 'manual_reference',
       launchUrlConfigured: false,
-      vendorPortalUrl: 'https://app.shown.io/create-account?lang=en',
-      vendorPortalLabel: 'Buka portal Shown',
-      pricingUrl: 'https://shown.io/en/pricing',
-      docsUrl: 'https://shown.io/en/api',
-      supportUrl: 'https://help.shown.io/',
+      vendorPortalUrl: 'https://ads.facebook.com',
+      vendorPortalLabel: 'Buka Meta Ads Manager',
+      pricingUrl: undefined,
+      docsUrl: undefined,
+      supportUrl: undefined,
       callbackUrl: 'https://api.example.com/api/medsos/integrations/callback/meta-ads-hub',
       webhookUrl: 'https://api.example.com/api/medsos/integrations/webhook/meta-ads-hub',
-      operatorNotes: 'Dipakai read-heavy untuk pacing dan lead handoff.',
-      vendorWorkspaceUrl: 'https://app.shown.io/',
+      operatorNotes: 'Terhubung via OAuth — read-heavy untuk pacing dan lead handoff.',
+      vendorWorkspaceUrl: 'https://ads.facebook.com',
       vendorWorkspaceEmail: 'growth@arescoffee.id',
-      subscriptionPlan: 'Starter $29/bulan',
+      subscriptionPlan: undefined,
       subscriptionStatus: 'active',
       renewalDate: '2026-06-08',
       billingOwnerName: 'Diva - Growth',
@@ -474,10 +474,10 @@ export default function MedsosConnections() {
 
   const stackHighlights = useMemo(() => [
     {
-      provider: 'Tapchat',
-      role: 'Social inbox + lead ads sync',
-      price: 'Mulai Rp49.000/bulan',
-      helper: 'IG, FB, TikTok, Shopee, Tokopedia chat',
+      provider: 'WA CRM',
+      role: 'WhatsApp inbox + lead tracking',
+      price: 'Self-hosted',
+      helper: 'Chat masuk, blast, eskalasi, semua di satu panel',
     },
     {
       provider: 'Jubelio',
@@ -486,10 +486,10 @@ export default function MedsosConnections() {
       helper: 'Order, inventory, katalog, multi-channel',
     },
     {
-      provider: 'Shown',
-      role: 'Meta Ads layer',
-      price: 'Starter $29/bulan',
-      helper: '0% komisi bila user pakai ad account sendiri',
+      provider: 'Meta Ads',
+      role: 'Facebook & Instagram Ads',
+      price: 'OAuth langsung ke Meta',
+      helper: 'Login Facebook, pilih Ad Account, selesai',
     },
   ], []);
 
@@ -796,7 +796,7 @@ export default function MedsosConnections() {
             </div>
             <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Connections Hub</h1>
             <p className={`mt-2 max-w-3xl ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Hamba kunci stack MVP Indonesia ke <span className="font-semibold">Tapchat + Jubelio + Shown</span>. Kerumitan OAuth, token refresh, webhook, dan retry sync tetap di sisi vendor; user cukup daftar, login, lalu hubungkan aset.
+              Stack MyCommerSocial: <span className="font-semibold">WA CRM + Jubelio + Meta Ads</span>. Semua integrasi dikelola dari satu hub — user cukup connect sekali, dashboard langsung hidup.
             </p>
             <div className="grid md:grid-cols-3 gap-3 mt-5">
               {stackHighlights.map((item) => (
@@ -842,7 +842,7 @@ export default function MedsosConnections() {
               <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
                 <p className="font-semibold">Connector & spend vendor</p>
                 <p className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Customer membayar vendor langsung: Tapchat untuk inbox sosial, Jubelio untuk marketplace ops, dan Shown untuk Meta Ads. MyCommerSocial hanya menjadi wadah kontrol, workflow, dan analytics.
+                  WA CRM dihosting sendiri. Jubelio dibayar langsung per order. Meta Ads spend langsung ke Meta. MyCommerSocial hanya menjadi wadah kontrol, workflow, dan analytics.
                 </p>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -1123,51 +1123,30 @@ export default function MedsosConnections() {
             <div className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
               <div className="flex items-center gap-2 mb-4">
                 <PlugZap size={18} className="text-blue-500" />
-                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Tapchat pilot pack</h3>
+                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>WA Inbox — quick setup</h3>
               </div>
               <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                Hamba jadikan <span className="font-semibold">Tapchat</span> sebagai jalur tembak pertama: 1 akun, 1–2 channel sosial, risiko kecil, feedback cepat.
+                Hubungkan <span className="font-semibold">Customer Service CRM</span> sebagai backbone WA inbox: URL instance + API key, langsung jalan.
               </p>
               <div className="grid gap-3 mt-4">
                 {[
-                  'Buka portal Tapchat lalu pilih Create Account.',
-                  'Isi field yang muncul saat ini: name, phone, Business Name, email, password, confirm Password.',
-                  'Setelah akun jadi, hubungkan minimal 1 Instagram Business atau 1 Facebook Page.',
-                  'Kembali ke MyCommerSocial lalu isi finalisasi workspace, email operasional, plan, dan aset aktif.',
+                  'Pastikan instance CRM sudah running dan bisa diakses dari internet.',
+                  'Masuk ke Settings → API Key di CRM, salin key tenant.',
+                  'Klik Complete Setup di card WA Inbox, isi URL instance dan API key.',
+                  'Status berubah jadi Connected — stats WA langsung tampil di Inbox tab.',
                 ].map((step, index) => (
                   <div key={step} className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
                     <span className="font-semibold mr-2">{index + 1}.</span>{step}
                   </div>
                 ))}
               </div>
-              <div className="grid sm:grid-cols-2 gap-3 mt-4">
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-blue-50'}`}>
-                  <p className="font-semibold text-sm">Scope uji yang hamba sarankan</p>
-                  <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Lite plan, 1 workspace, 1 IG Business, 1 FB Page, lalu cek status jadi connected.</p>
-                </div>
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-white'}`}>
-                  <p className="font-semibold text-sm">Target selesai</p>
-                  <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Pilot score Tapchat naik ke 100%, reference tersimpan, dan operator note terisi.</p>
-                </div>
-              </div>
               <div className="flex gap-3 mt-4">
-                {tapchatPilot.vendorPortalUrl ? (
-                  <a
-                    href={tapchatPilot.vendorPortalUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-semibold"
-                  >
-                    <ExternalLink size={16} />
-                    Buka Tapchat sekarang
-                  </a>
-                ) : null}
                 <button
                   onClick={() => openFinalizeModal(tapchatPilot)}
-                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 font-semibold ${isDark ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-semibold"
                 >
                   <BadgeCheck size={16} />
-                  Siapkan finalisasi Tapchat
+                  Setup WA Inbox
                 </button>
               </div>
             </div>
@@ -1181,7 +1160,7 @@ export default function MedsosConnections() {
             <div className="space-y-4">
               {[
                 'User klik Connect dari dashboard.',
-                'Portal vendor yang relevan dibuka: Tapchat, Jubelio, atau Shown.',
+                'WA CRM: isi URL + API key. Meta Ads: login Facebook, pilih Ad Account. Jubelio: daftar + hubungkan toko.',
                 'User login, memilih aset, lalu vendor menangani billing serta koneksi teknis.',
                 'Jika reference belum kembali otomatis, operator cukup finalisasi nama workspace dan channel aktif.',
               ].map((step, index) => (
@@ -1202,7 +1181,7 @@ export default function MedsosConnections() {
               {[
                 'OAuth client, redirect URI, webhook secret, token refresh',
                 'Health monitoring, callback routing, retry sync, masking connection reference',
-                'Pricing split: fee dashboard tetap terpisah dari biaya Tapchat / Jubelio / Shown',
+                'Pricing split: fee dashboard terpisah dari biaya Jubelio / Meta spend',
               ].map((item) => (
                 <div key={item} className={`rounded-2xl px-4 py-3 text-sm ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
                   {item}

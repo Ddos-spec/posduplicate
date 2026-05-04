@@ -65,7 +65,7 @@ export default function MedsosSettings() {
           </div>
           <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-blue-50 text-blue-700'}`}>
             <p className="text-xs uppercase tracking-[0.18em]">Current mode</p>
-            <p className="font-semibold text-sm">Connector hub sudah mengunci stack Tapchat + Jubelio + Shown; toggle lain masih frontend-first.</p>
+            <p className="font-semibold text-sm">Connector hub menggunakan stack WA CRM + Jubelio + Meta Ads; toggle lain masih frontend-first.</p>
           </div>
         </div>
       </div>
@@ -73,9 +73,9 @@ export default function MedsosSettings() {
       <div className="grid xl:grid-cols-3 gap-4">
         {[
           {
-            name: 'Tapchat',
-            role: 'Social inbox + lead ads sync',
-            helper: 'User bayar vendor langsung, kita hanya baca status dan workflow.',
+            name: 'WA CRM',
+            role: 'WhatsApp inbox + lead tracking',
+            helper: 'Self-hosted — URL instance + API key, stats langsung tampil di dashboard.',
           },
           {
             name: 'Jubelio',
@@ -83,9 +83,9 @@ export default function MedsosSettings() {
             helper: 'Order, stok, katalog, dan buyer chat akan lewat layer ini.',
           },
           {
-            name: 'Shown',
-            role: 'Meta Ads command source',
-            helper: 'Ad account milik user tetap di vendor, dashboard kita hanya memantau dan mengarahkan.',
+            name: 'Meta Ads',
+            role: 'Facebook & Instagram Ads',
+            helper: 'OAuth langsung ke Meta — login Facebook, pilih Ad Account, selesai.',
           },
         ].map((item) => (
           <div key={item.name} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
