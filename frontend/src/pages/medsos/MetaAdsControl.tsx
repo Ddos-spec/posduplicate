@@ -296,7 +296,7 @@ export default function MetaAdsControl() {
               Paid traffic dari Instagram & Facebook kini bisa dikelola dalam <span className="text-blue-500">satu command center</span>.
             </h1>
             <p className={`mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Campaign flight, budget pacing, creative winner, audience cluster, sampai alert fatigue dibuat terasa seperti ads manager operasional — tetap frontend-only dulu, sesuai kehendak Ainz-sama.
+              Campaign flight, budget pacing, creative winner, audience cluster, sampai alert fatigue dirancang agar terasa seperti ads manager operasional yang sesungguhnya.
             </p>
             <div className="flex flex-wrap items-center gap-3 mt-5">
               <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-gray-50 text-gray-700'}`}>
