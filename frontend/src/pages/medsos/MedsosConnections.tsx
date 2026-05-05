@@ -460,7 +460,7 @@ export default function MedsosConnections() {
   const [modal, setModal] = useState<ModalState | null>(null);
 
   const connectors = hub?.connectors || [];
-  const tapchatPilot = connectors.find((item) => item.slug === 'social-hub') || null;
+  const socialHubConnector = connectors.find((item) => item.slug === 'social-hub') || null;
 
   const summaryCards = useMemo(() => {
     const activeSummary = hub?.summary || buildDemoSummary(connectors);
@@ -831,7 +831,7 @@ export default function MedsosConnections() {
           <div className={`rounded-3xl border p-5 ${isDark ? 'bg-slate-900/60 border-slate-700' : 'bg-blue-50 border-blue-100'}`}>
             <div className="flex items-center gap-2 mb-4">
               <Wallet size={18} className="text-blue-500" />
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Pricing split yang Ainz-sama inginkan</h3>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Model harga yang transparan</h3>
             </div>
             <div className="space-y-4 text-sm">
               <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
@@ -1113,7 +1113,7 @@ export default function MedsosConnections() {
         </div>
 
         <div className="space-y-6">
-          {tapchatPilot ? (
+          {socialHubConnector ? (
             <div className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
               <div className="flex items-center gap-2 mb-4">
                 <PlugZap size={18} className="text-blue-500" />
@@ -1136,7 +1136,7 @@ export default function MedsosConnections() {
               </div>
               <div className="flex gap-3 mt-4">
                 <button
-                  onClick={() => openFinalizeModal(tapchatPilot)}
+                  onClick={() => openFinalizeModal(socialHubConnector)}
                   className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-semibold"
                 >
                   <BadgeCheck size={16} />

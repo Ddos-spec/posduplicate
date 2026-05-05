@@ -227,7 +227,7 @@ export default function MedsosDashboard() {
                 Omnichannel war room yang langsung memberi tahu <span className="text-blue-500">apa yang harus dikerjakan sekarang</span>.
               </h1>
               <p className={`mt-3 text-sm md:text-base ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                Fokus tampilan dulu, Ainz-sama: alert center, queue prioritas, team workload, campaign pipeline, dan marketplace exception dibuat terasa seperti command center sungguhan.
+                Alert center, queue prioritas, team workload, campaign pipeline, dan marketplace exception dirancang agar terasa seperti command center sungguhan.
               </p>
             </div>
 
