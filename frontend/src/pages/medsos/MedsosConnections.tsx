@@ -810,7 +810,7 @@ export default function MedsosConnections() {
                 </div>
               ))}
             </div>
-            <div className="grid sm:grid-cols-3 gap-4 mt-6">
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
               {summaryCards.map((card, index) => (
                 <div key={card.label} className={`rounded-2xl bg-gradient-to-br ${summaryTone[index % summaryTone.length]} p-[1px]`}>
                   <div className={`rounded-[15px] h-full p-4 ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
@@ -1076,38 +1076,32 @@ export default function MedsosConnections() {
                       Pilot score: <span className="font-semibold">{pilot.score}%</span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {connector.vendorPortalUrl ? (
-                      <a
-                        href={connector.vendorPortalUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={`rounded-2xl border px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2 ${isDark ? 'border-slate-700 bg-slate-900 hover:bg-slate-800' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
-                      >
-                        <ExternalLink size={15} />
-                        {connector.providerName}
-                      </a>
-                    ) : (
-                      <div className={`rounded-2xl border px-4 py-3 text-center text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
-                        Portal unset
-                      </div>
-                    )}
-                    {connector.pricingUrl ? (
-                      <a
-                        href={connector.pricingUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={`rounded-2xl border px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2 ${isDark ? 'border-slate-700 bg-slate-900 hover:bg-slate-800' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
-                      >
-                        <ExternalLink size={15} />
-                        Pricing
-                      </a>
-                    ) : (
-                      <div className={`rounded-2xl border px-4 py-3 text-center text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
-                        Pricing unset
-                      </div>
-                    )}
-                  </div>
+                  {(connector.vendorPortalUrl || connector.pricingUrl) ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {connector.vendorPortalUrl ? (
+                        <a
+                          href={connector.vendorPortalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`rounded-2xl border px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2 ${isDark ? 'border-slate-700 bg-slate-900 hover:bg-slate-800' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+                        >
+                          <ExternalLink size={15} />
+                          {connector.providerName}
+                        </a>
+                      ) : null}
+                      {connector.pricingUrl ? (
+                        <a
+                          href={connector.pricingUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`rounded-2xl border px-4 py-3 text-sm font-semibold flex items-center justify-center gap-2 ${isDark ? 'border-slate-700 bg-slate-900 hover:bg-slate-800' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+                        >
+                          <ExternalLink size={15} />
+                          Pricing
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className={`rounded-2xl border px-4 py-3 text-center text-xs ${isDark ? 'border-slate-700 bg-slate-900 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
                     Callback & webhook ready
                   </div>
