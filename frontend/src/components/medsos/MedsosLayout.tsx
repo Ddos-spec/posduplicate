@@ -133,7 +133,7 @@ export default function MedsosLayout() {
           </ul>
         </div>
 
-        <div className={`absolute bottom-0 left-0 w-full p-4 border-t ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+        <div className={`absolute bottom-0 left-0 w-full p-4 border-t ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
           <div className={`mb-3 rounded-xl px-3 py-2 text-xs flex items-center gap-2 ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
             <BellRing size={14} />
             2 channel butuh follow up hari ini

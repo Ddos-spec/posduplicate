@@ -59,12 +59,12 @@ const marketplacePortalUrl = process.env.MCS_MARKETPLACE_VENDOR_PORTAL_URL || 'h
 const marketplacePortalLabel = process.env.MCS_MARKETPLACE_VENDOR_PORTAL_LABEL || 'Buka portal Jubelio';
 
 const adsLaunchUrl = process.env.MCS_META_ADS_CONNECT_URL;
-const adsProviderName = process.env.MCS_META_ADS_PROVIDER_NAME || 'Shown';
-const adsPricingUrl = process.env.MCS_META_ADS_PRICING_URL || 'https://shown.io/en/pricing';
-const adsDocsUrl = process.env.MCS_META_ADS_DOCS_URL || 'https://shown.io/en/api';
-const adsSupportUrl = process.env.MCS_META_ADS_SUPPORT_URL || 'https://help.shown.io/';
-const adsPortalUrl = process.env.MCS_META_ADS_VENDOR_PORTAL_URL || 'https://app.shown.io/create-account?lang=en';
-const adsPortalLabel = process.env.MCS_META_ADS_VENDOR_PORTAL_LABEL || 'Buka portal Shown';
+const adsProviderName = process.env.MCS_META_ADS_PROVIDER_NAME || 'Meta';
+const adsPricingUrl = process.env.MCS_META_ADS_PRICING_URL || '';
+const adsDocsUrl = process.env.MCS_META_ADS_DOCS_URL || 'https://developers.facebook.com/docs/marketing-apis/';
+const adsSupportUrl = process.env.MCS_META_ADS_SUPPORT_URL || 'https://www.facebook.com/business/help';
+const adsPortalUrl = process.env.MCS_META_ADS_VENDOR_PORTAL_URL || 'https://ads.facebook.com';
+const adsPortalLabel = process.env.MCS_META_ADS_VENDOR_PORTAL_LABEL || 'Buka Meta Ads Manager';
 
 export const managedIntegrationsCatalog: Record<ManagedIntegrationSlug, ManagedIntegrationDefinition> = {
   'social-hub': {
@@ -136,21 +136,21 @@ export const managedIntegrationsCatalog: Record<ManagedIntegrationSlug, ManagedI
     slug: 'meta-ads-hub',
     integrationType: 'managed_meta_ads_hub',
     category: 'ads',
-    name: 'Meta Ads Hub',
-    description: 'Meta Ads dibungkus lewat Shown agar user cukup membuat akun, menghubungkan ad account, lalu membaca hasilnya dari dashboard.',
+    name: 'Meta Ads',
+    description: 'Hubungkan langsung ke Meta Business — login Facebook, pilih Ad Account, selesai. Campaign stats, spend, dan leads tampil di dashboard tanpa setup manual.',
     providerName: adsProviderName,
-    providerKey: 'shown',
+    providerKey: 'meta',
     launchMode: adsLaunchUrl ? 'hosted_link' : 'manual_reference',
     launchUrl: adsLaunchUrl,
     vendorPortalUrl: adsPortalUrl,
     vendorPortalLabel: adsPortalLabel,
-    pricingSummary: 'Shown Starter $29/bulan dan 0% komisi bila user memakai ad account miliknya sendiri.',
-    recommendedPlan: 'Starter $29/bulan',
-    pricingUrl: adsPricingUrl,
-    docsUrl: adsDocsUrl,
-    supportUrl: adsSupportUrl,
+    pricingSummary: undefined,
+    recommendedPlan: undefined,
+    pricingUrl: adsPricingUrl || undefined,
+    docsUrl: adsDocsUrl || undefined,
+    supportUrl: adsSupportUrl || undefined,
     webhookSecret: process.env.MCS_META_ADS_WEBHOOK_SECRET,
-    billingNote: 'Biaya Shown dan spend iklan dibayar langsung oleh user ke vendor / Meta. MyCommerSocial hanya menjadi command center.',
+    billingNote: 'Spend iklan dibayar langsung ke Meta. Tidak ada biaya third-party — MyCommerSocial hanya menjadi command center.',
     dashboardFeeNote: 'Rp300.000/bulan untuk command center, alert pacing, dan lead orchestration.',
     supportedChannels: [
       { brand: 'facebook', label: 'Facebook Ads' },
@@ -158,12 +158,12 @@ export const managedIntegrationsCatalog: Record<ManagedIntegrationSlug, ManagedI
     ],
     capabilities: ['account health', 'campaign snapshot', 'budget pacing', 'lead sync', 'creative workflow'],
     setupChecklist: [
-      'User klik connect lalu membuat akun Shown atau login jika sudah punya.',
-      'User menghubungkan ad account Meta miliknya dan memilih destination lead yang dibutuhkan.',
-      'Backend menerima reference akun, health status, dan sinkronisasi snapshot campaign.',
-      'Data tampil di Meta Ads command center tanpa user mengisi technical setup.',
+      'Klik Connect — akan diarahkan ke login Meta.',
+      'Login dengan akun Facebook yang punya Business Manager.',
+      'Pilih Ad Account yang ingin diintegrasikan lalu klik Continue.',
+      'Dashboard otomatis menampilkan data campaign.',
     ],
-    requiredUserActions: ['Daftar / login Shown', 'Hubungkan ad account', 'Approve permission'],
+    requiredUserActions: ['Login Facebook', 'Pilih Ad Account', 'Approve permission'],
   },
 };
 
