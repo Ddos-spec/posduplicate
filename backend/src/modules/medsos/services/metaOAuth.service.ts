@@ -37,7 +37,7 @@ export function buildMetaOAuthUrl(state: string): string {
     client_id: appId,
     redirect_uri: getMetaCallbackUrl(),
     state,
-    scope: 'ads_read,ads_management,business_management,pages_read_engagement',
+    scope: 'ads_read,ads_management,business_management',
     response_type: 'code',
   });
 
