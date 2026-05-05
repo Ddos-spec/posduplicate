@@ -63,7 +63,7 @@ export default function MedsosLayout() {
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDark ? 'bg-slate-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <aside className={`fixed top-0 left-0 z-40 h-screen transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 w-64 border-r ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
-        <div className="h-full px-3 py-4 overflow-y-auto pb-28">
+        <div className="h-full px-3 py-4 overflow-y-auto pb-40">
           <div className="flex items-center gap-3 mb-8 px-2">
             <MyCommerSocialLogo size={40} className="shadow-lg shadow-blue-500/30" />
             <div>
