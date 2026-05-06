@@ -93,6 +93,7 @@ const MarketplaceControl = lazy(() => import('./pages/medsos/MarketplaceControl'
 const MetaAdsControl = lazy(() => import('./pages/medsos/MetaAdsControl'));
 const MedsosAnalytics = lazy(() => import('./pages/medsos/MedsosAnalytics'));
 const MedsosSettings = lazy(() => import('./pages/medsos/MedsosSettings'));
+const MedsosPricing = lazy(() => import('./pages/medsos/MedsosPricing'));
 
 // Loading fallback
 const PageLoader = () => (
@@ -304,6 +305,7 @@ function App() {
           <Route path="ads" element={<MetaAdsControl />} />
           <Route path="analytics" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />
+          <Route path="pricing" element={<MedsosPricing />} />
           <Route index element={<Navigate to="/demo/medsos/dashboard" />} />
         </Route>
 
@@ -428,6 +430,7 @@ function App() {
           <Route path="ads" element={<MetaAdsControl />} />
           <Route path="analytics" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />
+          <Route path="pricing" element={<MedsosPricing />} />
           <Route index element={<Navigate to="/medsos/dashboard" />} />
         </Route>
 
