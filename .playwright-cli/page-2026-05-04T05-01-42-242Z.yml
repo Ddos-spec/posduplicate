@@ -1,0 +1,69 @@
+- generic [ref=e3]:
+  - button [ref=e5] [cursor=pointer]:
+    - img [ref=e6]
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - img [ref=e15]
+        - heading "MyPOS" [level=1] [ref=e18]
+      - generic [ref=e19]:
+        - img [ref=e20]
+        - generic [ref=e23]: Business Platform
+      - paragraph [ref=e24]: Point of Sale • Accounting • Inventory
+    - generic [ref=e25]:
+      - heading "Sign in to your account" [level=2] [ref=e26]
+      - paragraph [ref=e27]: Access all your business modules
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]: Email address
+        - generic [ref=e31]:
+          - img [ref=e33]
+          - textbox "name@company.com" [ref=e36]
+      - generic [ref=e37]:
+        - generic [ref=e38]: Password
+        - generic [ref=e39]:
+          - img [ref=e41]
+          - textbox "Enter your password" [ref=e44]
+          - button [ref=e45] [cursor=pointer]:
+            - img [ref=e46]
+      - generic [ref=e49]:
+        - generic [ref=e50] [cursor=pointer]:
+          - checkbox "Remember me" [ref=e51]
+          - generic [ref=e52]: Remember me
+        - button "Forgot password?" [ref=e53] [cursor=pointer]
+      - button "Sign In" [ref=e54] [cursor=pointer]
+    - generic [ref=e56]:
+      - img [ref=e58]
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - heading "Download MyPOS App" [level=3] [ref=e62]
+          - generic [ref=e63]: Android APK
+        - paragraph [ref=e64]: Pakai aplikasi Android untuk cetak struk Bluetooth yang lebih stabil. Login tetap pakai akun yang sama seperti di browser.
+        - generic [ref=e65]:
+          - link "Download MyPOS App" [ref=e66] [cursor=pointer]:
+            - /url: /downloads/mypos-latest.apk
+            - img [ref=e67]
+            - text: Download MyPOS App
+          - generic [ref=e70]: Buka dari HP Android untuk install langsung.
+    - generic [ref=e75]: or
+    - generic [ref=e76]:
+      - button "View Live Demo (No Login)" [ref=e77] [cursor=pointer]:
+        - img [ref=e78]
+        - text: View Live Demo (No Login)
+      - paragraph [ref=e80]: Explore all features in a simulated environment.
+    - generic [ref=e81]:
+      - generic [ref=e82]:
+        - img [ref=e83]
+        - generic [ref=e85]: Secure Login
+      - generic [ref=e86]:
+        - img [ref=e87]
+        - generic [ref=e89]: Fast Access
+      - generic [ref=e90]:
+        - img [ref=e91]
+        - generic [ref=e94]: Multi-Module
+  - generic [ref=e95]:
+    - button "Need help?" [ref=e96] [cursor=pointer]:
+      - img [ref=e97]
+      - text: Need help?
+    - paragraph [ref=e100]: © 2025 MyPOS Platform. All rights reserved.
+    - generic [ref=e101]: v2.0.0

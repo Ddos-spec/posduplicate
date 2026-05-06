@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import {
+  getZernioConnectUrl,
+  getZernioAccounts,
+  disconnectZernioAccount,
+  type ZernioAccount,
+} from '../../services/medsosPostsService';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo } from '../../components/medsos/BrandLogo';
 import {
@@ -458,6 +464,9 @@ export default function MedsosConnections() {
   const [loading, setLoading] = useState(!isDemo);
   const [busySlug, setBusySlug] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalState | null>(null);
+  const [zernioAccounts, setZernioAccounts] = useState<ZernioAccount[]>([]);
+  const [zernioConnecting, setZernioConnecting] = useState<string | null>(null);
+  const [zernioLoading, setZernioLoading] = useState(!isDemo);
 
   const connectors = hub?.connectors || [];
   const socialHubConnector = connectors.find((item) => item.slug === 'social-hub') || null;
@@ -505,11 +514,55 @@ export default function MedsosConnections() {
     const status = params.get('status');
     const provider = params.get('provider');
     const source = params.get('source');
+    const zernioConnected = params.get('zernio_connected');
 
     if (source === 'callback' && provider && status) {
       toast.success(`${provider} ${status === 'connected' ? 'berhasil terkoneksi' : 'butuh tindak lanjut'}`);
     }
+
+    if (zernioConnected) {
+      toast.success(`${zernioConnected} berhasil dihubungkan via Zernio!`);
+      if (!isDemo) loadZernioAccounts();
+    }
   }, [location.search]);
+
+  useEffect(() => {
+    if (!isDemo) loadZernioAccounts();
+  }, [isDemo]);
+
+  const loadZernioAccounts = async () => {
+    setZernioLoading(true);
+    try {
+      const accounts = await getZernioAccounts();
+      setZernioAccounts(accounts);
+    } catch {
+      // silent fail
+    } finally {
+      setZernioLoading(false);
+    }
+  };
+
+  const handleZernioConnect = async (platform: string) => {
+    setZernioConnecting(platform);
+    try {
+      const url = await getZernioConnectUrl(platform);
+      window.location.href = url;
+    } catch {
+      toast.error(`Gagal memulai koneksi ${platform}`);
+      setZernioConnecting(null);
+    }
+  };
+
+  const handleZernioDisconnect = async (account: ZernioAccount) => {
+    if (!window.confirm(`Putuskan ${account.displayName} (${account.platform})?`)) return;
+    try {
+      await disconnectZernioAccount(account.id);
+      toast.success(`${account.displayName} diputus`);
+      loadZernioAccounts();
+    } catch {
+      toast.error('Gagal putuskan akun');
+    }
+  };
 
   const loadHub = async () => {
     setLoading(true);
@@ -1397,6 +1450,87 @@ export default function MedsosConnections() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* ─── Zernio Social Platforms ─────────────────────────────── */}
+      {!isDemo && (
+        <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold bg-violet-500/10 text-violet-600 mb-3">
+                <PlugZap size={14} />
+                Zernio — Social Media Platforms
+              </div>
+              <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Hubungkan Akun Sosial</h2>
+              <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Klik Connect di platform yang ingin dihubungkan. Login sekali, data langsung masuk ke dashboard.
+              </p>
+            </div>
+            {!zernioLoading && (
+              <span className={`text-sm font-medium px-3 py-1 rounded-full ${zernioAccounts.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                {zernioAccounts.length} terhubung
+              </span>
+            )}
+          </div>
+
+          {zernioLoading ? (
+            <div className="flex items-center justify-center h-24">
+              <Loader2 className="animate-spin text-blue-500" size={24} />
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {([
+                { platform: 'facebook', label: 'Facebook', brand: 'facebook' as const },
+                { platform: 'instagram', label: 'Instagram', brand: 'instagram' as const },
+                { platform: 'tiktok', label: 'TikTok', brand: 'tiktok' as const },
+                { platform: 'youtube', label: 'YouTube', brand: 'youtube' as const },
+                { platform: 'whatsapp', label: 'WhatsApp', brand: 'whatsapp' as const },
+                { platform: 'twitter', label: 'X / Twitter', brand: 'instagram' as const },
+              ] as Array<{ platform: string; label: string; brand: 'facebook' | 'instagram' | 'tiktok' | 'youtube' | 'whatsapp' }>).map(({ platform, label, brand }) => {
+                const connected = zernioAccounts.find((a) => a.platform === platform);
+                const busy = zernioConnecting === platform;
+                return (
+                  <div key={platform} className={`rounded-2xl border p-4 flex flex-col gap-3 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-gray-100 bg-gray-50'}`}>
+                    <div className="flex items-center gap-3">
+                      <BrandLogo brand={brand} size={36} className="rounded-xl" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{label}</p>
+                        {connected ? (
+                          <p className={`text-xs truncate ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                            @{connected.username || connected.displayName}
+                          </p>
+                        ) : (
+                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Belum terhubung</p>
+                        )}
+                      </div>
+                      {connected && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                      )}
+                    </div>
+                    {connected ? (
+                      <button
+                        onClick={() => handleZernioDisconnect(connected)}
+                        className={`w-full text-xs py-2 rounded-xl font-medium flex items-center justify-center gap-1.5 ${isDark ? 'bg-slate-800 hover:bg-rose-900/40 text-rose-400' : 'bg-white hover:bg-rose-50 text-rose-500 border border-gray-200'}`}
+                      >
+                        <Unplug size={12} />
+                        Putuskan
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleZernioConnect(platform)}
+                        disabled={busy}
+                        className="w-full text-xs py-2 rounded-xl font-medium bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
+                      >
+                        {busy ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
+                        Connect
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

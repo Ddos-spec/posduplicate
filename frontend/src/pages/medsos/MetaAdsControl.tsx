@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo } from '../../components/medsos/BrandLogo';
-import { getMetaAdsSummary, getMetaOAuthStartUrl, type MetaAdsSummary } from '../../services/medsosPostsService';
+import { getZernioAdsSummary, getZernioConnectUrl, type MetaAdsSummary } from '../../services/medsosPostsService';
 import {
   metaAdsAccountHealth,
   metaAdsAlerts,
@@ -58,7 +58,7 @@ function LiveMetaAdsPanel({ isDark }: { isDark: boolean }) {
 
   useEffect(() => {
     let cancelled = false;
-    getMetaAdsSummary()
+    getZernioAdsSummary()
       .then((data) => { if (!cancelled) { setSummary(data); setLoading(false); } })
       .catch(() => { if (!cancelled) { setLoading(false); } });
     return () => { cancelled = true; };
@@ -67,10 +67,10 @@ function LiveMetaAdsPanel({ isDark }: { isDark: boolean }) {
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const url = await getMetaOAuthStartUrl();
+      const url = await getZernioConnectUrl('facebook');
       window.location.href = url;
     } catch {
-      setError('Gagal memulai koneksi Meta. Pastikan META_APP_ID sudah diset.');
+      setError('Gagal memulai koneksi Meta.');
       setConnecting(false);
     }
   };
