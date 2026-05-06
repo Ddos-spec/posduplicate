@@ -9,7 +9,7 @@ import { BrandLogo } from './BrandLogo';
 import MyCommerSocialLogo from './MyCommerSocialLogo';
 import {
   LayoutDashboard, Calendar, MessageCircle, Share2, Settings,
-  Menu, Sun, Moon, ArrowLeft, Plus, Store, LineChart, BellRing, Megaphone, PlugZap
+  Menu, Sun, Moon, ArrowLeft, Plus, Store, LineChart, BellRing, Megaphone, PlugZap, CreditCard
 } from 'lucide-react';
 
 export default function MedsosLayout() {
@@ -40,6 +40,7 @@ export default function MedsosLayout() {
     { icon: Store, label: 'Marketplace', path: `${basePath}/marketplace`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
     { icon: Megaphone, label: 'Meta Ads', path: `${basePath}/ads`, roles: ['medsos_manager', 'all'] },
     { icon: LineChart, label: 'Analytics', path: `${basePath}/analytics`, roles: ['medsos_manager', 'all'] },
+    { icon: CreditCard, label: 'Plans & Pricing', path: `${basePath}/pricing`, roles: ['medsos_manager', 'all'] },
     { icon: Settings, label: 'Settings', path: `${basePath}/settings`, roles: ['medsos_manager', 'all'] },
   ];
 
