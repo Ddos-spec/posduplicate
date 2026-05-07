@@ -1,10 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 
+async function hasValidOutlet(outletId: number | null | undefined) {
+  if (!outletId) return false;
+  const outlet = await prisma.outlets.findUnique({ where: { id: outletId }, select: { id: true } });
+  return Boolean(outlet);
+}
+
 // Helper: Check and create real-time alerts after stock change
 async function checkAndCreateAlerts(inventoryId: number, outletId: number) {
   const item = await prisma.inventory.findUnique({ where: { id: inventoryId } });
   if (!item) return;
+  if (!(await hasValidOutlet(outletId))) return;
 
   const currentStock = parseFloat(item.current_stock.toString());
   const minStock = parseFloat(item.min_stock.toString());
@@ -214,6 +221,10 @@ export const generateAlerts = async (req: Request, res: Response, _next: NextFun
     const alertsToCreate: any[] = [];
 
     for (const item of items) {
+      if (!(await hasValidOutlet(item.outlet_id))) {
+        continue;
+      }
+
       const currentStock = parseFloat(item.current_stock.toString());
       const minStock = parseFloat(item.min_stock.toString());
       const daysCover = item.days_cover ? parseFloat(item.days_cover.toString()) : null;

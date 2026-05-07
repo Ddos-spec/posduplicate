@@ -72,7 +72,7 @@ export const managedIntegrationsCatalog: Record<ManagedIntegrationSlug, ManagedI
     integrationType: 'managed_social_hub',
     category: 'social',
     name: 'WA Inbox',
-    description: 'Chat inbox berbasis WhatsApp — sambungkan ke instance Customer Service CRM untuk sinkronkan pesan masuk, stats, dan eskalasi langsung dari dashboard.',
+    description: 'Chat inbox berbasis WhatsApp — sambungkan Customer Service CRM untuk sinkronkan pesan masuk, stats, dan eskalasi langsung dari dashboard.',
     providerName: socialProviderName,
     providerKey: 'wa_crm',
     launchMode: socialLaunchUrl ? 'hosted_link' : 'manual_reference',
@@ -94,10 +94,10 @@ export const managedIntegrationsCatalog: Record<ManagedIntegrationSlug, ManagedI
     setupChecklist: [
       'Pastikan instance Customer Service CRM sudah berjalan dan aktif.',
       'Salin API key tenant dari panel admin CRM (Settings → API Key).',
-      'Masukkan URL instance CRM dan API key ke form finalisasi di dashboard ini.',
+      'Masukkan API key tenant ke form finalisasi di dashboard ini.',
       'Dashboard akan langsung membaca stats dan chat aktif dari CRM.',
     ],
-    requiredUserActions: ['Jalankan instance CRM', 'Salin API key', 'Isi URL + key di form'],
+    requiredUserActions: ['Jalankan instance CRM', 'Salin API key', 'Isi API key di form'],
   },
   'marketplace-hub': {
     slug: 'marketplace-hub',

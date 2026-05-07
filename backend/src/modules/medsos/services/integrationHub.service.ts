@@ -799,7 +799,11 @@ export async function proxySocialHubStats(tenantId: number) {
   const credentials = decryptCredentials(row.credentials);
   const metadata = asRecord(row.metadata);
   const apiKey = credentials.connectionId as string | undefined;
-  const baseUrl = (metadata.vendorWorkspaceUrl as string | undefined)?.replace(/\/$/, '');
+  const baseUrl = String(
+    (metadata.vendorWorkspaceUrl as string | undefined)
+      || definition.vendorPortalUrl
+      || ''
+  ).replace(/\/$/, '');
 
   if (!apiKey || !baseUrl) {
     return null;

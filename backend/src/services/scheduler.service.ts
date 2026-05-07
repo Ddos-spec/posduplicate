@@ -16,17 +16,27 @@ function isMissingSocialPostsTable(error: unknown) {
 async function generateInventoryAlerts() {
   console.log('[Scheduler] Generating inventory alerts...');
 
+  const validOutletIds = new Set(
+    (await prisma.outlets.findMany({ select: { id: true } })).map((outlet) => outlet.id)
+  );
+
   const items = await prisma.inventory.findMany({
     where: { is_active: true }
   });
 
   let createdCount = 0;
+  let skippedInvalidOutletCount = 0;
 
   for (const item of items) {
     const currentStock = parseFloat(item.current_stock.toString());
     const minStock = parseFloat(item.min_stock.toString());
     const daysCover = item.days_cover ? parseFloat(item.days_cover.toString()) : null;
-    const outletId = item.outlet_id || 0;
+    const outletId = item.outlet_id;
+
+    if (!outletId || !validOutletIds.has(outletId)) {
+      skippedInvalidOutletCount++;
+      continue;
+    }
 
     const alertsToCreate: { alert_type: string; severity: string; message: string }[] = [];
 
@@ -98,6 +108,9 @@ async function generateInventoryAlerts() {
   }
 
   console.log(`[Scheduler] Created ${createdCount} inventory alerts`);
+  if (skippedInvalidOutletCount > 0) {
+    console.warn(`[Scheduler] Skipped ${skippedInvalidOutletCount} inventory item(s) with missing or invalid outlet reference`);
+  }
   return createdCount;
 }
 
