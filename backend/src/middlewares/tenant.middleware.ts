@@ -26,6 +26,9 @@ export const tenantMiddleware = async (
   next: NextFunction
 ) => {
   try {
+    const requestedTenantHeader = req.header('X-Tenant-ID');
+    const requestedTenantId = requestedTenantHeader ? Number(requestedTenantHeader) : null;
+
     // Get user info from JWT (assume auth middleware runs first)
     const userId = req.userId; // Set by auth middleware
 
@@ -70,10 +73,33 @@ export const tenantMiddleware = async (
       });
     }
 
-    // Super Admin can access all tenants (no filtering)
+    // Super Admin can access all tenants (optionally scoped by X-Tenant-ID)
     if (user.roles?.name === 'Super Admin') {
       req.userRole = 'Super Admin';
       req.userId = user.id;
+
+      if (requestedTenantId && Number.isFinite(requestedTenantId)) {
+        const scopedTenant = await prisma.tenants.findFirst({
+          where: {
+            id: requestedTenantId,
+            deleted_at: null,
+          },
+        });
+
+        if (!scopedTenant) {
+          return res.status(404).json({
+            success: false,
+            error: {
+              code: 'TENANT_NOT_FOUND',
+              message: 'Selected tenant not found',
+            }
+          });
+        }
+
+        req.tenantId = scopedTenant.id;
+        req.tenant = scopedTenant;
+      }
+
       return next();
     }
 

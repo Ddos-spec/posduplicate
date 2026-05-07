@@ -7,6 +7,7 @@ import type { TenantModuleKey } from './utils/tenantModules';
 import { Toaster } from 'react-hot-toast';
 import ConfirmationModal from './components/common/ConfirmationModal';
 import PWARefreshPrompt from './components/common/PWARefreshPrompt';
+import SuperAdminTenantBar from './components/admin/SuperAdminTenantBar';
 
 // Auth (eager - needed immediately)
 import LoginPage from './pages/LoginPage';
@@ -15,6 +16,7 @@ import LoginPage from './pages/LoginPage';
 const CashierPage = lazy(() => import('./pages/CashierPage'));
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
+const SuperAdminOmniPage = lazy(() => import('./pages/admin/SuperAdminOmniPage'));
 const TenantManagementPage = lazy(() => import('./pages/admin/TenantManagementPage'));
 const SystemAnalyticsPage = lazy(() => import('./pages/admin/SystemAnalyticsPage'));
 const MyCommerSocialAdminPage = lazy(() => import('./pages/admin/MyCommerSocialAdminPage'));
@@ -239,6 +241,7 @@ function App() {
       />
       <ConfirmationModal />
       <PWARefreshPrompt />
+      <SuperAdminTenantBar />
       <Suspense fallback={<PageLoader />}>
         <Routes>
         {/* Public Routes */}
@@ -329,7 +332,7 @@ function App() {
             </AdminRoute>
           }
         >
-          <Route path="dashboard" element={<SystemAnalyticsPage />} />
+          <Route path="dashboard" element={<SuperAdminOmniPage />} />
           <Route path="tenants" element={<TenantManagementPage />} />
           <Route path="mycommersocial" element={<MyCommerSocialAdminPage />} />
           <Route path="analytics" element={<SystemAnalyticsPage />} />
