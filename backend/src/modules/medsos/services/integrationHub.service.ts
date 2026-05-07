@@ -182,6 +182,11 @@ function getBackendPublicUrl(): string {
   return configured.replace(/\/$/, '');
 }
 
+function getSocialHubApiBaseUrl(): string {
+  const configured = process.env.MCS_SOCIAL_API_BASE_URL || 'https://postgres-customerservicecrm.qk6yxt.easypanel.host';
+  return configured.replace(/\/$/, '');
+}
+
 function buildStateToken(payload: JsonRecord): string {
   return Buffer.from(JSON.stringify(payload)).toString('base64url');
 }
@@ -829,8 +834,8 @@ export async function getSocialHubConnectionStatus(tenantId: number): Promise<So
   const configuration = asRecord(row?.configuration);
   const apiKey = credentials.connectionId as string | undefined;
   const rawBaseUrl = String(
-    process.env.MCS_SOCIAL_API_BASE_URL
-      || (metadata.vendorWorkspaceUrl as string | undefined)
+    (metadata.vendorWorkspaceUrl as string | undefined)
+      || getSocialHubApiBaseUrl()
       || definition.vendorPortalUrl
       || ''
   ).replace(/\/$/, '');

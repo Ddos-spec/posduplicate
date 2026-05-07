@@ -47,7 +47,7 @@ const socialProviderName = process.env.MCS_SOCIAL_PROVIDER_NAME || 'WA CRM';
 const socialPricingUrl = process.env.MCS_SOCIAL_PRICING_URL || '';
 const socialDocsUrl = process.env.MCS_SOCIAL_DOCS_URL || '';
 const socialSupportUrl = process.env.MCS_SOCIAL_SUPPORT_URL || '';
-const socialPortalUrl = process.env.MCS_SOCIAL_VENDOR_PORTAL_URL || '';
+const socialPortalUrl = process.env.MCS_SOCIAL_VENDOR_PORTAL_URL || 'https://customerservicecrm.vercel.app';
 const socialPortalLabel = process.env.MCS_SOCIAL_VENDOR_PORTAL_LABEL || 'Buka WA CRM';
 
 const marketplaceLaunchUrl = process.env.MCS_MARKETPLACE_CONNECT_URL;
