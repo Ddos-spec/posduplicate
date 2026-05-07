@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useThemeStore } from '../../store/themeStore';
 import MyCommerSocialLogo from '../../components/medsos/MyCommerSocialLogo';
 import { PlatformBadge } from '../../components/medsos/PlatformBadge';
+import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   completeMyCommerSocialConnect,
   getMyCommerSocialIntegrationHub,
@@ -607,7 +608,10 @@ export default function MedsosConnections() {
 
           <div className="grid md:grid-cols-2 gap-4">
             <label className="space-y-2">
-              <span className="text-sm font-semibold">Workspace name</span>
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Workspace name
+                <FieldHelp title="Workspace name" description="Nama workspace WA yang akan tampil di dashboard. Biasanya mengikuti nama brand atau tim support." />
+              </span>
               <input
                 value={crmForm.workspaceName}
                 onChange={(event) => setCrmForm((current) => ({ ...current, workspaceName: event.target.value }))}
@@ -616,7 +620,10 @@ export default function MedsosConnections() {
               />
             </label>
             <label className="space-y-2">
-              <span className="text-sm font-semibold">Workspace email</span>
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Workspace email
+                <FieldHelp title="Workspace email" description="Email operasional untuk workspace WA. Gunakan email admin atau PIC yang mengelola CRM." />
+              </span>
               <input
                 value={crmForm.vendorWorkspaceEmail}
                 onChange={(event) => setCrmForm((current) => ({ ...current, vendorWorkspaceEmail: event.target.value }))}
@@ -625,7 +632,10 @@ export default function MedsosConnections() {
               />
             </label>
             <label className="space-y-2 md:col-span-2">
-              <span className="text-sm font-semibold">URL instance CRM</span>
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                URL instance CRM
+                <FieldHelp title="URL instance CRM" description="Alamat panel Customer Service CRM milik workspace ini. Contoh: https://crm.domainanda.com." />
+              </span>
               <input
                 value={crmForm.vendorWorkspaceUrl}
                 onChange={(event) => setCrmForm((current) => ({ ...current, vendorWorkspaceUrl: event.target.value }))}
@@ -634,7 +644,10 @@ export default function MedsosConnections() {
               />
             </label>
             <label className="space-y-2 md:col-span-2">
-              <span className="text-sm font-semibold">API key / connection reference</span>
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                API key / connection reference
+                <FieldHelp title="API key / connection reference" description="Credential atau reference ID dari Customer Service CRM. Nilai ini biasanya diberikan setelah workspace WA aktif." />
+              </span>
               <input
                 value={crmForm.connectionId}
                 onChange={(event) => setCrmForm((current) => ({ ...current, connectionId: event.target.value }))}
@@ -643,7 +656,10 @@ export default function MedsosConnections() {
               />
             </label>
             <label className="space-y-2 md:col-span-2">
-              <span className="text-sm font-semibold">Catatan operator</span>
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Catatan operator
+                <FieldHelp title="Catatan operator" description="Catatan internal seperti PIC, nomor utama, aturan eskalasi, atau informasi teknis lain untuk tim." />
+              </span>
               <textarea
                 value={crmForm.notes}
                 onChange={(event) => setCrmForm((current) => ({ ...current, notes: event.target.value }))}
