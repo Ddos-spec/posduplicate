@@ -12,6 +12,7 @@ import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   BellRing,
   CheckCircle2,
+  Loader2,
   MessageSquareText,
   PlugZap,
   Plus,
@@ -22,6 +23,7 @@ import {
   UsersRound,
   Workflow,
 } from 'lucide-react';
+import { settingsService } from '../../services/settingsService';
 
 const STORAGE_KEY = 'mycommersocial_settings_v2';
 
@@ -113,30 +115,58 @@ export default function MedsosSettings() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [seatDraft, setSeatDraft] = useState<SeatDraft>(emptySeatDraft);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as { settings?: Partial<SettingsState>; lastSavedAt?: string };
-        if (parsed.settings) {
+    const load = async () => {
+      try {
+        const backendResponse = await settingsService.getSettings();
+        const backendSettings = (backendResponse.data as { myCommerSocialSettings?: Partial<SettingsState>; myCommerSocialSettingsSavedAt?: string }) || {};
+        const workspaceSettings = backendSettings.myCommerSocialSettings;
+
+        if (workspaceSettings) {
           setSettings({
             ...defaultSettings,
-            ...parsed.settings,
+            ...workspaceSettings,
             channelAccess: {
               ...defaultSettings.channelAccess,
-              ...(parsed.settings.channelAccess ?? {}),
+              ...(workspaceSettings.channelAccess ?? {}),
             },
-            seats: parsed.settings.seats ?? [],
+            seats: workspaceSettings.seats ?? [],
           });
+          setLastSavedAt(backendSettings.myCommerSocialSettingsSavedAt || null);
+          setDirty(false);
+          return;
         }
-        if (parsed.lastSavedAt) {
-          setLastSavedAt(parsed.lastSavedAt);
+
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved) as { settings?: Partial<SettingsState>; lastSavedAt?: string };
+          if (parsed.settings) {
+            setSettings({
+              ...defaultSettings,
+              ...parsed.settings,
+              channelAccess: {
+                ...defaultSettings.channelAccess,
+                ...(parsed.settings.channelAccess ?? {}),
+              },
+              seats: parsed.settings.seats ?? [],
+            });
+          }
+          if (parsed.lastSavedAt) {
+            setLastSavedAt(parsed.lastSavedAt);
+          }
         }
+      } catch (error) {
+        console.error('Failed to load MyCommerSocial settings', error);
+        toast.error('Gagal memuat settings workspace.');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Failed to load MyCommerSocial settings', error);
-    }
+    };
+
+    void load();
   }, []);
 
   const activeSummary = useMemo(
@@ -150,18 +180,30 @@ export default function MedsosSettings() {
     [settings]
   );
 
-  const saveSettings = () => {
+  const saveSettings = async () => {
     const savedAt = new Date().toISOString();
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        settings,
-        lastSavedAt: savedAt,
-      })
-    );
-    setLastSavedAt(savedAt);
-    setDirty(false);
-    toast.success('Settings berhasil disimpan.');
+    try {
+      setSaving(true);
+      await settingsService.updateSettings({
+        myCommerSocialSettings: settings,
+        myCommerSocialSettingsSavedAt: savedAt,
+      });
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          settings,
+          lastSavedAt: savedAt,
+        })
+      );
+      setLastSavedAt(savedAt);
+      setDirty(false);
+      toast.success('Settings berhasil disimpan.');
+    } catch (error) {
+      console.error('Failed to save MyCommerSocial settings', error);
+      toast.error('Gagal menyimpan settings workspace.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateSettings = (updater: (current: SettingsState) => SettingsState) => {
@@ -212,6 +254,14 @@ export default function MedsosSettings() {
     },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
@@ -230,11 +280,12 @@ export default function MedsosSettings() {
             </div>
             <button
               type="button"
-              onClick={saveSettings}
+              onClick={() => void saveSettings()}
+              disabled={saving}
               className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
             >
-              <Save size={16} />
-              Simpan perubahan
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {saving ? 'Menyimpan...' : 'Simpan perubahan'}
             </button>
             {dirty ? (
               <p className={`text-xs ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>Ada perubahan yang belum disimpan.</p>
