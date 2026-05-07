@@ -49,7 +49,7 @@ export default function AdminLayout() {
   };
 
   const controlMenuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
+    { icon: LayoutDashboard, label: 'Omni Console', path: '/admin/dashboard' },
     { icon: Building2, label: 'Tenant Management', path: '/admin/tenants' },
     { icon: Share2, label: 'MyCommerSocial Ops', path: '/admin/mycommersocial' },
     { icon: TrendingUp, label: 'System Analytics', path: '/admin/analytics' },
@@ -224,7 +224,7 @@ export default function AdminLayout() {
                 <Menu className="w-6 h-6" />
               </button>
               <h2 className="text-xl font-semibold text-gray-800">
-                MyPOS System Administration
+                Super Admin Console
               </h2>
             </div>
             <div className="flex items-center gap-4 relative">

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '../store/authStore';
+import { useSuperAdminTenantStore } from '../store/superAdminTenantStore';
 
 // Determine API URL dynamically to support LAN/Mobile testing
 const getBaseUrl = () => {
@@ -56,9 +57,19 @@ const api = axios.create({
 // Add token to requests
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
+  const user = useAuthStore.getState().user;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  const roleName = (user?.roles?.name || user?.role?.name || '').toLowerCase();
+  const isSuperAdmin = roleName === 'super admin' || roleName === 'super_admin';
+  const selectedTenant = useSuperAdminTenantStore.getState().selectedTenant;
+
+  if (isSuperAdmin && selectedTenant?.id) {
+    config.headers['X-Tenant-ID'] = String(selectedTenant.id);
+  }
+
   return config;
 });
 
