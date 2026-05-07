@@ -106,6 +106,14 @@ function maskReference(reference?: string | null): string | null {
   return `${reference.slice(0, 4)}••••${reference.slice(-4)}`;
 }
 
+function isPlaceholderCrmUrl(value?: string | null): boolean {
+  const text = String(value || '').trim().toLowerCase();
+  if (!text) {
+    return false;
+  }
+  return text.includes('crm.example.com') || text.includes('example.com');
+}
+
 function normalizeState(rawStatus?: string | null, isActive?: boolean | null): IntegrationState {
   if (isActive && (rawStatus === 'active' || rawStatus === 'connected')) {
     return 'connected';
@@ -311,10 +319,10 @@ function buildConnectionCard(
     docsUrl: definition.docsUrl || null,
     supportUrl: definition.supportUrl || null,
     callbackUrl: `${getBackendPublicUrl()}/api/medsos/integrations/callback/${definition.slug}`,
-    webhookUrl: `${getBackendPublicUrl()}/api/medsos/integrations/webhook/${definition.slug}`,
-    operatorNotes: metadata.notes || null,
-    vendorWorkspaceUrl: metadata.vendorWorkspaceUrl || null,
-    vendorWorkspaceEmail: metadata.vendorWorkspaceEmail || null,
+      webhookUrl: `${getBackendPublicUrl()}/api/medsos/integrations/webhook/${definition.slug}`,
+      operatorNotes: metadata.notes || null,
+      vendorWorkspaceUrl: isPlaceholderCrmUrl(String(metadata.vendorWorkspaceUrl || '')) ? null : metadata.vendorWorkspaceUrl || null,
+      vendorWorkspaceEmail: metadata.vendorWorkspaceEmail || null,
     subscriptionPlan: metadata.subscriptionPlan || null,
     subscriptionStatus: metadata.subscriptionStatus || null,
     renewalDate: metadata.renewalDate || null,
@@ -589,6 +597,10 @@ export async function completeManagedIntegrationConnect(
         ...item,
         status: 'connected',
       }));
+  const resolvedVendorWorkspaceUrl = input.vendorWorkspaceUrl || metadata.vendorWorkspaceUrl || null;
+  const normalizedVendorWorkspaceUrl = isPlaceholderCrmUrl(resolvedVendorWorkspaceUrl)
+    ? null
+    : resolvedVendorWorkspaceUrl;
 
   await upsertManagedIntegration(tenantId, definition, {
     status: 'connected',
@@ -605,7 +617,7 @@ export async function completeManagedIntegrationConnect(
       selectedAssets,
       healthScore: metadata.healthScore || defaultHealthScore[definition.slug],
       notes: input.notes || metadata.notes || null,
-      vendorWorkspaceUrl: input.vendorWorkspaceUrl || metadata.vendorWorkspaceUrl || null,
+      vendorWorkspaceUrl: normalizedVendorWorkspaceUrl,
       vendorWorkspaceEmail: input.vendorWorkspaceEmail || metadata.vendorWorkspaceEmail || null,
       subscriptionPlan: input.subscriptionPlan || metadata.subscriptionPlan || definition.recommendedPlan || null,
       subscriptionStatus: input.subscriptionStatus || metadata.subscriptionStatus || 'active',
@@ -799,17 +811,19 @@ export async function proxySocialHubStats(tenantId: number) {
   const credentials = decryptCredentials(row.credentials);
   const metadata = asRecord(row.metadata);
   const apiKey = credentials.connectionId as string | undefined;
-  const baseUrl = String(
-    (metadata.vendorWorkspaceUrl as string | undefined)
+  const rawBaseUrl = String(
+    process.env.MCS_SOCIAL_API_BASE_URL
+      || (metadata.vendorWorkspaceUrl as string | undefined)
       || definition.vendorPortalUrl
       || ''
   ).replace(/\/$/, '');
+  const baseUrl = isPlaceholderCrmUrl(rawBaseUrl) ? '' : rawBaseUrl;
 
   if (!apiKey || !baseUrl) {
     return null;
   }
 
-  const response = await fetch(`${baseUrl}/api/v1/external/stats`, {
+  const response = await fetch(`${baseUrl}/api/v1/external/dashboard/stats`, {
     headers: { 'X-Tenant-Key': apiKey },
     signal: AbortSignal.timeout(8000),
   });

@@ -53,7 +53,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         setStats(statsData);
         const socialHub = hub?.connectors?.find((c: { slug: string }) => c.slug === 'social-hub');
         setConnector(socialHub ?? null);
-        setCrmUrl(socialHub?.vendorWorkspaceUrl ?? socialHub?.vendorPortalUrl ?? null);
+        setCrmUrl(socialHub?.vendorPortalUrl ?? socialHub?.vendorWorkspaceUrl ?? null);
       } catch {
         if (!cancelled) setError('Gagal memuat stats dari WA CRM.');
       } finally {
@@ -123,7 +123,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
     { label: 'Workspace', value: connector?.workspaceName || stats.tenant?.company_name || 'Belum diatur' },
     { label: 'Email', value: connector?.vendorWorkspaceEmail || 'Belum diisi' },
     { label: 'Connection ref', value: connector?.connectionRefMasked || 'Belum diisi' },
-    { label: 'URL CRM', value: connector?.vendorWorkspaceUrl || connector?.vendorPortalUrl || 'Otomatis dari konfigurasi sistem' },
+    { label: 'URL CRM', value: connector?.vendorPortalUrl || connector?.vendorWorkspaceUrl || 'Otomatis dari konfigurasi sistem' },
   ];
 
   return (
