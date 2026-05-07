@@ -190,13 +190,17 @@ export default function MedsosConnections() {
   const [loading, setLoading] = useState(!isDemo);
   const [savingWa, setSavingWa] = useState(false);
   const [waConnector, setWaConnector] = useState<ManagedIntegrationConnector | null>(isDemo ? demoWaConnector : null);
-  const [crmForm, setCrmForm] = useState<CrmFormState>(() => ({
-    ...emptyCrmForm,
-    workspaceName: demoWaConnector.workspaceName || '',
-    vendorWorkspaceUrl: demoWaConnector.vendorWorkspaceUrl || '',
-    vendorWorkspaceEmail: demoWaConnector.vendorWorkspaceEmail || '',
-    notes: demoWaConnector.operatorNotes || '',
-  }));
+  const [crmForm, setCrmForm] = useState<CrmFormState>(() => (
+    isDemo
+      ? {
+          ...emptyCrmForm,
+          workspaceName: demoWaConnector.workspaceName || '',
+          vendorWorkspaceUrl: demoWaConnector.vendorWorkspaceUrl || '',
+          vendorWorkspaceEmail: demoWaConnector.vendorWorkspaceEmail || '',
+          notes: demoWaConnector.operatorNotes || '',
+        }
+      : { ...emptyCrmForm }
+  ));
   const [zernioAccounts, setZernioAccounts] = useState<ZernioAccount[]>(isDemo ? demoZernioAccounts : []);
   const [zernioLoading, setZernioLoading] = useState(!isDemo);
   const [busyPlatform, setBusyPlatform] = useState<string | null>(null);
@@ -236,11 +240,11 @@ export default function MedsosConnections() {
       vendorWorkspaceEmail: current.vendorWorkspaceEmail || waConnector.vendorWorkspaceEmail || '',
       notes: current.notes || waConnector.operatorNotes || '',
     }));
-    if (waConnector.connectionRefMasked && !crmForm.connectionId.trim()) {
-      setShowWaKeyEditor(false);
-    } else if (!waConnector.connectionRefMasked) {
-      setShowWaKeyEditor(true);
-    }
+  }, [waConnector]);
+
+  useEffect(() => {
+    if (!waConnector) return;
+    setShowWaKeyEditor(!waConnector.connectionRefMasked);
   }, [waConnector]);
 
   useEffect(() => {
@@ -278,7 +282,7 @@ export default function MedsosConnections() {
       || waConnector.vendorPortalUrl
     )
   );
-  const waOpenUrl = waConnector?.vendorWorkspaceUrl || waConnector?.vendorPortalUrl || null;
+  const waOpenUrl = waConnector?.vendorPortalUrl || waConnector?.vendorWorkspaceUrl || null;
 
   const getConnectedAccount = (platforms: string[]) => {
     const lowered = platforms.map((item) => item.toLowerCase());
