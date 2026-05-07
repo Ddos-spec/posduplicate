@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { getWACrmStats, type WACrmStats } from '../../services/medsosPostsService';
+import { getWACrmStatus, type WACrmConnectionStatus, type WACrmStats } from '../../services/medsosPostsService';
 import { getMyCommerSocialIntegrationHub, type ManagedIntegrationConnector } from '../../services/myCommerSocialIntegrations';
 import {
   conversationMessages,
@@ -36,6 +36,7 @@ import {
 
 function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void }) {
   const [stats, setStats] = useState<WACrmStats | null>(null);
+  const [crmStatus, setCrmStatus] = useState<WACrmConnectionStatus | null>(null);
   const [crmUrl, setCrmUrl] = useState<string | null>(null);
   const [connector, setConnector] = useState<ManagedIntegrationConnector | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,8 +48,8 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
     (async () => {
       setError(null);
       try {
-        const [statsResult, hubResult] = await Promise.allSettled([
-          getWACrmStats(),
+        const [statusResult, hubResult] = await Promise.allSettled([
+          getWACrmStatus(),
           getMyCommerSocialIntegrationHub(),
         ]);
         if (cancelled) return;
@@ -58,9 +59,14 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         setConnector(socialHub ?? null);
         setCrmUrl(socialHub?.vendorPortalUrl ?? socialHub?.vendorWorkspaceUrl ?? null);
 
-        if (statsResult.status === 'fulfilled') {
-          setStats(statsResult.value);
+        if (statusResult.status === 'fulfilled') {
+          setCrmStatus(statusResult.value);
+          setStats(statusResult.value.stats);
+          if (statusResult.value.configured && !statusResult.value.reachable) {
+            setError(statusResult.value.message || 'WA CRM belum merespons.');
+          }
         } else {
+          setCrmStatus(null);
           setStats(null);
           setError('Gagal memuat stats dari WA CRM.');
         }
@@ -82,14 +88,15 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
   }
 
   const hasStoredConfig = Boolean(
-    connector && (
+    crmStatus?.configured || (
+      connector && (
       connector.status === 'connected'
       || connector.status === 'syncing'
       || connector.connectionRefMasked
       || connector.vendorWorkspaceUrl
       || connector.vendorPortalUrl
       || connector.workspaceName
-    )
+    ))
   );
 
   if (error || !stats) {

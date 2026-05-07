@@ -82,9 +82,29 @@ export interface WACrmStats {
   tenant?: { company_name: string; session_id: string | null };
 }
 
+export interface WACrmConnectionStatus {
+  configured: boolean;
+  active: boolean;
+  hasApiKey: boolean;
+  hasWorkspaceUrl: boolean;
+  reachable: boolean;
+  statsAvailable: boolean;
+  baseUrl: string | null;
+  connectionRefMasked: string | null;
+  checkedAt: string;
+  status: 'not_configured' | 'configuration_incomplete' | 'reachable' | 'degraded';
+  message: string;
+  stats: WACrmStats | null;
+}
+
 export async function getWACrmStats(): Promise<WACrmStats | null> {
   const { data } = await api.get('/medsos/integrations/proxy/social-hub/stats');
   return (data.data ?? null) as WACrmStats | null;
+}
+
+export async function getWACrmStatus(): Promise<WACrmConnectionStatus> {
+  const { data } = await api.get('/medsos/integrations/proxy/social-hub/status');
+  return data.data as WACrmConnectionStatus;
 }
 
 export interface MetaCampaignRow {
