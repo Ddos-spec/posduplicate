@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { PlatformBadge } from '../../components/medsos/PlatformBadge';
+import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   disconnectZernioAccount,
   getZernioAccounts,
@@ -163,7 +164,10 @@ export default function MetaAdsControl() {
         <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
           <div className="flex items-center justify-between gap-3 mb-5">
             <div>
-              <h2 className="font-bold text-xl">Connect ad networks</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-bold text-xl">Connect ad networks</h2>
+                <FieldHelp title="Connect ad networks" description="Hubungkan network iklan yang ingin dikelola. Setelah tersambung, account akan muncul di workspace ini." />
+              </div>
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Gunakan tombol ini untuk menyalakan jalur ads sesuai network yang dibutuhkan tenant.
               </p>
@@ -201,6 +205,7 @@ export default function MetaAdsControl() {
                         <button
                           type="button"
                           onClick={() => handleDisconnect(account)}
+                          title={`Putuskan ${platform.label} dari workspace ini`}
                           className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'bg-slate-900 text-rose-300 hover:bg-rose-950/40' : 'bg-rose-50 text-rose-600 hover:bg-rose-100'}`}
                         >
                           <Unplug size={15} />
@@ -211,6 +216,7 @@ export default function MetaAdsControl() {
                             href={account.profileUrl}
                             target="_blank"
                             rel="noreferrer"
+                            title={`Buka profile ${platform.label} di tab baru`}
                             className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'border border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
                           >
                             <ExternalLink size={15} />
@@ -223,6 +229,7 @@ export default function MetaAdsControl() {
                         type="button"
                         disabled={!platform.connectPlatform || busy}
                         onClick={() => platform.connectPlatform && handleConnect(platform.connectPlatform)}
+                        title={`Hubungkan ${platform.label} ke workspace ini`}
                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {busy ? <Loader2 size={15} className="animate-spin" /> : <PlugZap size={15} />}
@@ -240,7 +247,10 @@ export default function MetaAdsControl() {
           <div className="flex items-center gap-2 mb-5">
             <Sparkles className="text-blue-500" size={18} />
             <div>
-              <h2 className="font-bold text-xl">Workspace snapshot</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-bold text-xl">Workspace snapshot</h2>
+                <FieldHelp title="Workspace snapshot" description="Ringkasan account dan performa ads yang sudah tersedia di workspace Zernio saat ini." />
+              </div>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Daftar ad account aktif ditampilkan dari workspace Zernio yang sedang terhubung.
               </p>
