@@ -52,6 +52,21 @@ interface CallbackPayload {
   note?: string;
 }
 
+export interface SocialHubConnectionStatus {
+  configured: boolean;
+  active: boolean;
+  hasApiKey: boolean;
+  hasWorkspaceUrl: boolean;
+  reachable: boolean;
+  statsAvailable: boolean;
+  baseUrl: string | null;
+  connectionRefMasked: string | null;
+  checkedAt: string;
+  status: 'not_configured' | 'configuration_incomplete' | 'reachable' | 'degraded';
+  message: string;
+  stats: Record<string, unknown> | null;
+}
+
 const defaultHealthScore: Record<ManagedIntegrationSlug, number> = {
   'social-hub': 91,
   'marketplace-hub': 88,
@@ -792,6 +807,11 @@ export async function handleManagedIntegrationCallback(slug: string, payload: Ca
 }
 
 export async function proxySocialHubStats(tenantId: number) {
+  const status = await getSocialHubConnectionStatus(tenantId);
+  return status.stats;
+}
+
+export async function getSocialHubConnectionStatus(tenantId: number): Promise<SocialHubConnectionStatus> {
   const definition = getManagedIntegrationDefinition('social-hub')!;
 
   const row = await prisma.integrations.findUnique({
@@ -801,15 +821,12 @@ export async function proxySocialHubStats(tenantId: number) {
         integration_type: definition.integrationType,
       },
     },
-    select: { status: true, is_active: true, credentials: true, metadata: true },
+    select: { status: true, is_active: true, credentials: true, metadata: true, configuration: true },
   });
 
-  if (!row?.is_active) {
-    return null;
-  }
-
-  const credentials = decryptCredentials(row.credentials);
-  const metadata = asRecord(row.metadata);
+  const credentials = decryptCredentials(row?.credentials);
+  const metadata = asRecord(row?.metadata);
+  const configuration = asRecord(row?.configuration);
   const apiKey = credentials.connectionId as string | undefined;
   const rawBaseUrl = String(
     process.env.MCS_SOCIAL_API_BASE_URL
@@ -818,26 +835,129 @@ export async function proxySocialHubStats(tenantId: number) {
       || ''
   ).replace(/\/$/, '');
   const baseUrl = isPlaceholderCrmUrl(rawBaseUrl) ? '' : rawBaseUrl;
+  const configured = Boolean(
+    row && (
+      row.is_active
+      || apiKey
+      || baseUrl
+      || metadata.vendorWorkspaceEmail
+      || metadata.vendorWorkspaceUrl
+      || configuration.workspaceName
+    )
+  );
+  const hasApiKey = Boolean(apiKey);
+  const hasWorkspaceUrl = Boolean(baseUrl);
+  const active = Boolean(row?.is_active);
+  const connectionRefMasked = maskReference(apiKey || null);
+  const checkedAt = new Date().toISOString();
 
-  if (!apiKey || !baseUrl) {
-    return null;
+  if (!configured) {
+    return {
+      configured: false,
+      active,
+      hasApiKey,
+      hasWorkspaceUrl,
+      reachable: false,
+      statsAvailable: false,
+      baseUrl: baseUrl || null,
+      connectionRefMasked,
+      checkedAt,
+      status: 'not_configured',
+      message: 'WA Inbox belum dikonfigurasi.',
+      stats: null,
+    };
   }
 
-  const response = await fetch(`${baseUrl}/api/v1/external/dashboard/stats`, {
-    headers: { 'X-Tenant-Key': apiKey },
-    signal: AbortSignal.timeout(8000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`CRM stats returned ${response.status}`);
+  if (!hasApiKey || !hasWorkspaceUrl) {
+    return {
+      configured: true,
+      active,
+      hasApiKey,
+      hasWorkspaceUrl,
+      reachable: false,
+      statsAvailable: false,
+      baseUrl: baseUrl || null,
+      connectionRefMasked,
+      checkedAt,
+      status: 'configuration_incomplete',
+      message: !hasApiKey
+        ? 'API key Customer Service CRM belum tersimpan.'
+        : 'URL Customer Service CRM belum tersedia di konfigurasi sistem.',
+      stats: null,
+    };
   }
 
-  const json = await response.json() as { status: string; data: Record<string, unknown> };
-  if (json.status !== 'success') {
-    throw new Error('CRM stats response error');
-  }
+  try {
+    const response = await fetch(`${baseUrl}/api/v1/external/dashboard/stats`, {
+      headers: { 'X-Tenant-Key': apiKey as string },
+      signal: AbortSignal.timeout(8000),
+    });
 
-  return json.data;
+    if (!response.ok) {
+      return {
+        configured: true,
+        active,
+        hasApiKey,
+        hasWorkspaceUrl,
+        reachable: false,
+        statsAvailable: false,
+        baseUrl,
+        connectionRefMasked,
+        checkedAt,
+        status: 'degraded',
+        message: `CRM stats returned ${response.status}`,
+        stats: null,
+      };
+    }
+
+    const json = await response.json() as { status: string; data: Record<string, unknown> };
+    if (json.status !== 'success') {
+      return {
+        configured: true,
+        active,
+        hasApiKey,
+        hasWorkspaceUrl,
+        reachable: false,
+        statsAvailable: false,
+        baseUrl,
+        connectionRefMasked,
+        checkedAt,
+        status: 'degraded',
+        message: 'CRM stats response error',
+        stats: null,
+      };
+    }
+
+    return {
+      configured: true,
+      active,
+      hasApiKey,
+      hasWorkspaceUrl,
+      reachable: true,
+      statsAvailable: Boolean(json.data),
+      baseUrl,
+      connectionRefMasked,
+      checkedAt,
+      status: 'reachable',
+      message: 'WA CRM terhubung dan merespons.',
+      stats: json.data,
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      active,
+      hasApiKey,
+      hasWorkspaceUrl,
+      reachable: false,
+      statsAvailable: false,
+      baseUrl,
+      connectionRefMasked,
+      checkedAt,
+      status: 'degraded',
+      message: error instanceof Error ? error.message : 'WA CRM tidak merespons.',
+      stats: null,
+    };
+  }
 }
 
 export async function handleManagedIntegrationWebhook(slug: string, headers: Record<string, string | string[] | undefined>, body: unknown) {
