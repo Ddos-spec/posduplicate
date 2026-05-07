@@ -66,6 +66,25 @@ export async function getConnectUrl(
   return data.authUrl;
 }
 
+export async function getAdsConnectUrl(
+  tenantId: number,
+  platform: string,
+  redirectUrl: string,
+  accountId?: string,
+  tenantName?: string,
+): Promise<string> {
+  const profileId = await getOrCreateZernioProfile(tenantId, tenantName);
+  const qs = new URLSearchParams({ profileId });
+  if (redirectUrl) {
+    qs.set('redirect_url', redirectUrl);
+  }
+  if (accountId) {
+    qs.set('accountId', accountId);
+  }
+  const data = await zFetch<{ authUrl: string }>(`/connect/${platform}/ads?${qs}`);
+  return data.authUrl;
+}
+
 export interface ZernioAccount {
   id: string;
   platform: string;

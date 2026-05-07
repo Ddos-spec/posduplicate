@@ -243,7 +243,7 @@ export default function CreatePost() {
                   </div>
                   <p className="text-xs text-gray-800">
                     <span className="font-bold mr-1">my_awesome_brand</span>
-                    {caption || 'Caption preview akan muncul di sini. Hamba buatkan tampilannya terasa seperti app sungguhan.'}
+                    {caption || 'Caption preview akan muncul di sini. Tampilan ini dibuat agar user bisa membayangkan hasil post sebelum publish.'}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-2">2 hours ago</p>
                 </>

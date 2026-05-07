@@ -5,6 +5,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import { channelConnections, priorityThreads } from '../../data/omnichannelMock';
 import { getMyCommerSocialIntegrationHub } from '../../services/myCommerSocialIntegrations';
+import { getZernioAccounts } from '../../services/medsosPostsService';
 import { BrandLogo } from './BrandLogo';
 import MyCommerSocialLogo from './MyCommerSocialLogo';
 import {
@@ -26,8 +27,12 @@ export default function MedsosLayout() {
 
   useEffect(() => {
     if (!isDemo) {
-      getMyCommerSocialIntegrationHub()
-        .then((hub) => setLiveActiveChannels(hub.summary.connected))
+      Promise.all([getMyCommerSocialIntegrationHub(), getZernioAccounts()])
+        .then(([hub, accounts]) => {
+          const waConnector = hub.connectors.find((connector) => connector.slug === 'social-hub');
+          const waCount = waConnector?.vendorWorkspaceUrl || waConnector?.connectionRefMasked || waConnector?.status === 'connected' ? 1 : 0;
+          setLiveActiveChannels(accounts.length + waCount);
+        })
         .catch(() => setLiveActiveChannels(0));
     }
   }, [isDemo]);
@@ -38,7 +43,7 @@ export default function MedsosLayout() {
     { icon: Calendar, label: 'Planner', path: `${basePath}/calendar`, roles: ['medsos_manager', 'content_creator', 'all'] },
     { icon: MessageCircle, label: 'Unified Inbox', path: `${basePath}/inbox`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
     { icon: Store, label: 'Marketplace', path: `${basePath}/marketplace`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
-    { icon: Megaphone, label: 'Meta Ads', path: `${basePath}/ads`, roles: ['medsos_manager', 'all'] },
+    { icon: Megaphone, label: 'Ads Workspace', path: `${basePath}/ads`, roles: ['medsos_manager', 'all'] },
     { icon: LineChart, label: 'Analytics', path: `${basePath}/analytics`, roles: ['medsos_manager', 'all'] },
     { icon: CreditCard, label: 'Plans & Pricing', path: `${basePath}/pricing`, roles: ['medsos_manager', 'all'] },
     { icon: Settings, label: 'Settings', path: `${basePath}/settings`, roles: ['medsos_manager', 'all'] },
@@ -172,7 +177,7 @@ export default function MedsosLayout() {
               <div className={`h-8 w-px ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Focus</p>
-                <p className="text-sm font-semibold truncate max-w-[190px]">WA CRM + Jubelio + Meta Ads</p>
+                <p className="text-sm font-semibold truncate max-w-[190px]">WA Inbox + Zernio • Marketplace soon</p>
               </div>
             </div>
             <button
