@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import MyCommerSocialLogo from '../../components/medsos/MyCommerSocialLogo';
+import FieldHelp from '../../components/medsos/FieldHelp';
 import { PlatformBadge } from '../../components/medsos/PlatformBadge';
 import {
   getMyCommerSocialIntegrationHub,
@@ -203,7 +204,10 @@ export default function MedsosDashboard() {
             <div className="flex items-center gap-3 mb-3">
               <MyCommerSocialLogo size={46} className="shadow-lg shadow-blue-500/25" />
               <div>
-                <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Workspace overview</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Workspace overview</h1>
+                  <FieldHelp title="Workspace overview" description="Ringkasan ini menunjukkan apakah WA Inbox, akun social, dan ads tenant sudah siap dipakai tanpa harus buka semua halaman satu per satu." />
+                </div>
                 <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   Pantau status WA Inbox, koneksi social media, dan ads dari satu ringkasan operasional.
                 </p>
@@ -225,7 +229,7 @@ export default function MedsosDashboard() {
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
         {quickStatus.map((card) => (
-          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div key={card.label} title={`${card.label}: ${card.helper}`} className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
             <div className={`inline-flex rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
               <card.icon size={18} />
             </div>
@@ -238,7 +242,7 @@ export default function MedsosDashboard() {
 
       <div className="grid xl:grid-cols-4 gap-4">
         {liveFlow.map((item) => (
-          <div key={item.title} className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div key={item.title} title={item.description} className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
             <p className="font-semibold text-blue-500">{item.title}</p>
             <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.description}</p>
           </div>
@@ -247,7 +251,10 @@ export default function MedsosDashboard() {
 
       <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
         <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
-          <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Yang sudah aktif di workspace ini</h2>
+          <div className="flex items-center gap-2">
+            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Yang sudah aktif di workspace ini</h2>
+            <FieldHelp title="Status aktif" description="Bagian ini membedakan mana koneksi yang sudah live, mana yang baru tersimpan, dan mana yang belum dihubungkan." />
+          </div>
           <div className="grid md:grid-cols-3 gap-4 mt-6">
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
                   <p className="font-semibold">WA Inbox</p>
@@ -279,7 +286,10 @@ export default function MedsosDashboard() {
         </section>
 
         <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
-          <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Channel yang terlihat dari workspace ini</h2>
+          <div className="flex items-center gap-2">
+            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Channel yang terlihat dari workspace ini</h2>
+            <FieldHelp title="Daftar channel" description="Semua channel di sini diambil dari data live tenant. Jika sebuah akun belum muncul, cek lagi halaman Connections atau status sinkronisasinya." />
+          </div>
           {accounts.length === 0 ? (
             <div className={`rounded-2xl border p-5 mt-6 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>

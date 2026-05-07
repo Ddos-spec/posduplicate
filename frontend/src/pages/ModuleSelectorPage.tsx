@@ -76,12 +76,12 @@ export default function ModuleSelectorPage() {
     {
       id: 'medsos',
       name: 'MyCommerSocial',
-      description: 'Omnichannel workspace for social content, marketplace ops, unified inbox, and Meta Ads control.',
+      description: 'Workspace untuk WA Inbox, social media, dan ads yang dikelola dari satu command center.',
       icon: Share2,
       customLogo: true,
       color: 'from-blue-500 to-blue-600',
       iconBg: 'bg-blue-500',
-      features: ['Unified Inbox', 'Marketplace Watch', 'Meta Ads Control'],
+      features: ['WA Inbox', 'Social via Zernio', 'Ads Workspace'],
       status: 'new',
       path: '/medsos/dashboard'
     }

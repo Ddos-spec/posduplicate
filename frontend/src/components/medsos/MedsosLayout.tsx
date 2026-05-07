@@ -90,13 +90,13 @@ export default function MedsosLayout() {
               <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 {currentRole === 'medsos_manager' ? 'Omnichannel Manager' :
                  currentRole === 'content_creator' ? 'Content Creator' :
-                 currentRole === 'medsos_cs' ? 'Inbox Commander' : 'Commerce + Social Hub'}
+                 currentRole === 'medsos_cs' ? 'WA Inbox Operator' : 'WA + Social + Ads Hub'}
               </p>
               <div className="flex items-center gap-1.5 mt-2">
+                <BrandLogo brand="whatsapp" size={20} className="rounded-md" />
                 <BrandLogo brand="instagram" size={20} className="rounded-md" />
-                <BrandLogo brand="tiktok" size={20} className="rounded-md" />
-                <BrandLogo brand="shopee" size={20} className="rounded-md" />
-                <BrandLogo brand="tokopedia" size={20} className="rounded-md px-1" withRing />
+                <BrandLogo brand="facebook" size={20} className="rounded-md" />
+                <BrandLogo brand="metaads" size={20} className="rounded-md" withRing />
               </div>
             </div>
           </div>
@@ -124,6 +124,7 @@ export default function MedsosLayout() {
           <div className="px-2 mb-4">
             <button 
               onClick={() => navigate(`${basePath}/create`)}
+              title="Buka composer untuk membuat campaign atau post baru"
               className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all"
             >
               <Plus size={20} /> Create Campaign
@@ -137,6 +138,7 @@ export default function MedsosLayout() {
                 <li key={idx}>
                   <button
                     onClick={() => navigate(item.path)}
+                    title={`Buka halaman ${item.label}`}
                     className={`flex items-center w-full p-3 rounded-xl transition-all duration-200 ${
                       isActive
                         ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
@@ -159,6 +161,7 @@ export default function MedsosLayout() {
           </div>
           <button
             onClick={() => navigate(isDemo ? '/demo' : '/module-selector')}
+            title={isDemo ? 'Kembali ke pemilihan demo' : 'Kembali ke pemilihan modul'}
             className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-xl transition-colors ${
               isDark ? 'text-gray-400 hover:bg-slate-700 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -171,17 +174,17 @@ export default function MedsosLayout() {
 
       <div className="p-4 md:ml-64">
         <div className="flex justify-between items-center mb-6">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
+          <button type="button" title={sidebarOpen ? 'Tutup navigasi MyCommerSocial' : 'Buka navigasi MyCommerSocial'} onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
             <Menu className="w-6 h-6" />
           </button>
 
           <div className="flex items-center gap-2 ml-auto">
             <div className={`hidden md:flex items-center gap-3 rounded-2xl px-4 py-2 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
             <div className="flex -space-x-2 mr-1">
+              <BrandLogo brand="whatsapp" size={28} className="rounded-xl border-2 border-white" />
               <BrandLogo brand="instagram" size={28} className="rounded-xl border-2 border-white" />
               <BrandLogo brand="facebook" size={28} className="rounded-xl border-2 border-white" />
-              <BrandLogo brand="shopee" size={28} className="rounded-xl border-2 border-white" />
-              <BrandLogo brand="tokopedia" size={28} className="rounded-xl border-2 border-white px-1" withRing />
+              <BrandLogo brand="metaads" size={28} className="rounded-xl border-2 border-white" withRing />
             </div>
             <div>
               <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Mode</p>
@@ -195,6 +198,7 @@ export default function MedsosLayout() {
             </div>
             <button
               onClick={toggleTheme}
+              title={isDark ? 'Pakai mode terang' : 'Pakai mode gelap'}
               className={`p-2 rounded-xl transition-colors ${isDark ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' : 'bg-white text-slate-600 hover:bg-gray-100 border border-gray-200 shadow-sm'}`}
             >
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}

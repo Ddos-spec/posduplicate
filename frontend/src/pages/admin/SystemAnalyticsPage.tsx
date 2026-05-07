@@ -124,7 +124,7 @@ export default function SystemAnalyticsPage() {
     { icon: Monitor, title: 'MyPOS', description: 'Masuk ke operasi kasir, outlet, dan transaksi.', path: '/owner/dashboard', accent: 'bg-emerald-100 text-emerald-600' },
     { icon: Calculator, title: 'MyAkuntan', description: 'Akses pembukuan, ledger, budget, dan laporan.', path: '/accounting/dashboard', accent: 'bg-purple-100 text-purple-600' },
     { icon: Package, title: 'MyInventory', description: 'Pantau stok, forecast, reorder, dan analitik gudang.', path: '/inventory/dashboard', accent: 'bg-orange-100 text-orange-600' },
-    { icon: Share2, title: 'MyCommerSocial', description: 'Buka omnichannel, marketplace, inbox, dan Meta Ads.', path: '/medsos/dashboard', accent: 'bg-blue-100 text-blue-600' },
+    { icon: Share2, title: 'MyCommerSocial', description: 'Buka WA Inbox, social via Zernio, ads workspace, dan analytics.', path: '/medsos/dashboard', accent: 'bg-blue-100 text-blue-600' },
   ];
 
   if (loading) {
