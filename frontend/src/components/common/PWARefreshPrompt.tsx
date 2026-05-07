@@ -2,8 +2,18 @@ import { useServiceWorker } from '../../hooks/useServiceWorker';
 
 export default function PWARefreshPrompt() {
   const { needRefresh, offlineReady, refresh, close } = useServiceWorker();
+  const offlineReadyDismissed = typeof window !== 'undefined'
+    ? window.sessionStorage.getItem('mypos-pwa-offline-ready-dismissed') === '1'
+    : false;
 
-  if (!needRefresh && !offlineReady) return null;
+  const handleClose = () => {
+    if (offlineReady && typeof window !== 'undefined') {
+      window.sessionStorage.setItem('mypos-pwa-offline-ready-dismissed', '1');
+    }
+    close();
+  };
+
+  if (!needRefresh && (!offlineReady || offlineReadyDismissed)) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-sm">
@@ -21,7 +31,7 @@ export default function PWARefreshPrompt() {
                 Refresh
               </button>
               <button
-                onClick={close}
+                onClick={handleClose}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
               >
                 Nanti
@@ -35,7 +45,7 @@ export default function PWARefreshPrompt() {
               App siap digunakan offline
             </p>
             <button
-              onClick={close}
+              onClick={handleClose}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
               OK
