@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import { getWACrmStats, type WACrmStats } from '../../services/medsosPostsService';
-import { getMyCommerSocialIntegrationHub } from '../../services/myCommerSocialIntegrations';
+import { getMyCommerSocialIntegrationHub, type ManagedIntegrationConnector } from '../../services/myCommerSocialIntegrations';
 import {
   conversationMessages,
   inboxFilters,
@@ -24,6 +24,7 @@ import {
   NotebookPen,
   Paperclip,
   PlugZap,
+  Settings,
   Search,
   Send,
   ShieldAlert,
@@ -35,6 +36,7 @@ import {
 function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void }) {
   const [stats, setStats] = useState<WACrmStats | null>(null);
   const [crmUrl, setCrmUrl] = useState<string | null>(null);
+  const [connector, setConnector] = useState<ManagedIntegrationConnector | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +51,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         if (cancelled) return;
         setStats(statsData);
         const socialHub = hub?.connectors?.find((c: { slug: string }) => c.slug === 'social-hub');
+        setConnector(socialHub ?? null);
         setCrmUrl(socialHub?.vendorWorkspaceUrl ?? null);
       } catch {
         if (!cancelled) setError('Gagal memuat stats dari WA CRM.');
@@ -110,6 +113,17 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
     slate: isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-50 text-gray-700',
   };
 
+  const capabilities = connector?.capabilities?.length
+    ? connector.capabilities
+    : ['live chat inbox', 'agent routing', 'lead tracking', 'tagging & escalation'];
+
+  const workspaceDetails = [
+    { label: 'Workspace', value: connector?.workspaceName || stats.tenant?.company_name || 'Belum diatur' },
+    { label: 'Email', value: connector?.vendorWorkspaceEmail || 'Belum diisi' },
+    { label: 'Connection ref', value: connector?.connectionRefMasked || 'Belum diisi' },
+    { label: 'URL CRM', value: connector?.vendorWorkspaceUrl || 'Belum diisi' },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -117,7 +131,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
           <BrandLogo brand="whatsapp" size={44} className="rounded-2xl" />
           <div>
             <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              WA Inbox{stats.tenant?.company_name ? ` — ${stats.tenant.company_name}` : ''}
+              WA Workspace{stats.tenant?.company_name ? ` — ${stats.tenant.company_name}` : ''}
             </h2>
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Live data dari Customer Service CRM
@@ -127,17 +141,26 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
             </p>
           </div>
         </div>
-        {crmUrl && (
-          <a
-            href={crmUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-semibold text-sm"
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={onSetup}
+            className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
           >
-            <ExternalLink size={16} />
-            Buka CRM
-          </a>
-        )}
+            <Settings size={16} />
+            Connections
+          </button>
+          {crmUrl && (
+            <a
+              href={crmUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-semibold text-sm"
+            >
+              <ExternalLink size={16} />
+              Buka CRM
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -164,10 +187,35 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         </div>
       </div>
 
+      <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
+        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Workspace details</h3>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {workspaceDetails.map((item) => (
+              <div key={item.label} className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.label}</p>
+                <p className="text-sm font-semibold mt-1 break-all">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Fitur yang dikelola lewat CRM</h3>
+          <div className="grid gap-3">
+            {capabilities.map((item) => (
+              <div key={item} className={`rounded-2xl p-4 text-sm ${isDark ? 'bg-slate-900/60 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {crmUrl && (
         <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800/60 border-slate-700' : 'bg-blue-50 border-blue-100'}`}>
           <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-blue-800'}`}>
-            Untuk membalas chat, assign agent, dan mengelola eskalasi, klik tombol <strong>Buka CRM</strong> di atas. Semua operasional dikelola langsung dari Customer Service CRM.
+            Untuk membalas chat, assign agent, menggunakan tag, dan mengelola eskalasi, klik tombol <strong>Buka CRM</strong>. MyCommerSocial berfungsi sebagai command center, sedangkan operasional WA dijalankan langsung dari Customer Service CRM.
           </p>
         </div>
       )}

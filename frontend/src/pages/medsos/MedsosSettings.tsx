@@ -7,21 +7,30 @@ import {
   replyTemplates,
   routingRules,
   slaPolicies,
-  teamSeats,
 } from '../../data/omnichannelMock';
+import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   BellRing,
   CheckCircle2,
   MessageSquareText,
   PlugZap,
+  Plus,
   Save,
   Shield,
   Store,
+  Trash2,
   UsersRound,
   Workflow,
 } from 'lucide-react';
 
-const STORAGE_KEY = 'mycommersocial_settings_v1';
+const STORAGE_KEY = 'mycommersocial_settings_v2';
+
+type WorkspaceSeat = {
+  id: number;
+  name: string;
+  role: string;
+  channels: string;
+};
 
 type SettingsState = {
   channelAccess: {
@@ -34,7 +43,7 @@ type SettingsState = {
   activeApprovalIds: number[];
   activeTemplateIds: number[];
   activeNotificationIds: number[];
-  activeSeatIds: number[];
+  seats: WorkspaceSeat[];
 };
 
 const defaultSettings: SettingsState = {
@@ -48,7 +57,19 @@ const defaultSettings: SettingsState = {
   activeApprovalIds: approvalFlows.map((flow) => flow.id),
   activeTemplateIds: replyTemplates.slice(0, 3).map((template) => template.id),
   activeNotificationIds: notificationDestinations.filter((item) => item.active).map((item) => item.id),
-  activeSeatIds: teamSeats.map((seat) => seat.id),
+  seats: [],
+};
+
+type SeatDraft = {
+  name: string;
+  role: string;
+  channels: string;
+};
+
+const emptySeatDraft: SeatDraft = {
+  name: '',
+  role: '',
+  channels: '',
 };
 
 function formatSavedAt(value: string | null) {
@@ -91,14 +112,23 @@ export default function MedsosSettings() {
   const [settings, setSettings] = useState<SettingsState>(defaultSettings);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [seatDraft, setSeatDraft] = useState<SeatDraft>(emptySeatDraft);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved) as { settings?: SettingsState; lastSavedAt?: string };
+        const parsed = JSON.parse(saved) as { settings?: Partial<SettingsState>; lastSavedAt?: string };
         if (parsed.settings) {
-          setSettings({ ...defaultSettings, ...parsed.settings });
+          setSettings({
+            ...defaultSettings,
+            ...parsed.settings,
+            channelAccess: {
+              ...defaultSettings.channelAccess,
+              ...(parsed.settings.channelAccess ?? {}),
+            },
+            seats: parsed.settings.seats ?? [],
+          });
         }
         if (parsed.lastSavedAt) {
           setLastSavedAt(parsed.lastSavedAt);
@@ -115,6 +145,7 @@ export default function MedsosSettings() {
       routing: settings.activeRoutingIds.length,
       approvals: settings.activeApprovalIds.length,
       templates: settings.activeTemplateIds.length,
+      seats: settings.seats.length,
     }),
     [settings]
   );
@@ -136,6 +167,28 @@ export default function MedsosSettings() {
   const updateSettings = (updater: (current: SettingsState) => SettingsState) => {
     setSettings((current) => updater(current));
     setDirty(true);
+  };
+
+  const addSeat = () => {
+    if (!seatDraft.name.trim() || !seatDraft.role.trim()) {
+      toast.error('Nama dan role team seat wajib diisi.');
+      return;
+    }
+
+    updateSettings((current) => ({
+      ...current,
+      seats: [
+        ...current.seats,
+        {
+          id: Date.now(),
+          name: seatDraft.name.trim(),
+          role: seatDraft.role.trim(),
+          channels: seatDraft.channels.trim(),
+        },
+      ],
+    }));
+    setSeatDraft(emptySeatDraft);
+    toast.success('Team seat ditambahkan.');
   };
 
   const channelCards = [
@@ -166,7 +219,7 @@ export default function MedsosSettings() {
           <div className="max-w-3xl">
             <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Settings</h1>
             <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Atur channel aktif, rule operasional, approval, dan notifikasi untuk workspace MyCommerSocial.
+              Atur channel aktif, rule operasional, notifikasi, dan team seat untuk workspace MyCommerSocial.
             </p>
           </div>
 
@@ -333,35 +386,92 @@ export default function MedsosSettings() {
             <UsersRound size={18} className="text-orange-500" />
             <div>
               <h2 className="font-bold text-lg">Team seats</h2>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Tentukan seat yang aktif di workspace.</p>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Tambahkan seat tim yang akan memakai workspace ini.</p>
             </div>
           </div>
-          <div className="space-y-3">
-            {teamSeats.map((member) => {
-              const active = settings.activeSeatIds.includes(member.id);
-              return (
-                <div key={member.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Nama seat
+                <FieldHelp title="Nama seat" description="Nama singkat untuk anggota atau kursi kerja. Contoh: Admin CS 1 atau Content Reviewer." />
+              </span>
+              <input
+                value={seatDraft.name}
+                onChange={(event) => setSeatDraft((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Contoh: Admin CS 1"
+                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Role
+                <FieldHelp title="Role" description="Peran utama seat ini di operasional. Contoh: Customer Service, Reviewer, atau Ads Operator." />
+              </span>
+              <input
+                value={seatDraft.role}
+                onChange={(event) => setSeatDraft((current) => ({ ...current, role: event.target.value }))}
+                placeholder="Contoh: Customer Service"
+                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+              />
+            </label>
+
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Channel
+                <FieldHelp title="Channel" description="Daftar channel yang akan ditangani seat ini. Contoh: WhatsApp, Instagram, Facebook Ads." />
+              </span>
+              <input
+                value={seatDraft.channels}
+                onChange={(event) => setSeatDraft((current) => ({ ...current, channels: event.target.value }))}
+                placeholder="Contoh: WhatsApp, Instagram"
+                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+              />
+            </label>
+          </div>
+
+          <button
+            type="button"
+            onClick={addSeat}
+            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            <Plus size={16} />
+            Tambah team seat
+          </button>
+
+          {settings.seats.length === 0 ? (
+            <div className={`rounded-2xl border p-5 mt-5 ${isDark ? 'border-slate-700 bg-slate-900/40 text-gray-300' : 'border-gray-100 bg-gray-50 text-gray-600'}`}>
+              Belum ada team seat. Tambahkan seat sesuai tim yang akan memakai workspace ini.
+            </div>
+          ) : (
+            <div className="space-y-3 mt-5">
+              {settings.seats.map((seat) => (
+                <div key={seat.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-sm">{member.name}</p>
-                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{member.role}</p>
-                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{member.workload}</p>
+                      <p className="font-semibold text-sm">{seat.name}</p>
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{seat.role}</p>
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{seat.channels || 'Belum ada channel'}</p>
                     </div>
-                    <ToggleButton
-                      active={active}
-                      label={active ? 'Aktif' : 'Off'}
+                    <button
+                      type="button"
                       onClick={() =>
                         updateSettings((current) => ({
                           ...current,
-                          activeSeatIds: toggleSelection(current.activeSeatIds, member.id),
+                          seats: current.seats.filter((item) => item.id !== seat.id),
                         }))
                       }
-                    />
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${isDark ? 'bg-slate-950 text-rose-300 hover:bg-rose-950/40' : 'bg-rose-50 text-rose-600 hover:bg-rose-100'}`}
+                    >
+                      <Trash2 size={14} />
+                      Hapus
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
@@ -433,7 +543,7 @@ export default function MedsosSettings() {
               <div>
                 <p className="font-semibold">Ringkasan konfigurasi</p>
                 <p className={`text-sm mt-1 ${isDark ? 'text-gray-300' : 'text-blue-900'}`}>
-                  {activeSummary.sla} SLA aktif, {activeSummary.routing} routing rule aktif, {activeSummary.approvals} approval flow aktif, dan {activeSummary.templates} template balasan dipakai di workspace ini.
+                  {activeSummary.sla} SLA aktif, {activeSummary.routing} routing rule aktif, {activeSummary.approvals} approval flow aktif, {activeSummary.templates} template aktif, dan {activeSummary.seats} team seat tersimpan di workspace ini.
                 </p>
               </div>
             </div>
