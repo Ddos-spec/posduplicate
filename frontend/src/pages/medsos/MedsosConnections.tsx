@@ -200,6 +200,7 @@ export default function MedsosConnections() {
   const [zernioAccounts, setZernioAccounts] = useState<ZernioAccount[]>(isDemo ? demoZernioAccounts : []);
   const [zernioLoading, setZernioLoading] = useState(!isDemo);
   const [busyPlatform, setBusyPlatform] = useState<string | null>(null);
+  const [showWaKeyEditor, setShowWaKeyEditor] = useState(isDemo);
 
   const loadLiveData = async () => {
     setLoading(true);
@@ -235,6 +236,11 @@ export default function MedsosConnections() {
       vendorWorkspaceEmail: current.vendorWorkspaceEmail || waConnector.vendorWorkspaceEmail || '',
       notes: current.notes || waConnector.operatorNotes || '',
     }));
+    if (waConnector.connectionRefMasked && !crmForm.connectionId.trim()) {
+      setShowWaKeyEditor(false);
+    } else if (!waConnector.connectionRefMasked) {
+      setShowWaKeyEditor(true);
+    }
   }, [waConnector]);
 
   useEffect(() => {
@@ -327,8 +333,9 @@ export default function MedsosConnections() {
     const workspaceName = crmForm.workspaceName.trim() || waConnector?.workspaceName || 'WA Inbox';
     const connectionId = crmForm.connectionId.trim();
     const vendorWorkspaceUrl = crmForm.vendorWorkspaceUrl.trim() || waConnector?.vendorWorkspaceUrl || waConnector?.vendorPortalUrl || '';
+    const hasExistingConnection = Boolean(waConnector?.connectionRefMasked);
 
-    if (!connectionId) {
+    if (!connectionId && !hasExistingConnection) {
       toast.error('API key / connection reference wajib diisi.');
       return;
     }
@@ -348,8 +355,9 @@ export default function MedsosConnections() {
         ...current,
         workspaceName,
         vendorWorkspaceUrl,
-        connectionId,
+        connectionId: '',
       }));
+      setShowWaKeyEditor(false);
       toast.success('Demo WA Inbox berhasil diperbarui.');
       return;
     }
@@ -357,7 +365,7 @@ export default function MedsosConnections() {
     try {
       setSavingWa(true);
       const updated = await completeMyCommerSocialConnect('social-hub', {
-        connectionId,
+        connectionId: connectionId || undefined,
         workspaceName,
         vendorWorkspaceUrl: vendorWorkspaceUrl || undefined,
         vendorWorkspaceEmail: crmForm.vendorWorkspaceEmail || undefined,
@@ -371,8 +379,9 @@ export default function MedsosConnections() {
         ...current,
         workspaceName,
         vendorWorkspaceUrl,
-        connectionId,
+        connectionId: '',
       }));
+      setShowWaKeyEditor(false);
       toast.success('WA Inbox berhasil disimpan.');
       await loadLiveData();
     } catch (error) {
@@ -653,27 +662,55 @@ export default function MedsosConnections() {
                 className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
-            <div className={`space-y-2 md:col-span-2 rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-gray-50'}`}>
-              <span className="text-sm font-semibold inline-flex items-center gap-2">
-                URL instance CRM
-                <FieldHelp title="URL instance CRM" description="Alamat CRM ditentukan dari konfigurasi sistem, jadi tidak perlu diisi manual oleh user." />
-              </span>
-              <p className={`text-sm break-all ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                {crmForm.vendorWorkspaceUrl || waConnector?.vendorWorkspaceUrl || waConnector?.vendorPortalUrl || 'Otomatis dari konfigurasi sistem'}
-              </p>
+            <div className={`md:col-span-2 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-blue-50'}`}>
+              <div className="flex items-start gap-3">
+                <PlugZap size={18} className="text-blue-500 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold inline-flex items-center gap-2">
+                    Akses CRM otomatis
+                    <FieldHelp title="Akses CRM otomatis" description="URL Customer Service CRM sudah diatur di sistem, jadi user tidak perlu mengisi alamat CRM secara manual." />
+                  </p>
+                  <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-blue-900'}`}>
+                    Cukup simpan API key workspace. Setelah itu tombol <strong>Buka CRM</strong> akan memakai alamat CRM yang sudah dikonfigurasi.
+                  </p>
+                </div>
+              </div>
             </div>
-            <label className="space-y-2 md:col-span-2">
-              <span className="text-sm font-semibold inline-flex items-center gap-2">
-                API key / connection reference
-                <FieldHelp title="API key / connection reference" description="Cukup isi API key atau connection reference dari Customer Service CRM. Sistem akan memakai URL CRM yang sudah dikonfigurasi." />
-              </span>
-              <input
-                value={crmForm.connectionId}
-                onChange={(event) => setCrmForm((current) => ({ ...current, connectionId: event.target.value }))}
-                placeholder="API key tenant dari Customer Service CRM"
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
-              />
-            </label>
+            {showWaKeyEditor ? (
+              <label className="space-y-2 md:col-span-2">
+                <span className="text-sm font-semibold inline-flex items-center gap-2">
+                  API key / connection reference
+                  <FieldHelp title="API key / connection reference" description="Cukup isi API key atau connection reference dari Customer Service CRM. Sistem akan memakai URL CRM yang sudah dikonfigurasi." />
+                </span>
+                <input
+                  value={crmForm.connectionId}
+                  onChange={(event) => setCrmForm((current) => ({ ...current, connectionId: event.target.value }))}
+                  placeholder="API key tenant dari Customer Service CRM"
+                  className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                />
+              </label>
+            ) : (
+              <div className={`md:col-span-2 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-200 bg-gray-50'}`}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold inline-flex items-center gap-2">
+                      API key tersimpan
+                      <FieldHelp title="API key tersimpan" description="Untuk keamanan, nilai API key asli tidak ditampilkan kembali setelah halaman direfresh. Sistem hanya menampilkan reference yang sudah dimasking." />
+                    </p>
+                    <p className={`text-sm mt-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                      {waConnector?.connectionRefMasked || 'API key sudah tersimpan di sistem.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowWaKeyEditor(true)}
+                    className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    Ganti API key
+                  </button>
+                </div>
+              </div>
+            )}
             <label className="space-y-2 md:col-span-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Catatan operator
@@ -725,12 +762,12 @@ export default function MedsosConnections() {
               <button
                 type="button"
                 onClick={handleSaveWa}
-                disabled={savingWa || loading}
+                disabled={savingWa || loading || (!showWaKeyEditor && !waConnector?.connectionRefMasked)}
                 title="Simpan konfigurasi workspace WA"
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {savingWa ? <Loader2 size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
-                Simpan WA setup
+                {showWaKeyEditor ? 'Simpan WA setup' : 'Simpan perubahan'}
               </button>
             </div>
           </div>
