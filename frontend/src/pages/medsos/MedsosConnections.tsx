@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useThemeStore } from '../../store/themeStore';
 import MyCommerSocialLogo from '../../components/medsos/MyCommerSocialLogo';
-import MyMedsosLogo from '../../components/medsos/MyMedsosLogo';
 import { PlatformBadge } from '../../components/medsos/PlatformBadge';
 import {
   completeMyCommerSocialConnect,
@@ -134,20 +133,20 @@ const emptyCrmForm: CrmFormState = {
 
 const stepCards = [
   {
-    title: '1. User bikin akun',
-    description: 'Tenant dibuat seperti biasa. Belum perlu memikirkan API key Zernio, callback URL, atau app review.',
+    title: '1. Buat workspace',
+    description: 'Workspace bisnis dibuat seperti biasa dan siap dipakai untuk menampung channel yang akan dihubungkan.',
   },
   {
-    title: '2. Buka Connections',
-    description: 'Saat halaman ini dibuka, backend menyiapkan 1 profile Zernio khusus tenant tersebut secara otomatis.',
+    title: '2. Lengkapi WA Inbox',
+    description: 'Simpan URL instance dan credential Customer Service CRM untuk mengaktifkan operasional WhatsApp.',
   },
   {
-    title: '3. Connect channel',
-    description: 'User tinggal klik Connect untuk social atau ads yang dibutuhkan. Semua akun masuk ke profile tenant yang sama.',
+    title: '3. Hubungkan social',
+    description: 'Hubungkan Instagram, Facebook, TikTok, LinkedIn, dan channel lain langsung dari workspace Zernio.',
   },
   {
-    title: '4. Mulai operasional',
-    description: 'WA Inbox jalan lewat Customer Service CRM, social + ads lewat Zernio, marketplace menyusul setelah partnership siap.',
+    title: '4. Aktifkan ads',
+    description: 'Ad account mengikuti workspace yang sama sehingga social media dan ads bisa dikelola dari satu panel.',
   },
 ];
 
@@ -243,7 +242,7 @@ export default function MedsosConnections() {
     const adsConnected = params.get('zernio_ads_connected');
 
     if (socialConnected) {
-      toast.success(`${humanizePlatform(socialConnected)} berhasil masuk ke workspace Zernio tenant ini.`);
+      toast.success(`${humanizePlatform(socialConnected)} berhasil terhubung ke workspace Zernio.`);
       if (!isDemo) void loadLiveData();
     }
 
@@ -309,6 +308,7 @@ export default function MedsosConnections() {
     try {
       await disconnectZernioAccount(account.id);
       toast.success(`${humanizePlatform(account.platform)} diputus dari workspace tenant.`);
+      
       if (isDemo) {
         setZernioAccounts((current) => current.filter((item) => item.id !== account.id));
       } else {
@@ -373,20 +373,16 @@ export default function MedsosConnections() {
           <div className="max-w-4xl">
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
               <Sparkles size={14} />
-              MyCommerSocial launch mode
+              Channel activation
             </div>
             <div className="flex items-center gap-3 mb-3">
               <MyCommerSocialLogo size={46} className="shadow-lg shadow-blue-500/25" />
               <div>
                 <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Connections</h1>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  WA Inbox pakai produk internal. Social + ads full lewat Zernio. Marketplace diparkir dulu supaya launch lebih cepat.
+                  Hubungkan WA Inbox, social media, dan ads dari satu workspace operasional.
                 </p>
               </div>
-            </div>
-            <div className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-semibold ${isDark ? 'bg-slate-900/70 text-gray-200' : 'bg-blue-50 text-blue-700'}`}>
-              <MyMedsosLogo size={18} className="rounded-md" />
-              Mark internal lama tetap ada di dalam produk, tapi bukan lagi identitas utama.
             </div>
           </div>
 
@@ -399,12 +395,12 @@ export default function MedsosConnections() {
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Zernio Profile</p>
               <p className="mt-2 text-2xl font-bold">{zernioLoading ? '...' : 'Ready'}</p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>1 tenant = 1 profile Zernio otomatis</p>
+              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Workspace social dan ads siap dipakai</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Social connected</p>
               <p className="mt-2 text-2xl font-bold">{zernioLoading ? '...' : socialAccounts.length}</p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>semua akun sosial tenant masuk ke wadah yang sama</p>
+              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Akun organik yang aktif di workspace ini</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ads connected</p>
@@ -433,12 +429,12 @@ export default function MedsosConnections() {
             </div>
             <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Social + Ads tenant dipusatkan ke Zernio</h2>
             <p className={`text-sm mt-2 max-w-3xl ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Di belakang layar, MyCommerSocial memakai 1 master API key Zernio milik platform. Saat tenant ini pertama kali membuka halaman Connections, backend otomatis menyiapkan 1 profile Zernio khusus tenant ini. Semua akun social dan ads tenant masuk ke profile tersebut — jadi tidak bercampur dengan customer lain.
+              Semua koneksi social media dan ads dikelola melalui workspace Zernio yang terhubung ke akun bisnis ini.
             </p>
           </div>
           <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-blue-50 text-blue-700'}`}>
-            <p className="text-xs uppercase tracking-[0.18em]">Rule inti</p>
-            <p className="text-sm font-semibold mt-1">1 customer = 1 tenant = 1 profile Zernio</p>
+            <p className="text-xs uppercase tracking-[0.18em]">Workspace</p>
+            <p className="text-sm font-semibold mt-1">1 bisnis, 1 pusat koneksi</p>
           </div>
         </div>
 
@@ -583,7 +579,7 @@ export default function MedsosConnections() {
             <div>
               <p className="font-semibold">Yang diatur MyCommerSocial untuk user baru</p>
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-300' : 'text-blue-900'}`}>
-                User tidak perlu paham profile Zernio, OAuth callback, token refresh, atau app review. Yang mereka lihat hanya tombol Connect. Semua kerumitan itu dipindahkan ke layer platform.
+                Pengguna cukup memilih channel yang ingin diaktifkan. Setup koneksi dan sinkronisasi ditangani oleh sistem.
               </p>
             </div>
           </div>
@@ -598,9 +594,9 @@ export default function MedsosConnections() {
                 <MessageSquareText size={14} />
                 WA Inbox via produk internal
               </div>
-              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Customer Service CRM tetap jadi jalur WhatsApp</h2>
+              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>WA Inbox menggunakan Customer Service CRM</h2>
               <p className={`text-sm mt-2 max-w-3xl ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Untuk WhatsApp, MyCommerSocial tidak lewat Zernio. Jalur WA tetap memakai Customer Service CRM internal. Di halaman ini cukup simpan URL instance dan API key tenant, lalu dashboard lain akan membaca stats dan routing dari situ.
+                Simpan URL instance dan credential workspace agar inbox WhatsApp bisa dipantau dari panel ini.
               </p>
             </div>
             <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-gray-50 text-gray-700'}`}>
@@ -709,11 +705,11 @@ export default function MedsosConnections() {
             <div>
               <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-amber-500/15 text-amber-200' : 'bg-amber-100 text-amber-700'}`}>
                 <ShoppingBag size={14} />
-                Marketplace phase 2
+                Marketplace
               </div>
-              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace ditandai Coming Soon dulu</h2>
+              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace segera hadir</h2>
               <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Fokus launch sekarang adalah WA Inbox + social + ads. Marketplace sengaja diparkir dulu sambil menunggu arah partnership dengan Jubelio supaya fondasi produk tetap rapi.
+                Integrasi marketplace sedang disiapkan. Untuk saat ini fokus utama ada pada WA Inbox, social media, dan ads.
               </p>
             </div>
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-900 text-slate-200' : 'bg-slate-100 text-slate-700'}`}>Coming soon</span>
@@ -721,9 +717,9 @@ export default function MedsosConnections() {
 
           <div className="space-y-3 mb-6">
             {[
-              'Shopee & Tokopedia tetap ada di roadmap, tapi tidak ikut launch wave pertama.',
-              'Setelah kerja sama Jubelio jelas, workflow order, buyer chat, katalog, dan stok baru dipasang rapi.',
-              'Dengan cara ini, user baru tidak pusing karena koneksi utama yang aktif cuma WA + Zernio.',
+              'Shopee dan Tokopedia akan tersedia di modul marketplace terpisah.',
+              'Order queue, buyer chat, katalog, dan sinkronisasi stok akan muncul di halaman ini saat integrasi siap.',
+              'Workspace yang sudah aktif sekarang tetap bisa dipakai tanpa menunggu modul marketplace selesai.',
             ].map((item) => (
               <div key={item} className={`rounded-2xl border p-4 text-sm ${isDark ? 'border-slate-700 bg-slate-900/40 text-gray-300' : 'border-gray-100 bg-gray-50 text-gray-600'}`}>
                 <div className="flex items-start gap-3">
@@ -738,9 +734,9 @@ export default function MedsosConnections() {
             <div className="flex items-start gap-3">
               <Workflow size={18} className="text-blue-500 mt-0.5" />
               <div>
-                <p className="font-semibold">Kesimpulan flow yang dipakai sekarang</p>
+                <p className="font-semibold">Activation checklist</p>
                 <p className={`text-sm mt-1 ${isDark ? 'text-gray-300' : 'text-blue-900'}`}>
-                  User baru cukup fokus menyelesaikan dua hal: <span className="font-semibold">WA Inbox</span> dan <span className="font-semibold">workspace Zernio</span>. Begitu dua ini siap, MyCommerSocial sudah punya alur yang jelas tanpa harus menunggu marketplace beres.
+                  Lengkapi WA Inbox dan hubungkan workspace Zernio untuk mulai memakai inbox, planner, analytics, dan ads workspace.
                 </p>
               </div>
             </div>

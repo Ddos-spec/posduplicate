@@ -242,7 +242,7 @@ export default function MetaAdsControl() {
             <div>
               <h2 className="font-bold text-xl">Workspace snapshot</h2>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Zernio menjadi sumber utama daftar ad account yang terlihat di tenant ini.
+                Daftar ad account aktif ditampilkan dari workspace Zernio yang sedang terhubung.
               </p>
             </div>
           </div>

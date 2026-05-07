@@ -48,20 +48,20 @@ const demoAccounts: ZernioAccount[] = [
 
 const liveFlow = [
   {
-    title: 'Buat akun & tenant',
-    description: 'User masuk ke sistem seperti biasa. Belum perlu memikirkan token, app review, atau profile Zernio.',
+    title: 'Buat workspace',
+    description: 'Workspace bisnis siap dipakai untuk menampung inbox, channel social media, dan ads.',
   },
   {
     title: 'Buka menu Connections',
-    description: 'MyCommerSocial menyiapkan 1 profile Zernio khusus tenant ini dan menunggu user memilih channel yang dibutuhkan.',
+    description: 'Lengkapi WA Inbox dan hubungkan channel yang dibutuhkan dari panel Connections.',
   },
   {
     title: 'Aktifkan WA + Zernio',
-    description: 'WA tetap lewat Customer Service CRM, sedangkan social dan ads dipusatkan ke Zernio.',
+    description: 'WhatsApp menggunakan Customer Service CRM, sedangkan social media dan ads menggunakan Zernio.',
   },
   {
     title: 'Mulai operasional',
-    description: 'Begitu channel terhubung, halaman planner, inbox, analytics, dan ads workspace siap dipakai bertahap.',
+    description: 'Begitu channel terhubung, planner, inbox, analytics, dan ads workspace siap digunakan.',
   },
 ];
 
@@ -156,7 +156,7 @@ export default function MedsosDashboard() {
     {
       label: 'Marketplace',
       value: 'Soon',
-      helper: 'Masih diparkir sampai phase 2',
+      helper: 'Akan tersedia segera',
       icon: ShoppingBag,
     },
   ];
@@ -181,9 +181,9 @@ export default function MedsosDashboard() {
             <div className="flex items-center gap-3 mb-3">
               <MyCommerSocialLogo size={46} className="shadow-lg shadow-blue-500/25" />
               <div>
-                <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>MyCommerSocial sekarang punya jalur yang jelas</h1>
+                <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Workspace overview</h1>
                 <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  WA Inbox lewat Customer Service CRM, social + ads full lewat Zernio, marketplace dipindah ke phase berikutnya.
+                  Pantau status WA Inbox, koneksi social media, dan ads dari satu ringkasan operasional.
                 </p>
               </div>
             </div>
@@ -224,7 +224,7 @@ export default function MedsosDashboard() {
 
       <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
         <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
-          <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Yang sudah aktif di tenant ini</h2>
+          <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Yang sudah aktif di workspace ini</h2>
           <div className="grid md:grid-cols-3 gap-4 mt-6">
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
               <p className="font-semibold">WA Inbox</p>
@@ -236,7 +236,7 @@ export default function MedsosDashboard() {
               <p className="font-semibold">Social via Zernio</p>
               <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 {socialAccounts.length > 0
-                  ? `${socialAccounts.length} akun sosial sudah masuk ke profile tenant ini.`
+                  ? `${socialAccounts.length} akun sosial sudah terhubung ke workspace ini.`
                   : 'Belum ada akun sosial yang dihubungkan.'}
               </p>
             </div>

@@ -55,6 +55,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     kind: 'social',
     connectPlatform: 'linkedin',
     accountPlatforms: ['linkedin'],
+    brand: 'linkedin',
     hint: 'Cocok untuk brand B2B atau personal branding founder.',
   },
   {
@@ -63,6 +64,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     kind: 'social',
     connectPlatform: 'twitter',
     accountPlatforms: ['twitter'],
+    brand: 'x',
     hint: 'Sekali connect, account yang sama bisa dipakai lagi untuk X Ads.',
   },
   {
@@ -71,6 +73,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     kind: 'social',
     connectPlatform: 'threads',
     accountPlatforms: ['threads'],
+    brand: 'threads',
     hint: 'Masuk ke profile Zernio tenant yang sama dengan akun sosial lainnya.',
   },
   {
@@ -79,6 +82,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     kind: 'social',
     connectPlatform: 'bluesky',
     accountPlatforms: ['bluesky'],
+    brand: 'bluesky',
     hint: 'Tetap satu workspace walau channel-nya niche.',
   },
   {
@@ -87,6 +91,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     kind: 'social',
     connectPlatform: 'pinterest',
     accountPlatforms: ['pinterest'],
+    brand: 'pinterest',
     hint: 'Pin organik dan paid Pinterest bisa tinggal satu wadah.',
   },
   {
@@ -95,6 +100,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     kind: 'social',
     connectPlatform: 'reddit',
     accountPlatforms: ['reddit'],
+    brand: 'reddit',
     hint: 'Untuk workflow komunitas dan posting niche.',
   },
   {
@@ -103,6 +109,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     kind: 'social',
     connectPlatform: 'googlebusiness',
     accountPlatforms: ['googlebusiness'],
+    brand: 'googlebusiness',
     hint: 'Aktivasi presence lokal tanpa keluar dari dashboard utama.',
   },
   {
@@ -111,6 +118,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     kind: 'social',
     connectPlatform: null,
     accountPlatforms: ['snapchat'],
+    brand: 'snapchat',
     hint: 'Disiapkan di roadmap Zernio, tapi belum diaktifkan di launch awal ini.',
     soon: true,
   },
@@ -123,7 +131,7 @@ export const zernioAdsPlatforms: ZernioPlatformCard[] = [
     kind: 'ads',
     connectPlatform: 'facebook',
     accountPlatforms: ['metaads'],
-    brand: 'facebook',
+    brand: 'metaads',
     hint: 'Meta Ads dipusatkan ke Zernio, bukan connector terpisah lagi.',
     requirement: 'Hubungkan Facebook Page atau Instagram Business dulu agar Zernio bisa membuat workspace ads-nya.',
   },
@@ -133,6 +141,7 @@ export const zernioAdsPlatforms: ZernioPlatformCard[] = [
     kind: 'ads',
     connectPlatform: 'linkedin',
     accountPlatforms: ['linkedinads'],
+    brand: 'linkedinads',
     hint: 'Aktifkan hanya kalau tenant memang butuh paid B2B.',
     requirement: 'Sebaiknya akun LinkedIn organik sudah terhubung lebih dulu.',
   },
@@ -142,6 +151,7 @@ export const zernioAdsPlatforms: ZernioPlatformCard[] = [
     kind: 'ads',
     connectPlatform: 'pinterest',
     accountPlatforms: ['pinterestads'],
+    brand: 'pinterestads',
     hint: 'Paid discovery dan catalog traffic tetap pakai profile tenant yang sama.',
     requirement: 'Pinterest organik sebaiknya sudah tersambung.',
   },
@@ -161,6 +171,7 @@ export const zernioAdsPlatforms: ZernioPlatformCard[] = [
     kind: 'ads',
     connectPlatform: 'googleads',
     accountPlatforms: ['googleads'],
+    brand: 'googleads',
     hint: 'Search dan Display bisa tetap dikontrol dari command center yang sama.',
   },
   {
@@ -169,6 +180,7 @@ export const zernioAdsPlatforms: ZernioPlatformCard[] = [
     kind: 'ads',
     connectPlatform: 'twitter',
     accountPlatforms: ['xads'],
+    brand: 'xads',
     hint: 'Dipakai bila tenant butuh paid distribution di X.',
     requirement: 'X Ads membutuhkan akun X/Twitter organik yang sudah tersambung.',
   },
