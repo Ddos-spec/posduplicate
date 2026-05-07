@@ -2,10 +2,17 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
 
+async function hasValidOutlet(outletId: number | null | undefined) {
+  if (!outletId) return false;
+  const outlet = await prisma.outlets.findUnique({ where: { id: outletId }, select: { id: true } });
+  return Boolean(outlet);
+}
+
 // Helper: Check and create real-time alerts after stock movement
 async function checkAndCreateAlerts(inventoryId: number, outletId: number) {
   const item = await prisma.inventory.findUnique({ where: { id: inventoryId } });
   if (!item) return;
+  if (!(await hasValidOutlet(outletId))) return;
 
   const currentStock = parseFloat(item.current_stock.toString());
   const minStock = parseFloat(item.min_stock.toString());

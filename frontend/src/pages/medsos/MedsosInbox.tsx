@@ -53,7 +53,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         setStats(statsData);
         const socialHub = hub?.connectors?.find((c: { slug: string }) => c.slug === 'social-hub');
         setConnector(socialHub ?? null);
-        setCrmUrl(socialHub?.vendorWorkspaceUrl ?? null);
+        setCrmUrl(socialHub?.vendorWorkspaceUrl ?? socialHub?.vendorPortalUrl ?? null);
       } catch {
         if (!cancelled) setError('Gagal memuat stats dari WA CRM.');
       } finally {
@@ -82,8 +82,8 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         </h2>
         <p className={`text-sm max-w-md mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           {error
-            ? 'Pastikan instance CRM sedang berjalan dan URL + API key sudah benar di halaman Connections.'
-            : 'Isi URL instance CRM dan API key di halaman Connections untuk mengaktifkan inbox live.'}
+            ? 'Pastikan Customer Service CRM sedang berjalan dan API key workspace sudah benar di halaman Connections.'
+            : 'Isi API key workspace di halaman Connections untuk mengaktifkan inbox live.'}
         </p>
         <button
           onClick={onSetup}
@@ -123,7 +123,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
     { label: 'Workspace', value: connector?.workspaceName || stats.tenant?.company_name || 'Belum diatur' },
     { label: 'Email', value: connector?.vendorWorkspaceEmail || 'Belum diisi' },
     { label: 'Connection ref', value: connector?.connectionRefMasked || 'Belum diisi' },
-    { label: 'URL CRM', value: connector?.vendorWorkspaceUrl || 'Belum diisi' },
+    { label: 'URL CRM', value: connector?.vendorWorkspaceUrl || connector?.vendorPortalUrl || 'Otomatis dari konfigurasi sistem' },
   ];
 
   return (

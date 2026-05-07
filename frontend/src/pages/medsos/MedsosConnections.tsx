@@ -139,7 +139,7 @@ const stepCards = [
   },
   {
     title: '2. Lengkapi WA Inbox',
-    description: 'Simpan URL instance dan credential Customer Service CRM untuk mengaktifkan operasional WhatsApp.',
+    description: 'Masukkan API key Customer Service CRM untuk mengaktifkan operasional WhatsApp.',
   },
   {
     title: '3. Hubungkan social',
@@ -231,7 +231,7 @@ export default function MedsosConnections() {
     setCrmForm((current) => ({
       ...current,
       workspaceName: current.workspaceName || waConnector.workspaceName || '',
-      vendorWorkspaceUrl: current.vendorWorkspaceUrl || waConnector.vendorWorkspaceUrl || '',
+      vendorWorkspaceUrl: current.vendorWorkspaceUrl || waConnector.vendorWorkspaceUrl || waConnector.vendorPortalUrl || '',
       vendorWorkspaceEmail: current.vendorWorkspaceEmail || waConnector.vendorWorkspaceEmail || '',
       notes: current.notes || waConnector.operatorNotes || '',
     }));
@@ -269,8 +269,10 @@ export default function MedsosConnections() {
       || waConnector.status === 'syncing'
       || waConnector.connectionRefMasked
       || waConnector.vendorWorkspaceUrl
+      || waConnector.vendorPortalUrl
     )
   );
+  const waOpenUrl = waConnector?.vendorWorkspaceUrl || waConnector?.vendorPortalUrl || null;
 
   const getConnectedAccount = (platforms: string[]) => {
     const lowered = platforms.map((item) => item.toLowerCase());
@@ -322,22 +324,32 @@ export default function MedsosConnections() {
   };
 
   const handleSaveWa = async () => {
-    if (!crmForm.workspaceName.trim() || !crmForm.vendorWorkspaceUrl.trim()) {
-      toast.error('Workspace name dan URL CRM wajib diisi.');
+    const workspaceName = crmForm.workspaceName.trim() || waConnector?.workspaceName || 'WA Inbox';
+    const connectionId = crmForm.connectionId.trim();
+    const vendorWorkspaceUrl = crmForm.vendorWorkspaceUrl.trim() || waConnector?.vendorWorkspaceUrl || waConnector?.vendorPortalUrl || '';
+
+    if (!connectionId) {
+      toast.error('API key / connection reference wajib diisi.');
       return;
     }
 
     if (isDemo) {
       setWaConnector((current) => current ? {
         ...current,
-        workspaceName: crmForm.workspaceName,
-        vendorWorkspaceUrl: crmForm.vendorWorkspaceUrl,
+        workspaceName,
+        vendorWorkspaceUrl,
         vendorWorkspaceEmail: crmForm.vendorWorkspaceEmail || null,
         operatorNotes: crmForm.notes || null,
         status: 'connected',
         statusLabel: 'Connected',
-        connectionRefMasked: crmForm.connectionId ? 'api_••••demo' : current.connectionRefMasked,
+        connectionRefMasked: 'api_••••demo',
       } : current);
+      setCrmForm((current) => ({
+        ...current,
+        workspaceName,
+        vendorWorkspaceUrl,
+        connectionId,
+      }));
       toast.success('Demo WA Inbox berhasil diperbarui.');
       return;
     }
@@ -345,9 +357,9 @@ export default function MedsosConnections() {
     try {
       setSavingWa(true);
       const updated = await completeMyCommerSocialConnect('social-hub', {
-        connectionId: crmForm.connectionId || undefined,
-        workspaceName: crmForm.workspaceName,
-        vendorWorkspaceUrl: crmForm.vendorWorkspaceUrl,
+        connectionId,
+        workspaceName,
+        vendorWorkspaceUrl: vendorWorkspaceUrl || undefined,
         vendorWorkspaceEmail: crmForm.vendorWorkspaceEmail || undefined,
         notes: crmForm.notes || undefined,
         subscriptionPlan: 'custom',
@@ -355,6 +367,12 @@ export default function MedsosConnections() {
         selectedAssets: [{ id: 'whatsapp', label: 'WhatsApp Inbox', kind: 'whatsapp', status: 'connected' }],
       });
       setWaConnector(updated);
+      setCrmForm((current) => ({
+        ...current,
+        workspaceName,
+        vendorWorkspaceUrl,
+        connectionId,
+      }));
       toast.success('WA Inbox berhasil disimpan.');
       await loadLiveData();
     } catch (error) {
@@ -601,7 +619,7 @@ export default function MedsosConnections() {
               </div>
               <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>WA Inbox menggunakan Customer Service CRM</h2>
               <p className={`text-sm mt-2 max-w-3xl ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Simpan URL instance dan credential workspace agar inbox WhatsApp bisa dipantau dari panel ini.
+                Masukkan API key workspace agar inbox WhatsApp bisa dipantau dari panel ini. URL CRM diambil otomatis dari konfigurasi sistem.
               </p>
             </div>
             <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-gray-50 text-gray-700'}`}>
@@ -635,22 +653,19 @@ export default function MedsosConnections() {
                 className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
-            <label className="space-y-2 md:col-span-2">
+            <div className={`space-y-2 md:col-span-2 rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-gray-50'}`}>
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 URL instance CRM
-                <FieldHelp title="URL instance CRM" description="Alamat panel Customer Service CRM milik workspace ini. Contoh: https://crm.domainanda.com." />
+                <FieldHelp title="URL instance CRM" description="Alamat CRM ditentukan dari konfigurasi sistem, jadi tidak perlu diisi manual oleh user." />
               </span>
-              <input
-                value={crmForm.vendorWorkspaceUrl}
-                onChange={(event) => setCrmForm((current) => ({ ...current, vendorWorkspaceUrl: event.target.value }))}
-                placeholder="https://crm.domainanda.com"
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
-              />
-            </label>
+              <p className={`text-sm break-all ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                {crmForm.vendorWorkspaceUrl || waConnector?.vendorWorkspaceUrl || waConnector?.vendorPortalUrl || 'Otomatis dari konfigurasi sistem'}
+              </p>
+            </div>
             <label className="space-y-2 md:col-span-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 API key / connection reference
-                <FieldHelp title="API key / connection reference" description="Credential atau reference ID dari Customer Service CRM. Nilai ini biasanya diberikan setelah workspace WA aktif." />
+                <FieldHelp title="API key / connection reference" description="Cukup isi API key atau connection reference dari Customer Service CRM. Sistem akan memakai URL CRM yang sudah dikonfigurasi." />
               </span>
               <input
                 value={crmForm.connectionId}
@@ -696,9 +711,9 @@ export default function MedsosConnections() {
               Billing WA tetap custom sesuai produk internal. Dashboard fee MyCommerSocial terpisah dari biaya operasional WA CRM.
             </div>
             <div className="flex gap-3">
-              {waConnector?.vendorWorkspaceUrl ? (
+              {waOpenUrl ? (
                 <a
-                  href={waConnector.vendorWorkspaceUrl}
+                  href={waOpenUrl}
                   target="_blank"
                   rel="noreferrer"
                   className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-900 text-white hover:bg-slate-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
