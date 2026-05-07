@@ -14,7 +14,8 @@ export type ManagedIntegrationBrand =
   | 'tiktok'
   | 'youtube'
   | 'shopee'
-  | 'tokopedia';
+  | 'tokopedia'
+  | 'whatsapp';
 
 export interface ManagedIntegrationChannel {
   brand: ManagedIntegrationBrand;

@@ -78,6 +78,7 @@ export interface WACrmStats {
   todayChats: number;
   todayMessages: number;
   totalUsers: number;
+  agentCount?: number;
   tenant?: { company_name: string; session_id: string | null };
 }
 
@@ -132,8 +133,19 @@ export interface ZernioAccount {
   isActive: boolean;
 }
 
-export async function getZernioConnectUrl(platform: string): Promise<string> {
-  const { data } = await api.get('/medsos/zernio/connect-url', { params: { platform } });
+export async function getZernioConnectUrl(platform: string, returnPath = '/medsos/connections'): Promise<string> {
+  const { data } = await api.get('/medsos/zernio/connect-url', { params: { platform, returnPath } });
+  return (data.data as { authUrl: string }).authUrl;
+}
+
+export async function getZernioAdsConnectUrl(
+  platform: string,
+  accountId?: string,
+  returnPath = '/medsos/ads'
+): Promise<string> {
+  const { data } = await api.get('/medsos/zernio/ads/connect-url', {
+    params: { platform, accountId, returnPath },
+  });
   return (data.data as { authUrl: string }).authUrl;
 }
 

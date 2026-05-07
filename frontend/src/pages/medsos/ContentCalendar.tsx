@@ -65,13 +65,6 @@ function createFallbackBrief(card: typeof plannerCards[number]): CampaignBrief {
   };
 }
 
-const statusToStage: Record<string, string> = {
-  draft: 'draft',
-  scheduled: 'scheduled',
-  published: 'published',
-  failed: 'failed',
-};
-
 function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
   posts: SocialPost[];
   isDark: boolean;
