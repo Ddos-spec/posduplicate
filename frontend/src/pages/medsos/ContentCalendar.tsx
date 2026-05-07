@@ -128,6 +128,7 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
           </div>
           <button
             onClick={() => navigate('/medsos/create')}
+            title="Buka composer untuk membuat post baru"
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
           >
             <Plus size={18} /> New Post
@@ -140,7 +141,7 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
           <CalendarRange size={40} className="mx-auto text-blue-500 mb-4" />
           <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Belum ada post</h2>
           <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Buat post pertama kamu dari menu Create.</p>
-          <button onClick={() => navigate('/medsos/create')} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 text-white px-5 py-3 font-semibold">
+          <button title="Buka composer untuk membuat post pertama" onClick={() => navigate('/medsos/create')} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 text-white px-5 py-3 font-semibold">
             <Plus size={16} /> Create Post
           </button>
         </div>
@@ -169,6 +170,7 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
                         <button
                           onClick={() => handlePublish(post)}
                           disabled={busy === post.id}
+                          title="Publish post ini sekarang"
                           className="text-xs text-blue-500 font-semibold disabled:opacity-60"
                         >
                           {busy === post.id ? '…' : 'Publish'}
@@ -177,6 +179,7 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
                       <button
                         onClick={() => handleDelete(post)}
                         disabled={busy === post.id}
+                        title="Hapus post ini"
                         className="text-xs text-red-400 font-semibold disabled:opacity-60 ml-auto"
                       >
                         Hapus

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
+import FieldHelp from '../../components/medsos/FieldHelp';
 import { getWACrmStats, type WACrmStats } from '../../services/medsosPostsService';
 import { getMyCommerSocialIntegrationHub, type ManagedIntegrationConnector } from '../../services/myCommerSocialIntegrations';
 import {
@@ -86,6 +87,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         </p>
         <button
           onClick={onSetup}
+          title="Buka halaman Connections untuk melengkapi konfigurasi WA"
           className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold"
         >
           <PlugZap size={18} />
@@ -144,18 +146,20 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={onSetup}
+            title="Buka halaman Connections"
             className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
           >
             <Settings size={16} />
             Connections
           </button>
           {crmUrl && (
-            <a
-              href={crmUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-semibold text-sm"
-            >
+          <a
+            href={crmUrl}
+            target="_blank"
+            rel="noreferrer"
+            title="Buka Customer Service CRM di tab baru"
+            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-semibold text-sm"
+          >
               <ExternalLink size={16} />
               Buka CRM
             </a>
@@ -263,7 +267,10 @@ export default function MedsosInbox() {
         <div className="p-4 border-b dark:border-slate-700">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Unified Inbox</p>
+              <div className="flex items-center gap-2">
+                <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Unified Inbox</p>
+                <FieldHelp title="Unified Inbox" description="Area ini dipakai untuk mencari thread, membaca prioritas percakapan, dan menyiapkan balasan." />
+              </div>
               <h2 className="text-lg font-bold">Queue & Response Desk</h2>
             </div>
             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-blue-50 text-blue-600'}`}>
@@ -305,6 +312,7 @@ export default function MedsosInbox() {
             <input
               type="text"
               placeholder="Cari thread / buyer / order..."
+              title="Cari percakapan berdasarkan nama customer, channel, atau referensi order"
               className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
             />
           </div>
@@ -313,6 +321,7 @@ export default function MedsosInbox() {
             {['Channel', 'SLA', 'Assignee', 'Sentiment'].map((filterName) => (
               <button
                 key={filterName}
+                title={`Filter percakapan berdasarkan ${filterName}`}
                 className={`px-3 py-2 rounded-xl border flex items-center justify-between ${isDark ? 'border-slate-600 bg-slate-700 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-600'}`}
               >
                 <span>{filterName}</span>
@@ -330,6 +339,7 @@ export default function MedsosInbox() {
               <button
                 key={chat.id}
                 onClick={() => setSelectedChat(chat)}
+                title={`Buka thread ${chat.customer}`}
                 className={`w-full text-left p-4 border-b transition ${
                   isActive
                     ? isDark ? 'bg-slate-700 border-slate-600' : 'bg-blue-50 border-blue-100'
@@ -387,13 +397,13 @@ export default function MedsosInbox() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button className={`px-3 py-2 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
+            <button title="Pilih staff penanggung jawab thread ini" className={`px-3 py-2 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
               Assign
             </button>
-            <button className={`px-3 py-2 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
+            <button title="Masukkan template balasan cepat" className={`px-3 py-2 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
               Macro
             </button>
-            <button className={`p-2 rounded-xl ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
+            <button title="Lihat aksi tambahan untuk thread ini" className={`p-2 rounded-xl ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
               <MoreVertical size={18} />
             </button>
           </div>
@@ -473,16 +483,17 @@ export default function MedsosInbox() {
             <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{selectedDetail.internalNotes[0]}</p>
           </div>
           <div className={`flex items-center gap-2 rounded-2xl border px-2 py-2 ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
-            <button className="p-2 text-gray-400 hover:text-gray-600"><Paperclip size={20} /></button>
+            <button title="Lampirkan file atau media" className="p-2 text-gray-400 hover:text-gray-600"><Paperclip size={20} /></button>
             <input
               type="text"
               placeholder="Ketik balasan / macro / resolution..."
               value={reply}
               onChange={(e) => setReply(e.target.value)}
+              title="Tulis balasan untuk thread aktif"
               className={`flex-1 bg-transparent outline-none text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}
             />
-            <button className="p-2 text-gray-400 hover:text-gray-600"><Smile size={20} /></button>
-            <button className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
+            <button title="Pilih emoji" className="p-2 text-gray-400 hover:text-gray-600"><Smile size={20} /></button>
+            <button title="Kirim balasan" className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
               <Send size={18} />
             </button>
           </div>

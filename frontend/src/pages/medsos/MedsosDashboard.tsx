@@ -192,6 +192,7 @@ export default function MedsosDashboard() {
           <button
             type="button"
             onClick={() => navigate(isDemo ? '/demo/medsos/connections' : '/medsos/connections')}
+            title="Buka halaman Connections untuk mengatur WA, social media, dan ads"
             className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
           >
             Buka Connections

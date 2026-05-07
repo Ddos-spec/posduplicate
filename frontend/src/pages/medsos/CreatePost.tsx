@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
+import FieldHelp from '../../components/medsos/FieldHelp';
 import { CalendarClock, CheckCircle2, Image as ImageIcon, Loader2, MessageSquareQuote, Send, ShoppingBag, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createPost } from '../../services/medsosPostsService';
@@ -64,10 +65,16 @@ export default function CreatePost() {
           <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Buat campaign / postingan baru</h2>
           <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Frontend-only composer untuk social post, promo marketplace, dan broadcast ops.</p>
         </div>
+
+        <div className="flex items-center gap-2 mb-3">
+          <p className="text-sm font-semibold">Pilih channel</p>
+          <FieldHelp title="Pilih channel" description="Tentukan channel tujuan untuk menyesuaikan gaya preview, kebutuhan caption, dan jenis campaign." />
+        </div>
         
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button 
             onClick={() => setPlatform('instagram')}
+            title="Gunakan format post untuk Instagram Feed"
             className={`flex-1 py-3 rounded-xl font-bold border-2 transition-all ${
               platform === 'instagram' 
                 ? 'border-purple-500 bg-purple-50 text-purple-700' 
@@ -81,6 +88,7 @@ export default function CreatePost() {
           </button>
           <button 
             onClick={() => setPlatform('tiktok')}
+            title="Gunakan format post untuk TikTok atau Reels"
             className={`flex-1 py-3 rounded-xl font-bold border-2 transition-all ${
               platform === 'tiktok' 
                 ? 'border-black bg-gray-100 text-black' 
@@ -94,6 +102,7 @@ export default function CreatePost() {
           </button>
           <button 
             onClick={() => setPlatform('shopee')}
+            title="Gunakan format campaign untuk Shopee"
             className={`flex-1 py-3 rounded-xl font-bold border-2 transition-all ${
               platform === 'shopee'
                 ? 'border-orange-500 bg-orange-50 text-orange-700'
@@ -107,6 +116,7 @@ export default function CreatePost() {
           </button>
           <button 
             onClick={() => setPlatform('tokopedia')}
+            title="Gunakan format broadcast untuk Tokopedia"
             className={`flex-1 py-3 rounded-xl font-bold border-2 transition-all ${
               platform === 'tokopedia'
                 ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
@@ -122,7 +132,7 @@ export default function CreatePost() {
 
         <div className={`border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center cursor-pointer transition-colors mb-6 ${
           isDark ? 'border-slate-600 hover:border-slate-500 bg-slate-700/30' : 'border-gray-300 hover:border-blue-400 bg-gray-50'
-        }`}>
+        }`} title="Area upload aset utama seperti hero image, thumbnail, atau promo card.">
           <ImageIcon className={`w-10 h-10 mb-2 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
           <p className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Drag & drop aset hero / thumbnail / promo card</p>
           <p className="text-xs text-gray-400 mt-1">Semuanya masih dummy, tapi layout finalnya sudah dipoles</p>
@@ -133,6 +143,7 @@ export default function CreatePost() {
             <div className="flex items-center gap-2 mb-2">
               <CalendarClock size={16} className="text-blue-500" />
               <p className="font-semibold text-sm">Jadwal Publish</p>
+              <FieldHelp title="Jadwal publish" description="Isi waktu tayang jika post ingin dijadwalkan. Jika dikosongkan, item akan tetap tersimpan sebagai draft." />
             </div>
             {isDemo ? (
               <>
@@ -152,6 +163,7 @@ export default function CreatePost() {
             <div className="flex items-center gap-2 mb-2">
               <MessageSquareQuote size={16} className="text-purple-500" />
               <p className="font-semibold text-sm">Objective</p>
+              <FieldHelp title="Objective" description="Tujuan campaign ini. Gunakan sebagai pengingat singkat untuk arah CTA dan target hasil." />
             </div>
             <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Awareness + reply conversion ke WhatsApp sales</p>
             <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>CTA, offer, dan audience masih mock</p>
@@ -159,10 +171,15 @@ export default function CreatePost() {
         </div>
 
         <div className="flex-1 relative">
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-sm font-semibold">Caption / message</p>
+            <FieldHelp title="Caption / message" description="Tulis caption, broadcast, atau template pesan yang akan dipakai di channel terpilih." />
+          </div>
           <textarea
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             placeholder="Tulis caption, broadcast, atau buyer message template..."
+            title="Isi caption atau pesan utama untuk campaign ini."
             className={`w-full h-full p-4 rounded-xl border resize-none outline-none focus:ring-2 focus:ring-blue-500 ${
               isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900'
             }`}
@@ -186,6 +203,7 @@ export default function CreatePost() {
           <button
             onClick={handleSaveDraft}
             disabled={saving}
+            title="Simpan post sebagai draft tanpa menjadwalkan tayang"
             className={`px-6 py-3 rounded-xl font-bold border disabled:opacity-60 ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save Draft'}
@@ -193,6 +211,7 @@ export default function CreatePost() {
           <button
             onClick={handleQueue}
             disabled={saving}
+            title="Simpan dan masukkan campaign ke antrean publish"
             className="px-6 py-3 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Queue Campaign</>}

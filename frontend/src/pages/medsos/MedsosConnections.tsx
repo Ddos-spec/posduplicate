@@ -483,6 +483,7 @@ export default function MedsosConnections() {
                         <button
                           type="button"
                           onClick={() => handleDisconnect(account)}
+                          title={`Putuskan ${platform.label} dari workspace`}
                           className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'bg-slate-900 text-rose-300 hover:bg-rose-950/40' : 'bg-rose-50 text-rose-600 hover:bg-rose-100'}`}
                         >
                           <Unplug size={15} />
@@ -493,6 +494,7 @@ export default function MedsosConnections() {
                           type="button"
                           disabled={!platform.connectPlatform || platform.soon || busy}
                           onClick={() => platform.connectPlatform && handleSocialConnect(platform.connectPlatform)}
+                          title={`Hubungkan ${platform.label} ke workspace Zernio`}
                           className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busy ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
@@ -550,6 +552,7 @@ export default function MedsosConnections() {
                         <button
                           type="button"
                           onClick={() => handleDisconnect(account)}
+                          title={`Putuskan ${platform.label} dari workspace`}
                           className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'bg-slate-900 text-rose-300 hover:bg-rose-950/40' : 'bg-rose-50 text-rose-600 hover:bg-rose-100'}`}
                         >
                           <Unplug size={15} />
@@ -560,6 +563,7 @@ export default function MedsosConnections() {
                           type="button"
                           disabled={!platform.connectPlatform || busy}
                           onClick={() => platform.connectPlatform && handleAdsConnect(platform.connectPlatform)}
+                          title={`Hubungkan ${platform.label} ke workspace Zernio`}
                           className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busy ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
@@ -707,6 +711,7 @@ export default function MedsosConnections() {
                 type="button"
                 onClick={handleSaveWa}
                 disabled={savingWa || loading}
+                title="Simpan konfigurasi workspace WA"
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {savingWa ? <Loader2 size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
