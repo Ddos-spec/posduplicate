@@ -1,10 +1,18 @@
 import type { ReactNode } from 'react';
 import {
+  siBluesky,
   siFacebook,
+  siGoogleads,
   siInstagram,
+  siMeta,
+  siPinterest,
+  siReddit,
   siShopee,
+  siSnapchat,
   siTiktok,
+  siThreads,
   siWhatsapp,
+  siX,
   siYoutube,
   type SimpleIcon,
 } from 'simple-icons';
@@ -16,7 +24,21 @@ export type BrandKey =
   | 'youtube'
   | 'shopee'
   | 'tokopedia'
-  | 'whatsapp';
+  | 'whatsapp'
+  | 'linkedin'
+  | 'threads'
+  | 'bluesky'
+  | 'pinterest'
+  | 'reddit'
+  | 'x'
+  | 'metaads'
+  | 'googleads'
+  | 'linkedinads'
+  | 'pinterestads'
+  | 'tiktokads'
+  | 'xads'
+  | 'googlebusiness'
+  | 'snapchat';
 
 type BrandLogoProps = {
   brand: BrandKey;
@@ -32,6 +54,17 @@ const iconMap: Partial<Record<BrandKey, SimpleIcon>> = {
   youtube: siYoutube,
   shopee: siShopee,
   whatsapp: siWhatsapp,
+  threads: siThreads,
+  bluesky: siBluesky,
+  pinterest: siPinterest,
+  reddit: siReddit,
+  x: siX,
+  metaads: siMeta,
+  googleads: siGoogleads,
+  pinterestads: siPinterest,
+  tiktokads: siTiktok,
+  xads: siX,
+  snapchat: siSnapchat,
 };
 
 const brandStyles: Record<BrandKey, { bg: string; fg?: string }> = {
@@ -42,6 +75,20 @@ const brandStyles: Record<BrandKey, { bg: string; fg?: string }> = {
   shopee: { bg: '#EE4D2D' },
   tokopedia: { bg: '#FFFFFF' },
   whatsapp: { bg: '#25D366' },
+  linkedin: { bg: '#0A66C2', fg: '#FFFFFF' },
+  threads: { bg: '#101010', fg: '#FFFFFF' },
+  bluesky: { bg: '#0285FF', fg: '#FFFFFF' },
+  pinterest: { bg: '#E60023', fg: '#FFFFFF' },
+  reddit: { bg: '#FF4500', fg: '#FFFFFF' },
+  x: { bg: '#111111', fg: '#FFFFFF' },
+  metaads: { bg: '#1877F2', fg: '#FFFFFF' },
+  googleads: { bg: '#FFFFFF' },
+  linkedinads: { bg: '#0A66C2', fg: '#FFFFFF' },
+  pinterestads: { bg: '#E60023', fg: '#FFFFFF' },
+  tiktokads: { bg: '#111111', fg: '#FFFFFF' },
+  xads: { bg: '#111111', fg: '#FFFFFF' },
+  googlebusiness: { bg: '#FFFFFF' },
+  snapchat: { bg: '#FFFC00', fg: '#111111' },
 };
 
 function renderInner(brand: BrandKey, size: number): ReactNode {
@@ -53,6 +100,28 @@ function renderInner(brand: BrandKey, size: number): ReactNode {
         className="block"
         style={{ height: size * 0.46, width: 'auto', maxWidth: size * 1.8 }}
       />
+    );
+  }
+
+  if (brand === 'linkedin' || brand === 'linkedinads') {
+    return (
+      <span
+        className="block font-black lowercase"
+        style={{ color: '#FFFFFF', fontSize: size * 0.42, lineHeight: 1 }}
+      >
+        in
+      </span>
+    );
+  }
+
+  if (brand === 'googlebusiness') {
+    return (
+      <span
+        className="block font-black"
+        style={{ color: '#1A73E8', fontSize: size * 0.42, lineHeight: 1 }}
+      >
+        G
+      </span>
     );
   }
 
@@ -104,6 +173,21 @@ export function resolveBrandKey(input: string): BrandKey {
   if (value.includes('shopee')) return 'shopee';
   if (value.includes('tokopedia')) return 'tokopedia';
   if (value.includes('whatsapp')) return 'whatsapp';
+  if (value.includes('linkedin ads')) return 'linkedinads';
+  if (value.includes('linkedin')) return 'linkedin';
+  if (value.includes('threads')) return 'threads';
+  if (value.includes('bluesky')) return 'bluesky';
+  if (value.includes('pinterest ads')) return 'pinterestads';
+  if (value.includes('pinterest')) return 'pinterest';
+  if (value.includes('reddit')) return 'reddit';
+  if (value.includes('google business')) return 'googlebusiness';
+  if (value.includes('google ads')) return 'googleads';
+  if (value.includes('meta ads')) return 'metaads';
+  if (value.includes('tiktok ads')) return 'tiktokads';
+  if (value.includes('x ads')) return 'xads';
+  if (value.includes('twitter')) return 'x';
+  if (value === 'x') return 'x';
+  if (value.includes('snapchat')) return 'snapchat';
 
   return 'instagram';
 }

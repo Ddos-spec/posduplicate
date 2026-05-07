@@ -45,8 +45,8 @@ function createFallbackBrief(card: typeof plannerCards[number]): CampaignBrief {
   return {
     id: card.id,
     title: card.title,
-    objective: `UI placeholder untuk ${card.title}. Brief detail final bisa diikat ke backend nanti.`,
-    audience: 'Segment akan ditentukan saat wiring backend dan campaign service.',
+    objective: `Ringkasan kerja untuk ${card.title}. Brief dapat disesuaikan lagi sebelum tayang.`,
+    audience: 'Segment utama dapat dilengkapi sesuai target campaign.',
     owner: card.owner,
     reviewer: card.reviewer,
     deadline: card.deadline,
@@ -59,7 +59,7 @@ function createFallbackBrief(card: typeof plannerCards[number]): CampaignBrief {
       { label: 'Asset final lengkap', done: card.stage === 'published' || card.stage === 'scheduled' },
     ],
     comments: [
-      { author: card.updatedBy.split('•')[0].trim(), text: 'Versi detail akan mengikuti implementasi backend berikutnya.', time: 'baru saja' },
+      { author: card.updatedBy.split('•')[0].trim(), text: 'Brief siap dilengkapi sebelum campaign dipublikasikan.', time: 'baru saja' },
     ],
     updatedBy: card.updatedBy,
   };
@@ -248,7 +248,7 @@ export default function ContentCalendar() {
             </div>
             <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner kampanye yang terasa seperti alat kerja tim sungguhan</h1>
             <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Di sini pipeline, reviewer, asset, preview channel, dan approval chain sudah dibuat hidup dulu sebelum backend dipasang.
+              Kelola pipeline, reviewer, asset, preview channel, dan approval campaign dari satu workspace.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -409,7 +409,7 @@ export default function ContentCalendar() {
                       </div>
                       <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
                         <p className="text-sm font-medium">{selectedBrief.title}</p>
-                        <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Goal {selectedCard.goal} • CTA disesuaikan per channel saat backend hidup.</p>
+                        <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Goal {selectedCard.goal} • CTA dapat disesuaikan untuk tiap channel.</p>
                       </div>
                     </div>
                   ))}

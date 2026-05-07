@@ -1,20 +1,20 @@
 import { useThemeStore } from '../../store/themeStore';
-import { Clock3, Handshake, ShoppingBag, Store } from 'lucide-react';
+import { Clock3, MessageCircleMore, ShoppingBag, Store } from 'lucide-react';
 
-const roadmap = [
+const highlights = [
   {
-    title: 'Jubelio partnership in progress',
-    description: 'Marketplace sengaja diparkir dulu sambil menunggu bentuk kerja sama dengan Jubelio benar-benar jelas.',
-    icon: Handshake,
+    title: 'Marketplace sedang disiapkan',
+    description: 'Integrasi marketplace akan hadir sebagai modul terpisah dengan alur order, katalog, dan buyer chat yang rapi.',
+    icon: Store,
   },
   {
-    title: 'Order + buyer chat nanti satu jalur',
-    description: 'Begitu partnership siap, order sync, buyer chat, katalog, dan stok akan masuk sebagai phase 2.',
-    icon: ShoppingBag,
+    title: 'Buyer chat & order ops',
+    description: 'Halaman ini nantinya menampung order queue, buyer chat, issue center, dan pemantauan katalog.',
+    icon: MessageCircleMore,
   },
   {
-    title: 'Launch wave pertama tetap fokus',
-    description: 'Untuk sekarang user baru cukup menyelesaikan WA Inbox dan Zernio agar onboarding tidak membingungkan.',
+    title: 'Status peluncuran',
+    description: 'Sambil modul marketplace disiapkan, operasional utama tetap berjalan di WA Inbox, social media, dan ads.',
     icon: Clock3,
   },
 ];
@@ -31,20 +31,20 @@ export default function MarketplaceControl() {
               <Store size={14} />
               Marketplace • coming soon
             </div>
-            <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace sengaja belum diaktifkan</h1>
+            <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace akan hadir di modul ini</h1>
             <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Di fase ini MyCommerSocial difokuskan dulu ke WA Inbox, social media, dan ads. Marketplace tidak dipaksakan ikut launch supaya fondasi produk tetap rapi.
+              Halaman marketplace akan dipakai untuk mengelola order, buyer chat, sinkronisasi katalog, dan pengecekan issue operasional.
             </p>
           </div>
           <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-gray-50 text-gray-700'}`}>
             <p className="text-xs uppercase tracking-[0.18em]">Status</p>
-            <p className="font-semibold text-sm mt-1">Roadmap phase 2</p>
+            <p className="font-semibold text-sm mt-1">Coming soon</p>
           </div>
         </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
-        {roadmap.map((item) => (
+        {highlights.map((item) => (
           <div key={item.title} className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
             <div className={`inline-flex rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-amber-300' : 'bg-amber-50 text-amber-700'}`}>
               <item.icon size={18} />
@@ -56,16 +56,19 @@ export default function MarketplaceControl() {
       </div>
 
       <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Apa yang nanti masuk saat marketplace dibuka?</h2>
+        <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Yang akan tersedia</h2>
         <div className="grid md:grid-cols-2 gap-4 mt-6">
           {[
-            'Shopee, Tokopedia, dan buyer chat marketplace masuk lewat jalur partner yang resmi.',
-            'Order queue, issue center, dan catalog health baru dihidupkan setelah integrasinya stabil.',
-            'Tidak ada setup separuh jadi — begitu modul marketplace dibuka, user langsung dapat flow yang rapi.',
-            'Sampai itu tiba, halaman ini sengaja dijaga sederhana agar tidak membingungkan user baru.',
+            'Buyer chat dan order queue dalam satu panel operasional.',
+            'Pemantauan katalog, stok, dan issue listing per channel.',
+            'Status pengiriman, pembatalan, dan refund dalam tampilan yang ringkas.',
+            'Sinkronisasi marketplace akan mengikuti alur aktivasi resmi saat modul dibuka.',
           ].map((line) => (
             <div key={line} className={`rounded-2xl border p-4 text-sm ${isDark ? 'border-slate-700 bg-slate-900/40 text-gray-300' : 'border-gray-100 bg-gray-50 text-gray-600'}`}>
-              {line}
+              <div className="flex items-start gap-3">
+                <ShoppingBag size={16} className="text-amber-500 mt-0.5" />
+                <span>{line}</span>
+              </div>
             </div>
           ))}
         </div>
