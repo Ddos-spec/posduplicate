@@ -96,6 +96,8 @@ export interface UpdateSettingsData {
   cashierSecurity?: Partial<CashierSecuritySettings> & { supervisorPin?: string };
   printerRouting?: PrinterRoutingSettings;
   accountingSettings?: AccountingSettings;
+  myCommerSocialSettings?: unknown;
+  myCommerSocialSettingsSavedAt?: string;
 }
 
 export interface AuthorizeSupervisorActionData {

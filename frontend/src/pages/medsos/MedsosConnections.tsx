@@ -12,9 +12,11 @@ import {
 } from '../../services/myCommerSocialIntegrations';
 import {
   disconnectZernioAccount,
+  getWACrmStatus,
   getZernioAccounts,
   getZernioAdsConnectUrl,
   getZernioConnectUrl,
+  type WACrmConnectionStatus,
   type ZernioAccount,
 } from '../../services/medsosPostsService';
 import { isZernioAdsAccount, zernioAdsPlatforms, zernioSocialPlatforms } from '../../data/zernioCatalog';
@@ -190,6 +192,7 @@ export default function MedsosConnections() {
   const [loading, setLoading] = useState(!isDemo);
   const [savingWa, setSavingWa] = useState(false);
   const [waConnector, setWaConnector] = useState<ManagedIntegrationConnector | null>(isDemo ? demoWaConnector : null);
+  const [waStatus, setWaStatus] = useState<WACrmConnectionStatus | null>(null);
   const [crmForm, setCrmForm] = useState<CrmFormState>(() => (
     isDemo
       ? {
@@ -217,6 +220,13 @@ export default function MedsosConnections() {
       const socialHub = hub.connectors.find((connector) => connector.slug === 'social-hub') || null;
       setWaConnector(socialHub);
       setZernioAccounts(accounts);
+      try {
+        const status = await getWACrmStatus();
+        setWaStatus(status);
+      } catch (statusError) {
+        console.error('Failed to load WA live status', statusError);
+        setWaStatus(null);
+      }
     } catch (error) {
       console.error('Failed to load MyCommerSocial connections', error);
       toast.error('Gagal memuat konfigurasi connections.');
@@ -282,6 +292,21 @@ export default function MedsosConnections() {
       || waConnector.vendorPortalUrl
     )
   );
+  const waState = useMemo(() => {
+    if (isDemo) {
+      return { card: 'Ready', label: 'Connected ke workspace CRM', helper: 'Demo workspace aktif' };
+    }
+    if (waStatus?.reachable) {
+      return { card: 'Ready', label: 'Connected ke workspace CRM', helper: 'WA CRM merespons dan siap dipakai' };
+    }
+    if (waStatus?.configured) {
+      return { card: 'Check', label: 'Perlu dicek', helper: waStatus.message || 'Konfigurasi WA ada, tetapi CRM belum merespons' };
+    }
+    if (waReady) {
+      return { card: 'Saved', label: 'Tersimpan', helper: 'API key sudah ada, menunggu validasi live' };
+    }
+    return { card: 'Setup', label: 'Belum dikonfigurasi', helper: 'Simpan API key workspace untuk menyalakan WA Inbox' };
+  }, [isDemo, waStatus, waReady]);
   const waOpenUrl = waConnector?.vendorPortalUrl || waConnector?.vendorWorkspaceUrl || null;
 
   const getConnectedAccount = (platforms: string[]) => {
@@ -421,8 +446,8 @@ export default function MedsosConnections() {
           <div className="grid sm:grid-cols-2 gap-3 min-w-[280px]">
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>WA Inbox</p>
-              <p className="mt-2 text-2xl font-bold">{waReady ? 'Ready' : 'Setup'}</p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Customer Service CRM untuk WhatsApp</p>
+              <p className="mt-2 text-2xl font-bold">{waState.card}</p>
+              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{waState.helper}</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Zernio Profile</p>
@@ -637,7 +662,7 @@ export default function MedsosConnections() {
             </div>
             <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-gray-50 text-gray-700'}`}>
               <p className="text-xs uppercase tracking-[0.18em]">Status</p>
-              <p className="font-semibold text-sm mt-1">{waReady ? 'Connected ke workspace CRM' : 'Belum dikonfigurasi'}</p>
+              <p className="font-semibold text-sm mt-1">{waState.label}</p>
             </div>
           </div>
 

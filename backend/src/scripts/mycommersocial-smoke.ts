@@ -26,6 +26,11 @@ type SocialHubStatus = {
   message: string;
 };
 
+type SettingsEnvelope = {
+  myCommerSocialSettings?: unknown;
+  myCommerSocialSettingsSavedAt?: string;
+};
+
 function readBool(name: string, fallback = false): boolean {
   const value = String(process.env[name] || '').trim().toLowerCase();
   if (!value) return fallback;
@@ -107,6 +112,15 @@ async function main() {
     detail: `Tenant ${String(tenant.data?.business_name || tenant.data?.company_name || tenant.data?.id || 'aktif')}`,
   });
 
+  const settings = await requestJson<SettingsEnvelope & JsonRecord>(baseUrl, '/api/settings', { headers: authHeaders });
+  checks.push({
+    level: 'PASS',
+    name: 'Workspace settings',
+    detail: settings.data?.myCommerSocialSettings
+      ? 'Settings workspace MyCommerSocial sudah tersedia di tenant settings.'
+      : 'Endpoint settings hidup; workspace settings belum pernah disimpan dari halaman Settings.',
+  });
+
   const hub = await requestJson<{ connectors?: JsonRecord[] }>(baseUrl, '/api/medsos/integrations/hub', { headers: authHeaders });
   const connectors = Array.isArray(hub.data?.connectors) ? hub.data?.connectors || [] : [];
   const socialHub = connectors.find((item) => item.slug === 'social-hub');
@@ -168,6 +182,23 @@ async function main() {
       detail: adsAccounts.length > 0 ? `${adsAccounts.length} akun ads terhubung.` : 'Belum ada akun ads terhubung di Zernio.',
     });
   }
+
+  const adsSummary = await requestJson<JsonRecord | null>(baseUrl, '/api/medsos/zernio/ads/summary', { headers: authHeaders });
+  checks.push({
+    level: adsSummary.data ? 'PASS' : (expectAdsAccount ? 'FAIL' : 'WARN'),
+    name: 'Ads summary route',
+    detail: adsSummary.data
+      ? `Ads summary tersedia${adsSummary.data?.campaigns ? ` (${(adsSummary.data.campaigns as unknown[]).length} campaign)` : ''}.`
+      : 'Belum ada data ads summary yang bisa ditampilkan.',
+  });
+
+  const posts = await requestJson<JsonRecord[] | null>(baseUrl, '/api/medsos/posts', { headers: authHeaders });
+  const postsCount = Array.isArray(posts.data) ? posts.data.length : 0;
+  checks.push({
+    level: 'PASS',
+    name: 'Posts route',
+    detail: `${postsCount} post terbaca dari modul medsos.`,
+  });
 
   console.log('\nMyCommerSocial smoke check');
   console.log(`Base URL : ${baseUrl}`);

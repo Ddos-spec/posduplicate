@@ -7,7 +7,7 @@ import {
   getMyCommerSocialIntegrationHub,
   type ManagedIntegrationConnector,
 } from '../../services/myCommerSocialIntegrations';
-import { getZernioAccounts, type ZernioAccount } from '../../services/medsosPostsService';
+import { getWACrmStatus, getZernioAccounts, type WACrmConnectionStatus, type ZernioAccount } from '../../services/medsosPostsService';
 import { isZernioAdsAccount } from '../../data/zernioCatalog';
 import {
   ArrowRight,
@@ -97,6 +97,7 @@ export default function MedsosDashboard() {
 
   const [loading, setLoading] = useState(!isDemo);
   const [waConnector, setWaConnector] = useState<ManagedIntegrationConnector | null>(null);
+  const [waStatus, setWaStatus] = useState<WACrmConnectionStatus | null>(null);
   const [accounts, setAccounts] = useState<ZernioAccount[]>(isDemo ? demoAccounts : []);
 
   useEffect(() => {
@@ -110,6 +111,13 @@ export default function MedsosDashboard() {
         ]);
         setWaConnector(hub.connectors.find((item) => item.slug === 'social-hub') || null);
         setAccounts(zernioAccounts);
+        try {
+          const status = await getWACrmStatus();
+          setWaStatus(status);
+        } catch (statusError) {
+          console.error('Failed to load WA CRM status', statusError);
+          setWaStatus(null);
+        }
       } catch (error) {
         console.error('Failed to load dashboard workspace summary', error);
       } finally {
@@ -129,16 +137,30 @@ export default function MedsosDashboard() {
     [accounts]
   );
 
-  const waReady = useMemo(
-    () => isDemo || Boolean(waConnector?.vendorWorkspaceUrl || waConnector?.connectionRefMasked || waConnector?.status === 'connected'),
-    [isDemo, waConnector]
+  const waState = useMemo(
+    () => {
+      if (isDemo) {
+        return { label: 'Ready', helper: 'Customer Service CRM internal' };
+      }
+      if (waStatus?.reachable) {
+        return { label: 'Ready', helper: 'WA CRM merespons dan stats live aktif' };
+      }
+      if (waStatus?.configured) {
+        return { label: 'Check', helper: waStatus.message || 'Konfigurasi ada, tetapi koneksi perlu dicek' };
+      }
+      if (waConnector?.connectionRefMasked || waConnector?.status === 'connected') {
+        return { label: 'Check', helper: 'Konfigurasi tersimpan, menunggu validasi CRM' };
+      }
+      return { label: 'Setup', helper: 'Customer Service CRM untuk WhatsApp' };
+    },
+    [isDemo, waStatus, waConnector]
   );
 
   const quickStatus = [
     {
       label: 'WA Inbox',
-      value: waReady ? 'Ready' : 'Setup',
-      helper: 'Customer Service CRM internal',
+      value: waState.label,
+      helper: waState.helper,
       icon: MessageSquareText,
     },
     {
@@ -228,9 +250,13 @@ export default function MedsosDashboard() {
           <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Yang sudah aktif di workspace ini</h2>
           <div className="grid md:grid-cols-3 gap-4 mt-6">
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-              <p className="font-semibold">WA Inbox</p>
-              <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {waReady ? 'Workspace CRM sudah siap dipakai dari inbox live.' : 'Belum ada URL/API key CRM yang disimpan.'}
+                  <p className="font-semibold">WA Inbox</p>
+                  <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {waStatus?.reachable
+                  ? 'Workspace CRM sudah siap dipakai dari inbox live.'
+                  : waStatus?.configured
+                    ? waStatus.message || 'Konfigurasi WA ada, tetapi koneksi live perlu dicek.'
+                    : 'Belum ada API key CRM yang disimpan.'}
               </p>
             </div>
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
