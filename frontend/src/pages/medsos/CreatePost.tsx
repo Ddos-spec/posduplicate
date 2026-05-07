@@ -3,9 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { CalendarClock, CheckCircle2, Image as ImageIcon, Loader2, MessageSquareQuote, Send, ShoppingBag, Sparkles } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Image as ImageIcon, Loader2, MessageSquareQuote, Send, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createPost } from '../../services/medsosPostsService';
+import type { PostPlatform } from '../../services/medsosPostsService';
 
 export default function CreatePost() {
   const { isDark } = useThemeStore();
@@ -13,18 +14,16 @@ export default function CreatePost() {
   const navigate = useNavigate();
   const isDemo = location.pathname.startsWith('/demo');
   const [caption, setCaption] = useState('');
-  const [platform, setPlatform] = useState<'instagram' | 'tiktok' | 'shopee' | 'tokopedia'>('instagram');
+  const [platform, setPlatform] = useState<PostPlatform>('instagram');
   const [scheduledAt, setScheduledAt] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const apiPlatform = (platform === 'shopee' || platform === 'tokopedia') ? 'instagram' : platform as 'instagram' | 'tiktok';
 
   const handleSaveDraft = async () => {
     if (isDemo) { toast.success('Draft disimpan (demo)'); return; }
     if (!caption.trim()) { toast.error('Caption tidak boleh kosong'); return; }
     setSaving(true);
     try {
-      await createPost({ content: caption, platform: apiPlatform, status: 'draft' });
+      await createPost({ content: caption, platform, status: 'draft' });
       toast.success('Draft disimpan');
       navigate('/medsos/calendar');
     } catch {
@@ -41,7 +40,7 @@ export default function CreatePost() {
     try {
       await createPost({
         content: caption,
-        platform: apiPlatform,
+        platform,
         status: scheduledAt ? 'scheduled' : 'draft',
         scheduledAt: scheduledAt || undefined,
       });
@@ -62,8 +61,11 @@ export default function CreatePost() {
             <Sparkles size={14} />
             Composer mockup
           </div>
-          <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Buat campaign / postingan baru</h2>
-          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Frontend-only composer untuk social post, promo marketplace, dan broadcast ops.</p>
+          <div className="flex items-center gap-2">
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Buat campaign / postingan baru</h2>
+            <FieldHelp title="Composer post" description="Composer ini dipakai untuk menyiapkan draft atau jadwal publish ke channel social yang aktif. Marketplace belum ikut dari halaman ini karena modulnya masih coming soon." />
+          </div>
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Composer untuk social post tenant yang akan diteruskan ke workflow planner dan publishing.</p>
         </div>
 
         <div className="flex items-center gap-2 mb-3">
@@ -101,31 +103,17 @@ export default function CreatePost() {
             </div>
           </button>
           <button 
-            onClick={() => setPlatform('shopee')}
-            title="Gunakan format campaign untuk Shopee"
+            onClick={() => setPlatform('facebook')}
+            title="Gunakan format post untuk Facebook Page"
             className={`flex-1 py-3 rounded-xl font-bold border-2 transition-all ${
-              platform === 'shopee'
-                ? 'border-orange-500 bg-orange-50 text-orange-700'
+              platform === 'facebook'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
                 : isDark ? 'border-slate-600 text-gray-400' : 'border-gray-200 text-gray-500'
             }`}
           >
             <div className="flex items-center justify-center gap-2">
-              <BrandLogo brand="shopee" size={22} className="rounded-lg" />
-              <span>Shopee Campaign</span>
-            </div>
-          </button>
-          <button 
-            onClick={() => setPlatform('tokopedia')}
-            title="Gunakan format broadcast untuk Tokopedia"
-            className={`flex-1 py-3 rounded-xl font-bold border-2 transition-all ${
-              platform === 'tokopedia'
-                ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                : isDark ? 'border-slate-600 text-gray-400' : 'border-gray-200 text-gray-500'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <BrandLogo brand="tokopedia" size={22} className="rounded-lg px-1" withRing />
-              <span>Tokopedia Broadcast</span>
+              <BrandLogo brand="facebook" size={22} className="rounded-lg" />
+              <span>Facebook Page</span>
             </div>
           </button>
         </div>
@@ -195,7 +183,7 @@ export default function CreatePost() {
             <p>• Visual hero sudah aman untuk semua rasio</p>
             <p>• CTA mengarah ke channel yang benar</p>
             <p>• Tone copy sesuai persona brand</p>
-            <p>• Promo marketplace sinkron dengan banner</p>
+            <p>• Jadwal publish cocok dengan kebutuhan campaign</p>
           </div>
         </div>
 
@@ -233,10 +221,10 @@ export default function CreatePost() {
                   withRing
                 />
                 <span className="font-bold text-sm">
-                  {platform === 'instagram' ? 'Instagram' : platform === 'tiktok' ? 'TikTok' : platform === 'shopee' ? 'Shopee' : 'Tokopedia'}
+                  {platform === 'instagram' ? 'Instagram' : platform === 'tiktok' ? 'TikTok' : 'Facebook'}
                 </span>
               </div>
-              {platform === 'shopee' || platform === 'tokopedia' ? <ShoppingBag size={18} className="text-gray-500" /> : <div className="w-6 h-6 rounded-full bg-gray-200"></div>}
+              <div className="w-6 h-6 rounded-full bg-gray-200"></div>
             </div>
 
             <div className={`w-full ${platform === 'instagram' ? 'aspect-square' : 'flex-1'} bg-gray-200 flex items-center justify-center text-gray-400`}>
@@ -244,29 +232,14 @@ export default function CreatePost() {
             </div>
 
             <div className="p-3 bg-white flex-1 overflow-y-auto">
-              {platform === 'shopee' || platform === 'tokopedia' ? (
-                <>
-                  <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 mb-3">
-                    <p className="text-xs font-semibold text-orange-700">Voucher Payday</p>
-                    <p className="text-[11px] text-orange-600">Diskon 15% + gratis ongkir</p>
-                  </div>
-                  <p className="text-xs text-gray-800 font-semibold mb-1">Broadcast Preview</p>
-                  <p className="text-xs text-gray-700">
-                    {caption || 'Halo kak, stok seasonal blend sudah ready. Bisa checkout hari ini untuk bonus sample pack.'}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="flex gap-3 mb-2">
-                    <HeartIcon /> <ChatIcon /> <ShareIcon />
-                  </div>
-                  <p className="text-xs text-gray-800">
-                    <span className="font-bold mr-1">my_awesome_brand</span>
-                    {caption || 'Caption preview akan muncul di sini. Tampilan ini dibuat agar user bisa membayangkan hasil post sebelum publish.'}
-                  </p>
-                  <p className="text-[10px] text-gray-400 mt-2">2 hours ago</p>
-                </>
-              )}
+              <div className="flex gap-3 mb-2">
+                <HeartIcon /> <ChatIcon /> <ShareIcon />
+              </div>
+              <p className="text-xs text-gray-800">
+                <span className="font-bold mr-1">my_awesome_brand</span>
+                {caption || 'Caption preview akan muncul di sini. Tampilan ini dibuat agar user bisa membayangkan hasil post sebelum publish.'}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-2">2 hours ago</p>
             </div>
           </div>
         </div>

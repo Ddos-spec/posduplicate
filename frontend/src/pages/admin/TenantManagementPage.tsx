@@ -99,7 +99,7 @@ const moduleCatalog: Array<{
   {
     key: 'commerSocial',
     name: 'MyCommerSocial',
-    description: 'Marketplace ops, social inbox, planner, analytics, dan Meta Ads.',
+    description: 'WA Inbox, social via Zernio, ads workspace, planner, dan analytics.',
     accent: 'from-blue-500 to-blue-600',
     icon: Share2,
   },

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
+import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   approvalFlows,
   campaignBriefs,
@@ -123,7 +124,10 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
       <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Content Planner</h1>
+            <div className="flex items-center gap-2">
+              <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Content Planner</h1>
+              <FieldHelp title="Content Planner live" description="Planner live menampilkan post yang benar-benar tersimpan di tenant. Dari sini operator bisa melihat draft, jadwal tayang, post live, lalu publish atau hapus bila perlu." />
+            </div>
             <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{posts.length} post tersimpan</p>
           </div>
           <button
@@ -249,16 +253,19 @@ export default function ContentCalendar() {
               <Sparkles size={14} />
               Content operations workspace
             </div>
-            <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner kampanye yang terasa seperti alat kerja tim sungguhan</h1>
+            <div className="flex items-center gap-2">
+              <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner kampanye yang terasa seperti alat kerja tim sungguhan</h1>
+              <FieldHelp title="Planner campaign" description="Planner dipakai untuk memindahkan campaign dari ide sampai published. Semua kartu, brief, reviewer, asset, dan approval chain bisa dibaca dari satu halaman ini." />
+            </div>
             <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Kelola pipeline, reviewer, asset, preview channel, dan approval campaign dari satu workspace.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button className={`px-4 py-2 rounded-xl font-semibold border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-700'}`}>
+            <button title="Ubah tampilan planner menjadi ringkasan mingguan" className={`px-4 py-2 rounded-xl font-semibold border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-700'}`}>
               Weekly View
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
+            <button title="Buka composer untuk menyiapkan campaign baru" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
               <Plus size={18} /> New Campaign
             </button>
           </div>
@@ -266,22 +273,22 @@ export default function ContentCalendar() {
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
-          <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Review queue</p>
+          <div title="Jumlah item yang menunggu reviewer atau owner sebelum tayang." className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Review queue</p>
           <p className="mt-2 text-3xl font-bold">{summary.review}</p>
           <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>butuh reviewer atau owner approval</p>
         </div>
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div title="Jumlah campaign yang sudah punya jadwal publish." className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
           <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Scheduled</p>
           <p className="mt-2 text-3xl font-bold">{summary.scheduled}</p>
           <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>siap publish per channel</p>
         </div>
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div title="Jumlah campaign yang sudah live." className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
           <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Published</p>
           <p className="mt-2 text-3xl font-bold">{summary.published}</p>
           <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>sudah live dan siap dipantau</p>
         </div>
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div title="Jumlah jalur approval yang aktif untuk workflow campaign." className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
           <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Approval lanes</p>
           <p className="mt-2 text-3xl font-bold">{approvalFlows.length}</p>
           <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>publish, voucher, price exception</p>
@@ -289,12 +296,15 @@ export default function ContentCalendar() {
       </div>
 
       <div className="grid xl:grid-cols-[1.3fr_0.95fr] gap-6 items-start">
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Kanban Pipeline</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Idea → draft → design → review → scheduled → published.</p>
-            </div>
+          <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Kanban Pipeline</h3>
+                  <FieldHelp title="Kanban pipeline" description="Klik salah satu kartu untuk membuka brief lengkap di panel kanan. Setiap kolom mewakili tahapan kerja tim sampai konten benar-benar tayang." />
+                </div>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Idea → draft → design → review → scheduled → published.</p>
+              </div>
             <CalendarRange size={18} className="text-blue-500" />
           </div>
 
@@ -354,7 +364,10 @@ export default function ContentCalendar() {
           <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Campaign Brief Drawer</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Campaign Brief Drawer</h3>
+                  <FieldHelp title="Campaign brief drawer" description="Panel kanan merangkum objective, target audience, PIC, reviewer, checklist, asset, dan komentar untuk campaign yang sedang dipilih." />
+                </div>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Semua detail penting dalam satu panel kanan.</p>
               </div>
               <FileStack size={18} className="text-purple-500" />
@@ -476,7 +489,10 @@ export default function ContentCalendar() {
             <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Approval Chain</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Approval Chain</h3>
+                    <FieldHelp title="Approval chain" description="Bagian ini menjelaskan siapa saja yang harus menyetujui jenis campaign tertentu dan target SLA untuk setiap jalur approval." />
+                  </div>
                   <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Agar reviewer, owner, dan SLA approval terlihat jelas.</p>
                 </div>
                 <Clock3 size={18} className="text-amber-500" />
@@ -506,7 +522,10 @@ export default function ContentCalendar() {
             <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Weekly Activity</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Weekly Activity</h3>
+                    <FieldHelp title="Weekly activity" description="Feed ini dipakai untuk membaca aktivitas terbaru tim kreatif, jadwal campaign, dan perubahan penting tanpa membuka kartu satu per satu." />
+                  </div>
                   <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Campuran schedule dan perubahan tim kreatif.</p>
                 </div>
                 <CalendarRange size={18} className="text-blue-500" />

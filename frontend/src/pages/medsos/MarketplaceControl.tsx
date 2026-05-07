@@ -1,4 +1,5 @@
 import { useThemeStore } from '../../store/themeStore';
+import FieldHelp from '../../components/medsos/FieldHelp';
 import { Clock3, MessageCircleMore, ShoppingBag, Store } from 'lucide-react';
 
 const highlights = [
@@ -31,7 +32,10 @@ export default function MarketplaceControl() {
               <Store size={14} />
               Marketplace • coming soon
             </div>
-            <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace akan hadir di modul ini</h1>
+            <div className="flex items-center gap-2">
+              <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace akan hadir di modul ini</h1>
+              <FieldHelp title="Marketplace coming soon" description="Halaman ini sengaja belum aktif penuh. Fokus operasional saat ini ada pada WA Inbox, social media, dan ads sampai integrasi marketplace siap dipakai." />
+            </div>
             <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Halaman marketplace akan dipakai untuk mengelola order, buyer chat, sinkronisasi katalog, dan pengecekan issue operasional.
             </p>
@@ -45,7 +49,7 @@ export default function MarketplaceControl() {
 
       <div className="grid md:grid-cols-3 gap-4">
         {highlights.map((item) => (
-          <div key={item.title} className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div key={item.title} title={item.description} className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
             <div className={`inline-flex rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-amber-300' : 'bg-amber-50 text-amber-700'}`}>
               <item.icon size={18} />
             </div>
@@ -56,7 +60,10 @@ export default function MarketplaceControl() {
       </div>
 
       <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Yang akan tersedia</h2>
+        <div className="flex items-center gap-2">
+          <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Yang akan tersedia</h2>
+          <FieldHelp title="Ruang lingkup marketplace" description="Daftar ini memberi gambaran fitur yang akan masuk saat modul marketplace dibuka, tanpa membuat user mengira semuanya sudah live sekarang." />
+        </div>
         <div className="grid md:grid-cols-2 gap-4 mt-6">
           {[
             'Buyer chat dan order queue dalam satu panel operasional.',

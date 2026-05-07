@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
+import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   bestPostingWindows,
   channelPerformance,
@@ -53,7 +54,10 @@ function LiveAnalytics({ posts, isDark }: { posts: SocialPost[]; isDark: boolean
   return (
     <div className="space-y-6">
       <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics</h1>
+        <div className="flex items-center gap-2">
+          <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics</h1>
+          <FieldHelp title="Analytics live" description="Halaman ini menampilkan ringkasan performa dari post yang benar-benar tersimpan di tenant. Jika belum ada post live, metrik detail memang masih kosong." />
+        </div>
         <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Berdasarkan {posts.length} post yang tersimpan</p>
       </div>
 
@@ -142,12 +146,15 @@ export default function MedsosAnalytics() {
       <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="max-w-3xl">
-            <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics yang menjawab “kenapa”, bukan cuma “apa”</h1>
+            <div className="flex items-center gap-2">
+              <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics yang menjawab “kenapa”, bukan cuma “apa”</h1>
+              <FieldHelp title="Analytics demo" description="Contoh insight ini menunjukkan jenis analisis yang nantinya muncul saat data tenant sudah cukup: waktu terbaik, SLA, sentimen, performa channel, dan catatan revenue." />
+            </div>
             <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Best posting time, reply speed, sentiment, conversion, revenue share, dan SLA compliance sudah dibentuk supaya layer insight terasa lebih mahal.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 gap-3 min-w-[300px]">
+          <div className="grid sm:grid-cols-2 gap-3 w-full lg:w-auto lg:min-w-[300px]">
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60 text-white' : 'bg-gray-50 text-gray-900'}`}>
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp size={16} className="text-blue-500" />
@@ -161,8 +168,8 @@ export default function MedsosAnalytics() {
                 <ShieldCheck size={16} className="text-emerald-500" />
                 <span className="text-sm font-semibold">Best SLA</span>
               </div>
-              <p className="text-xl font-bold">Shopee 98%</p>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>paling stabil di queue buyer chat</p>
+              <p className="text-xl font-bold">WhatsApp 98%</p>
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>paling stabil di inbox support harian</p>
             </div>
           </div>
         </div>
@@ -193,7 +200,7 @@ export default function MedsosAnalytics() {
             <LineChartIcon size={18} className="text-blue-500" />
             <div>
               <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Reply Speed Trend</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Bandingkan kecepatan respon social vs marketplace.</p>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Bandingkan kecepatan respon WA Inbox vs social media.</p>
             </div>
           </div>
           <div className="h-[320px]">
@@ -205,7 +212,7 @@ export default function MedsosAnalytics() {
                 <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }} />
                 <Legend />
                 <Line type="monotone" dataKey="social" stroke="#3b82f6" strokeWidth={3} dot={false} name="Social (mnt)" />
-                <Line type="monotone" dataKey="marketplace" stroke="#10b981" strokeWidth={3} dot={false} name="Marketplace (mnt)" />
+                <Line type="monotone" dataKey="marketplace" stroke="#10b981" strokeWidth={3} dot={false} name="WA Inbox (mnt)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
