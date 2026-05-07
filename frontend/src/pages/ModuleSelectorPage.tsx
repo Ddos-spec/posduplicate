@@ -150,7 +150,7 @@ export default function ModuleSelectorPage() {
                 {isSuperAdmin ? 'SUPER ADMIN' : 'OWNER'}
               </span>
               <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {isSuperAdmin ? 'Akses semua modul aktif di kerajaan ini' : 'Choose a module to continue'}
+                {isSuperAdmin ? 'Akses semua modul aktif untuk tenant ini' : 'Choose a module to continue'}
               </span>
               <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${isDark ? 'bg-slate-800' : 'bg-gray-100'}`}>
                 <Clock className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />

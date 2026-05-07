@@ -51,6 +51,7 @@ export default function AdminLayout() {
   const controlMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: Building2, label: 'Tenant Management', path: '/admin/tenants' },
+    { icon: Share2, label: 'MyCommerSocial Ops', path: '/admin/mycommersocial' },
     { icon: TrendingUp, label: 'System Analytics', path: '/admin/analytics' },
     ...(isSuperAdmin ? [{ icon: CreditCard, label: 'Billing Management', path: '/admin/billing' }] : []),
     { icon: Key, label: 'API Key Management', path: '/admin/api-keys' },
@@ -244,7 +245,7 @@ export default function AdminLayout() {
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-medium text-gray-700">{user?.name || 'Admin'}</p>
                   <p className="text-xs text-gray-500">
-                    {isSuperAdmin ? 'Super Admin • Supreme Access' : (user?.email || 'admin@mypos.com')}
+                    {isSuperAdmin ? 'Super Admin • Full Access' : (user?.email || 'admin@mypos.com')}
                   </p>
                 </div>
                 <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center">
