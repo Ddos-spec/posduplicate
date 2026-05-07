@@ -115,6 +115,7 @@ export default function SystemAnalyticsPage() {
   const controlTowerActions = [
     { icon: Building2, title: 'Tenant Management', description: 'Kelola tenant, subscription, dan status akun.', path: '/admin/tenants' },
     ...(isSuperAdmin ? [{ icon: CreditCard, title: 'Billing Management', description: 'Pantau billing, jatuh tempo, dan pembayaran tenant.', path: '/admin/billing' }] : []),
+    { icon: Share2, title: 'MyCommerSocial Ops', description: 'Atur paket tenant, workspace WA, dan profile Zernio per customer.', path: '/admin/mycommersocial' },
     { icon: Key, title: 'API Key Management', description: 'Atur API key, akses integrasi, dan dokumentasi teknis.', path: '/admin/api-keys' },
     { icon: Book, title: 'API Documentation', description: 'Buka pusat dokumentasi endpoint dan referensi developer.', path: '/admin/api-docs' },
   ];
@@ -193,7 +194,7 @@ export default function SystemAnalyticsPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Business Modules</h2>
-                <p className="text-sm text-gray-500">Super admin kini bisa lompat langsung ke seluruh kerajaan modul.</p>
+                <p className="text-sm text-gray-500">Super admin bisa lompat langsung ke seluruh modul bisnis dari panel ini.</p>
               </div>
               <div className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
                 Full Access

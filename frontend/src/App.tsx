@@ -17,6 +17,7 @@ const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
 const TenantManagementPage = lazy(() => import('./pages/admin/TenantManagementPage'));
 const SystemAnalyticsPage = lazy(() => import('./pages/admin/SystemAnalyticsPage'));
+const MyCommerSocialAdminPage = lazy(() => import('./pages/admin/MyCommerSocialAdminPage'));
 const ApiDocumentationPage = lazy(() => import('./pages/admin/ApiDocumentationPage'));
 const ApiKeyManagementPage = lazy(() => import('./pages/admin/ApiKeyManagementPage'));
 const BillingManagementPage = lazy(() => import('./pages/admin/BillingManagementPage'));
@@ -330,6 +331,7 @@ function App() {
         >
           <Route path="dashboard" element={<SystemAnalyticsPage />} />
           <Route path="tenants" element={<TenantManagementPage />} />
+          <Route path="mycommersocial" element={<MyCommerSocialAdminPage />} />
           <Route path="analytics" element={<SystemAnalyticsPage />} />
           <Route path="billing" element={<BillingManagementPage />} />
           <Route path="api-keys" element={<ApiKeyManagementPage />} />

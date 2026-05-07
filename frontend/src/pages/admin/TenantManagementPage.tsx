@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -108,6 +109,7 @@ const planOptions = ['standard', 'growth', 'enterprise'];
 const statusOptions = ['active', 'trial', 'expired', 'suspended'];
 
 export default function TenantManagementPage() {
+  const navigate = useNavigate();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -340,7 +342,7 @@ export default function TenantManagementPage() {
         </div>
         <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-amber-800 text-sm font-semibold">
           <Crown className="w-4 h-4" />
-          Supreme provisioning enabled
+          Provisioning aktif
         </div>
       </div>
 
@@ -351,7 +353,7 @@ export default function TenantManagementPage() {
             <span className="text-xs text-gray-400 uppercase">Tenants</span>
           </div>
           <p className="text-2xl font-bold text-gray-900">{tenants.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Tenant aktif di kerajaan MyPOS</p>
+          <p className="text-sm text-gray-500 mt-1">Tenant aktif di ekosistem MyPOS</p>
         </div>
         <div className="bg-white rounded-2xl shadow p-5">
           <div className="flex items-center justify-between mb-2">
@@ -494,6 +496,13 @@ export default function TenantManagementPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => navigate(`/admin/mycommersocial?tenantId=${tenant.id}`)}
+                          className="p-1 text-sky-600 hover:bg-sky-50 rounded"
+                          title="Kelola MyCommerSocial"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleEditTenant(tenant)}
                           className="p-1 text-blue-600 hover:bg-blue-50 rounded"
