@@ -40,20 +40,30 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
   const [connector, setConnector] = useState<ManagedIntegrationConnector | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setError(null);
       try {
-        const [statsData, hub] = await Promise.all([
+        const [statsResult, hubResult] = await Promise.allSettled([
           getWACrmStats(),
           getMyCommerSocialIntegrationHub(),
         ]);
         if (cancelled) return;
-        setStats(statsData);
+
+        const hub = hubResult.status === 'fulfilled' ? hubResult.value : null;
         const socialHub = hub?.connectors?.find((c: { slug: string }) => c.slug === 'social-hub');
         setConnector(socialHub ?? null);
         setCrmUrl(socialHub?.vendorPortalUrl ?? socialHub?.vendorWorkspaceUrl ?? null);
+
+        if (statsResult.status === 'fulfilled') {
+          setStats(statsResult.value);
+        } else {
+          setStats(null);
+          setError('Gagal memuat stats dari WA CRM.');
+        }
       } catch {
         if (!cancelled) setError('Gagal memuat stats dari WA CRM.');
       } finally {
@@ -61,7 +71,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadTick]);
 
   if (loading) {
     return (
@@ -71,6 +81,17 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
     );
   }
 
+  const hasStoredConfig = Boolean(
+    connector && (
+      connector.status === 'connected'
+      || connector.status === 'syncing'
+      || connector.connectionRefMasked
+      || connector.vendorWorkspaceUrl
+      || connector.vendorPortalUrl
+      || connector.workspaceName
+    )
+  );
+
   if (error || !stats) {
     return (
       <div className={`rounded-3xl border p-10 flex flex-col items-center text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
@@ -78,21 +99,43 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
           {error ? <AlertTriangle size={36} className="text-amber-500" /> : <PlugZap size={36} className="text-blue-500" />}
         </div>
         <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          {error ? 'Tidak bisa menjangkau WA CRM' : 'WA Inbox belum dikonfigurasi'}
+          {hasStoredConfig ? 'WA Inbox sudah tersimpan, tetapi CRM belum merespons' : 'WA Inbox belum dikonfigurasi'}
         </h2>
         <p className={`text-sm max-w-md mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-          {error
-            ? 'Pastikan Customer Service CRM sedang berjalan dan API key workspace sudah benar di halaman Connections.'
+          {hasStoredConfig
+            ? 'API key atau workspace sudah tersimpan. Sistem belum berhasil mengambil data live dari Customer Service CRM saat ini. Coba buka CRM atau periksa ulang koneksinya di halaman Connections.'
             : 'Isi API key workspace di halaman Connections untuk mengaktifkan inbox live.'}
         </p>
-        <button
-          onClick={onSetup}
-          title="Buka halaman Connections untuk melengkapi konfigurasi WA"
-          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold"
-        >
-          <PlugZap size={18} />
-          Lengkapi Setup
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <button
+            onClick={() => setReloadTick((current) => current + 1)}
+            title="Coba muat ulang status WA Inbox"
+            className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          >
+            <Loader2 size={18} />
+            Coba lagi
+          </button>
+          <button
+            onClick={onSetup}
+            title="Buka halaman Connections untuk memeriksa konfigurasi WA"
+            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold"
+          >
+            <PlugZap size={18} />
+            {hasStoredConfig ? 'Periksa Connections' : 'Lengkapi Setup'}
+          </button>
+          {crmUrl && (
+            <a
+              href={crmUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Buka Customer Service CRM di tab baru"
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 font-semibold"
+            >
+              <ExternalLink size={18} />
+              Buka CRM
+            </a>
+          )}
+        </div>
       </div>
     );
   }
