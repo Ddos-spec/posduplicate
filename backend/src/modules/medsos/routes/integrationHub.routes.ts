@@ -8,6 +8,7 @@ import {
   disconnect,
   getIntegrationDetail,
   getIntegrationHub,
+  proxyStatus,
   proxyStats,
   syncNow,
   webhook,
@@ -22,6 +23,7 @@ router.use(authMiddleware);
 router.use(tenantMiddleware);
 
 router.get('/hub', getIntegrationHub);
+router.get('/proxy/social-hub/status', proxyStatus);
 router.get('/proxy/social-hub/stats', proxyStats);
 router.get('/:slug', getIntegrationDetail);
 router.post('/:slug/connect', beginConnect);
@@ -30,4 +32,3 @@ router.post('/:slug/sync', syncNow);
 router.post('/:slug/disconnect', disconnect);
 
 export default router;
-

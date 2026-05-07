@@ -3,6 +3,7 @@ import {
   beginManagedIntegrationConnect,
   completeManagedIntegrationConnect,
   disconnectManagedIntegration,
+  getSocialHubConnectionStatus,
   getManagedIntegrationDetail,
   getManagedIntegrationHub,
   handleManagedIntegrationCallback,
@@ -235,6 +236,20 @@ export const proxyStats = async (req: Request, res: Response, next: NextFunction
       return;
     }
 
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const proxyStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.tenantId) {
+      res.status(400).json({ success: false, error: { code: 'NO_TENANT', message: 'Tenant context is required' } });
+      return;
+    }
+
+    const data = await getSocialHubConnectionStatus(req.tenantId);
     res.json({ success: true, data });
   } catch (error) {
     next(error);
