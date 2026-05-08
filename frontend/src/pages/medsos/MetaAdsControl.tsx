@@ -25,6 +25,17 @@ import {
   Sparkles,
   Unplug,
 } from 'lucide-react';
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 const demoAccounts: ZernioAccount[] = [
   {
@@ -44,6 +55,21 @@ const demoAccounts: ZernioAccount[] = [
     isActive: true,
   },
 ];
+
+type DatePreset = '7d' | '30d' | '90d' | 'custom';
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getDateDaysAgo(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return formatDateInput(date);
+}
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('id-ID').format(value || 0);
@@ -98,6 +124,19 @@ function humanizeStatus(status: string) {
   return labels[normalized] ?? status;
 }
 
+function buildPresetRange(preset: Exclude<DatePreset, 'custom'>) {
+  const today = formatDateInput(new Date());
+  switch (preset) {
+    case '7d':
+      return { fromDate: getDateDaysAgo(6), toDate: today };
+    case '30d':
+      return { fromDate: getDateDaysAgo(29), toDate: today };
+    case '90d':
+    default:
+      return { fromDate: getDateDaysAgo(89), toDate: today };
+  }
+}
+
 const platformBreakdownDefaults: Record<string, string[]> = {
   facebook: ['age', 'gender', 'country', 'publisher_platform'],
   instagram: ['age', 'gender', 'country', 'publisher_platform'],
@@ -132,13 +171,16 @@ export default function MetaAdsControl() {
   const [selectedAdId, setSelectedAdId] = useState<string | null>(null);
   const [selectedAdAnalyticsLoading, setSelectedAdAnalyticsLoading] = useState(false);
   const [selectedAdAnalytics, setSelectedAdAnalytics] = useState<ZernioAdAnalyticsSummary | null>(null);
+  const [datePreset, setDatePreset] = useState<DatePreset>('30d');
+  const [fromDate, setFromDate] = useState<string>(() => buildPresetRange('30d').fromDate);
+  const [toDate, setToDate] = useState<string>(() => buildPresetRange('30d').toDate);
 
   const load = async () => {
     setLoading(true);
     try {
       const [zernioAccounts, zernioSummary] = await Promise.all([
         getZernioAccounts(),
-        getZernioAdsSummary(),
+        getZernioAdsSummary({ fromDate, toDate }),
       ]);
       setAccounts(zernioAccounts);
       setSummary(zernioSummary);
@@ -152,7 +194,7 @@ export default function MetaAdsControl() {
   useEffect(() => {
     if (isDemo) return;
     void load();
-  }, [isDemo]);
+  }, [isDemo, fromDate, toDate]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -177,6 +219,22 @@ export default function MetaAdsControl() {
   const selectedAd = useMemo(
     () => campaignAds.find((ad) => ad.id === selectedAdId) ?? null,
     [campaignAds, selectedAdId]
+  );
+
+  const dailyChartData = useMemo(
+    () => (selectedAdAnalytics?.daily ?? []).map((row) => ({
+      date: row.date,
+      spend: Number(row.spend || 0),
+      clicks: Number(row.clicks || 0),
+      impressions: Number(row.impressions || 0),
+      conversions: Number(row.conversions || 0),
+    })),
+    [selectedAdAnalytics]
+  );
+
+  const availableBreakdowns = useMemo(
+    () => Object.entries(selectedAdAnalytics?.breakdowns ?? {}),
+    [selectedAdAnalytics]
   );
 
   const getConnectedAccount = (platforms: string[]) => {
@@ -212,12 +270,21 @@ export default function MetaAdsControl() {
     }
   };
 
+  const applyPreset = (preset: Exclude<DatePreset, 'custom'>) => {
+    const next = buildPresetRange(preset);
+    setDatePreset(preset);
+    setFromDate(next.fromDate);
+    setToDate(next.toDate);
+  };
+
   const loadAdAnalytics = async (ad: ZernioAdListItem) => {
     setSelectedAdId(ad.id);
     setSelectedAdAnalyticsLoading(true);
     try {
       const analytics = await getZernioAdAnalytics({
         adId: ad.id,
+        fromDate,
+        toDate,
         breakdowns: platformBreakdownDefaults[ad.platform] ?? [],
       });
       setSelectedAdAnalytics(analytics);
@@ -229,11 +296,9 @@ export default function MetaAdsControl() {
     }
   };
 
-  const handleInspectCampaign = async (campaign: ZernioAdsCampaignSummary) => {
-    setActiveCampaignId(campaign.id);
+  const fetchCampaignDetail = async (campaign: ZernioAdsCampaignSummary, preferredAdId?: string | null) => {
     setCampaignAdsLoading(true);
     setCampaignAds([]);
-    setSelectedAdId(null);
     setSelectedAdAnalytics(null);
 
     try {
@@ -241,11 +306,15 @@ export default function MetaAdsControl() {
         campaignId: campaign.id,
         accountId: campaign.socialAccountId,
         adAccountId: campaign.adAccountId,
+        fromDate,
+        toDate,
       });
       setCampaignAds(ads);
-
-      if (ads[0]) {
-        await loadAdAnalytics(ads[0]);
+      const preferredAd = (preferredAdId ? ads.find((ad) => ad.id === preferredAdId) : null) ?? ads[0] ?? null;
+      if (preferredAd) {
+        await loadAdAnalytics(preferredAd);
+      } else {
+        setSelectedAdId(null);
       }
     } catch (error) {
       console.error('Failed to inspect campaign detail', error);
@@ -253,6 +322,22 @@ export default function MetaAdsControl() {
       setCampaignAdsLoading(false);
     }
   };
+
+  const handleInspectCampaign = async (campaign: ZernioAdsCampaignSummary) => {
+    if (activeCampaignId === campaign.id) {
+      void fetchCampaignDetail(campaign, selectedAdId);
+      return;
+    }
+    setActiveCampaignId(campaign.id);
+  };
+
+  useEffect(() => {
+    if (isDemo || !activeCampaign) {
+      return;
+    }
+    void fetchCampaignDetail(activeCampaign, selectedAdId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCampaign, fromDate, toDate]);
 
   if (!isDemo && loading) {
     return (
@@ -285,6 +370,69 @@ export default function MetaAdsControl() {
             <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-gray-50 text-gray-700'}`}>
               <p className="text-xs uppercase tracking-[0.18em]">Active campaigns</p>
               <p className="font-semibold text-sm mt-1">{summary?.totals.activeCampaigns ?? 0} campaign</p>
+            </div>
+          </div>
+        </div>
+
+        <div className={`mt-6 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-blue-100 bg-blue-50/60'}`}>
+          <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="font-semibold">Analytics range</p>
+                <FieldHelp title="Analytics range" description="Ringkasan ads, daftar campaign, sampai detail ad akan mengikuti rentang tanggal ini. Cocok untuk baca performa 7 hari, 30 hari, atau 90 hari terakhir." />
+              </div>
+              <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Ubah range untuk mengganti angka spend, CTR, conversions, dan timeline di seluruh Ads Workspace.
+              </p>
+            </div>
+
+            <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+              <div className="flex flex-wrap gap-2">
+                {(['7d', '30d', '90d'] as const).map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+                      datePreset === preset
+                        ? 'bg-blue-600 text-white'
+                        : isDark
+                          ? 'bg-slate-800 text-slate-100 hover:bg-slate-700'
+                          : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                    title={`Gunakan range ${preset}`}
+                  >
+                    {preset === '7d' ? '7 hari' : preset === '30d' ? '30 hari' : '90 hari'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Dari</span>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(event) => {
+                      setDatePreset('custom');
+                      setFromDate(event.target.value);
+                    }}
+                    className={`rounded-xl px-3 py-2 ${isDark ? 'bg-slate-800 border border-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Sampai</span>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(event) => {
+                      setDatePreset('custom');
+                      setToDate(event.target.value);
+                    }}
+                    className={`rounded-xl px-3 py-2 ${isDark ? 'bg-slate-800 border border-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}
+                  />
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -878,7 +1026,43 @@ export default function MetaAdsControl() {
                           )}
                         </div>
 
-                        {Object.keys(selectedAdAnalytics.breakdowns).length > 0 ? (
+                        {dailyChartData.length > 0 ? (
+                          <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                            <div className="flex items-center gap-2 mb-4">
+                              <p className="font-semibold">Performance chart</p>
+                              <FieldHelp title="Performance chart" description="Visual cepat untuk melihat pola spend, clicks, dan conversions per hari tanpa harus membaca tabel satu per satu." />
+                            </div>
+
+                            <div className="grid xl:grid-cols-2 gap-4">
+                              <div className="h-72">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <AreaChart data={dailyChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#E5E7EB'} />
+                                    <XAxis dataKey="date" stroke={isDark ? '#94A3B8' : '#6B7280'} tick={{ fontSize: 12 }} />
+                                    <YAxis stroke={isDark ? '#94A3B8' : '#6B7280'} tick={{ fontSize: 12 }} />
+                                    <Tooltip />
+                                    <Area type="monotone" dataKey="spend" stroke="#3B82F6" fill="#93C5FD" fillOpacity={0.3} name="Spend" />
+                                  </AreaChart>
+                                </ResponsiveContainer>
+                              </div>
+
+                              <div className="h-72">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <BarChart data={dailyChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#E5E7EB'} />
+                                    <XAxis dataKey="date" stroke={isDark ? '#94A3B8' : '#6B7280'} tick={{ fontSize: 12 }} />
+                                    <YAxis stroke={isDark ? '#94A3B8' : '#6B7280'} tick={{ fontSize: 12 }} />
+                                    <Tooltip />
+                                    <Bar dataKey="clicks" fill="#10B981" name="Clicks" radius={[6, 6, 0, 0]} />
+                                    <Bar dataKey="conversions" fill="#F59E0B" name="Conversions" radius={[6, 6, 0, 0]} />
+                                  </BarChart>
+                                </ResponsiveContainer>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {availableBreakdowns.length > 0 ? (
                           <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
                             <div className="flex items-center gap-2 mb-4">
                               <p className="font-semibold">Breakdowns</p>
@@ -886,7 +1070,7 @@ export default function MetaAdsControl() {
                             </div>
 
                             <div className="grid xl:grid-cols-2 gap-4">
-                              {Object.entries(selectedAdAnalytics.breakdowns).map(([dimension, rows]) => (
+                              {availableBreakdowns.map(([dimension, rows]) => (
                                 <div key={dimension} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
                                   <p className="font-semibold">{breakdownLabels[dimension] || dimension}</p>
                                   <div className="mt-3 space-y-2">

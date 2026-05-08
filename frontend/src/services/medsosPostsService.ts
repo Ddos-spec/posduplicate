@@ -310,8 +310,16 @@ export async function disconnectZernioAccount(accountId: string): Promise<void> 
   await api.delete(`/medsos/zernio/accounts/${accountId}`);
 }
 
-export async function getZernioAdsSummary(): Promise<ZernioAdsSummary | null> {
-  const { data } = await api.get('/medsos/zernio/ads/summary');
+export async function getZernioAdsSummary(params?: {
+  fromDate?: string;
+  toDate?: string;
+}): Promise<ZernioAdsSummary | null> {
+  const { data } = await api.get('/medsos/zernio/ads/summary', {
+    params: {
+      fromDate: params?.fromDate,
+      toDate: params?.toDate,
+    },
+  });
   return (data.data ?? null) as ZernioAdsSummary | null;
 }
 
@@ -319,12 +327,16 @@ export async function getZernioAdsByCampaign(params: {
   campaignId: string;
   accountId?: string | null;
   adAccountId?: string | null;
+  fromDate?: string;
+  toDate?: string;
 }): Promise<ZernioAdListItem[]> {
   const { data } = await api.get('/medsos/zernio/ads/by-campaign', {
     params: {
       campaignId: params.campaignId,
       accountId: params.accountId || undefined,
       adAccountId: params.adAccountId || undefined,
+      fromDate: params.fromDate,
+      toDate: params.toDate,
     },
   });
   return (data.data?.ads ?? []) as ZernioAdListItem[];
