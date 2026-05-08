@@ -2,6 +2,14 @@ import prisma from '../../../utils/prisma';
 
 const ZERNIO_API_KEY = process.env.ZERNIO_API_KEY || '';
 const BASE = 'https://zernio.com/api/v1';
+const ZERNIO_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type CacheEntry<T> = {
+  expiresAt: number;
+  value: T;
+};
+
+const zernioCache = new Map<string, CacheEntry<unknown>>();
 
 function headers() {
   return {
@@ -19,6 +27,40 @@ async function zFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const json = await resp.json() as T & { error?: string };
   if (!resp.ok) throw new Error((json as any).error ?? `Zernio error ${resp.status}`);
   return json;
+}
+
+function getCacheValue<T>(key: string): T | null {
+  const entry = zernioCache.get(key);
+  if (!entry) {
+    return null;
+  }
+
+  if (entry.expiresAt <= Date.now()) {
+    zernioCache.delete(key);
+    return null;
+  }
+
+  return entry.value as T;
+}
+
+function setCacheValue<T>(key: string, value: T, ttlMs = ZERNIO_CACHE_TTL_MS): T {
+  zernioCache.set(key, {
+    expiresAt: Date.now() + ttlMs,
+    value,
+  });
+  return value;
+}
+
+async function getOrSetCache<T>(key: string, factory: () => Promise<T>, refresh = false, ttlMs = ZERNIO_CACHE_TTL_MS): Promise<T> {
+  if (!refresh) {
+    const cached = getCacheValue<T>(key);
+    if (cached !== null) {
+      return cached;
+    }
+  }
+
+  const value = await factory();
+  return setCacheValue(key, value, ttlMs);
 }
 
 // ─── Profile per tenant ────────────────────────────────────────────────────
@@ -668,7 +710,7 @@ export async function listZernioAdsForCampaign(
   campaignId: string,
   accountId?: string,
   adAccountId?: string,
-  options?: { fromDate?: string; toDate?: string },
+  options?: { fromDate?: string; toDate?: string; refresh?: boolean },
 ): Promise<ZernioAdListItem[]> {
   const profileId = await getOrCreateZernioProfile(tenantId);
   const qs = new URLSearchParams({
@@ -694,16 +736,33 @@ export async function listZernioAdsForCampaign(
     qs.set('toDate', options.toDate);
   }
 
-  const data = await zFetch<{ ads?: ZernioApiAd[] }>(`/ads?${qs}`);
-  return (data.ads ?? [])
-    .map(normalizeZernioAd)
-    .sort((left, right) => right.metrics.spend - left.metrics.spend);
+  const cacheKey = [
+    'zernio-ads-by-campaign',
+    tenantId,
+    profileId,
+    campaignId,
+    accountId || '',
+    adAccountId || '',
+    options?.fromDate || '',
+    options?.toDate || '',
+  ].join(':');
+
+  return getOrSetCache(
+    cacheKey,
+    async () => {
+      const data = await zFetch<{ ads?: ZernioApiAd[] }>(`/ads?${qs}`);
+      return (data.ads ?? [])
+        .map(normalizeZernioAd)
+        .sort((left, right) => right.metrics.spend - left.metrics.spend);
+    },
+    options?.refresh ?? false,
+  );
 }
 
 export async function getZernioAdAnalytics(
   _tenantId: number,
   adId: string,
-  options?: { fromDate?: string; toDate?: string; breakdowns?: string[] },
+  options?: { fromDate?: string; toDate?: string; breakdowns?: string[]; refresh?: boolean },
 ): Promise<ZernioAdAnalyticsSummary | null> {
   try {
     const qs = new URLSearchParams();
@@ -718,23 +777,38 @@ export async function getZernioAdAnalytics(
     }
 
     const suffix = qs.size > 0 ? `?${qs}` : '';
-    const data = await zFetch<ZernioApiAdAnalyticsResponse>(`/ads/${encodeURIComponent(adId)}/analytics${suffix}`);
-    const summaryBase = buildBaseMetrics(data.analytics?.summary);
-    const daily = (data.analytics?.daily ?? []).map((row) => ({
-      date: row.date ?? '',
-      ...buildMetricSummary(buildBaseMetrics(row), 1),
-    }));
+    const cacheKey = [
+      'zernio-ad-analytics',
+      _tenantId,
+      adId,
+      options?.fromDate || '',
+      options?.toDate || '',
+      options?.breakdowns?.join(',') || '',
+    ].join(':');
 
-    return {
-      id: data.ad?.id ?? adId,
-      name: data.ad?.name ?? 'Untitled ad',
-      platform: String(data.ad?.platform ?? '').toLowerCase(),
-      platformLabel: getPlatformLabel(String(data.ad?.platform ?? '')),
-      status: String(data.ad?.status ?? 'unknown').toLowerCase(),
-      summary: buildMetricSummary(summaryBase, 1),
-      daily,
-      breakdowns: data.analytics?.breakdowns ?? {},
-    };
+    return getOrSetCache(
+      cacheKey,
+      async () => {
+        const data = await zFetch<ZernioApiAdAnalyticsResponse>(`/ads/${encodeURIComponent(adId)}/analytics${suffix}`);
+        const summaryBase = buildBaseMetrics(data.analytics?.summary);
+        const daily = (data.analytics?.daily ?? []).map((row) => ({
+          date: row.date ?? '',
+          ...buildMetricSummary(buildBaseMetrics(row), 1),
+        }));
+
+        return {
+          id: data.ad?.id ?? adId,
+          name: data.ad?.name ?? 'Untitled ad',
+          platform: String(data.ad?.platform ?? '').toLowerCase(),
+          platformLabel: getPlatformLabel(String(data.ad?.platform ?? '')),
+          status: String(data.ad?.status ?? 'unknown').toLowerCase(),
+          summary: buildMetricSummary(summaryBase, 1),
+          daily,
+          breakdowns: data.analytics?.breakdowns ?? {},
+        };
+      },
+      options?.refresh ?? false,
+    );
   } catch {
     return null;
   }
@@ -742,10 +816,21 @@ export async function getZernioAdAnalytics(
 
 export async function getZernioAdsSummary(
   tenantId: number,
-  options?: { fromDate?: string; toDate?: string },
+  options?: { fromDate?: string; toDate?: string; refresh?: boolean },
 ): Promise<ZernioAdsSummary | null> {
   try {
     const profileId = await getOrCreateZernioProfile(tenantId);
+    const cacheKey = [
+      'zernio-ads-summary',
+      tenantId,
+      profileId,
+      options?.fromDate || '',
+      options?.toDate || '',
+    ].join(':');
+
+    return getOrSetCache(
+      cacheKey,
+      async () => {
     const allAccounts = await listZernioAccounts(tenantId);
     const adsWorkspaceAccounts = allAccounts
       .filter((account) => isZernioAdsPlatform(account.platform))
@@ -928,23 +1013,26 @@ export async function getZernioAdsSummary(
 
     const totals = summarizeCampaignGroup(normalizedCampaigns);
 
-    return {
-      connectedVia: 'zernio',
-      profileId,
-      generatedAt: new Date().toISOString(),
-      totals: {
-        networks: platformSummaries.length,
-        connectedAccounts: workspaceAccounts.length,
-        linkedAdAccounts: workspaceAccounts.reduce((count, account) => count + account.adAccounts.length, 0),
-        totalCampaigns: totals.totalCampaigns,
-        activeCampaigns: totals.activeCampaigns,
-        metrics: totals.metrics,
-        spendByCurrency: totals.spendByCurrency,
+        return {
+          connectedVia: 'zernio',
+          profileId,
+          generatedAt: new Date().toISOString(),
+          totals: {
+            networks: platformSummaries.length,
+            connectedAccounts: workspaceAccounts.length,
+            linkedAdAccounts: workspaceAccounts.reduce((count, account) => count + account.adAccounts.length, 0),
+            totalCampaigns: totals.totalCampaigns,
+            activeCampaigns: totals.activeCampaigns,
+            metrics: totals.metrics,
+            spendByCurrency: totals.spendByCurrency,
+          },
+          platforms: platformSummaries,
+          accounts: workspaceAccounts,
+          campaigns: normalizedCampaigns.map(({ _baseMetrics: _discard, ...campaign }) => campaign),
+        };
       },
-      platforms: platformSummaries,
-      accounts: workspaceAccounts,
-      campaigns: normalizedCampaigns.map(({ _baseMetrics: _discard, ...campaign }) => campaign),
-    };
+      options?.refresh ?? false,
+    );
   } catch {
     return null;
   }
