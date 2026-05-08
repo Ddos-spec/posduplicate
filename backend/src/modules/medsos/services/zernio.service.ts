@@ -594,7 +594,10 @@ async function listZernioPlatformAdAccounts(accountId: string): Promise<ZernioAp
   return data.accounts ?? [];
 }
 
-async function listAllZernioAdCampaigns(profileId: string): Promise<ZernioApiAdCampaign[]> {
+async function listAllZernioAdCampaigns(
+  profileId: string,
+  options?: { fromDate?: string; toDate?: string },
+): Promise<ZernioApiAdCampaign[]> {
   const allCampaigns: ZernioApiAdCampaign[] = [];
   let page = 1;
   let pages = 1;
@@ -606,6 +609,14 @@ async function listAllZernioAdCampaigns(profileId: string): Promise<ZernioApiAdC
       limit: '100',
       source: 'all',
     });
+
+    if (options?.fromDate) {
+      qs.set('fromDate', options.fromDate);
+    }
+
+    if (options?.toDate) {
+      qs.set('toDate', options.toDate);
+    }
 
     const data = await zFetch<{ campaigns?: ZernioApiAdCampaign[]; pagination?: ZernioPagination }>(`/ads/campaigns?${qs}`);
     allCampaigns.push(...(data.campaigns ?? []));
@@ -657,6 +668,7 @@ export async function listZernioAdsForCampaign(
   campaignId: string,
   accountId?: string,
   adAccountId?: string,
+  options?: { fromDate?: string; toDate?: string },
 ): Promise<ZernioAdListItem[]> {
   const profileId = await getOrCreateZernioProfile(tenantId);
   const qs = new URLSearchParams({
@@ -672,6 +684,14 @@ export async function listZernioAdsForCampaign(
 
   if (adAccountId) {
     qs.set('adAccountId', adAccountId);
+  }
+
+  if (options?.fromDate) {
+    qs.set('fromDate', options.fromDate);
+  }
+
+  if (options?.toDate) {
+    qs.set('toDate', options.toDate);
   }
 
   const data = await zFetch<{ ads?: ZernioApiAd[] }>(`/ads?${qs}`);
@@ -720,7 +740,10 @@ export async function getZernioAdAnalytics(
   }
 }
 
-export async function getZernioAdsSummary(tenantId: number): Promise<ZernioAdsSummary | null> {
+export async function getZernioAdsSummary(
+  tenantId: number,
+  options?: { fromDate?: string; toDate?: string },
+): Promise<ZernioAdsSummary | null> {
   try {
     const profileId = await getOrCreateZernioProfile(tenantId);
     const allAccounts = await listZernioAccounts(tenantId);
@@ -736,7 +759,7 @@ export async function getZernioAdsSummary(tenantId: number): Promise<ZernioAdsSu
     }
 
     const [rawCampaigns, adAccountsByWorkspaceAccount] = await Promise.all([
-      listAllZernioAdCampaigns(profileId).catch(() => []),
+      listAllZernioAdCampaigns(profileId, options).catch(() => []),
       Promise.all(
         adsWorkspaceAccounts.map(async (account) => ({
           workspaceAccountId: account.id,

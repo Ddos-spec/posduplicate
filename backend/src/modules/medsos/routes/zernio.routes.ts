@@ -74,7 +74,9 @@ router.delete('/accounts/:accountId', async (req, res, next) => {
 // GET /api/medsos/zernio/ads/summary
 router.get('/ads/summary', async (req, res, next) => {
   try {
-    const summary = await getZernioAdsSummary(req.tenantId!);
+    const fromDate = typeof req.query.fromDate === 'string' ? req.query.fromDate : undefined;
+    const toDate = typeof req.query.toDate === 'string' ? req.query.toDate : undefined;
+    const summary = await getZernioAdsSummary(req.tenantId!, { fromDate, toDate });
     return res.json({ success: true, data: summary });
   } catch (err) {
     next(err);
@@ -87,12 +89,14 @@ router.get('/ads/by-campaign', async (req, res, next) => {
     const campaignId = typeof req.query.campaignId === 'string' ? req.query.campaignId : '';
     const accountId = typeof req.query.accountId === 'string' ? req.query.accountId : undefined;
     const adAccountId = typeof req.query.adAccountId === 'string' ? req.query.adAccountId : undefined;
+    const fromDate = typeof req.query.fromDate === 'string' ? req.query.fromDate : undefined;
+    const toDate = typeof req.query.toDate === 'string' ? req.query.toDate : undefined;
 
     if (!campaignId) {
       return res.status(400).json({ success: false, message: 'campaignId is required' });
     }
 
-    const ads = await listZernioAdsForCampaign(req.tenantId!, campaignId, accountId, adAccountId);
+    const ads = await listZernioAdsForCampaign(req.tenantId!, campaignId, accountId, adAccountId, { fromDate, toDate });
     return res.json({ success: true, data: { ads } });
   } catch (err) {
     next(err);
