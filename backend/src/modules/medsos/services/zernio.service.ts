@@ -113,58 +113,618 @@ export async function disconnectZernioAccount(accountId: string): Promise<void> 
 
 // ─── Ads summary ──────────────────────────────────────────────────────────
 
+const ZERNIO_ADS_ACCOUNT_PLATFORMS = new Set(['metaads', 'googleads', 'linkedinads', 'tiktokads', 'pinterestads', 'xads']);
+const ZERNIO_ADS_NETWORK_ORDER = ['metaads', 'googleads', 'linkedinads', 'tiktokads', 'pinterestads', 'xads'] as const;
+
+const ZERNIO_ADS_NETWORK_LABELS: Record<string, string> = {
+  metaads: 'Meta Ads',
+  googleads: 'Google Ads',
+  linkedinads: 'LinkedIn Ads',
+  tiktokads: 'TikTok Ads',
+  pinterestads: 'Pinterest Ads',
+  xads: 'X Ads',
+};
+
+const ZERNIO_ADS_PLATFORM_LABELS: Record<string, string> = {
+  facebook: 'Facebook Ads',
+  instagram: 'Instagram Ads',
+  google: 'Google Ads',
+  linkedin: 'LinkedIn Ads',
+  tiktok: 'TikTok Ads',
+  pinterest: 'Pinterest Ads',
+  twitter: 'X Ads',
+  metaads: 'Meta Ads',
+  googleads: 'Google Ads',
+  linkedinads: 'LinkedIn Ads',
+  tiktokads: 'TikTok Ads',
+  pinterestads: 'Pinterest Ads',
+  xads: 'X Ads',
+};
+
+type ZernioAdsNetworkKey = typeof ZERNIO_ADS_NETWORK_ORDER[number];
+
+type ZernioPagination = {
+  page?: number;
+  limit?: number;
+  total?: number;
+  pages?: number;
+};
+
+type ZernioApiAdAccount = {
+  id?: string;
+  name?: string;
+  currency?: string | null;
+  status?: string | null;
+  timezoneName?: string | null;
+  timezoneOffsetHoursUtc?: number | null;
+};
+
+type ZernioApiAdMetrics = {
+  spend?: number | string | null;
+  impressions?: number | string | null;
+  reach?: number | string | null;
+  clicks?: number | string | null;
+  ctr?: number | string | null;
+  cpc?: number | string | null;
+  cpm?: number | string | null;
+  engagement?: number | string | null;
+  conversions?: number | string | null;
+  costPerConversion?: number | string | null;
+  purchaseValue?: number | string | null;
+  roas?: number | string | null;
+};
+
+type ZernioApiAdCampaign = {
+  platformCampaignId?: string;
+  platform?: string;
+  campaignName?: string;
+  status?: string;
+  reviewStatus?: string | null;
+  adCount?: number;
+  budget?: { amount?: number | null; type?: string | null } | null;
+  campaignBudget?: { amount?: number | null; type?: string | null } | null;
+  budgetLevel?: string | null;
+  currency?: string | null;
+  metrics?: ZernioApiAdMetrics | null;
+  platformAdAccountId?: string | null;
+  platformAdAccountName?: string | null;
+  accountId?: string;
+  profileId?: string;
+  platformObjective?: string | null;
+  optimizationGoal?: string | null;
+};
+
+type MetricAccumulator = {
+  spend: number;
+  impressions: number;
+  reach: number;
+  clicks: number;
+  engagement: number;
+  conversions: number;
+  purchaseValue: number;
+};
+
+export interface ZernioCurrencyTotals {
+  currency: string;
+  spend: number;
+  purchaseValue: number;
+  conversions: number;
+  cpc: number | null;
+  cpm: number | null;
+  costPerConversion: number | null;
+  roas: number | null;
+}
+
+export interface ZernioAdsMetrics {
+  spend: number;
+  impressions: number;
+  reach: number;
+  clicks: number;
+  engagement: number;
+  conversions: number;
+  purchaseValue: number;
+  ctr: number;
+  cpc: number | null;
+  cpm: number | null;
+  costPerConversion: number | null;
+  roas: number | null;
+}
+
+export interface ZernioAdsCampaignSummary {
+  id: string;
+  name: string;
+  networkKey: ZernioAdsNetworkKey;
+  networkLabel: string;
+  platform: string;
+  platformLabel: string;
+  socialAccountId: string;
+  socialAccountName: string;
+  adAccountId: string | null;
+  adAccountName: string | null;
+  currency: string | null;
+  status: string;
+  reviewStatus: string | null;
+  objective: string | null;
+  optimizationGoal: string | null;
+  budgetLevel: string | null;
+  budgetAmount: number | null;
+  budgetType: string | null;
+  adCount: number;
+  metrics: ZernioAdsMetrics;
+}
+
+export interface ZernioAdsLinkedAccountSummary {
+  id: string;
+  name: string;
+  currency: string | null;
+  status: string | null;
+  timezoneName: string | null;
+  timezoneOffsetHoursUtc: number | null;
+  totalCampaigns: number;
+  activeCampaigns: number;
+  metrics: ZernioAdsMetrics;
+  spendByCurrency: ZernioCurrencyTotals[];
+  campaigns: ZernioAdsCampaignSummary[];
+}
+
+export interface ZernioAdsWorkspaceAccountSummary {
+  id: string;
+  platform: string;
+  networkKey: ZernioAdsNetworkKey;
+  networkLabel: string;
+  username: string;
+  displayName: string;
+  profileUrl: string | null;
+  isActive: boolean;
+  totalCampaigns: number;
+  activeCampaigns: number;
+  metrics: ZernioAdsMetrics;
+  spendByCurrency: ZernioCurrencyTotals[];
+  adAccounts: ZernioAdsLinkedAccountSummary[];
+}
+
+export interface ZernioAdsPlatformSummary {
+  key: ZernioAdsNetworkKey;
+  label: string;
+  connectedAccounts: number;
+  linkedAdAccounts: number;
+  totalCampaigns: number;
+  activeCampaigns: number;
+  metrics: ZernioAdsMetrics;
+  spendByCurrency: ZernioCurrencyTotals[];
+}
+
 export interface ZernioAdsSummary {
   connectedVia: 'zernio';
-  accountName: string | null;
-  adAccounts: Array<{ id: string; name: string; currency?: string }>;
-  campaigns: Array<{
-    id: string;
-    name: string;
-    status: string;
-    spend: number;
-    impressions: number;
-    clicks: number;
-  }>;
-  totals: { spend: number; impressions: number; clicks: number };
+  profileId: string;
+  generatedAt: string;
+  totals: {
+    networks: number;
+    connectedAccounts: number;
+    linkedAdAccounts: number;
+    totalCampaigns: number;
+    activeCampaigns: number;
+    metrics: ZernioAdsMetrics;
+    spendByCurrency: ZernioCurrencyTotals[];
+  };
+  platforms: ZernioAdsPlatformSummary[];
+  accounts: ZernioAdsWorkspaceAccountSummary[];
+  campaigns: ZernioAdsCampaignSummary[];
+}
+
+type InternalCampaignSummary = ZernioAdsCampaignSummary & { _baseMetrics: MetricAccumulator };
+
+function isZernioAdsPlatform(platform: string): platform is ZernioAdsNetworkKey {
+  return ZERNIO_ADS_ACCOUNT_PLATFORMS.has(platform.toLowerCase());
+}
+
+function getNetworkKeyFromAccountPlatform(platform: string): ZernioAdsNetworkKey {
+  const lowered = platform.toLowerCase();
+  switch (lowered) {
+    case 'metaads':
+      return 'metaads';
+    case 'googleads':
+      return 'googleads';
+    case 'linkedinads':
+      return 'linkedinads';
+    case 'tiktokads':
+      return 'tiktokads';
+    case 'pinterestads':
+      return 'pinterestads';
+    case 'xads':
+      return 'xads';
+    default:
+      return 'metaads';
+  }
+}
+
+function getNetworkKeyFromCampaignPlatform(platform: string): ZernioAdsNetworkKey {
+  const lowered = platform.toLowerCase();
+  switch (lowered) {
+    case 'facebook':
+    case 'instagram':
+      return 'metaads';
+    case 'google':
+      return 'googleads';
+    case 'linkedin':
+      return 'linkedinads';
+    case 'tiktok':
+      return 'tiktokads';
+    case 'pinterest':
+      return 'pinterestads';
+    case 'twitter':
+      return 'xads';
+    default:
+      return 'metaads';
+  }
+}
+
+function getNetworkLabel(networkKey: ZernioAdsNetworkKey): string {
+  return ZERNIO_ADS_NETWORK_LABELS[networkKey] ?? networkKey;
+}
+
+function getPlatformLabel(platform: string): string {
+  return ZERNIO_ADS_PLATFORM_LABELS[platform.toLowerCase()] ?? platform;
+}
+
+function toNumber(value: unknown): number {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function toInteger(value: unknown): number {
+  return Math.trunc(toNumber(value));
+}
+
+function buildBaseMetrics(metrics?: ZernioApiAdMetrics | null): MetricAccumulator {
+  return {
+    spend: toNumber(metrics?.spend),
+    impressions: toInteger(metrics?.impressions),
+    reach: toInteger(metrics?.reach),
+    clicks: toInteger(metrics?.clicks),
+    engagement: toInteger(metrics?.engagement),
+    conversions: toInteger(metrics?.conversions),
+    purchaseValue: toNumber(metrics?.purchaseValue),
+  };
+}
+
+function emptyBaseMetrics(): MetricAccumulator {
+  return {
+    spend: 0,
+    impressions: 0,
+    reach: 0,
+    clicks: 0,
+    engagement: 0,
+    conversions: 0,
+    purchaseValue: 0,
+  };
+}
+
+function sumBaseMetrics(items: MetricAccumulator[]): MetricAccumulator {
+  return items.reduce<MetricAccumulator>((acc, item) => ({
+    spend: acc.spend + item.spend,
+    impressions: acc.impressions + item.impressions,
+    reach: acc.reach + item.reach,
+    clicks: acc.clicks + item.clicks,
+    engagement: acc.engagement + item.engagement,
+    conversions: acc.conversions + item.conversions,
+    purchaseValue: acc.purchaseValue + item.purchaseValue,
+  }), emptyBaseMetrics());
+}
+
+function roundMetric(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function buildMetricSummary(metrics: MetricAccumulator, currencyCount: number): ZernioAdsMetrics {
+  const ctr = metrics.impressions > 0 ? (metrics.clicks / metrics.impressions) * 100 : 0;
+  const singleCurrency = currencyCount <= 1;
+  const cpc = singleCurrency && metrics.clicks > 0 ? metrics.spend / metrics.clicks : null;
+  const cpm = singleCurrency && metrics.impressions > 0 ? (metrics.spend / metrics.impressions) * 1000 : null;
+  const costPerConversion = singleCurrency && metrics.conversions > 0 ? metrics.spend / metrics.conversions : null;
+  const roas = singleCurrency && metrics.spend > 0 ? metrics.purchaseValue / metrics.spend : null;
+
+  return {
+    spend: roundMetric(metrics.spend),
+    impressions: metrics.impressions,
+    reach: metrics.reach,
+    clicks: metrics.clicks,
+    engagement: metrics.engagement,
+    conversions: metrics.conversions,
+    purchaseValue: roundMetric(metrics.purchaseValue),
+    ctr: roundMetric(ctr),
+    cpc: cpc == null ? null : roundMetric(cpc),
+    cpm: cpm == null ? null : roundMetric(cpm),
+    costPerConversion: costPerConversion == null ? null : roundMetric(costPerConversion),
+    roas: roas == null ? null : roundMetric(roas),
+  };
+}
+
+function buildSpendByCurrency(items: Array<{ currency: string | null; metrics: MetricAccumulator }>): ZernioCurrencyTotals[] {
+  const grouped = new Map<string, MetricAccumulator>();
+
+  for (const item of items) {
+    const currency = (item.currency || 'UNSPECIFIED').toUpperCase();
+    const current = grouped.get(currency) ?? emptyBaseMetrics();
+    grouped.set(currency, {
+      spend: current.spend + item.metrics.spend,
+      impressions: current.impressions + item.metrics.impressions,
+      reach: current.reach + item.metrics.reach,
+      clicks: current.clicks + item.metrics.clicks,
+      engagement: current.engagement + item.metrics.engagement,
+      conversions: current.conversions + item.metrics.conversions,
+      purchaseValue: current.purchaseValue + item.metrics.purchaseValue,
+    });
+  }
+
+  return Array.from(grouped.entries())
+    .map(([currency, metrics]) => {
+      const summary = buildMetricSummary(metrics, 1);
+      return {
+        currency,
+        spend: summary.spend,
+        purchaseValue: summary.purchaseValue,
+        conversions: summary.conversions,
+        cpc: summary.cpc,
+        cpm: summary.cpm,
+        costPerConversion: summary.costPerConversion,
+        roas: summary.roas,
+      };
+    })
+    .sort((left, right) => right.spend - left.spend);
+}
+
+function summarizeCampaignGroup(campaigns: InternalCampaignSummary[]) {
+  const baseMetrics = sumBaseMetrics(campaigns.map((campaign) => campaign._baseMetrics));
+  const spendByCurrency = buildSpendByCurrency(campaigns.map((campaign) => ({
+    currency: campaign.currency,
+    metrics: campaign._baseMetrics,
+  })));
+  const metrics = buildMetricSummary(baseMetrics, spendByCurrency.length);
+
+  return {
+    totalCampaigns: campaigns.length,
+    activeCampaigns: campaigns.filter((campaign) => campaign.status === 'active').length,
+    metrics,
+    spendByCurrency,
+  };
+}
+
+async function listZernioPlatformAdAccounts(accountId: string): Promise<ZernioApiAdAccount[]> {
+  const data = await zFetch<{ accounts?: ZernioApiAdAccount[] }>(`/ads/accounts?accountId=${encodeURIComponent(accountId)}&limit=1000`);
+  return data.accounts ?? [];
+}
+
+async function listAllZernioAdCampaigns(profileId: string): Promise<ZernioApiAdCampaign[]> {
+  const allCampaigns: ZernioApiAdCampaign[] = [];
+  let page = 1;
+  let pages = 1;
+
+  do {
+    const qs = new URLSearchParams({
+      profileId,
+      page: String(page),
+      limit: '100',
+      source: 'all',
+    });
+
+    const data = await zFetch<{ campaigns?: ZernioApiAdCampaign[]; pagination?: ZernioPagination }>(`/ads/campaigns?${qs}`);
+    allCampaigns.push(...(data.campaigns ?? []));
+    pages = Math.max(1, data.pagination?.pages ?? 1);
+    page += 1;
+  } while (page <= pages);
+
+  return allCampaigns;
 }
 
 export async function getZernioAdsSummary(tenantId: number): Promise<ZernioAdsSummary | null> {
   try {
-    const accounts = await listZernioAccounts(tenantId);
-    const fbAccount = accounts.find((a) => a.platform === 'facebook');
-    if (!fbAccount) return null;
-
-    // Fetch ad accounts linked to this Facebook connection
-    const adAccountsData = await zFetch<{ adAccounts?: any[] }>(`/ads/accounts?accountId=${fbAccount.id}`)
-      .catch(() => ({ adAccounts: [] }));
-
-    const adAccounts: Array<{ id: string; name: string; currency?: string }> = (adAccountsData.adAccounts ?? []).map((a: any) => ({
-      id: a.id ?? a.accountId,
-      name: a.name ?? a.id,
-      currency: a.currency,
-    }));
-
-    // Fetch campaigns for first ad account
-    let campaigns: ZernioAdsSummary['campaigns'] = [];
-    if (adAccounts[0]) {
-      const adsData = await zFetch<{ ads?: any[] }>(`/ads?accountId=${fbAccount.id}&adAccountId=${adAccounts[0].id}`)
-        .catch(() => ({ ads: [] }));
-      campaigns = (adsData.ads ?? []).map((c: any) => ({
-        id: c.id,
-        name: c.name ?? c.id,
-        status: c.status ?? 'UNKNOWN',
-        spend: parseFloat(c.spend ?? '0'),
-        impressions: parseInt(c.impressions ?? '0', 10),
-        clicks: parseInt(c.clicks ?? '0', 10),
+    const profileId = await getOrCreateZernioProfile(tenantId);
+    const allAccounts = await listZernioAccounts(tenantId);
+    const adsWorkspaceAccounts = allAccounts
+      .filter((account) => isZernioAdsPlatform(account.platform))
+      .map((account) => ({
+        ...account,
+        networkKey: getNetworkKeyFromAccountPlatform(account.platform),
       }));
+
+    if (adsWorkspaceAccounts.length === 0) {
+      return null;
     }
 
-    const totals = campaigns.reduce(
-      (acc, c) => ({ spend: acc.spend + c.spend, impressions: acc.impressions + c.impressions, clicks: acc.clicks + c.clicks }),
-      { spend: 0, impressions: 0, clicks: 0 },
+    const [rawCampaigns, adAccountsByWorkspaceAccount] = await Promise.all([
+      listAllZernioAdCampaigns(profileId).catch(() => []),
+      Promise.all(
+        adsWorkspaceAccounts.map(async (account) => ({
+          workspaceAccountId: account.id,
+          adAccounts: await listZernioPlatformAdAccounts(account.id).catch(() => []),
+        })),
+      ),
+    ]);
+
+    const workspaceAccountMap = new Map(adsWorkspaceAccounts.map((account) => [account.id, account]));
+    const workspaceAccountsByNetwork = new Map<ZernioAdsNetworkKey, typeof adsWorkspaceAccounts>();
+    for (const account of adsWorkspaceAccounts) {
+      const bucket = workspaceAccountsByNetwork.get(account.networkKey) ?? [];
+      bucket.push(account);
+      workspaceAccountsByNetwork.set(account.networkKey, bucket);
+    }
+
+    const resolveWorkspaceAccount = (campaign: ZernioApiAdCampaign) => {
+      if (campaign.accountId && workspaceAccountMap.has(campaign.accountId)) {
+        return workspaceAccountMap.get(campaign.accountId)!;
+      }
+
+      const networkKey = getNetworkKeyFromCampaignPlatform(campaign.platform || '');
+      const candidates = workspaceAccountsByNetwork.get(networkKey) ?? [];
+      return candidates.length === 1 ? candidates[0] : null;
+    };
+
+    const normalizedCampaigns = rawCampaigns
+      .map<InternalCampaignSummary | null>((campaign) => {
+        const owner = resolveWorkspaceAccount(campaign);
+        if (!owner) {
+          return null;
+        }
+
+        const baseMetrics = buildBaseMetrics(campaign.metrics);
+        const budget = campaign.campaignBudget ?? campaign.budget ?? null;
+
+        return {
+          id: campaign.platformCampaignId ?? `${owner.id}:${campaign.platformAdAccountId ?? 'unknown'}:${campaign.campaignName ?? 'campaign'}`,
+          name: campaign.campaignName ?? 'Untitled campaign',
+          networkKey: owner.networkKey,
+          networkLabel: getNetworkLabel(owner.networkKey),
+          platform: String(campaign.platform ?? '').toLowerCase(),
+          platformLabel: getPlatformLabel(String(campaign.platform ?? '')),
+          socialAccountId: owner.id,
+          socialAccountName: owner.displayName || owner.username || getNetworkLabel(owner.networkKey),
+          adAccountId: campaign.platformAdAccountId ?? null,
+          adAccountName: campaign.platformAdAccountName ?? null,
+          currency: campaign.currency ?? null,
+          status: String(campaign.status ?? 'unknown').toLowerCase(),
+          reviewStatus: campaign.reviewStatus ?? null,
+          objective: campaign.platformObjective ?? null,
+          optimizationGoal: campaign.optimizationGoal ?? null,
+          budgetLevel: campaign.budgetLevel ?? null,
+          budgetAmount: budget?.amount == null ? null : roundMetric(toNumber(budget.amount)),
+          budgetType: budget?.type ?? null,
+          adCount: toInteger(campaign.adCount),
+          metrics: buildMetricSummary(baseMetrics, campaign.currency ? 1 : 0),
+          _baseMetrics: baseMetrics,
+        };
+      })
+      .filter((campaign): campaign is InternalCampaignSummary => campaign !== null)
+      .sort((left, right) => right._baseMetrics.spend - left._baseMetrics.spend);
+
+    const adAccountsLookup = new Map<string, ZernioApiAdAccount[]>(
+      adAccountsByWorkspaceAccount.map((item) => [item.workspaceAccountId, item.adAccounts]),
     );
 
-    return { connectedVia: 'zernio', accountName: fbAccount.displayName, adAccounts, campaigns, totals };
+    const workspaceAccounts: ZernioAdsWorkspaceAccountSummary[] = adsWorkspaceAccounts.map((workspaceAccount) => {
+      const campaignsForWorkspaceAccount = normalizedCampaigns.filter((campaign) => campaign.socialAccountId === workspaceAccount.id);
+      const knownAdAccounts = adAccountsLookup.get(workspaceAccount.id) ?? [];
+      const campaignBuckets = new Map<string, InternalCampaignSummary[]>();
+
+      for (const campaign of campaignsForWorkspaceAccount) {
+        const bucketKey = campaign.adAccountId ?? `unmapped:${workspaceAccount.id}`;
+        const bucket = campaignBuckets.get(bucketKey) ?? [];
+        bucket.push(campaign);
+        campaignBuckets.set(bucketKey, bucket);
+      }
+
+      const linkedAdAccounts: ZernioAdsLinkedAccountSummary[] = [];
+
+      for (const knownAdAccount of knownAdAccounts) {
+        const id = knownAdAccount.id ?? knownAdAccount.name ?? `${workspaceAccount.id}-ad-account`;
+        const campaignsForAdAccount = campaignBuckets.get(id) ?? [];
+        const stats = summarizeCampaignGroup(campaignsForAdAccount);
+
+        linkedAdAccounts.push({
+          id,
+          name: knownAdAccount.name ?? id,
+          currency: knownAdAccount.currency ?? campaignsForAdAccount[0]?.currency ?? null,
+          status: knownAdAccount.status ?? null,
+          timezoneName: knownAdAccount.timezoneName ?? null,
+          timezoneOffsetHoursUtc: knownAdAccount.timezoneOffsetHoursUtc ?? null,
+          totalCampaigns: stats.totalCampaigns,
+          activeCampaigns: stats.activeCampaigns,
+          metrics: stats.metrics,
+          spendByCurrency: stats.spendByCurrency,
+          campaigns: campaignsForAdAccount.map(({ _baseMetrics: _discard, ...campaign }) => campaign),
+        });
+      }
+
+      for (const [bucketKey, campaignsForBucket] of campaignBuckets.entries()) {
+        if (linkedAdAccounts.some((item) => item.id === bucketKey)) {
+          continue;
+        }
+
+        const stats = summarizeCampaignGroup(campaignsForBucket);
+        linkedAdAccounts.push({
+          id: bucketKey,
+          name: campaignsForBucket[0]?.adAccountName ?? bucketKey,
+          currency: campaignsForBucket[0]?.currency ?? null,
+          status: null,
+          timezoneName: null,
+          timezoneOffsetHoursUtc: null,
+          totalCampaigns: stats.totalCampaigns,
+          activeCampaigns: stats.activeCampaigns,
+          metrics: stats.metrics,
+          spendByCurrency: stats.spendByCurrency,
+          campaigns: campaignsForBucket.map(({ _baseMetrics: _discard, ...campaign }) => campaign),
+        });
+      }
+
+      linkedAdAccounts.sort((left, right) => right.metrics.spend - left.metrics.spend);
+
+      const workspaceStats = summarizeCampaignGroup(campaignsForWorkspaceAccount);
+
+      return {
+        id: workspaceAccount.id,
+        platform: workspaceAccount.platform,
+        networkKey: workspaceAccount.networkKey,
+        networkLabel: getNetworkLabel(workspaceAccount.networkKey),
+        username: workspaceAccount.username,
+        displayName: workspaceAccount.displayName,
+        profileUrl: workspaceAccount.profileUrl,
+        isActive: workspaceAccount.isActive,
+        totalCampaigns: workspaceStats.totalCampaigns,
+        activeCampaigns: workspaceStats.activeCampaigns,
+        metrics: workspaceStats.metrics,
+        spendByCurrency: workspaceStats.spendByCurrency,
+        adAccounts: linkedAdAccounts,
+      };
+    });
+
+    const platformSummaries: ZernioAdsPlatformSummary[] = ZERNIO_ADS_NETWORK_ORDER
+      .map((networkKey) => {
+        const accountsForNetwork = workspaceAccounts.filter((account) => account.networkKey === networkKey);
+        if (accountsForNetwork.length === 0) {
+          return null;
+        }
+
+        const campaignsForNetwork = normalizedCampaigns.filter((campaign) => campaign.networkKey === networkKey);
+        const stats = summarizeCampaignGroup(campaignsForNetwork);
+
+        return {
+          key: networkKey,
+          label: getNetworkLabel(networkKey),
+          connectedAccounts: accountsForNetwork.length,
+          linkedAdAccounts: accountsForNetwork.reduce((count, account) => count + account.adAccounts.length, 0),
+          totalCampaigns: stats.totalCampaigns,
+          activeCampaigns: stats.activeCampaigns,
+          metrics: stats.metrics,
+          spendByCurrency: stats.spendByCurrency,
+        };
+      })
+      .filter((summary): summary is ZernioAdsPlatformSummary => summary !== null);
+
+    const totals = summarizeCampaignGroup(normalizedCampaigns);
+
+    return {
+      connectedVia: 'zernio',
+      profileId,
+      generatedAt: new Date().toISOString(),
+      totals: {
+        networks: platformSummaries.length,
+        connectedAccounts: workspaceAccounts.length,
+        linkedAdAccounts: workspaceAccounts.reduce((count, account) => count + account.adAccounts.length, 0),
+        totalCampaigns: totals.totalCampaigns,
+        activeCampaigns: totals.activeCampaigns,
+        metrics: totals.metrics,
+        spendByCurrency: totals.spendByCurrency,
+      },
+      platforms: platformSummaries,
+      accounts: workspaceAccounts,
+      campaigns: normalizedCampaigns.map(({ _baseMetrics: _discard, ...campaign }) => campaign),
+    };
   } catch {
     return null;
   }

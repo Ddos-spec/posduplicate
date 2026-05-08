@@ -107,27 +107,112 @@ export async function getWACrmStatus(): Promise<WACrmConnectionStatus> {
   return data.data as WACrmConnectionStatus;
 }
 
-export interface MetaCampaignRow {
-  id: string;
-  name: string;
-  status: string;
-  objective: string;
+export interface ZernioCurrencyTotals {
+  currency: string;
   spend: number;
-  impressions: number;
-  clicks: number;
-  ctr: string;
-  cpm: string;
-  dailyBudget: number | null;
-  lifetimeBudget: number | null;
+  purchaseValue: number;
+  conversions: number;
+  cpc: number | null;
+  cpm: number | null;
+  costPerConversion: number | null;
+  roas: number | null;
 }
 
-export interface MetaAdsSummary {
-  metaUserName: string | null;
-  adAccounts: Array<{ id: string; name: string; currency: string }>;
-  activeCampaigns: number;
+export interface ZernioAdsMetrics {
+  spend: number;
+  impressions: number;
+  reach: number;
+  clicks: number;
+  engagement: number;
+  conversions: number;
+  purchaseValue: number;
+  ctr: number;
+  cpc: number | null;
+  cpm: number | null;
+  costPerConversion: number | null;
+  roas: number | null;
+}
+
+export interface ZernioAdsCampaignSummary {
+  id: string;
+  name: string;
+  networkKey: string;
+  networkLabel: string;
+  platform: string;
+  platformLabel: string;
+  socialAccountId: string;
+  socialAccountName: string;
+  adAccountId: string | null;
+  adAccountName: string | null;
+  currency: string | null;
+  status: string;
+  reviewStatus: string | null;
+  objective: string | null;
+  optimizationGoal: string | null;
+  budgetLevel: string | null;
+  budgetAmount: number | null;
+  budgetType: string | null;
+  adCount: number;
+  metrics: ZernioAdsMetrics;
+}
+
+export interface ZernioAdsLinkedAccountSummary {
+  id: string;
+  name: string;
+  currency: string | null;
+  status: string | null;
+  timezoneName: string | null;
+  timezoneOffsetHoursUtc: number | null;
   totalCampaigns: number;
-  campaigns: MetaCampaignRow[];
-  totals: { spend: number; impressions: number; clicks: number };
+  activeCampaigns: number;
+  metrics: ZernioAdsMetrics;
+  spendByCurrency: ZernioCurrencyTotals[];
+  campaigns: ZernioAdsCampaignSummary[];
+}
+
+export interface ZernioAdsWorkspaceAccountSummary {
+  id: string;
+  platform: string;
+  networkKey: string;
+  networkLabel: string;
+  username: string;
+  displayName: string;
+  profileUrl: string | null;
+  isActive: boolean;
+  totalCampaigns: number;
+  activeCampaigns: number;
+  metrics: ZernioAdsMetrics;
+  spendByCurrency: ZernioCurrencyTotals[];
+  adAccounts: ZernioAdsLinkedAccountSummary[];
+}
+
+export interface ZernioAdsPlatformSummary {
+  key: string;
+  label: string;
+  connectedAccounts: number;
+  linkedAdAccounts: number;
+  totalCampaigns: number;
+  activeCampaigns: number;
+  metrics: ZernioAdsMetrics;
+  spendByCurrency: ZernioCurrencyTotals[];
+}
+
+export interface ZernioAdsSummary {
+  connectedVia: 'zernio';
+  profileId: string;
+  generatedAt: string;
+  totals: {
+    networks: number;
+    connectedAccounts: number;
+    linkedAdAccounts: number;
+    totalCampaigns: number;
+    activeCampaigns: number;
+    metrics: ZernioAdsMetrics;
+    spendByCurrency: ZernioCurrencyTotals[];
+  };
+  platforms: ZernioAdsPlatformSummary[];
+  accounts: ZernioAdsWorkspaceAccountSummary[];
+  campaigns: ZernioAdsCampaignSummary[];
 }
 
 export async function getMetaOAuthStartUrl(): Promise<string> {
@@ -137,9 +222,9 @@ export async function getMetaOAuthStartUrl(): Promise<string> {
   return (data.data as { oauthUrl: string }).oauthUrl;
 }
 
-export async function getMetaAdsSummary(): Promise<MetaAdsSummary | null> {
+export async function getMetaAdsSummary(): Promise<Record<string, any> | null> {
   const { data } = await api.get('/medsos/meta-oauth/summary');
-  return (data.data ?? null) as MetaAdsSummary | null;
+  return (data.data ?? null) as Record<string, any> | null;
 }
 
 // ─── Zernio ────────────────────────────────────────────────────────────────
@@ -178,21 +263,7 @@ export async function disconnectZernioAccount(accountId: string): Promise<void> 
   await api.delete(`/medsos/zernio/accounts/${accountId}`);
 }
 
-export async function getZernioAdsSummary(): Promise<MetaAdsSummary | null> {
+export async function getZernioAdsSummary(): Promise<ZernioAdsSummary | null> {
   const { data } = await api.get('/medsos/zernio/ads/summary');
-  if (!data.data) return null;
-  const z = data.data;
-  return {
-    metaUserName: z.accountName ?? null,
-    adAccounts: z.adAccounts ?? [],
-    activeCampaigns: (z.campaigns ?? []).filter((c: any) => c.status === 'ACTIVE').length,
-    totalCampaigns: (z.campaigns ?? []).length,
-    campaigns: (z.campaigns ?? []).map((c: any) => ({
-      id: c.id, name: c.name, status: c.status, objective: c.objective ?? '-',
-      spend: c.spend, impressions: c.impressions, clicks: c.clicks,
-      ctr: c.ctr ?? '0', cpm: c.cpm ?? '0',
-      dailyBudget: c.dailyBudget ?? null, lifetimeBudget: c.lifetimeBudget ?? null,
-    })),
-    totals: z.totals ?? { spend: 0, impressions: 0, clicks: 0 },
-  } as MetaAdsSummary;
+  return (data.data ?? null) as ZernioAdsSummary | null;
 }
