@@ -215,6 +215,53 @@ export interface ZernioAdsSummary {
   campaigns: ZernioAdsCampaignSummary[];
 }
 
+export interface ZernioAdListItem {
+  id: string;
+  name: string;
+  platform: string;
+  platformLabel: string;
+  status: string;
+  adType: string | null;
+  goal: string | null;
+  isExternal: boolean;
+  campaignId: string | null;
+  campaignName: string | null;
+  adSetId: string | null;
+  adSetName: string | null;
+  adAccountId: string | null;
+  adAccountName: string | null;
+  createdAt: string | null;
+  objective: string | null;
+  optimizationGoal: string | null;
+  budgetAmount: number | null;
+  budgetType: string | null;
+  metrics: ZernioAdsMetrics;
+  creative: {
+    thumbnailUrl: string | null;
+    imageUrl: string | null;
+    videoUrl: string | null;
+    mediaUrls: string[];
+    body: string | null;
+    headline: string | null;
+    linkUrl: string | null;
+  };
+}
+
+export interface ZernioAdAnalyticsDailyRow extends ZernioAdsMetrics {
+  date: string;
+}
+
+export interface ZernioAdAnalyticsSummary {
+  id: string;
+  name: string;
+  platform: string;
+  platformLabel: string;
+  status: string;
+  summary: ZernioAdsMetrics;
+  daily: ZernioAdAnalyticsDailyRow[];
+  breakdowns: Record<string, Array<Record<string, any>>>;
+}
+
 export async function getMetaOAuthStartUrl(): Promise<string> {
   const { data } = await api.get('/medsos/meta-oauth/start-url', {
     params: { returnPath: '/medsos/meta-ads' },
@@ -266,4 +313,35 @@ export async function disconnectZernioAccount(accountId: string): Promise<void> 
 export async function getZernioAdsSummary(): Promise<ZernioAdsSummary | null> {
   const { data } = await api.get('/medsos/zernio/ads/summary');
   return (data.data ?? null) as ZernioAdsSummary | null;
+}
+
+export async function getZernioAdsByCampaign(params: {
+  campaignId: string;
+  accountId?: string | null;
+  adAccountId?: string | null;
+}): Promise<ZernioAdListItem[]> {
+  const { data } = await api.get('/medsos/zernio/ads/by-campaign', {
+    params: {
+      campaignId: params.campaignId,
+      accountId: params.accountId || undefined,
+      adAccountId: params.adAccountId || undefined,
+    },
+  });
+  return (data.data?.ads ?? []) as ZernioAdListItem[];
+}
+
+export async function getZernioAdAnalytics(params: {
+  adId: string;
+  fromDate?: string;
+  toDate?: string;
+  breakdowns?: string[];
+}): Promise<ZernioAdAnalyticsSummary | null> {
+  const { data } = await api.get(`/medsos/zernio/ads/${params.adId}/analytics`, {
+    params: {
+      fromDate: params.fromDate,
+      toDate: params.toDate,
+      breakdowns: params.breakdowns?.join(','),
+    },
+  });
+  return (data.data ?? null) as ZernioAdAnalyticsSummary | null;
 }

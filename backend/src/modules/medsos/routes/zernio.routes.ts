@@ -3,7 +3,9 @@ import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import {
   getAdsConnectUrl,
+  getZernioAdAnalytics,
   getConnectUrl,
+  listZernioAdsForCampaign,
   listZernioAccounts,
   disconnectZernioAccount,
   getZernioAdsSummary,
@@ -74,6 +76,45 @@ router.get('/ads/summary', async (req, res, next) => {
   try {
     const summary = await getZernioAdsSummary(req.tenantId!);
     return res.json({ success: true, data: summary });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/medsos/zernio/ads/by-campaign?campaignId=...&accountId=...&adAccountId=...
+router.get('/ads/by-campaign', async (req, res, next) => {
+  try {
+    const campaignId = typeof req.query.campaignId === 'string' ? req.query.campaignId : '';
+    const accountId = typeof req.query.accountId === 'string' ? req.query.accountId : undefined;
+    const adAccountId = typeof req.query.adAccountId === 'string' ? req.query.adAccountId : undefined;
+
+    if (!campaignId) {
+      return res.status(400).json({ success: false, message: 'campaignId is required' });
+    }
+
+    const ads = await listZernioAdsForCampaign(req.tenantId!, campaignId, accountId, adAccountId);
+    return res.json({ success: true, data: { ads } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/medsos/zernio/ads/:adId/analytics
+router.get('/ads/:adId/analytics', async (req, res, next) => {
+  try {
+    const breakdowns = typeof req.query.breakdowns === 'string'
+      ? req.query.breakdowns.split(',').map((item) => item.trim()).filter(Boolean)
+      : undefined;
+    const fromDate = typeof req.query.fromDate === 'string' ? req.query.fromDate : undefined;
+    const toDate = typeof req.query.toDate === 'string' ? req.query.toDate : undefined;
+
+    const analytics = await getZernioAdAnalytics(req.tenantId!, req.params.adId, {
+      breakdowns,
+      fromDate,
+      toDate,
+    });
+
+    return res.json({ success: true, data: analytics });
   } catch (err) {
     next(err);
   }
