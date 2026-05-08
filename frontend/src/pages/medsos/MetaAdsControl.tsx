@@ -5,9 +5,14 @@ import { PlatformBadge } from '../../components/medsos/PlatformBadge';
 import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   disconnectZernioAccount,
+  getZernioAdAnalytics,
+  getZernioAdsByCampaign,
   getZernioAccounts,
   getZernioAdsConnectUrl,
   getZernioAdsSummary,
+  type ZernioAdAnalyticsSummary,
+  type ZernioAdListItem,
+  type ZernioAdsCampaignSummary,
   type ZernioAdsSummary,
   type ZernioAccount,
 } from '../../services/medsosPostsService';
@@ -93,6 +98,25 @@ function humanizeStatus(status: string) {
   return labels[normalized] ?? status;
 }
 
+const platformBreakdownDefaults: Record<string, string[]> = {
+  facebook: ['age', 'gender', 'country', 'publisher_platform'],
+  instagram: ['age', 'gender', 'country', 'publisher_platform'],
+  tiktok: ['gender', 'age', 'country_code', 'platform'],
+};
+
+const breakdownLabels: Record<string, string> = {
+  age: 'Age',
+  gender: 'Gender',
+  country: 'Country',
+  country_code: 'Country',
+  publisher_platform: 'Publisher',
+  platform: 'Platform',
+  device_platform: 'Device',
+  region: 'Region',
+  language: 'Language',
+  ac: 'Network',
+};
+
 export default function MetaAdsControl() {
   const { isDark } = useThemeStore();
   const location = useLocation();
@@ -102,6 +126,12 @@ export default function MetaAdsControl() {
   const [busyPlatform, setBusyPlatform] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<ZernioAccount[]>(isDemo ? demoAccounts : []);
   const [summary, setSummary] = useState<ZernioAdsSummary | null>(null);
+  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
+  const [campaignAdsLoading, setCampaignAdsLoading] = useState(false);
+  const [campaignAds, setCampaignAds] = useState<ZernioAdListItem[]>([]);
+  const [selectedAdId, setSelectedAdId] = useState<string | null>(null);
+  const [selectedAdAnalyticsLoading, setSelectedAdAnalyticsLoading] = useState(false);
+  const [selectedAdAnalytics, setSelectedAdAnalytics] = useState<ZernioAdAnalyticsSummary | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -140,6 +170,14 @@ export default function MetaAdsControl() {
   const platformSummaries = summary?.platforms ?? [];
   const workspaceAccounts = summary?.accounts ?? [];
   const topCampaigns = summary?.campaigns.slice(0, 12) ?? [];
+  const activeCampaign = useMemo(
+    () => summary?.campaigns.find((campaign) => campaign.id === activeCampaignId) ?? null,
+    [summary, activeCampaignId]
+  );
+  const selectedAd = useMemo(
+    () => campaignAds.find((ad) => ad.id === selectedAdId) ?? null,
+    [campaignAds, selectedAdId]
+  );
 
   const getConnectedAccount = (platforms: string[]) => {
     const lowered = platforms.map((item) => item.toLowerCase());
@@ -171,6 +209,48 @@ export default function MetaAdsControl() {
       }
     } catch (error) {
       console.error('Failed to disconnect Zernio ads account', error);
+    }
+  };
+
+  const loadAdAnalytics = async (ad: ZernioAdListItem) => {
+    setSelectedAdId(ad.id);
+    setSelectedAdAnalyticsLoading(true);
+    try {
+      const analytics = await getZernioAdAnalytics({
+        adId: ad.id,
+        breakdowns: platformBreakdownDefaults[ad.platform] ?? [],
+      });
+      setSelectedAdAnalytics(analytics);
+    } catch (error) {
+      console.error('Failed to load ad analytics detail', error);
+      setSelectedAdAnalytics(null);
+    } finally {
+      setSelectedAdAnalyticsLoading(false);
+    }
+  };
+
+  const handleInspectCampaign = async (campaign: ZernioAdsCampaignSummary) => {
+    setActiveCampaignId(campaign.id);
+    setCampaignAdsLoading(true);
+    setCampaignAds([]);
+    setSelectedAdId(null);
+    setSelectedAdAnalytics(null);
+
+    try {
+      const ads = await getZernioAdsByCampaign({
+        campaignId: campaign.id,
+        accountId: campaign.socialAccountId,
+        adAccountId: campaign.adAccountId,
+      });
+      setCampaignAds(ads);
+
+      if (ads[0]) {
+        await loadAdAnalytics(ads[0]);
+      }
+    } catch (error) {
+      console.error('Failed to inspect campaign detail', error);
+    } finally {
+      setCampaignAdsLoading(false);
     }
   };
 
@@ -601,7 +681,22 @@ export default function MetaAdsControl() {
                         <td className="px-6 py-4 align-top">{formatCompactNumber(campaign.metrics.clicks)}</td>
                         <td className="px-6 py-4 align-top">{formatMetricValue(campaign.metrics.ctr)}%</td>
                         <td className="px-6 py-4 align-top">
-                          {campaign.metrics.roas == null ? '—' : `${formatMetricValue(campaign.metrics.roas)}x`}
+                          <div className="flex items-center justify-between gap-3">
+                            <span>{campaign.metrics.roas == null ? '—' : `${formatMetricValue(campaign.metrics.roas)}x`}</span>
+                            <button
+                              type="button"
+                              onClick={() => void handleInspectCampaign(campaign)}
+                              className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${activeCampaignId === campaign.id
+                                ? 'bg-blue-600 text-white'
+                                : isDark
+                                  ? 'bg-slate-700 text-slate-100 hover:bg-slate-600'
+                                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              title="Buka detail ad di dalam campaign ini"
+                            >
+                              Inspect
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -610,6 +705,234 @@ export default function MetaAdsControl() {
               </div>
             )}
           </section>
+
+          {activeCampaign ? (
+            <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-bold text-xl">Ad drill-down</h2>
+                    <FieldHelp title="Ad drill-down" description="Bagian ini memakai GET /v1/ads dan GET /v1/ads/{adId}/analytics dari Zernio untuk membedah isi campaign sampai level ad." />
+                  </div>
+                  <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Campaign <span className="font-semibold">{activeCampaign.name}</span> • {activeCampaign.networkLabel} • {activeCampaign.adAccountName || 'Ad account belum bernama'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                    <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Spend</p>
+                    <p className="font-semibold">{activeCampaign.currency ? formatCurrencyValue(activeCampaign.currency, activeCampaign.metrics.spend) : '—'}</p>
+                  </div>
+                  <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                    <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Clicks</p>
+                    <p className="font-semibold">{formatCompactNumber(activeCampaign.metrics.clicks)}</p>
+                  </div>
+                  <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                    <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>CTR</p>
+                    <p className="font-semibold">{formatMetricValue(activeCampaign.metrics.ctr)}%</p>
+                  </div>
+                  <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                    <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>ROAS</p>
+                    <p className="font-semibold">{activeCampaign.metrics.roas == null ? '—' : `${formatMetricValue(activeCampaign.metrics.roas)}x`}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid xl:grid-cols-[1.05fr_1.25fr] gap-6">
+                <div className="space-y-4">
+                  <div className={`rounded-2xl border ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                    <div className="px-4 py-3 border-b border-inherit">
+                      <p className="font-semibold">Ads inside campaign</p>
+                    </div>
+
+                    {campaignAdsLoading ? (
+                      <div className="px-4 py-8 flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                      </div>
+                    ) : campaignAds.length === 0 ? (
+                      <div className="px-4 py-5">
+                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Tidak ada ad level detail yang dikembalikan Zernio untuk campaign ini.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-inherit">
+                        {campaignAds.map((ad) => (
+                          <button
+                            key={ad.id}
+                            type="button"
+                            onClick={() => void loadAdAnalytics(ad)}
+                            className={`w-full text-left px-4 py-4 transition ${selectedAdId === ad.id
+                              ? isDark ? 'bg-slate-800/90' : 'bg-blue-50'
+                              : isDark ? 'hover:bg-slate-800/60' : 'hover:bg-gray-50'
+                            }`}
+                            title="Lihat analytics detail ad ini"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-semibold truncate">{ad.name}</p>
+                                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {ad.adAccountName || 'Ad account'} • {humanizeStatus(ad.status)} • {ad.goal || ad.platformLabel}
+                                </p>
+                              </div>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isDark ? 'bg-slate-700 text-slate-100' : 'bg-white text-gray-600 border border-gray-200'}`}>
+                                {formatCompactNumber(ad.metrics.clicks)} clicks
+                              </span>
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+                              <div>
+                                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Spend</p>
+                                <p className="font-semibold">{activeCampaign.currency ? formatCurrencyValue(activeCampaign.currency, ad.metrics.spend) : formatMetricValue(ad.metrics.spend)}</p>
+                              </div>
+                              <div>
+                                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>CTR</p>
+                                <p className="font-semibold">{formatMetricValue(ad.metrics.ctr)}%</p>
+                              </div>
+                              <div>
+                                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Conv.</p>
+                                <p className="font-semibold">{formatCompactNumber(ad.metrics.conversions)}</p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div>
+                        <p className="font-semibold">Selected ad analytics</p>
+                        <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {selectedAd ? `${selectedAd.name} • ${selectedAd.platformLabel}` : 'Pilih satu ad untuk melihat analytics detail.'}
+                        </p>
+                      </div>
+                      {selectedAdAnalyticsLoading ? <Loader2 className="w-5 h-5 animate-spin text-blue-500" /> : null}
+                    </div>
+
+                    {!selectedAd ? (
+                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Pilih satu ad di panel kiri untuk membuka timeline dan breakdown analytics.
+                      </p>
+                    ) : !selectedAdAnalytics ? (
+                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Analytics detail belum tersedia untuk ad ini.
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                          <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                            <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Impressions</p>
+                            <p className="font-semibold">{formatCompactNumber(selectedAdAnalytics.summary.impressions)}</p>
+                          </div>
+                          <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                            <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Clicks</p>
+                            <p className="font-semibold">{formatCompactNumber(selectedAdAnalytics.summary.clicks)}</p>
+                          </div>
+                          <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                            <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>CTR</p>
+                            <p className="font-semibold">{formatMetricValue(selectedAdAnalytics.summary.ctr)}%</p>
+                          </div>
+                          <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                            <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>ROAS</p>
+                            <p className="font-semibold">{selectedAdAnalytics.summary.roas == null ? '—' : `${formatMetricValue(selectedAdAnalytics.summary.roas)}x`}</p>
+                          </div>
+                        </div>
+
+                        <div className={`rounded-2xl border ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                          <div className="px-4 py-3 border-b border-inherit">
+                            <p className="font-semibold">Daily timeline</p>
+                          </div>
+                          {selectedAdAnalytics.daily.length === 0 ? (
+                            <div className="px-4 py-4">
+                              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada timeline harian yang dikembalikan Zernio.</p>
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto">
+                              <table className="w-full min-w-[620px] text-sm">
+                                <thead>
+                                  <tr className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    {['Date', 'Spend', 'Impressions', 'Clicks', 'CTR', 'Conversions'].map((header) => (
+                                      <th key={header} className="px-4 py-3 text-left font-medium text-xs">{header}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-inherit">
+                                  {selectedAdAnalytics.daily.slice(-7).reverse().map((row) => (
+                                    <tr key={row.date}>
+                                      <td className="px-4 py-3">{row.date}</td>
+                                      <td className="px-4 py-3">{activeCampaign.currency ? formatCurrencyValue(activeCampaign.currency, row.spend) : formatMetricValue(row.spend)}</td>
+                                      <td className="px-4 py-3">{formatCompactNumber(row.impressions)}</td>
+                                      <td className="px-4 py-3">{formatCompactNumber(row.clicks)}</td>
+                                      <td className="px-4 py-3">{formatMetricValue(row.ctr)}%</td>
+                                      <td className="px-4 py-3">{formatCompactNumber(row.conversions)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+
+                        {Object.keys(selectedAdAnalytics.breakdowns).length > 0 ? (
+                          <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                            <div className="flex items-center gap-2 mb-4">
+                              <p className="font-semibold">Breakdowns</p>
+                              <FieldHelp title="Breakdowns" description="Zernio hanya mengirim breakdown tertentu tergantung platform. Meta dan TikTok paling kaya di bagian ini." />
+                            </div>
+
+                            <div className="grid xl:grid-cols-2 gap-4">
+                              {Object.entries(selectedAdAnalytics.breakdowns).map(([dimension, rows]) => (
+                                <div key={dimension} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                                  <p className="font-semibold">{breakdownLabels[dimension] || dimension}</p>
+                                  <div className="mt-3 space-y-2">
+                                    {rows.slice(0, 5).map((row, index) => {
+                                      const label =
+                                        row.name ??
+                                        row.label ??
+                                        row.value ??
+                                        row.age ??
+                                        row.gender ??
+                                        row.country ??
+                                        row.country_code ??
+                                        row.publisher_platform ??
+                                        row.platform ??
+                                        `Item ${index + 1}`;
+
+                                      return (
+                                        <div key={`${dimension}-${index}`} className="flex items-center justify-between gap-3 text-sm">
+                                          <div className="min-w-0">
+                                            <p className="truncate font-medium">{String(label)}</p>
+                                            <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs`}>
+                                              {formatCompactNumber(Number(row.impressions || 0))} impressions
+                                            </p>
+                                          </div>
+                                          <div className="text-right">
+                                            <p className="font-semibold">{formatCompactNumber(Number(row.clicks || 0))} clicks</p>
+                                            <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs`}>
+                                              {formatMetricValue(Number(row.ctr || 0))}%
+                                            </p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          ) : null}
         </>
       ) : null}
     </div>

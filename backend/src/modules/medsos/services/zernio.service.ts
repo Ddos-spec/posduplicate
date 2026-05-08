@@ -194,6 +194,52 @@ type ZernioApiAdCampaign = {
   optimizationGoal?: string | null;
 };
 
+type ZernioApiAd = {
+  _id?: string;
+  name?: string;
+  platform?: string;
+  status?: string;
+  adType?: string;
+  goal?: string | null;
+  isExternal?: boolean;
+  budget?: { amount?: number | null; type?: string | null } | null;
+  metrics?: ZernioApiAdMetrics | null;
+  platformAdId?: string;
+  platformAdAccountId?: string;
+  platformCampaignId?: string;
+  platformAdSetId?: string;
+  campaignName?: string;
+  adSetName?: string;
+  platformObjective?: string | null;
+  optimizationGoal?: string | null;
+  platformAdAccountName?: string | null;
+  platformCreatedAt?: string | null;
+  creative?: {
+    thumbnailUrl?: string | null;
+    imageUrl?: string | null;
+    videoUrl?: string | null;
+    mediaUrls?: string[] | null;
+    body?: string | null;
+    googleHeadline?: string | null;
+    googleDescription?: string | null;
+    linkUrl?: string | null;
+  } | null;
+};
+
+type ZernioApiAdAnalyticsResponse = {
+  ad?: {
+    id?: string;
+    name?: string;
+    platform?: string;
+    status?: string;
+  } | null;
+  analytics?: {
+    summary?: ZernioApiAdMetrics | null;
+    daily?: Array<ZernioApiAdMetrics & { date?: string }> | null;
+    breakdowns?: Record<string, Array<Record<string, any>>> | null;
+  } | null;
+};
+
 type MetricAccumulator = {
   spend: number;
   impressions: number;
@@ -310,6 +356,53 @@ export interface ZernioAdsSummary {
   platforms: ZernioAdsPlatformSummary[];
   accounts: ZernioAdsWorkspaceAccountSummary[];
   campaigns: ZernioAdsCampaignSummary[];
+}
+
+export interface ZernioAdListItem {
+  id: string;
+  name: string;
+  platform: string;
+  platformLabel: string;
+  status: string;
+  adType: string | null;
+  goal: string | null;
+  isExternal: boolean;
+  campaignId: string | null;
+  campaignName: string | null;
+  adSetId: string | null;
+  adSetName: string | null;
+  adAccountId: string | null;
+  adAccountName: string | null;
+  createdAt: string | null;
+  objective: string | null;
+  optimizationGoal: string | null;
+  budgetAmount: number | null;
+  budgetType: string | null;
+  metrics: ZernioAdsMetrics;
+  creative: {
+    thumbnailUrl: string | null;
+    imageUrl: string | null;
+    videoUrl: string | null;
+    mediaUrls: string[];
+    body: string | null;
+    headline: string | null;
+    linkUrl: string | null;
+  };
+}
+
+export interface ZernioAdAnalyticsDailyRow extends ZernioAdsMetrics {
+  date: string;
+}
+
+export interface ZernioAdAnalyticsSummary {
+  id: string;
+  name: string;
+  platform: string;
+  platformLabel: string;
+  status: string;
+  summary: ZernioAdsMetrics;
+  daily: ZernioAdAnalyticsDailyRow[];
+  breakdowns: Record<string, Array<Record<string, any>>>;
 }
 
 type InternalCampaignSummary = ZernioAdsCampaignSummary & { _baseMetrics: MetricAccumulator };
@@ -521,6 +614,110 @@ async function listAllZernioAdCampaigns(profileId: string): Promise<ZernioApiAdC
   } while (page <= pages);
 
   return allCampaigns;
+}
+
+function normalizeZernioAd(ad: ZernioApiAd): ZernioAdListItem {
+  const baseMetrics = buildBaseMetrics(ad.metrics);
+
+  return {
+    id: ad._id ?? ad.platformAdId ?? ad.name ?? 'unknown-ad',
+    name: ad.name ?? 'Untitled ad',
+    platform: String(ad.platform ?? '').toLowerCase(),
+    platformLabel: getPlatformLabel(String(ad.platform ?? '')),
+    status: String(ad.status ?? 'unknown').toLowerCase(),
+    adType: ad.adType ?? null,
+    goal: ad.goal ?? null,
+    isExternal: Boolean(ad.isExternal),
+    campaignId: ad.platformCampaignId ?? null,
+    campaignName: ad.campaignName ?? null,
+    adSetId: ad.platformAdSetId ?? null,
+    adSetName: ad.adSetName ?? null,
+    adAccountId: ad.platformAdAccountId ?? null,
+    adAccountName: ad.platformAdAccountName ?? null,
+    createdAt: ad.platformCreatedAt ?? null,
+    objective: ad.platformObjective ?? null,
+    optimizationGoal: ad.optimizationGoal ?? null,
+    budgetAmount: ad.budget?.amount == null ? null : roundMetric(toNumber(ad.budget.amount)),
+    budgetType: ad.budget?.type ?? null,
+    metrics: buildMetricSummary(baseMetrics, 1),
+    creative: {
+      thumbnailUrl: ad.creative?.thumbnailUrl ?? null,
+      imageUrl: ad.creative?.imageUrl ?? null,
+      videoUrl: ad.creative?.videoUrl ?? null,
+      mediaUrls: ad.creative?.mediaUrls ?? [],
+      body: ad.creative?.body ?? ad.creative?.googleDescription ?? null,
+      headline: ad.creative?.googleHeadline ?? null,
+      linkUrl: ad.creative?.linkUrl ?? null,
+    },
+  };
+}
+
+export async function listZernioAdsForCampaign(
+  tenantId: number,
+  campaignId: string,
+  accountId?: string,
+  adAccountId?: string,
+): Promise<ZernioAdListItem[]> {
+  const profileId = await getOrCreateZernioProfile(tenantId);
+  const qs = new URLSearchParams({
+    profileId,
+    campaignId,
+    source: 'all',
+    limit: '500',
+  });
+
+  if (accountId) {
+    qs.set('accountId', accountId);
+  }
+
+  if (adAccountId) {
+    qs.set('adAccountId', adAccountId);
+  }
+
+  const data = await zFetch<{ ads?: ZernioApiAd[] }>(`/ads?${qs}`);
+  return (data.ads ?? [])
+    .map(normalizeZernioAd)
+    .sort((left, right) => right.metrics.spend - left.metrics.spend);
+}
+
+export async function getZernioAdAnalytics(
+  _tenantId: number,
+  adId: string,
+  options?: { fromDate?: string; toDate?: string; breakdowns?: string[] },
+): Promise<ZernioAdAnalyticsSummary | null> {
+  try {
+    const qs = new URLSearchParams();
+    if (options?.fromDate) {
+      qs.set('fromDate', options.fromDate);
+    }
+    if (options?.toDate) {
+      qs.set('toDate', options.toDate);
+    }
+    if (options?.breakdowns?.length) {
+      qs.set('breakdowns', options.breakdowns.join(','));
+    }
+
+    const suffix = qs.size > 0 ? `?${qs}` : '';
+    const data = await zFetch<ZernioApiAdAnalyticsResponse>(`/ads/${encodeURIComponent(adId)}/analytics${suffix}`);
+    const summaryBase = buildBaseMetrics(data.analytics?.summary);
+    const daily = (data.analytics?.daily ?? []).map((row) => ({
+      date: row.date ?? '',
+      ...buildMetricSummary(buildBaseMetrics(row), 1),
+    }));
+
+    return {
+      id: data.ad?.id ?? adId,
+      name: data.ad?.name ?? 'Untitled ad',
+      platform: String(data.ad?.platform ?? '').toLowerCase(),
+      platformLabel: getPlatformLabel(String(data.ad?.platform ?? '')),
+      status: String(data.ad?.status ?? 'unknown').toLowerCase(),
+      summary: buildMetricSummary(summaryBase, 1),
+      daily,
+      breakdowns: data.analytics?.breakdowns ?? {},
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function getZernioAdsSummary(tenantId: number): Promise<ZernioAdsSummary | null> {
