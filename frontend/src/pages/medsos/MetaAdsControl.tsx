@@ -18,10 +18,12 @@ import {
 } from '../../services/medsosPostsService';
 import { isZernioAdsAccount, zernioAdsPlatforms } from '../../data/zernioCatalog';
 import {
+  Download,
   ExternalLink,
   Loader2,
   Megaphone,
   PlugZap,
+  RefreshCw,
   Sparkles,
   Unplug,
 } from 'lucide-react';
@@ -124,6 +126,35 @@ function humanizeStatus(status: string) {
   return labels[normalized] ?? status;
 }
 
+function escapeCsvCell(value: unknown) {
+  const text = String(value ?? '');
+  if (/[",\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function downloadCsv(filename: string, rows: Array<Array<string | number | null | undefined>>) {
+  const csv = rows.map((row) => row.map(escapeCsvCell).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+}
+
+function slugifyFilenamePart(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || 'export';
+}
+
 function buildPresetRange(preset: Exclude<DatePreset, 'custom'>) {
   const today = formatDateInput(new Date());
   switch (preset) {
@@ -165,6 +196,7 @@ export default function MetaAdsControl() {
   const [busyPlatform, setBusyPlatform] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<ZernioAccount[]>(isDemo ? demoAccounts : []);
   const [summary, setSummary] = useState<ZernioAdsSummary | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
   const [campaignAdsLoading, setCampaignAdsLoading] = useState(false);
   const [campaignAds, setCampaignAds] = useState<ZernioAdListItem[]>([]);
@@ -175,19 +207,27 @@ export default function MetaAdsControl() {
   const [fromDate, setFromDate] = useState<string>(() => buildPresetRange('30d').fromDate);
   const [toDate, setToDate] = useState<string>(() => buildPresetRange('30d').toDate);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (options?: { refresh?: boolean; silent?: boolean }) => {
+    if (options?.silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
       const [zernioAccounts, zernioSummary] = await Promise.all([
         getZernioAccounts(),
-        getZernioAdsSummary({ fromDate, toDate }),
+        getZernioAdsSummary({ fromDate, toDate, refresh: options?.refresh }),
       ]);
       setAccounts(zernioAccounts);
       setSummary(zernioSummary);
     } catch (error) {
       console.error('Failed to load Zernio ads workspace', error);
     } finally {
-      setLoading(false);
+      if (options?.silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -236,6 +276,52 @@ export default function MetaAdsControl() {
     () => Object.entries(selectedAdAnalytics?.breakdowns ?? {}),
     [selectedAdAnalytics]
   );
+  const alerts = useMemo(() => {
+    const source = summary?.campaigns ?? [];
+    const items = source.flatMap((campaign) => {
+      const list: Array<{ id: string; level: 'high' | 'medium'; title: string; detail: string }> = [];
+
+      if (campaign.metrics.spend >= 100 && campaign.metrics.conversions === 0) {
+        list.push({
+          id: `${campaign.id}-no-conv`,
+          level: 'high',
+          title: 'Spend berjalan tanpa conversion',
+          detail: `${campaign.name} sudah belanja ${campaign.currency ? formatCurrencyValue(campaign.currency, campaign.metrics.spend) : formatMetricValue(campaign.metrics.spend)} tapi conversion masih 0.`,
+        });
+      }
+
+      if (campaign.metrics.impressions >= 1000 && campaign.metrics.ctr > 0 && campaign.metrics.ctr < 1) {
+        list.push({
+          id: `${campaign.id}-low-ctr`,
+          level: 'medium',
+          title: 'CTR rendah',
+          detail: `${campaign.name} punya CTR ${formatMetricValue(campaign.metrics.ctr)}% dengan ${formatCompactNumber(campaign.metrics.impressions)} impressions.`,
+        });
+      }
+
+      if (campaign.reviewStatus === 'rejected' || campaign.reviewStatus === 'with_issues') {
+        list.push({
+          id: `${campaign.id}-review`,
+          level: 'high',
+          title: 'Campaign ditandai platform',
+          detail: `${campaign.name} sedang dalam status review ${campaign.reviewStatus}.`,
+        });
+      }
+
+      if (campaign.status === 'active' && campaign.metrics.impressions === 0 && campaign.metrics.spend === 0) {
+        list.push({
+          id: `${campaign.id}-idle`,
+          level: 'medium',
+          title: 'Campaign aktif tapi belum bergerak',
+          detail: `${campaign.name} aktif namun belum punya spend atau impressions pada range yang dipilih.`,
+        });
+      }
+
+      return list;
+    });
+
+    return items.slice(0, 6);
+  }, [summary]);
 
   const getConnectedAccount = (platforms: string[]) => {
     const lowered = platforms.map((item) => item.toLowerCase());
@@ -270,6 +356,13 @@ export default function MetaAdsControl() {
     }
   };
 
+  const handleRefreshWorkspace = async () => {
+    await load({ refresh: true, silent: true });
+    if (activeCampaign) {
+      await fetchCampaignDetail(activeCampaign, selectedAdId, true);
+    }
+  };
+
   const applyPreset = (preset: Exclude<DatePreset, 'custom'>) => {
     const next = buildPresetRange(preset);
     setDatePreset(preset);
@@ -277,7 +370,7 @@ export default function MetaAdsControl() {
     setToDate(next.toDate);
   };
 
-  const loadAdAnalytics = async (ad: ZernioAdListItem) => {
+  const loadAdAnalytics = async (ad: ZernioAdListItem, refresh = false) => {
     setSelectedAdId(ad.id);
     setSelectedAdAnalyticsLoading(true);
     try {
@@ -286,6 +379,7 @@ export default function MetaAdsControl() {
         fromDate,
         toDate,
         breakdowns: platformBreakdownDefaults[ad.platform] ?? [],
+        refresh,
       });
       setSelectedAdAnalytics(analytics);
     } catch (error) {
@@ -296,7 +390,7 @@ export default function MetaAdsControl() {
     }
   };
 
-  const fetchCampaignDetail = async (campaign: ZernioAdsCampaignSummary, preferredAdId?: string | null) => {
+  const fetchCampaignDetail = async (campaign: ZernioAdsCampaignSummary, preferredAdId?: string | null, refresh = false) => {
     setCampaignAdsLoading(true);
     setCampaignAds([]);
     setSelectedAdAnalytics(null);
@@ -308,11 +402,12 @@ export default function MetaAdsControl() {
         adAccountId: campaign.adAccountId,
         fromDate,
         toDate,
+        refresh,
       });
       setCampaignAds(ads);
       const preferredAd = (preferredAdId ? ads.find((ad) => ad.id === preferredAdId) : null) ?? ads[0] ?? null;
       if (preferredAd) {
-        await loadAdAnalytics(preferredAd);
+        await loadAdAnalytics(preferredAd, refresh);
       } else {
         setSelectedAdId(null);
       }
@@ -329,6 +424,83 @@ export default function MetaAdsControl() {
       return;
     }
     setActiveCampaignId(campaign.id);
+  };
+
+  const handleExportCampaigns = () => {
+    if (!summary?.campaigns.length) {
+      return;
+    }
+
+    const rows = [
+      ['Campaign', 'Network', 'Platform', 'Ad Account', 'Status', 'Review Status', 'Currency', 'Spend', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'ROAS'],
+      ...summary.campaigns.map((campaign) => [
+        campaign.name,
+        campaign.networkLabel,
+        campaign.platformLabel,
+        campaign.adAccountName || '',
+        campaign.status,
+        campaign.reviewStatus || '',
+        campaign.currency || '',
+        campaign.metrics.spend,
+        campaign.metrics.impressions,
+        campaign.metrics.clicks,
+        campaign.metrics.ctr,
+        campaign.metrics.conversions,
+        campaign.metrics.roas ?? '',
+      ]),
+    ];
+
+    downloadCsv(`ads-campaigns-${fromDate}-to-${toDate}.csv`, rows);
+  };
+
+  const handleExportAdAnalytics = () => {
+    if (!selectedAdAnalytics) {
+      return;
+    }
+
+    const rows: Array<Array<string | number>> = [
+      ['Ad', selectedAdAnalytics.name],
+      ['Platform', selectedAdAnalytics.platformLabel],
+      ['Status', selectedAdAnalytics.status],
+      [],
+      ['Date', 'Spend', 'Impressions', 'Clicks', 'CTR', 'Conversions', 'ROAS'],
+      ...selectedAdAnalytics.daily.map((row) => [
+        row.date,
+        row.spend,
+        row.impressions,
+        row.clicks,
+        row.ctr,
+        row.conversions,
+        row.roas ?? 0,
+      ]),
+    ];
+
+    for (const [dimension, values] of Object.entries(selectedAdAnalytics.breakdowns)) {
+      rows.push([]);
+      rows.push([breakdownLabels[dimension] || dimension, 'Impressions', 'Clicks', 'CTR']);
+      values.forEach((row) => {
+        const label =
+          row.name ??
+          row.label ??
+          row.value ??
+          row.age ??
+          row.gender ??
+          row.country ??
+          row.country_code ??
+          row.publisher_platform ??
+          row.platform ??
+          'Item';
+
+        rows.push([
+          String(label),
+          Number(row.impressions || 0),
+          Number(row.clicks || 0),
+          Number(row.ctr || 0),
+        ]);
+      });
+    }
+
+    downloadCsv(`ad-analytics-${slugifyFilenamePart(selectedAdAnalytics.name)}-${fromDate}-to-${toDate}.csv`, rows);
   };
 
   useEffect(() => {
@@ -372,6 +544,30 @@ export default function MetaAdsControl() {
               <p className="font-semibold text-sm mt-1">{summary?.totals.activeCampaigns ?? 0} campaign</p>
             </div>
           </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => void handleRefreshWorkspace()}
+            className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${
+              isDark ? 'bg-slate-900 text-slate-100 hover:bg-slate-700' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+            }`}
+            title="Paksa ambil ulang data dari Zernio"
+          >
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Refreshing...' : 'Refresh data'}
+          </button>
+          <button
+            type="button"
+            onClick={handleExportCampaigns}
+            disabled={!summary?.campaigns.length}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            title="Export campaign lintas network ke CSV"
+          >
+            <Download size={15} />
+            Export campaign CSV
+          </button>
         </div>
 
         <div className={`mt-6 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-blue-100 bg-blue-50/60'}`}>
@@ -437,6 +633,31 @@ export default function MetaAdsControl() {
           </div>
         </div>
       </div>
+
+      {alerts.length > 0 ? (
+        <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="font-bold text-xl">Attention center</h2>
+            <FieldHelp title="Attention center" description="Alert ini dibentuk dari data campaign yang sudah dibaca dari Zernio. Tujuannya supaya user tahu campaign mana yang perlu dicek duluan tanpa buka satu-satu." />
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-3">
+            {alerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={`rounded-2xl border p-4 ${
+                  alert.level === 'high'
+                    ? isDark ? 'border-rose-800 bg-rose-950/20' : 'border-rose-200 bg-rose-50'
+                    : isDark ? 'border-amber-800 bg-amber-950/20' : 'border-amber-200 bg-amber-50'
+                }`}
+              >
+                <p className="font-semibold">{alert.title}</p>
+                <p className={`text-sm mt-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{alert.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid xl:grid-cols-2 gap-6">
         <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
@@ -972,6 +1193,29 @@ export default function MetaAdsControl() {
                       </p>
                     ) : (
                       <div className="space-y-4">
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={handleExportAdAnalytics}
+                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                            title="Export timeline dan breakdown ad ini ke CSV"
+                          >
+                            <Download size={15} />
+                            Export ad analytics CSV
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => selectedAd && void loadAdAnalytics(selectedAd, true)}
+                            className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${
+                              isDark ? 'bg-slate-800 text-slate-100 hover:bg-slate-700' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                            }`}
+                            title="Paksa ambil ulang analytics ad ini dari Zernio"
+                          >
+                            <RefreshCw size={15} className={selectedAdAnalyticsLoading ? 'animate-spin' : ''} />
+                            Refresh ad analytics
+                          </button>
+                        </div>
+
                         <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
                           <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
                             <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Impressions</p>

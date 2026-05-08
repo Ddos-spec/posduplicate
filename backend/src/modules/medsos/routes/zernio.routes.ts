@@ -76,7 +76,8 @@ router.get('/ads/summary', async (req, res, next) => {
   try {
     const fromDate = typeof req.query.fromDate === 'string' ? req.query.fromDate : undefined;
     const toDate = typeof req.query.toDate === 'string' ? req.query.toDate : undefined;
-    const summary = await getZernioAdsSummary(req.tenantId!, { fromDate, toDate });
+    const refresh = String(req.query.refresh || '').toLowerCase() === 'true' || String(req.query.refresh || '') === '1';
+    const summary = await getZernioAdsSummary(req.tenantId!, { fromDate, toDate, refresh });
     return res.json({ success: true, data: summary });
   } catch (err) {
     next(err);
@@ -91,12 +92,13 @@ router.get('/ads/by-campaign', async (req, res, next) => {
     const adAccountId = typeof req.query.adAccountId === 'string' ? req.query.adAccountId : undefined;
     const fromDate = typeof req.query.fromDate === 'string' ? req.query.fromDate : undefined;
     const toDate = typeof req.query.toDate === 'string' ? req.query.toDate : undefined;
+    const refresh = String(req.query.refresh || '').toLowerCase() === 'true' || String(req.query.refresh || '') === '1';
 
     if (!campaignId) {
       return res.status(400).json({ success: false, message: 'campaignId is required' });
     }
 
-    const ads = await listZernioAdsForCampaign(req.tenantId!, campaignId, accountId, adAccountId, { fromDate, toDate });
+    const ads = await listZernioAdsForCampaign(req.tenantId!, campaignId, accountId, adAccountId, { fromDate, toDate, refresh });
     return res.json({ success: true, data: { ads } });
   } catch (err) {
     next(err);
@@ -111,11 +113,13 @@ router.get('/ads/:adId/analytics', async (req, res, next) => {
       : undefined;
     const fromDate = typeof req.query.fromDate === 'string' ? req.query.fromDate : undefined;
     const toDate = typeof req.query.toDate === 'string' ? req.query.toDate : undefined;
+    const refresh = String(req.query.refresh || '').toLowerCase() === 'true' || String(req.query.refresh || '') === '1';
 
     const analytics = await getZernioAdAnalytics(req.tenantId!, req.params.adId, {
       breakdowns,
       fromDate,
       toDate,
+      refresh,
     });
 
     return res.json({ success: true, data: analytics });
