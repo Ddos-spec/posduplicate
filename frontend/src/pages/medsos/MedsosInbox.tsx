@@ -63,15 +63,15 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
           setCrmStatus(statusResult.value);
           setStats(statusResult.value.stats);
           if (statusResult.value.configured && !statusResult.value.reachable) {
-            setError(statusResult.value.message || 'WA CRM belum merespons.');
+            setError(statusResult.value.message || 'Workspace inbox belum merespons.');
           }
         } else {
           setCrmStatus(null);
           setStats(null);
-          setError('Gagal memuat stats dari WA CRM.');
+          setError('Gagal memuat stats inbox.');
         }
       } catch {
-        if (!cancelled) setError('Gagal memuat stats dari WA CRM.');
+        if (!cancelled) setError('Gagal memuat stats inbox.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -106,11 +106,11 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
           {error ? <AlertTriangle size={36} className="text-amber-500" /> : <PlugZap size={36} className="text-blue-500" />}
         </div>
         <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          {hasStoredConfig ? 'WA Inbox sudah tersimpan, tetapi CRM belum merespons' : 'WA Inbox belum dikonfigurasi'}
+          {hasStoredConfig ? 'WA Inbox sudah tersimpan, tetapi layanan inbox belum merespons' : 'WA Inbox belum dikonfigurasi'}
         </h2>
         <p className={`text-sm max-w-md mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           {hasStoredConfig
-            ? 'API key atau workspace sudah tersimpan. Sistem belum berhasil mengambil data live dari Customer Service CRM saat ini. Coba buka CRM atau periksa ulang koneksinya di halaman Connections.'
+            ? 'API key atau workspace sudah tersimpan. Sistem belum berhasil mengambil data live dari inbox saat ini. Coba buka inbox atau periksa ulang koneksinya di halaman Connections.'
             : 'Isi API key workspace di halaman Connections untuk mengaktifkan inbox live.'}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
@@ -135,11 +135,11 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
               href={crmUrl}
               target="_blank"
               rel="noreferrer"
-              title="Buka Customer Service CRM di tab baru"
+              title="Buka workspace inbox di tab baru"
               className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 font-semibold"
             >
               <ExternalLink size={18} />
-              Buka CRM
+              Buka inbox
             </a>
           )}
         </div>
@@ -173,7 +173,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
     { label: 'Workspace', value: connector?.workspaceName || stats.tenant?.company_name || 'Belum diatur' },
     { label: 'Email', value: connector?.vendorWorkspaceEmail || 'Belum diisi' },
     { label: 'Connection ref', value: connector?.connectionRefMasked || 'Belum diisi' },
-    { label: 'URL CRM', value: connector?.vendorPortalUrl || connector?.vendorWorkspaceUrl || 'Otomatis dari konfigurasi sistem' },
+    { label: 'Workspace URL', value: connector?.vendorPortalUrl || connector?.vendorWorkspaceUrl || 'Otomatis dari konfigurasi sistem' },
   ];
 
   return (
@@ -186,7 +186,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
               WA Workspace{stats.tenant?.company_name ? ` — ${stats.tenant.company_name}` : ''}
             </h2>
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Live data dari Customer Service CRM
+              Live data dari workspace inbox
               {stats.tenant?.session_id
                 ? ` • Session ${stats.tenant.session_id}`
                 : ' • Session tidak aktif'}
@@ -207,11 +207,11 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
             href={crmUrl}
             target="_blank"
             rel="noreferrer"
-            title="Buka Customer Service CRM di tab baru"
+            title="Buka workspace inbox di tab baru"
             className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-semibold text-sm"
           >
               <ExternalLink size={16} />
-              Buka CRM
+              Buka inbox
             </a>
           )}
         </div>
@@ -255,7 +255,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         </div>
 
         <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Fitur yang dikelola lewat CRM</h3>
+          <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Fitur yang dikelola lewat workspace inbox</h3>
           <div className="grid gap-3">
             {capabilities.map((item) => (
               <div key={item} className={`rounded-2xl p-4 text-sm ${isDark ? 'bg-slate-900/60 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
@@ -269,7 +269,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
       {crmUrl && (
         <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800/60 border-slate-700' : 'bg-blue-50 border-blue-100'}`}>
           <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-blue-800'}`}>
-            Untuk membalas chat, assign agent, menggunakan tag, dan mengelola eskalasi, klik tombol <strong>Buka CRM</strong>. MyCommerSocial berfungsi sebagai command center, sedangkan operasional WA dijalankan langsung dari Customer Service CRM.
+            Untuk membalas chat, assign agent, menggunakan tag, dan mengelola eskalasi, klik tombol <strong>Buka inbox</strong>. MyCommerSocial berfungsi sebagai command center, sedangkan operasional WA dijalankan langsung dari workspace inbox.
           </p>
         </div>
       )}

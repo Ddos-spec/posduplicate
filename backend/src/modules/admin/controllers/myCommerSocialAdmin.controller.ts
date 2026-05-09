@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { decrypt } from '../../../utils/crypto';
-import { getManagedIntegrationHub, syncManagedIntegration } from '../../medsos/services/integrationHub.service';
+import {
+  completeManagedIntegrationConnect,
+  getManagedIntegrationHub,
+  syncManagedIntegration,
+} from '../../medsos/services/integrationHub.service';
 import { getOrCreateZernioProfile, listZernioAccounts, type ZernioAccount } from '../../medsos/services/zernio.service';
 
 type JsonRecord = Record<string, any>;
@@ -365,6 +369,11 @@ const buildAdminDetail = async (tenantId: number) => {
   }
 
   const summary = mapTenantListItem(tenant);
+  const rowByType = new Map(tenant.integrations.map((row) => [row.integration_type, row]));
+  const marketplaceRow = rowByType.get(managedIntegrationTypeMap['marketplace-hub']) || null;
+  const marketplaceConfiguration = asRecord(marketplaceRow?.configuration);
+  const marketplaceMetadata = asRecord(marketplaceRow?.metadata);
+  const marketplaceCredentials = decryptCredentials(marketplaceRow?.credentials);
   const integrationHub = await getManagedIntegrationHub(tenantId);
   let zernioAccounts: ZernioAccount[] = [];
   let zernioSyncError: string | null = null;
@@ -373,7 +382,7 @@ const buildAdminDetail = async (tenantId: number) => {
     try {
       zernioAccounts = await listZernioAccounts(tenantId, tenant.business_name);
     } catch (error) {
-      zernioSyncError = error instanceof Error ? error.message : 'Gagal membaca akun Zernio';
+      zernioSyncError = error instanceof Error ? error.message : 'Gagal membaca akun social workspace';
     }
   }
 
@@ -389,6 +398,17 @@ const buildAdminDetail = async (tenantId: number) => {
       maxUsers: tenant.max_users ?? 0,
     },
     integrationHub,
+    internalConnectors: {
+      marketplaceHub: {
+        workspaceName: parseString(marketplaceConfiguration.workspaceName, '') || null,
+        appIdMasked: maskReference(marketplaceCredentials.appId || marketplaceCredentials.connectionId || null),
+        hasSecretKey: Boolean(parseString(marketplaceCredentials.secretKey, '')),
+        botSenderEmail: parseString(marketplaceCredentials.botSenderEmail, '') || null,
+        aiWebhookUrl: parseString(marketplaceConfiguration.aiWebhookUrl, '') || null,
+        aiWebhookTimeoutMs: asPositiveNumber(marketplaceConfiguration.aiWebhookTimeoutMs, 15000),
+        notes: parseString(marketplaceMetadata.notes, ''),
+      },
+    },
     zernioAccounts,
     socialAccounts,
     adsAccounts,
@@ -626,7 +646,7 @@ export const ensureMyCommerSocialZernioProfile = async (req: Request, res: Respo
 
     res.json({
       success: true,
-      message: 'Profile Zernio siap dipakai',
+      message: 'Social workspace siap dipakai',
       data: {
         profileId,
         detail,
@@ -664,6 +684,64 @@ export const syncMyCommerSocialConnector = async (req: Request, res: Response, n
     res.json({
       success: true,
       message: 'Status connector berhasil disegarkan',
+      data: {
+        connector,
+        detail,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const saveMyCommerSocialConnectorInternalConfig = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = Number(req.params.tenantId);
+    const slug = req.params.slug as ManagedConnectorSlug;
+
+    if (!Number.isFinite(tenantId)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_TENANT_ID', message: 'Tenant ID tidak valid' },
+      });
+      return;
+    }
+
+    if (!['social-hub', 'marketplace-hub', 'meta-ads-hub'].includes(slug)) {
+      res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_CONNECTOR', message: 'Connector tidak dikenali' },
+      });
+      return;
+    }
+
+    const connector = await completeManagedIntegrationConnect(tenantId, slug, {
+      connectionId: typeof req.body?.connectionId === 'string' ? req.body.connectionId : undefined,
+      appId: typeof req.body?.appId === 'string' ? req.body.appId : undefined,
+      secretKey: typeof req.body?.secretKey === 'string' ? req.body.secretKey : undefined,
+      botSenderEmail: typeof req.body?.botSenderEmail === 'string' ? req.body.botSenderEmail : undefined,
+      aiWebhookUrl: typeof req.body?.aiWebhookUrl === 'string' ? req.body.aiWebhookUrl : undefined,
+      aiWebhookAuthToken: typeof req.body?.aiWebhookAuthToken === 'string' ? req.body.aiWebhookAuthToken : undefined,
+      aiWebhookTimeoutMs: typeof req.body?.aiWebhookTimeoutMs === 'number'
+        ? req.body.aiWebhookTimeoutMs
+        : typeof req.body?.aiWebhookTimeoutMs === 'string'
+          ? Number(req.body.aiWebhookTimeoutMs)
+          : undefined,
+      workspaceName: typeof req.body?.workspaceName === 'string' ? req.body.workspaceName : undefined,
+      notes: typeof req.body?.notes === 'string' ? req.body.notes : undefined,
+      vendorWorkspaceUrl: typeof req.body?.vendorWorkspaceUrl === 'string' ? req.body.vendorWorkspaceUrl : undefined,
+      vendorWorkspaceEmail: typeof req.body?.vendorWorkspaceEmail === 'string' ? req.body.vendorWorkspaceEmail : undefined,
+      subscriptionPlan: typeof req.body?.subscriptionPlan === 'string' ? req.body.subscriptionPlan : undefined,
+      subscriptionStatus: typeof req.body?.subscriptionStatus === 'string' ? req.body.subscriptionStatus : undefined,
+      renewalDate: typeof req.body?.renewalDate === 'string' ? req.body.renewalDate : undefined,
+      billingOwnerName: typeof req.body?.billingOwnerName === 'string' ? req.body.billingOwnerName : undefined,
+      selectedAssets: Array.isArray(req.body?.selectedAssets) ? req.body.selectedAssets : undefined,
+    });
+    const detail = await buildAdminDetail(tenantId);
+
+    res.json({
+      success: true,
+      message: 'Konfigurasi internal connector berhasil disimpan',
       data: {
         connector,
         detail,

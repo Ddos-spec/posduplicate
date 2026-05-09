@@ -1,5 +1,6 @@
 import prisma from '../../../utils/prisma';
 import { decrypt, encrypt } from '../../../utils/crypto';
+import { randomBytes } from 'crypto';
 import {
   getManagedIntegrationDefinition,
   managedIntegrationOrder,
@@ -28,6 +29,12 @@ export interface ManagedAssetInput {
 
 export interface CompleteConnectionInput {
   connectionId?: string;
+  appId?: string;
+  secretKey?: string;
+  botSenderEmail?: string;
+  aiWebhookUrl?: string;
+  aiWebhookAuthToken?: string;
+  aiWebhookTimeoutMs?: number;
   workspaceName?: string;
   notes?: string;
   vendorWorkspaceUrl?: string;
@@ -257,7 +264,7 @@ function buildNextActions(
   hasVendorPortalUrl: boolean
 ): string[] {
   if (state === 'connected') {
-    return ['Pantau health score', 'Sinkronkan data bila perlu', `Kelola billing ${definition.providerName} langsung dari portal vendornya`];
+    return ['Pantau health score', 'Sinkronkan data bila perlu', 'Kelola workspace dan billing dari panel operasional yang aktif'];
   }
 
   if (state === 'pending_user_action') {
@@ -266,8 +273,8 @@ function buildNextActions(
 
   if (!hasLaunchUrl && hasVendorPortalUrl) {
     return [
-      `Buka portal ${definition.providerName} lalu aktifkan plan yang direkomendasikan`,
-      'Hubungkan aset yang dibutuhkan dari sisi vendor',
+      'Buka panel operasional lalu aktifkan paket workspace yang dibutuhkan',
+      'Hubungkan aset dan channel yang dibutuhkan dari sisi workspace',
       'Kembali ke dashboard untuk menyimpan reference dan finalisasi channel aktif',
     ];
   }
@@ -285,6 +292,7 @@ function buildNextActions(
 
 function buildConnectionCard(
   definition: ManagedIntegrationDefinition,
+  tenantId: number,
   integrationRow?: {
     id: number;
     status: string;
@@ -306,6 +314,10 @@ function buildConnectionCard(
   const launchUrlConfigured = Boolean(definition.launchUrl);
   const vendorPortalUrl = definition.vendorPortalUrl || null;
   const healthScore = Number(metadata.healthScore || defaultHealthScore[definition.slug] || 0);
+  const webhookToken = String(configuration.webhookToken || '').trim();
+  const webhookUrl = definition.slug === 'marketplace-hub' && webhookToken
+    ? `${getBackendPublicUrl()}/api/medsos/integrations/webhook/${definition.slug}?tenant_id=${tenantId}&token=${encodeURIComponent(webhookToken)}`
+    : `${getBackendPublicUrl()}/api/medsos/integrations/webhook/${definition.slug}`;
 
   return {
     id: integrationRow?.id || null,
@@ -339,17 +351,17 @@ function buildConnectionCard(
     docsUrl: definition.docsUrl || null,
     supportUrl: definition.supportUrl || null,
     callbackUrl: `${getBackendPublicUrl()}/api/medsos/integrations/callback/${definition.slug}`,
-      webhookUrl: `${getBackendPublicUrl()}/api/medsos/integrations/webhook/${definition.slug}`,
-      operatorNotes: metadata.notes || null,
-      vendorWorkspaceUrl: isPlaceholderCrmUrl(String(metadata.vendorWorkspaceUrl || '')) ? null : metadata.vendorWorkspaceUrl || null,
-      vendorWorkspaceEmail: metadata.vendorWorkspaceEmail || null,
+    webhookUrl,
+    operatorNotes: metadata.notes || null,
+    vendorWorkspaceUrl: isPlaceholderCrmUrl(String(metadata.vendorWorkspaceUrl || '')) ? null : metadata.vendorWorkspaceUrl || null,
+    vendorWorkspaceEmail: metadata.vendorWorkspaceEmail || null,
     subscriptionPlan: metadata.subscriptionPlan || null,
     subscriptionStatus: metadata.subscriptionStatus || null,
     renewalDate: metadata.renewalDate || null,
     billingOwnerName: metadata.billingOwnerName || null,
     lastSyncAt: integrationRow?.last_sync_at?.toISOString() || null,
     connectedAt: integrationRow?.activated_at?.toISOString() || null,
-    connectionRefMasked: maskReference(credentials.connectionId || credentials.connectionRef || null),
+    connectionRefMasked: maskReference(credentials.connectionId || credentials.appId || credentials.connectionRef || null),
     launchSession: configuration.launchSession || null,
     lastError: metadata.lastError || null,
     lastWebhookEvent: metadata.lastWebhookEvent || null,
@@ -431,7 +443,7 @@ export async function getManagedIntegrationHub(tenantId: number) {
   const rowByType = new Map(rows.map((row) => [row.integration_type, row]));
   const connectors = managedIntegrationOrder.map((slug) => {
     const definition = getManagedIntegrationDefinition(slug)!;
-    return buildConnectionCard(definition, rowByType.get(definition.integrationType));
+    return buildConnectionCard(definition, tenantId, rowByType.get(definition.integrationType));
   });
 
   return {
@@ -479,7 +491,7 @@ export async function getManagedIntegrationDetail(tenantId: number, slug: string
     },
   });
 
-  return buildConnectionCard(definition, row);
+  return buildConnectionCard(definition, tenantId, row);
 }
 
 export async function beginManagedIntegrationConnect(
@@ -621,21 +633,48 @@ export async function completeManagedIntegrationConnect(
   const normalizedVendorWorkspaceUrl = isPlaceholderCrmUrl(resolvedVendorWorkspaceUrl)
     ? null
     : resolvedVendorWorkspaceUrl;
+  const webhookToken = String(configuration.webhookToken || '').trim() || randomBytes(18).toString('hex');
+  const aiWebhookUrl = input.aiWebhookUrl?.trim() || String(configuration.aiWebhookUrl || '').trim() || null;
+  const aiWebhookTimeoutMs = Number(input.aiWebhookTimeoutMs || configuration.aiWebhookTimeoutMs || 15000);
+  const nextCredentials = {
+    ...credentials,
+    connectionId: input.connectionId || input.appId || credentials.connectionId || null,
+    appId: input.appId || credentials.appId || credentials.connectionId || null,
+    secretKey: input.secretKey || credentials.secretKey || null,
+    botSenderEmail: input.botSenderEmail || credentials.botSenderEmail || null,
+    aiWebhookAuthToken: input.aiWebhookAuthToken || credentials.aiWebhookAuthToken || null,
+  };
+  const hasMarketplaceCredentials = Boolean(nextCredentials.appId && nextCredentials.secretKey && nextCredentials.botSenderEmail);
+  const hasMarketplaceRequest = definition.slug === 'marketplace-hub'
+    && Boolean(
+      input.workspaceName?.trim()
+      || input.notes?.trim()
+      || selectedAssets.length > 0
+    );
+  const nextStatus = definition.slug === 'marketplace-hub'
+    ? (hasMarketplaceCredentials ? 'connected' : hasMarketplaceRequest ? 'pending_user_action' : 'action_required')
+    : 'connected';
+  const nextIsActive = definition.slug === 'marketplace-hub'
+    ? hasMarketplaceCredentials
+    : true;
 
   await upsertManagedIntegration(tenantId, definition, {
-    status: 'connected',
-    isActive: true,
+    status: nextStatus,
+    isActive: nextIsActive,
     activatedAt: existing?.created_at || new Date(),
     lastSyncAt: new Date(),
     configuration: {
       ...configuration,
       workspaceName: input.workspaceName || configuration.workspaceName || definition.name,
       launchSession: null,
+      webhookToken,
+      aiWebhookUrl,
+      aiWebhookTimeoutMs,
     },
     metadata: {
       ...metadata,
       selectedAssets,
-      healthScore: metadata.healthScore || defaultHealthScore[definition.slug],
+      healthScore: metadata.healthScore || (definition.slug === 'marketplace-hub' ? 92 : defaultHealthScore[definition.slug]),
       notes: input.notes || metadata.notes || null,
       vendorWorkspaceUrl: normalizedVendorWorkspaceUrl,
       vendorWorkspaceEmail: input.vendorWorkspaceEmail || metadata.vendorWorkspaceEmail || null,
@@ -647,10 +686,7 @@ export async function completeManagedIntegrationConnect(
       lastWebhookEvent: metadata.lastWebhookEvent || null,
       finalizedAt: new Date().toISOString(),
     },
-    credentials: {
-      ...credentials,
-      connectionId: input.connectionId || credentials.connectionId || null,
-    },
+    credentials: nextCredentials,
   });
 
   return getManagedIntegrationDetail(tenantId, slug);
@@ -715,7 +751,10 @@ export async function syncManagedIntegration(tenantId: number, slug: string) {
   });
 
   const metadata = asRecord(existing?.metadata);
-  const hasConnection = Boolean(decryptCredentials(existing?.credentials).connectionId) || asArray(metadata.selectedAssets).length > 0;
+  const decrypted = decryptCredentials(existing?.credentials);
+  const hasConnection = slug === 'marketplace-hub'
+    ? Boolean((decrypted.appId || decrypted.connectionId) && decrypted.secretKey && decrypted.botSenderEmail)
+    : Boolean(decrypted.connectionId) || asArray(metadata.selectedAssets).length > 0;
 
   await upsertManagedIntegration(tenantId, definition, {
     status: hasConnection ? 'connected' : 'action_required',
@@ -886,8 +925,8 @@ export async function getSocialHubConnectionStatus(tenantId: number): Promise<So
       checkedAt,
       status: 'configuration_incomplete',
       message: !hasApiKey
-        ? 'API key Customer Service CRM belum tersimpan.'
-        : 'URL Customer Service CRM belum tersedia di konfigurasi sistem.',
+        ? 'API key workspace inbox belum tersimpan.'
+        : 'Alamat workspace inbox belum tersedia di konfigurasi sistem.',
       stats: null,
     };
   }
@@ -910,7 +949,7 @@ export async function getSocialHubConnectionStatus(tenantId: number): Promise<So
         connectionRefMasked,
         checkedAt,
         status: 'degraded',
-        message: `CRM stats returned ${response.status}`,
+        message: `Inbox stats returned ${response.status}`,
         stats: null,
       };
     }
@@ -928,7 +967,7 @@ export async function getSocialHubConnectionStatus(tenantId: number): Promise<So
         connectionRefMasked,
         checkedAt,
         status: 'degraded',
-        message: 'CRM stats response error',
+        message: 'Inbox stats response error',
         stats: null,
       };
     }
@@ -944,7 +983,7 @@ export async function getSocialHubConnectionStatus(tenantId: number): Promise<So
       connectionRefMasked,
       checkedAt,
       status: 'reachable',
-      message: 'WA CRM terhubung dan merespons.',
+      message: 'WA Inbox terhubung dan merespons.',
       stats: json.data,
     };
   } catch (error) {
@@ -959,7 +998,7 @@ export async function getSocialHubConnectionStatus(tenantId: number): Promise<So
       connectionRefMasked,
       checkedAt,
       status: 'degraded',
-      message: error instanceof Error ? error.message : 'WA CRM tidak merespons.',
+      message: error instanceof Error ? error.message : 'WA Inbox tidak merespons.',
       stats: null,
     };
   }

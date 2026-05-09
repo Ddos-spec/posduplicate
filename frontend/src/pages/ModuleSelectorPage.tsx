@@ -81,7 +81,7 @@ export default function ModuleSelectorPage() {
       customLogo: true,
       color: 'from-blue-500 to-blue-600',
       iconBg: 'bg-blue-500',
-      features: ['WA Inbox', 'Social via Zernio', 'Ads Workspace'],
+      features: ['WA Inbox', 'Social Workspace', 'Ads Workspace'],
       status: 'new',
       path: '/medsos/dashboard'
     }

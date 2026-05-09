@@ -115,7 +115,7 @@ export default function SystemAnalyticsPage() {
   const controlTowerActions = [
     { icon: Building2, title: 'Tenant Management', description: 'Kelola tenant, subscription, dan status akun.', path: '/admin/tenants' },
     ...(isSuperAdmin ? [{ icon: CreditCard, title: 'Billing Management', description: 'Pantau billing, jatuh tempo, dan pembayaran tenant.', path: '/admin/billing' }] : []),
-    { icon: Share2, title: 'MyCommerSocial Ops', description: 'Atur paket tenant, workspace WA, dan profile Zernio per customer.', path: '/admin/mycommersocial' },
+    { icon: Share2, title: 'MyCommerSocial Ops', description: 'Atur paket tenant, workspace WA, dan social workspace per customer.', path: '/admin/mycommersocial' },
     { icon: Key, title: 'API Key Management', description: 'Atur API key, akses integrasi, dan dokumentasi teknis.', path: '/admin/api-keys' },
     { icon: Book, title: 'API Documentation', description: 'Buka pusat dokumentasi endpoint dan referensi developer.', path: '/admin/api-docs' },
   ];
@@ -124,7 +124,7 @@ export default function SystemAnalyticsPage() {
     { icon: Monitor, title: 'MyPOS', description: 'Masuk ke operasi kasir, outlet, dan transaksi.', path: '/owner/dashboard', accent: 'bg-emerald-100 text-emerald-600' },
     { icon: Calculator, title: 'MyAkuntan', description: 'Akses pembukuan, ledger, budget, dan laporan.', path: '/accounting/dashboard', accent: 'bg-purple-100 text-purple-600' },
     { icon: Package, title: 'MyInventory', description: 'Pantau stok, forecast, reorder, dan analitik gudang.', path: '/inventory/dashboard', accent: 'bg-orange-100 text-orange-600' },
-    { icon: Share2, title: 'MyCommerSocial', description: 'Buka WA Inbox, social via Zernio, ads workspace, dan analytics.', path: '/medsos/dashboard', accent: 'bg-blue-100 text-blue-600' },
+    { icon: Share2, title: 'MyCommerSocial', description: 'Buka WA Inbox, social workspace, ads workspace, dan analytics.', path: '/medsos/dashboard', accent: 'bg-blue-100 text-blue-600' },
   ];
 
   if (loading) {

@@ -13,13 +13,13 @@ const cards = [
   {
     title: 'Social + ads engine',
     value: 'Menyesuaikan kebutuhan workspace',
-    description: 'Social media dan ads berjalan lewat Zernio. Biaya detailnya dibungkus sesuai jumlah akun dan kebutuhan tenant.',
+    description: 'Social media dan ads berjalan lewat workspace engine yang dikelola di belakang layar. Biaya detailnya dibungkus sesuai jumlah akun dan kebutuhan tenant.',
     icon: PlugZap,
   },
   {
     title: 'WA Inbox add-on',
     value: 'Custom',
-    description: 'WhatsApp tetap lewat Customer Service CRM internal, jadi skemanya bisa dipisah sesuai kebutuhan operasional.',
+    description: 'WhatsApp tetap lewat workspace inbox internal, jadi skemanya bisa dipisah sesuai kebutuhan operasional.',
     icon: MessageSquareText,
   },
   {
@@ -36,12 +36,12 @@ const faqs = [
     answer: 'Karena kebutuhan setiap workspace berbeda, paket awal dibuat fleksibel agar social media, ads, dan add-on lain bisa disesuaikan tanpa mengganggu operasional.',
   },
   {
-    question: 'Apakah user bayar vendor langsung?',
+    question: 'Apakah user bayar engine operasional langsung?',
     answer: 'Penawaran ke customer dapat dibungkus sebagai satu workspace, sementara pengelolaan biaya internal tetap bisa dipisahkan sesuai kebutuhan bisnis.',
   },
   {
     question: 'Kalau tenant cuma butuh social tanpa WA bagaimana?',
-    answer: 'Bisa. WA Inbox bersifat add-on. Tenant bisa mulai dari dashboard + Zernio dulu lalu menambahkan WA belakangan.',
+    answer: 'Bisa. WA Inbox bersifat add-on. Tenant bisa mulai dari dashboard + social workspace dulu lalu menambahkan WA belakangan.',
   },
   {
     question: 'Kapan marketplace mulai dijual?',
@@ -92,12 +92,12 @@ export default function MedsosPricing() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Komponen harga</h2>
-              <FieldHelp title="Komponen harga" description="Bagian ini dipakai untuk menjelaskan apa yang termasuk biaya dashboard, kapan biaya Zernio dihitung, dan kapan add-on lain ditagihkan." />
+              <FieldHelp title="Komponen harga" description="Bagian ini dipakai untuk menjelaskan apa yang termasuk biaya dashboard, kapan biaya engine sosial dihitung, dan kapan add-on lain ditagihkan." />
             </div>
             <div className="space-y-3 mt-5">
               {[
                 'Rp300.000 / bulan dipakai sebagai base fee dashboard MyCommerSocial.',
-                'Social + ads dihitung sesuai kebutuhan workspace yang akan dijalankan lewat Zernio.',
+                'Social + ads dihitung sesuai kebutuhan workspace yang akan dijalankan lewat engine sosial.',
                 'WA Inbox tetap bisa dijual terpisah sebagai add-on custom.',
                 'Marketplace akan tersedia sebagai add-on saat modul integrasinya dibuka.',
               ].map((line) => (
@@ -110,7 +110,7 @@ export default function MedsosPricing() {
 
           <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-blue-100 bg-blue-50'}`}>
             <p className="text-xs uppercase tracking-[0.18em] text-blue-500">Prinsip jualannya</p>
-            <h3 className="mt-2 text-xl font-bold">Jual 1 workspace, bukan 1 vendor</h3>
+            <h3 className="mt-2 text-xl font-bold">Jual 1 workspace, bukan banyak tools terpisah</h3>
             <p className={`text-sm mt-3 ${isDark ? 'text-gray-300' : 'text-blue-900'}`}>
               Customer cukup melihat satu paket workspace yang siap dipakai. Komponen internal tetap bisa diatur sesuai kebutuhan operasional dan margin bisnis.
             </p>

@@ -8,7 +8,14 @@ import {
   getMyCommerSocialIntegrationHub,
   type ManagedIntegrationConnector,
 } from '../../services/myCommerSocialIntegrations';
-import { getWACrmStatus, getZernioAccounts, type WACrmConnectionStatus, type ZernioAccount } from '../../services/medsosPostsService';
+import {
+  getMarketplaceHubStatus,
+  getWACrmStatus,
+  getZernioAccounts,
+  type MarketplaceHubConnectionStatus,
+  type WACrmConnectionStatus,
+  type ZernioAccount,
+} from '../../services/medsosPostsService';
 import { isZernioAdsAccount } from '../../data/zernioCatalog';
 import {
   ArrowRight,
@@ -57,8 +64,8 @@ const liveFlow = [
     description: 'Lengkapi WA Inbox dan hubungkan channel yang dibutuhkan dari panel Connections.',
   },
   {
-    title: 'Aktifkan WA + Zernio',
-    description: 'WhatsApp menggunakan Customer Service CRM, sedangkan social media dan ads menggunakan Zernio.',
+    title: 'Aktifkan inbox + social workspace',
+    description: 'WhatsApp menggunakan workspace inbox internal, sedangkan social media dan ads menggunakan workspace sosial yang sama.',
   },
   {
     title: 'Mulai operasional',
@@ -99,6 +106,7 @@ export default function MedsosDashboard() {
   const [loading, setLoading] = useState(!isDemo);
   const [waConnector, setWaConnector] = useState<ManagedIntegrationConnector | null>(null);
   const [waStatus, setWaStatus] = useState<WACrmConnectionStatus | null>(null);
+  const [marketplaceStatus, setMarketplaceStatus] = useState<MarketplaceHubConnectionStatus | null>(null);
   const [accounts, setAccounts] = useState<ZernioAccount[]>(isDemo ? demoAccounts : []);
 
   useEffect(() => {
@@ -113,11 +121,16 @@ export default function MedsosDashboard() {
         setWaConnector(hub.connectors.find((item) => item.slug === 'social-hub') || null);
         setAccounts(zernioAccounts);
         try {
-          const status = await getWACrmStatus();
+          const [status, marketplaceProbe] = await Promise.all([
+            getWACrmStatus(),
+            getMarketplaceHubStatus(),
+          ]);
           setWaStatus(status);
+          setMarketplaceStatus(marketplaceProbe);
         } catch (statusError) {
-          console.error('Failed to load WA CRM status', statusError);
+          console.error('Failed to load WA inbox status', statusError);
           setWaStatus(null);
+          setMarketplaceStatus(null);
         }
       } catch (error) {
         console.error('Failed to load dashboard workspace summary', error);
@@ -141,18 +154,18 @@ export default function MedsosDashboard() {
   const waState = useMemo(
     () => {
       if (isDemo) {
-        return { label: 'Ready', helper: 'Customer Service CRM internal' };
+        return { label: 'Ready', helper: 'Workspace inbox internal' };
       }
       if (waStatus?.reachable) {
-        return { label: 'Ready', helper: 'WA CRM merespons dan stats live aktif' };
+        return { label: 'Ready', helper: 'Workspace inbox merespons dan stats live aktif' };
       }
       if (waStatus?.configured) {
         return { label: 'Check', helper: waStatus.message || 'Konfigurasi ada, tetapi koneksi perlu dicek' };
       }
       if (waConnector?.connectionRefMasked || waConnector?.status === 'connected') {
-        return { label: 'Check', helper: 'Konfigurasi tersimpan, menunggu validasi CRM' };
+        return { label: 'Check', helper: 'Konfigurasi tersimpan, menunggu validasi layanan inbox' };
       }
-      return { label: 'Setup', helper: 'Customer Service CRM untuk WhatsApp' };
+      return { label: 'Setup', helper: 'Workspace inbox untuk WhatsApp' };
     },
     [isDemo, waStatus, waConnector]
   );
@@ -165,21 +178,23 @@ export default function MedsosDashboard() {
       icon: MessageSquareText,
     },
     {
-      label: 'Social via Zernio',
+      label: 'Social workspace',
       value: String(socialAccounts.length),
       helper: 'Akun sosial tenant yang sudah aktif',
       icon: PlugZap,
     },
     {
-      label: 'Ads via Zernio',
+      label: 'Ads workspace',
       value: String(adsAccounts.length),
       helper: 'Ad account tenant yang sudah aktif',
       icon: Sparkles,
     },
     {
       label: 'Marketplace',
-      value: 'Soon',
-      helper: 'Akan tersedia segera',
+      value: marketplaceStatus?.reachable ? String(marketplaceStatus.channels.length) : marketplaceStatus?.configured ? 'Check' : 'Setup',
+      helper: marketplaceStatus?.reachable
+        ? `${marketplaceStatus.channels.length} channel marketplace chat aktif`
+        : marketplaceStatus?.message || 'Marketplace chat belum diaktifkan',
       icon: ShoppingBag,
     },
   ];
@@ -209,7 +224,7 @@ export default function MedsosDashboard() {
                   <FieldHelp title="Workspace overview" description="Ringkasan ini menunjukkan apakah WA Inbox, akun social, dan ads tenant sudah siap dipakai tanpa harus buka semua halaman satu per satu." />
                 </div>
                 <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Pantau status WA Inbox, koneksi social media, dan ads dari satu ringkasan operasional.
+                  Pantau status WA Inbox, koneksi social media, marketplace chat, dan ads dari satu ringkasan operasional.
                 </p>
               </div>
             </div>
@@ -218,7 +233,7 @@ export default function MedsosDashboard() {
           <button
             type="button"
             onClick={() => navigate(isDemo ? '/demo/medsos/connections' : '/medsos/connections')}
-            title="Buka halaman Connections untuk mengatur WA, social media, dan ads"
+            title="Buka halaman Connections untuk mengatur WA, marketplace chat, social media, dan ads"
             className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
           >
             Buka Connections
@@ -260,14 +275,14 @@ export default function MedsosDashboard() {
                   <p className="font-semibold">WA Inbox</p>
                   <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 {waStatus?.reachable
-                  ? 'Workspace CRM sudah siap dipakai dari inbox live.'
+                  ? 'Workspace inbox sudah siap dipakai dari inbox live.'
                   : waStatus?.configured
                     ? waStatus.message || 'Konfigurasi WA ada, tetapi koneksi live perlu dicek.'
-                    : 'Belum ada API key CRM yang disimpan.'}
+                    : 'Belum ada API key inbox yang disimpan.'}
               </p>
             </div>
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-              <p className="font-semibold">Social via Zernio</p>
+              <p className="font-semibold">Social workspace</p>
               <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 {socialAccounts.length > 0
                   ? `${socialAccounts.length} akun sosial sudah terhubung ke workspace ini.`
@@ -275,7 +290,7 @@ export default function MedsosDashboard() {
               </p>
             </div>
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-              <p className="font-semibold">Ads via Zernio</p>
+              <p className="font-semibold">Ads workspace</p>
               <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 {adsAccounts.length > 0
                   ? `${adsAccounts.length} ad account sudah aktif.`
@@ -293,7 +308,7 @@ export default function MedsosDashboard() {
           {accounts.length === 0 ? (
             <div className={`rounded-2xl border p-5 mt-6 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Belum ada channel yang terhubung. Lanjut ke halaman Connections untuk menyalakan WA Inbox atau mulai connect Zernio.
+                Belum ada channel yang terhubung. Lanjut ke halaman Connections untuk menyalakan WA Inbox, marketplace chat, atau mulai menghubungkan social workspace.
               </p>
             </div>
           ) : (

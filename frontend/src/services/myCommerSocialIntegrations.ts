@@ -14,6 +14,7 @@ export type ManagedIntegrationBrand =
   | 'tiktok'
   | 'youtube'
   | 'shopee'
+  | 'lazada'
   | 'tokopedia'
   | 'whatsapp';
 
@@ -128,6 +129,12 @@ export interface BeginConnectResponse {
 
 export interface CompleteManagedIntegrationPayload {
   connectionId?: string;
+  appId?: string;
+  secretKey?: string;
+  botSenderEmail?: string;
+  aiWebhookUrl?: string;
+  aiWebhookAuthToken?: string;
+  aiWebhookTimeoutMs?: number;
   workspaceName?: string;
   notes?: string;
   vendorWorkspaceUrl?: string;

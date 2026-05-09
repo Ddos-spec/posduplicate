@@ -23,6 +23,7 @@ export type BrandKey =
   | 'tiktok'
   | 'youtube'
   | 'shopee'
+  | 'lazada'
   | 'tokopedia'
   | 'whatsapp'
   | 'linkedin'
@@ -73,6 +74,7 @@ const brandStyles: Record<BrandKey, { bg: string; fg?: string }> = {
   tiktok: { bg: '#111111', fg: '#FFFFFF' },
   youtube: { bg: '#FF0000' },
   shopee: { bg: '#EE4D2D' },
+  lazada: { bg: '#5F27CD', fg: '#FFFFFF' },
   tokopedia: { bg: '#FFFFFF' },
   whatsapp: { bg: '#25D366' },
   linkedin: { bg: '#0A66C2', fg: '#FFFFFF' },
@@ -100,6 +102,17 @@ function renderInner(brand: BrandKey, size: number): ReactNode {
         className="block"
         style={{ height: size * 0.46, width: 'auto', maxWidth: size * 1.8 }}
       />
+    );
+  }
+
+  if (brand === 'lazada') {
+    return (
+      <span
+        className="block font-black uppercase"
+        style={{ color: '#FFFFFF', fontSize: size * 0.34, lineHeight: 1 }}
+      >
+        Lz
+      </span>
     );
   }
 
@@ -171,6 +184,7 @@ export function resolveBrandKey(input: string): BrandKey {
   if (value.includes('tiktok')) return 'tiktok';
   if (value.includes('youtube')) return 'youtube';
   if (value.includes('shopee')) return 'shopee';
+  if (value.includes('lazada')) return 'lazada';
   if (value.includes('tokopedia')) return 'tokopedia';
   if (value.includes('whatsapp')) return 'whatsapp';
   if (value.includes('linkedin ads')) return 'linkedinads';

@@ -97,6 +97,31 @@ export interface WACrmConnectionStatus {
   stats: WACrmStats | null;
 }
 
+export interface MarketplaceChatChannel {
+  id: string;
+  name: string;
+  source: string;
+}
+
+export interface MarketplaceHubConnectionStatus {
+  configured: boolean;
+  active: boolean;
+  hasAppId: boolean;
+  hasSecretKey: boolean;
+  hasBotSenderEmail: boolean;
+  hasAiWebhook: boolean;
+  reachable: boolean;
+  checkedAt: string;
+  status: 'not_configured' | 'configuration_incomplete' | 'reachable' | 'degraded';
+  message: string;
+  workspaceName: string | null;
+  appIdMasked: string | null;
+  botSenderEmail: string | null;
+  aiWebhookUrl: string | null;
+  webhookUrl: string | null;
+  channels: MarketplaceChatChannel[];
+}
+
 export async function getWACrmStats(): Promise<WACrmStats | null> {
   const { data } = await api.get('/medsos/integrations/proxy/social-hub/stats');
   return (data.data ?? null) as WACrmStats | null;
@@ -105,6 +130,11 @@ export async function getWACrmStats(): Promise<WACrmStats | null> {
 export async function getWACrmStatus(): Promise<WACrmConnectionStatus> {
   const { data } = await api.get('/medsos/integrations/proxy/social-hub/status');
   return data.data as WACrmConnectionStatus;
+}
+
+export async function getMarketplaceHubStatus(): Promise<MarketplaceHubConnectionStatus> {
+  const { data } = await api.get('/medsos/integrations/proxy/marketplace-hub/status');
+  return data.data as MarketplaceHubConnectionStatus;
 }
 
 export interface ZernioCurrencyTotals {

@@ -526,11 +526,11 @@ export default function MetaAdsControl() {
           <div className="max-w-3xl">
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>
               <Megaphone size={14} />
-              Ads workspace via Zernio
+              Ads workspace
             </div>
-            <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Semua jalur ads sekarang dipusatkan ke Zernio</h1>
+            <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Semua jalur ads sekarang dipusatkan ke satu workspace</h1>
             <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Workspace ini sekarang membaca account, ad account, campaign, dan metrik lintas network langsung dari layer ads Zernio. Jadi kalau tenant menghubungkan beberapa network sekaligus, semuanya bisa tetap muncul di satu tempat.
+              Workspace ini sekarang membaca account, ad account, campaign, dan metrik lintas network langsung dari layer ads terpusat. Jadi kalau tenant menghubungkan beberapa network sekaligus, semuanya bisa tetap muncul di satu tempat.
             </p>
           </div>
 
@@ -553,7 +553,7 @@ export default function MetaAdsControl() {
             className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${
               isDark ? 'bg-slate-900 text-slate-100 hover:bg-slate-700' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
             }`}
-            title="Paksa ambil ulang data dari Zernio"
+            title="Paksa ambil ulang data ads"
           >
             <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
             {refreshing ? 'Refreshing...' : 'Refresh data'}
@@ -638,7 +638,7 @@ export default function MetaAdsControl() {
         <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-4">
             <h2 className="font-bold text-xl">Attention center</h2>
-            <FieldHelp title="Attention center" description="Alert ini dibentuk dari data campaign yang sudah dibaca dari Zernio. Tujuannya supaya user tahu campaign mana yang perlu dicek duluan tanpa buka satu-satu." />
+            <FieldHelp title="Attention center" description="Alert ini dibentuk dari data campaign yang sudah dibaca dari workspace ads. Tujuannya supaya user tahu campaign mana yang perlu dicek duluan tanpa buka satu-satu." />
           </div>
 
           <div className="grid lg:grid-cols-2 gap-3">
@@ -748,7 +748,7 @@ export default function MetaAdsControl() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-xl">Workspace snapshot</h2>
-                <FieldHelp title="Workspace snapshot" description="Ringkasan semua network ads yang sudah dipetakan dari profile Zernio tenant ini, termasuk account terhubung, ad account, campaign, dan metrik lintas network." />
+                <FieldHelp title="Workspace snapshot" description="Ringkasan semua network ads yang sudah dipetakan dari workspace tenant ini, termasuk account terhubung, ad account, campaign, dan metrik lintas network." />
               </div>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Kalau tenant menghubungkan beberapa network sekaligus, setiap network akan diringkas terpisah lalu digabung di view global ini.
@@ -787,7 +787,7 @@ export default function MetaAdsControl() {
                 <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <p className="font-semibold">Spend per currency</p>
-                    <FieldHelp title="Spend per currency" description="Zernio tidak menormalisasi semua network ke satu mata uang. Karena itu total spend ditampilkan per currency supaya angka tidak menyesatkan." />
+                    <FieldHelp title="Spend per currency" description="Workspace ads tidak menormalisasi semua network ke satu mata uang. Karena itu total spend ditampilkan per currency supaya angka tidak menyesatkan." />
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {summary.totals.spendByCurrency.map((item) => (
@@ -870,7 +870,7 @@ export default function MetaAdsControl() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="font-bold text-xl">Per-account analytics</h2>
-                  <FieldHelp title="Per-account analytics" description="Setiap workspace ads Zernio bisa punya satu atau lebih ad account. Di sini ringkasan campaign dan spend dipisah per account supaya operator bisa lihat mana yang aktif dan mana yang belum bergerak." />
+                  <FieldHelp title="Per-account analytics" description="Setiap workspace ads bisa punya satu atau lebih ad account. Di sini ringkasan campaign dan spend dipisah per account supaya operator bisa lihat mana yang aktif dan mana yang belum bergerak." />
                 </div>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   Ini bagian yang menentukan apakah dashboard sanggup membaca semua akun ads yang tersambung di tenant yang sama.
@@ -880,7 +880,7 @@ export default function MetaAdsControl() {
 
             {workspaceAccounts.length === 0 ? (
               <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada account ads yang berhasil dibaca dari profile Zernio ini.</p>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada account ads yang berhasil dibaca dari workspace ini.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -935,7 +935,7 @@ export default function MetaAdsControl() {
                     <div className="mt-4 grid xl:grid-cols-2 gap-3">
                       {workspaceAccount.adAccounts.length === 0 ? (
                         <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
-                          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada ad account spesifik yang dikembalikan dari Zernio untuk workspace ini.</p>
+                          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada ad account spesifik yang dikembalikan untuk workspace ini.</p>
                         </div>
                       ) : (
                         workspaceAccount.adAccounts.map((adAccount) => (
@@ -992,7 +992,7 @@ export default function MetaAdsControl() {
             <div className="px-6 py-5 border-b border-inherit">
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-xl">Campaign intelligence</h2>
-                <FieldHelp title="Campaign intelligence" description="Daftar ini mengambil campaign lintas network dari Zernio lalu menampilkannya dalam format yang lebih mudah dipantau dari dashboard internal." />
+                <FieldHelp title="Campaign intelligence" description="Daftar ini mengambil campaign lintas network dari workspace ads lalu menampilkannya dalam format yang lebih mudah dipantau dari dashboard internal." />
               </div>
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Data ini sudah bukan khusus Meta saja. Kalau tenant menyalakan Google Ads, LinkedIn Ads, TikTok Ads, Pinterest Ads, atau X Ads, campaign dari network itu juga ikut masuk ke tabel ini.
@@ -1003,7 +1003,7 @@ export default function MetaAdsControl() {
               <div className="px-6 py-8">
                 <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
                   <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Account ads sudah tersambung, tapi belum ada campaign yang dikembalikan Zernio untuk profile tenant ini.
+                    Account ads sudah tersambung, tapi belum ada campaign yang dikembalikan untuk profile tenant ini.
                   </p>
                 </div>
               </div>
@@ -1081,7 +1081,7 @@ export default function MetaAdsControl() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="font-bold text-xl">Ad drill-down</h2>
-                    <FieldHelp title="Ad drill-down" description="Bagian ini memakai GET /v1/ads dan GET /v1/ads/{adId}/analytics dari Zernio untuk membedah isi campaign sampai level ad." />
+                    <FieldHelp title="Ad drill-down" description="Bagian ini memakai endpoint analytics ads untuk membedah isi campaign sampai level ad." />
                   </div>
                   <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     Campaign <span className="font-semibold">{activeCampaign.name}</span> • {activeCampaign.networkLabel} • {activeCampaign.adAccountName || 'Ad account belum bernama'}
@@ -1122,7 +1122,7 @@ export default function MetaAdsControl() {
                     ) : campaignAds.length === 0 ? (
                       <div className="px-4 py-5">
                         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          Tidak ada ad level detail yang dikembalikan Zernio untuk campaign ini.
+                          Tidak ada detail level ad yang dikembalikan untuk campaign ini.
                         </p>
                       </div>
                     ) : (
@@ -1209,7 +1209,7 @@ export default function MetaAdsControl() {
                             className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${
                               isDark ? 'bg-slate-800 text-slate-100 hover:bg-slate-700' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
                             }`}
-                            title="Paksa ambil ulang analytics ad ini dari Zernio"
+                            title="Paksa ambil ulang analytics ad ini"
                           >
                             <RefreshCw size={15} className={selectedAdAnalyticsLoading ? 'animate-spin' : ''} />
                             Refresh ad analytics
@@ -1241,7 +1241,7 @@ export default function MetaAdsControl() {
                           </div>
                           {selectedAdAnalytics.daily.length === 0 ? (
                             <div className="px-4 py-4">
-                              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada timeline harian yang dikembalikan Zernio.</p>
+                              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada timeline harian yang dikembalikan.</p>
                             </div>
                           ) : (
                             <div className="overflow-x-auto">
@@ -1310,7 +1310,7 @@ export default function MetaAdsControl() {
                           <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
                             <div className="flex items-center gap-2 mb-4">
                               <p className="font-semibold">Breakdowns</p>
-                              <FieldHelp title="Breakdowns" description="Zernio hanya mengirim breakdown tertentu tergantung platform. Meta dan TikTok paling kaya di bagian ini." />
+                              <FieldHelp title="Breakdowns" description="Breakdown yang tersedia bergantung pada platform. Meta dan TikTok biasanya paling kaya di bagian ini." />
                             </div>
 
                             <div className="grid xl:grid-cols-2 gap-4">

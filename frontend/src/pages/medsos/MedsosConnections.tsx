@@ -7,11 +7,15 @@ import { PlatformBadge } from '../../components/medsos/PlatformBadge';
 import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   completeMyCommerSocialConnect,
+  disconnectMyCommerSocialIntegration,
   getMyCommerSocialIntegrationHub,
+  syncMyCommerSocialIntegration,
   type ManagedIntegrationConnector,
 } from '../../services/myCommerSocialIntegrations';
 import {
+  getMarketplaceHubStatus,
   disconnectZernioAccount,
+  type MarketplaceHubConnectionStatus,
   getWACrmStatus,
   getZernioAccounts,
   getZernioAdsConnectUrl,
@@ -22,7 +26,6 @@ import {
 import { isZernioAdsAccount, zernioAdsPlatforms, zernioSocialPlatforms } from '../../data/zernioCatalog';
 import {
   BadgeCheck,
-  CheckCircle2,
   ExternalLink,
   Link2,
   Loader2,
@@ -31,6 +34,8 @@ import {
   ShieldCheck,
   ShoppingBag,
   Sparkles,
+  Bot,
+  RefreshCcw,
   Unplug,
   Workflow,
 } from 'lucide-react';
@@ -43,6 +48,11 @@ type CrmFormState = {
   notes: string;
 };
 
+type MarketplaceFormState = {
+  workspaceName: string;
+  notes: string;
+};
+
 const demoWaConnector = {
   id: 1,
   slug: 'social-hub',
@@ -50,8 +60,8 @@ const demoWaConnector = {
   name: 'WA Inbox',
   workspaceName: 'Tepat Laser Support Desk',
   category: 'social',
-  description: 'Customer Service CRM menangani inbox WhatsApp, agent routing, dan lead tracking.',
-  providerName: 'Customer Service CRM',
+  description: 'Workspace chat internal menangani inbox WhatsApp, routing agent, dan lead tracking.',
+  providerName: 'In-house Inbox',
   providerKey: 'wa_crm',
   status: 'connected',
   statusLabel: 'Connected',
@@ -70,7 +80,7 @@ const demoWaConnector = {
   launchMode: 'manual_reference',
   launchUrlConfigured: false,
   vendorPortalUrl: 'https://crm.example.com',
-  vendorPortalLabel: 'Buka CRM',
+  vendorPortalLabel: 'Buka inbox',
   pricingUrl: null,
   docsUrl: null,
   supportUrl: null,
@@ -126,6 +136,95 @@ const demoZernioAccounts: ZernioAccount[] = [
   },
 ];
 
+const demoMarketplaceConnector = {
+  id: 2,
+  slug: 'marketplace-hub',
+  integrationType: 'managed_marketplace_hub',
+  name: 'Marketplace Chat Hub',
+  workspaceName: 'Tepat Laser Marketplace',
+  category: 'marketplace',
+  description: 'Marketplace chat engine untuk Shopee, Lazada, Tokopedia, dan TikTok Shop.',
+  providerName: 'Marketplace Chat Engine',
+  providerKey: 'marketplace_chat_engine',
+  status: 'connected',
+  statusLabel: 'Connected',
+  isActive: true,
+  healthScore: 94,
+  supportedChannels: [
+    { brand: 'shopee', label: 'Shopee Chat' },
+    { brand: 'lazada', label: 'Lazada Chat' },
+    { brand: 'tokopedia', label: 'Tokopedia / TikTok Shop Chat' },
+  ],
+  capabilities: ['marketplace chat sync', 'AI auto-reply bridge', 'agent handover'],
+  billingNote: 'Marketplace chat engine dikelola di belakang layar dan diteruskan ke AI workflow.',
+  dashboardFeeNote: 'Dashboard fee terpisah dari biaya operasional engine chat.',
+  pricingSummary: null,
+  recommendedPlan: 'workspace bundle',
+  selectedAssets: [
+    { id: 'shopee-chat', label: 'Shopee Chat', kind: 'marketplace_chat', status: 'connected' },
+    { id: 'tokopedia-chat', label: 'Tokopedia / TikTok Shop Chat', kind: 'marketplace_chat', status: 'connected' },
+  ],
+  setupChecklist: [],
+  requiredUserActions: [],
+  nextActions: [],
+  launchMode: 'manual_reference',
+  launchUrlConfigured: false,
+  vendorPortalUrl: null,
+  vendorPortalLabel: null,
+  pricingUrl: null,
+  docsUrl: null,
+  supportUrl: null,
+  callbackUrl: '',
+  webhookUrl: 'https://api.example.com/api/medsos/integrations/webhook/marketplace-hub?tenant_id=1&token=demo',
+  operatorNotes: 'Demo workspace untuk marketplace AI.',
+  vendorWorkspaceUrl: null,
+  vendorWorkspaceEmail: 'marketplace@tepatlaser.com',
+  subscriptionPlan: 'workspace bundle',
+  subscriptionStatus: 'active',
+  renewalDate: null,
+  billingOwnerName: 'Marketplace Team',
+  lastSyncAt: new Date().toISOString(),
+  connectedAt: new Date().toISOString(),
+  connectionRefMasked: 'app_••••demo',
+  launchSession: null,
+  lastError: null,
+  lastWebhookEvent: {
+    receivedAt: new Date().toISOString(),
+    eventType: 'new_comment',
+  },
+  updatedAt: new Date().toISOString(),
+  customerPaysDirectly: false,
+  dashboardFee: {
+    currency: 'IDR',
+    amount: 300000,
+    label: 'Rp300.000 / bulan',
+    description: 'Biaya command center.',
+  },
+} as ManagedIntegrationConnector;
+
+const demoMarketplaceStatus: MarketplaceHubConnectionStatus = {
+  configured: true,
+  active: true,
+  hasAppId: true,
+  hasSecretKey: true,
+  hasBotSenderEmail: true,
+  hasAiWebhook: true,
+  reachable: true,
+  checkedAt: new Date().toISOString(),
+  status: 'reachable',
+  message: '3 channel marketplace chat terdeteksi.',
+  workspaceName: 'Tepat Laser Marketplace',
+  appIdMasked: 'app_••••demo',
+  botSenderEmail: 'bot@tepatlaser.id',
+  aiWebhookUrl: 'https://automation.example.com/webhook/marketplace-ai',
+  webhookUrl: 'https://api.example.com/api/medsos/integrations/webhook/marketplace-hub?tenant_id=1&token=demo',
+  channels: [
+    { id: '1', name: 'Shopee Chat', source: 'shopee' },
+    { id: '2', name: 'Lazada Chat', source: 'lazada' },
+    { id: '3', name: 'Tokopedia / TikTok Shop Chat', source: 'tokopedia' },
+  ],
+};
+
 const emptyCrmForm: CrmFormState = {
   workspaceName: '',
   vendorWorkspaceUrl: '',
@@ -134,22 +233,27 @@ const emptyCrmForm: CrmFormState = {
   notes: '',
 };
 
+const emptyMarketplaceForm: MarketplaceFormState = {
+  workspaceName: '',
+  notes: '',
+};
+
 const stepCards = [
   {
     title: '1. Buat workspace',
-    description: 'Workspace bisnis dibuat seperti biasa dan siap dipakai untuk menampung channel yang akan dihubungkan.',
+    description: 'Workspace bisnis dibuat seperti biasa dan siap dipakai untuk WA Inbox, marketplace chat, social media, dan ads.',
   },
   {
     title: '2. Lengkapi WA Inbox',
-    description: 'Masukkan API key Customer Service CRM untuk mengaktifkan operasional WhatsApp.',
+    description: 'Masukkan API key workspace inbox untuk mengaktifkan operasional WhatsApp.',
   },
   {
-    title: '3. Hubungkan social',
-    description: 'Hubungkan Instagram, Facebook, TikTok, LinkedIn, dan channel lain langsung dari workspace Zernio.',
+    title: '3. Aktifkan marketplace chat',
+    description: 'Simpan permintaan aktivasi marketplace chat agar tim onboarding bisa menyalakan AI dan koneksi channel.',
   },
   {
     title: '4. Aktifkan ads',
-    description: 'Ad account mengikuti workspace yang sama sehingga social media dan ads bisa dikelola dari satu panel.',
+    description: 'Hubungkan social media dan ads melalui workspace terpusat agar semua channel non-marketplace tetap ada di satu panel.',
   },
 ];
 
@@ -193,6 +297,10 @@ export default function MedsosConnections() {
   const [savingWa, setSavingWa] = useState(false);
   const [waConnector, setWaConnector] = useState<ManagedIntegrationConnector | null>(isDemo ? demoWaConnector : null);
   const [waStatus, setWaStatus] = useState<WACrmConnectionStatus | null>(null);
+  const [savingMarketplace, setSavingMarketplace] = useState(false);
+  const [syncingMarketplace, setSyncingMarketplace] = useState(false);
+  const [marketplaceConnector, setMarketplaceConnector] = useState<ManagedIntegrationConnector | null>(isDemo ? demoMarketplaceConnector : null);
+  const [marketplaceStatus, setMarketplaceStatus] = useState<MarketplaceHubConnectionStatus | null>(isDemo ? demoMarketplaceStatus : null);
   const [crmForm, setCrmForm] = useState<CrmFormState>(() => (
     isDemo
       ? {
@@ -203,6 +311,15 @@ export default function MedsosConnections() {
           notes: demoWaConnector.operatorNotes || '',
         }
       : { ...emptyCrmForm }
+  ));
+  const [marketplaceForm, setMarketplaceForm] = useState<MarketplaceFormState>(() => (
+    isDemo
+      ? {
+          ...emptyMarketplaceForm,
+          workspaceName: demoMarketplaceConnector.workspaceName || '',
+          notes: demoMarketplaceConnector.operatorNotes || '',
+        }
+      : { ...emptyMarketplaceForm }
   ));
   const [zernioAccounts, setZernioAccounts] = useState<ZernioAccount[]>(isDemo ? demoZernioAccounts : []);
   const [zernioLoading, setZernioLoading] = useState(!isDemo);
@@ -218,14 +335,21 @@ export default function MedsosConnections() {
         getZernioAccounts(),
       ]);
       const socialHub = hub.connectors.find((connector) => connector.slug === 'social-hub') || null;
+      const marketplaceHub = hub.connectors.find((connector) => connector.slug === 'marketplace-hub') || null;
       setWaConnector(socialHub);
+      setMarketplaceConnector(marketplaceHub);
       setZernioAccounts(accounts);
       try {
-        const status = await getWACrmStatus();
+        const [status, marketplaceProbe] = await Promise.all([
+          getWACrmStatus(),
+          getMarketplaceHubStatus(),
+        ]);
         setWaStatus(status);
+        setMarketplaceStatus(marketplaceProbe);
       } catch (statusError) {
-        console.error('Failed to load WA live status', statusError);
+        console.error('Failed to load live connector status', statusError);
         setWaStatus(null);
+        setMarketplaceStatus(null);
       }
     } catch (error) {
       console.error('Failed to load MyCommerSocial connections', error);
@@ -253,6 +377,15 @@ export default function MedsosConnections() {
   }, [waConnector]);
 
   useEffect(() => {
+    if (!marketplaceConnector && !marketplaceStatus) return;
+    setMarketplaceForm((current) => ({
+      ...current,
+      workspaceName: current.workspaceName || marketplaceConnector?.workspaceName || marketplaceStatus?.workspaceName || '',
+      notes: current.notes || marketplaceConnector?.operatorNotes || '',
+    }));
+  }, [marketplaceConnector, marketplaceStatus]);
+
+  useEffect(() => {
     if (!waConnector) return;
     setShowWaKeyEditor(!waConnector.connectionRefMasked);
   }, [waConnector]);
@@ -263,12 +396,12 @@ export default function MedsosConnections() {
     const adsConnected = params.get('zernio_ads_connected');
 
     if (socialConnected) {
-      toast.success(`${humanizePlatform(socialConnected)} berhasil terhubung ke workspace Zernio.`);
+      toast.success(`${humanizePlatform(socialConnected)} berhasil terhubung ke workspace social.`);
       if (!isDemo) void loadLiveData();
     }
 
     if (adsConnected) {
-      toast.success(`${humanizePlatform(adsConnected)} berhasil diaktifkan lewat Zernio.`);
+      toast.success(`${humanizePlatform(adsConnected)} berhasil diaktifkan di workspace ads.`);
       if (!isDemo) void loadLiveData();
     }
   }, [location.search, isDemo]);
@@ -294,13 +427,13 @@ export default function MedsosConnections() {
   );
   const waState = useMemo(() => {
     if (isDemo) {
-      return { card: 'Ready', label: 'Connected ke workspace CRM', helper: 'Demo workspace aktif' };
+      return { card: 'Ready', label: 'Connected ke workspace inbox', helper: 'Demo workspace aktif' };
     }
     if (waStatus?.reachable) {
-      return { card: 'Ready', label: 'Connected ke workspace CRM', helper: 'WA CRM merespons dan siap dipakai' };
+      return { card: 'Ready', label: 'Connected ke workspace inbox', helper: 'Workspace inbox merespons dan siap dipakai' };
     }
     if (waStatus?.configured) {
-      return { card: 'Check', label: 'Perlu dicek', helper: waStatus.message || 'Konfigurasi WA ada, tetapi CRM belum merespons' };
+      return { card: 'Check', label: 'Perlu dicek', helper: waStatus.message || 'Konfigurasi WA ada, tetapi layanan inbox belum merespons' };
     }
     if (waReady) {
       return { card: 'Saved', label: 'Tersimpan', helper: 'API key sudah ada, menunggu validasi live' };
@@ -308,6 +441,38 @@ export default function MedsosConnections() {
     return { card: 'Setup', label: 'Belum dikonfigurasi', helper: 'Simpan API key workspace untuk menyalakan WA Inbox' };
   }, [isDemo, waStatus, waReady]);
   const waOpenUrl = waConnector?.vendorPortalUrl || waConnector?.vendorWorkspaceUrl || null;
+
+  const marketplaceState = useMemo(() => {
+    if (isDemo) {
+      return { card: 'Ready', label: 'Marketplace AI live', helper: 'Marketplace chat engine aktif' };
+    }
+    if (marketplaceStatus?.reachable) {
+      return {
+        card: 'Ready',
+        label: 'Marketplace AI live',
+        helper: marketplaceStatus.message || 'Marketplace chat engine merespons dan channel terdeteksi',
+      };
+    }
+    if (marketplaceStatus?.configured) {
+      return {
+        card: 'Check',
+        label: 'Perlu validasi',
+        helper: marketplaceStatus.message || 'Kredensial tersimpan, tetapi marketplace engine belum merespons',
+      };
+    }
+    if (marketplaceConnector?.connectionRefMasked || marketplaceConnector?.workspaceName) {
+      return {
+        card: 'Saved',
+        label: 'Draft tersimpan',
+        helper: 'Konfigurasi marketplace sudah tersimpan, tinggal dilengkapi atau dicek ulang',
+      };
+    }
+    return {
+      card: 'Setup',
+      label: 'Belum dikonfigurasi',
+      helper: 'Simpan permintaan aktivasi untuk marketplace chat dan AI',
+    };
+  }, [isDemo, marketplaceStatus, marketplaceConnector]);
 
   const getConnectedAccount = (platforms: string[]) => {
     const lowered = platforms.map((item) => item.toLowerCase());
@@ -354,7 +519,7 @@ export default function MedsosConnections() {
       }
     } catch (error) {
       console.error('Failed to disconnect Zernio account', error);
-      toast.error('Gagal memutuskan account Zernio.');
+      toast.error('Gagal memutuskan account social atau ads.');
     }
   };
 
@@ -414,10 +579,120 @@ export default function MedsosConnections() {
       toast.success('WA Inbox berhasil disimpan.');
       await loadLiveData();
     } catch (error) {
-      console.error('Failed to save WA CRM settings', error);
+      console.error('Failed to save WA inbox settings', error);
       toast.error('Gagal menyimpan konfigurasi WA Inbox.');
     } finally {
       setSavingWa(false);
+    }
+  };
+
+  const handleSaveMarketplace = async () => {
+    const workspaceName = marketplaceForm.workspaceName.trim() || marketplaceConnector?.workspaceName || 'Marketplace Chat Hub';
+    if (!workspaceName) {
+      toast.error('Nama workspace marketplace wajib diisi.');
+      return;
+    }
+
+    if (isDemo) {
+      setMarketplaceConnector((current) => current ? {
+        ...current,
+        workspaceName,
+        operatorNotes: marketplaceForm.notes || null,
+        connectionRefMasked: 'app_••••demo',
+        status: 'connected',
+        statusLabel: 'Connected',
+      } : current);
+      setMarketplaceStatus((current) => current ? {
+        ...current,
+        configured: true,
+        hasAppId: current.hasAppId,
+        hasSecretKey: current.hasSecretKey,
+        hasBotSenderEmail: current.hasBotSenderEmail,
+        hasAiWebhook: current.hasAiWebhook,
+        reachable: true,
+        status: 'reachable',
+        message: '3 channel marketplace chat terdeteksi.',
+        workspaceName,
+        botSenderEmail: current.botSenderEmail,
+        aiWebhookUrl: current.aiWebhookUrl,
+      } : current);
+      setMarketplaceForm((current) => ({
+        ...current,
+        workspaceName,
+      }));
+      toast.success('Demo marketplace chat berhasil diperbarui.');
+      return;
+    }
+
+    try {
+      setSavingMarketplace(true);
+      const updated = await completeMyCommerSocialConnect('marketplace-hub', {
+        workspaceName,
+        notes: marketplaceForm.notes.trim() || undefined,
+        selectedAssets: [
+          { id: 'shopee-chat', label: 'Shopee Chat', kind: 'marketplace_chat', status: 'connected' },
+          { id: 'lazada-chat', label: 'Lazada Chat', kind: 'marketplace_chat', status: 'connected' },
+          { id: 'tokopedia-tiktok-chat', label: 'Tokopedia / TikTok Shop Chat', kind: 'marketplace_chat', status: 'connected' },
+        ],
+      });
+      setMarketplaceConnector(updated);
+      setMarketplaceForm((current) => ({
+        ...current,
+        workspaceName,
+      }));
+      toast.success('Permintaan aktivasi marketplace chat berhasil disimpan.');
+      await loadLiveData();
+    } catch (error) {
+      console.error('Failed to save marketplace chat settings', error);
+      toast.error('Gagal menyimpan konfigurasi marketplace chat.');
+    } finally {
+      setSavingMarketplace(false);
+    }
+  };
+
+  const handleSyncMarketplace = async () => {
+    if (isDemo) {
+      toast.success('Demo marketplace chat sudah sinkron.');
+      return;
+    }
+
+    try {
+      setSyncingMarketplace(true);
+      await syncMyCommerSocialIntegration('marketplace-hub');
+      await loadLiveData();
+      toast.success('Status marketplace chat berhasil diperbarui.');
+    } catch (error) {
+      console.error('Failed to refresh marketplace chat status', error);
+      toast.error('Gagal memperbarui status marketplace chat.');
+    } finally {
+      setSyncingMarketplace(false);
+    }
+  };
+
+  const handleDisconnectMarketplace = async () => {
+    if (!window.confirm('Putuskan konfigurasi marketplace chat dari workspace ini?')) {
+      return;
+    }
+
+    if (isDemo) {
+      setMarketplaceConnector(null);
+      setMarketplaceStatus(null);
+      setMarketplaceForm({ ...emptyMarketplaceForm });
+      toast.success('Demo marketplace chat diputus.');
+      return;
+    }
+
+    try {
+      setSyncingMarketplace(true);
+      await disconnectMyCommerSocialIntegration('marketplace-hub');
+      setMarketplaceForm({ ...emptyMarketplaceForm });
+      await loadLiveData();
+      toast.success('Marketplace chat berhasil diputus.');
+    } catch (error) {
+      console.error('Failed to disconnect marketplace chat', error);
+      toast.error('Gagal memutuskan marketplace chat.');
+    } finally {
+      setSyncingMarketplace(false);
     }
   };
 
@@ -437,7 +712,7 @@ export default function MedsosConnections() {
               <div>
                 <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Connections</h1>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Hubungkan WA Inbox, social media, dan ads dari satu workspace operasional.
+                  Hubungkan WA Inbox, marketplace chat engine, social media, dan ads dari satu workspace operasional.
                 </p>
               </div>
             </div>
@@ -450,9 +725,9 @@ export default function MedsosConnections() {
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{waState.helper}</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
-              <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Zernio Profile</p>
-              <p className="mt-2 text-2xl font-bold">{zernioLoading ? '...' : 'Ready'}</p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Workspace social dan ads siap dipakai</p>
+              <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Marketplace AI</p>
+              <p className="mt-2 text-2xl font-bold">{marketplaceState.card}</p>
+              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{marketplaceState.helper}</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Social connected</p>
@@ -482,11 +757,11 @@ export default function MedsosConnections() {
           <div>
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>
               <PlugZap size={14} />
-              Zernio workspace
+              Social + ads workspace
             </div>
-            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Social + Ads tenant dipusatkan ke Zernio</h2>
+            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Social + Ads dipusatkan ke satu workspace</h2>
             <p className={`text-sm mt-2 max-w-3xl ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Semua koneksi social media dan ads dikelola melalui workspace Zernio yang terhubung ke akun bisnis ini.
+              Semua koneksi social media dan ads dikelola melalui satu workspace terpusat agar reporting, planner, dan aktivasi channel tidak terpecah.
             </p>
           </div>
           <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-blue-50 text-blue-700'}`}>
@@ -550,7 +825,7 @@ export default function MedsosConnections() {
                           type="button"
                           disabled={!platform.connectPlatform || platform.soon || busy}
                           onClick={() => platform.connectPlatform && handleSocialConnect(platform.connectPlatform)}
-                          title={`Hubungkan ${platform.label} ke workspace Zernio`}
+                          title={`Hubungkan ${platform.label} ke workspace`}
                           className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busy ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
@@ -568,7 +843,7 @@ export default function MedsosConnections() {
             <div className="flex items-center justify-between gap-3 mb-5">
               <div>
                 <h3 className="font-bold text-lg">Ads channels</h3>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Semua ad network diarahkan ke Zernio agar tidak ada connector ads lain yang membingungkan.</p>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Semua ad network diarahkan ke workspace ads yang sama agar tim cukup memantau dari satu panel.</p>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${badgeTone}`}>{adsAccounts.length} connected</span>
             </div>
@@ -619,7 +894,7 @@ export default function MedsosConnections() {
                           type="button"
                           disabled={!platform.connectPlatform || busy}
                           onClick={() => platform.connectPlatform && handleAdsConnect(platform.connectPlatform)}
-                          title={`Hubungkan ${platform.label} ke workspace Zernio`}
+                          title={`Hubungkan ${platform.label} ke workspace`}
                           className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busy ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
@@ -640,7 +915,7 @@ export default function MedsosConnections() {
             <div>
               <p className="font-semibold">Yang diatur MyCommerSocial untuk user baru</p>
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-300' : 'text-blue-900'}`}>
-                Pengguna cukup memilih channel yang ingin diaktifkan. Setup koneksi dan sinkronisasi ditangani oleh sistem.
+                Pengguna cukup memilih channel yang ingin diaktifkan. Setup koneksi dan sinkronisasi ditangani oleh sistem di belakang layar.
               </p>
             </div>
           </div>
@@ -653,11 +928,11 @@ export default function MedsosConnections() {
             <div>
               <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-emerald-500/15 text-emerald-200' : 'bg-emerald-100 text-emerald-700'}`}>
                 <MessageSquareText size={14} />
-                WA Inbox via produk internal
+                WA Inbox
               </div>
-              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>WA Inbox menggunakan Customer Service CRM</h2>
+              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>WA Inbox diaktifkan lewat workspace chat internal</h2>
               <p className={`text-sm mt-2 max-w-3xl ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Masukkan API key workspace agar inbox WhatsApp bisa dipantau dari panel ini. URL CRM diambil otomatis dari konfigurasi sistem.
+                Masukkan API key workspace agar inbox WhatsApp bisa dipantau dari panel ini. Alamat workspace chat diambil otomatis dari konfigurasi sistem.
               </p>
             </div>
             <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-gray-50 text-gray-700'}`}>
@@ -682,7 +957,7 @@ export default function MedsosConnections() {
             <label className="space-y-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Workspace email
-                <FieldHelp title="Workspace email" description="Email operasional untuk workspace WA. Gunakan email admin atau PIC yang mengelola CRM." />
+                <FieldHelp title="Workspace email" description="Email operasional untuk workspace WA. Gunakan email admin atau PIC yang mengelola inbox." />
               </span>
               <input
                 value={crmForm.vendorWorkspaceEmail}
@@ -696,11 +971,11 @@ export default function MedsosConnections() {
                 <PlugZap size={18} className="text-blue-500 mt-0.5" />
                 <div className="space-y-1">
                   <p className="text-sm font-semibold inline-flex items-center gap-2">
-                    Akses CRM otomatis
-                    <FieldHelp title="Akses CRM otomatis" description="URL Customer Service CRM sudah diatur di sistem, jadi user tidak perlu mengisi alamat CRM secara manual." />
+                    Akses inbox otomatis
+                    <FieldHelp title="Akses workspace otomatis" description="Alamat workspace chat sudah diatur di sistem, jadi user tidak perlu mengisi URL secara manual." />
                   </p>
                   <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-blue-900'}`}>
-                    Cukup simpan API key workspace. Setelah itu tombol <strong>Buka CRM</strong> akan memakai alamat CRM yang sudah dikonfigurasi.
+                    Cukup simpan API key workspace. Setelah itu tombol <strong>Buka inbox</strong> akan memakai alamat workspace yang sudah dikonfigurasi secara internal.
                   </p>
                 </div>
               </div>
@@ -709,12 +984,12 @@ export default function MedsosConnections() {
               <label className="space-y-2 md:col-span-2">
                 <span className="text-sm font-semibold inline-flex items-center gap-2">
                   API key / connection reference
-                  <FieldHelp title="API key / connection reference" description="Cukup isi API key atau connection reference dari Customer Service CRM. Sistem akan memakai URL CRM yang sudah dikonfigurasi." />
+                  <FieldHelp title="API key / connection reference" description="Cukup isi API key atau connection reference workspace chat. Sistem akan memakai URL yang sudah dikonfigurasi." />
                 </span>
                 <input
                   value={crmForm.connectionId}
                   onChange={(event) => setCrmForm((current) => ({ ...current, connectionId: event.target.value }))}
-                  placeholder="API key tenant dari Customer Service CRM"
+                  placeholder="API key tenant untuk workspace chat"
                   className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
                 />
               </label>
@@ -774,7 +1049,7 @@ export default function MedsosConnections() {
 
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mt-6">
             <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Billing WA tetap custom sesuai produk internal. Dashboard fee MyCommerSocial terpisah dari biaya operasional WA CRM.
+              Billing WA tetap custom sesuai paket operasional yang aktif. Dashboard fee MyCommerSocial terpisah dari biaya workspace chat.
             </div>
             <div className="flex gap-3">
               {waOpenUrl ? (
@@ -785,7 +1060,7 @@ export default function MedsosConnections() {
                   className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-900 text-white hover:bg-slate-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
                 >
                   <ExternalLink size={16} />
-                  Buka CRM
+                  Buka inbox
                 </a>
               ) : null}
               <button
@@ -807,40 +1082,160 @@ export default function MedsosConnections() {
             <div>
               <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-amber-500/15 text-amber-200' : 'bg-amber-100 text-amber-700'}`}>
                 <ShoppingBag size={14} />
-                Marketplace
+                Marketplace chat + AI
               </div>
-              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace segera hadir</h2>
+              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace chat diaktivasi oleh tim onboarding</h2>
               <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Integrasi marketplace sedang disiapkan. Untuk saat ini fokus utama ada pada WA Inbox, social media, dan ads.
+                Klien cukup memilih workspace dan marketplace yang ingin dipakai. Routing AI dan koneksi engine marketplace dikelola di belakang layar oleh tim aktivasi.
               </p>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-900 text-slate-200' : 'bg-slate-100 text-slate-700'}`}>Coming soon</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-900 text-slate-200' : 'bg-slate-100 text-slate-700'}`}>{marketplaceState.label}</span>
           </div>
 
-          <div className="space-y-3 mb-6">
-            {[
-              'Shopee dan Tokopedia akan tersedia di modul marketplace terpisah.',
-              'Order queue, buyer chat, katalog, dan sinkronisasi stok akan muncul di halaman ini saat integrasi siap.',
-              'Workspace yang sudah aktif sekarang tetap bisa dipakai tanpa menunggu modul marketplace selesai.',
-            ].map((item) => (
-              <div key={item} className={`rounded-2xl border p-4 text-sm ${isDark ? 'border-slate-700 bg-slate-900/40 text-gray-300' : 'border-gray-100 bg-gray-50 text-gray-600'}`}>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 size={16} className="text-emerald-500 mt-0.5" />
-                  <span>{item}</span>
+          <div className="grid md:grid-cols-2 gap-4">
+            <label className="space-y-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Workspace marketplace
+                <FieldHelp title="Workspace marketplace" description="Nama workspace untuk operasional chat marketplace. Biasanya mengikuti nama brand utama atau nama bisnis yang mengelola semua toko." />
+              </span>
+              <input
+                value={marketplaceForm.workspaceName}
+                onChange={(event) => setMarketplaceForm((current) => ({ ...current, workspaceName: event.target.value }))}
+                placeholder="Contoh: Tepat Laser Marketplace"
+                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+              />
+            </label>
+
+            <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-blue-50'}`}>
+              <div className="flex items-start gap-3">
+                <Bot size={18} className="text-blue-500 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold inline-flex items-center gap-2">
+                    Aktivasi AI dikelola otomatis
+                    <FieldHelp title="Aktivasi AI" description="Koneksi chat marketplace, routing pesan ke AI, dan jalur balasan tidak perlu diurus oleh user. Semua aktivasi teknis ditangani oleh tim onboarding." />
+                  </p>
+                  <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-blue-900'}`}>
+                    Setelah workspace ini disimpan, tim aktivasi akan menyelesaikan koneksi marketplace dan AI tanpa meminta user mengisi pengaturan teknis tambahan.
+                  </p>
                 </div>
               </div>
-            ))}
+            </div>
+
+            <div className="md:col-span-2">
+              <p className="text-sm font-semibold inline-flex items-center gap-2 mb-3">
+                Channel yang diprioritaskan
+                <FieldHelp title="Channel marketplace" description="Pilih marketplace yang ingin disatukan ke dashboard. Bila belum semua toko siap, aktivasi bisa dilakukan bertahap per channel." />
+              </p>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {[
+                  { key: 'shopee', label: 'Shopee Chat', helper: 'Chat buyer dari toko Shopee yang sudah aktif.' },
+                  { key: 'lazada', label: 'Lazada Chat', helper: 'Chat buyer dan pertanyaan order dari Lazada.' },
+                  { key: 'tokopedia', label: 'Tokopedia Chat', helper: 'Inbox Tokopedia untuk toko yang sudah berjalan.' },
+                  { key: 'tiktok', label: 'TikTok Shop Chat', helper: 'Chat pre-sales dan post-sales dari TikTok Shop.' },
+                ].map((channel) => {
+                  const isDetected = marketplaceStatus?.channels?.some((item) => item.source.toLowerCase().includes(channel.key));
+                  return (
+                    <div key={channel.key} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                      <div className="flex items-start gap-3">
+                        <PlatformBadge
+                          label={channel.label}
+                          brand={channel.key === 'tiktok' ? 'tiktok' : channel.key === 'tokopedia' ? 'tokopedia' : channel.key === 'lazada' ? 'lazada' : 'shopee'}
+                          size={42}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold">{channel.label}</p>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isDetected ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                              {isDetected ? 'Aktif' : 'Siap diaktifkan'}
+                            </span>
+                          </div>
+                          <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{channel.helper}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Catatan aktivasi
+                <FieldHelp title="Catatan aktivasi" description="Gunakan untuk mencatat toko prioritas, PIC, jam operasional, atau detail khusus yang perlu diketahui saat tim onboarding mengaktifkan marketplace chat." />
+              </span>
+              <textarea
+                value={marketplaceForm.notes}
+                onChange={(event) => setMarketplaceForm((current) => ({ ...current, notes: event.target.value }))}
+                placeholder="Contoh: prioritaskan Shopee utama dulu, AI hanya aktif di jam kerja, fallback ke human untuk komplain refund."
+                rows={4}
+                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+              />
+            </label>
           </div>
 
-          <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-blue-100 bg-blue-50'}`}>
+          <div className={`rounded-2xl border p-4 mt-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+            <div className="grid md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Current workspace</p>
+                <p className="font-semibold mt-1">{marketplaceConnector?.workspaceName || marketplaceStatus?.workspaceName || 'Belum diset'}</p>
+              </div>
+              <div>
+                <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Detected channels</p>
+                <p className="font-semibold mt-1">{marketplaceStatus?.channels?.length || 0}</p>
+              </div>
+              <div>
+                <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Last updated</p>
+                <p className="font-semibold mt-1">{toLocalDate(marketplaceConnector?.updatedAt || marketplaceStatus?.checkedAt)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className={`rounded-2xl border p-5 mt-5 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-blue-100 bg-blue-50'}`}>
             <div className="flex items-start gap-3">
               <Workflow size={18} className="text-blue-500 mt-0.5" />
               <div>
-                <p className="font-semibold">Activation checklist</p>
+                <p className="font-semibold">Alur aktivasi</p>
                 <p className={`text-sm mt-1 ${isDark ? 'text-gray-300' : 'text-blue-900'}`}>
-                  Lengkapi WA Inbox dan hubungkan workspace Zernio untuk mulai memakai inbox, planner, analytics, dan ads workspace.
+                  Simpan workspace marketplace terlebih dulu. Setelah itu tim onboarding akan menghubungkan toko yang sudah ada, menyalakan AI, lalu mengembalikan status koneksi ke dashboard ini.
                 </p>
               </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mt-6">
+            <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              User tidak perlu mengurus pengaturan teknis connector. Dashboard hanya menampilkan status aktivasi dan channel yang sudah siap dipakai.
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleSyncMarketplace}
+                disabled={syncingMarketplace}
+                className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-900 text-white hover:bg-slate-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'} disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                {syncingMarketplace ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
+                Refresh status
+              </button>
+              {marketplaceConnector ? (
+                <button
+                  type="button"
+                  onClick={handleDisconnectMarketplace}
+                  disabled={syncingMarketplace}
+                  className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-900 text-rose-300 hover:bg-rose-950/40' : 'border-gray-200 bg-white text-rose-600 hover:bg-rose-50'} disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  <Unplug size={16} />
+                  Putuskan setup
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleSaveMarketplace}
+                disabled={savingMarketplace}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingMarketplace ? <Loader2 size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
+                {marketplaceConnector ? 'Simpan perubahan' : 'Simpan aktivasi'}
+              </button>
             </div>
           </div>
         </section>

@@ -9,6 +9,7 @@ export type ManagedChannelBrand =
   | 'youtube'
   | 'shopee'
   | 'tokopedia'
+  | 'lazada'
   | 'whatsapp';
 
 export interface ManagedChannelDefinition {
@@ -43,20 +44,20 @@ export interface ManagedIntegrationDefinition {
 }
 
 const socialLaunchUrl = process.env.MCS_SOCIAL_CONNECT_URL;
-const socialProviderName = process.env.MCS_SOCIAL_PROVIDER_NAME || 'WA CRM';
+const socialProviderName = process.env.MCS_SOCIAL_PROVIDER_NAME || 'WA Inbox';
 const socialPricingUrl = process.env.MCS_SOCIAL_PRICING_URL || '';
 const socialDocsUrl = process.env.MCS_SOCIAL_DOCS_URL || '';
 const socialSupportUrl = process.env.MCS_SOCIAL_SUPPORT_URL || '';
 const socialPortalUrl = process.env.MCS_SOCIAL_VENDOR_PORTAL_URL || 'https://customerservicecrm.vercel.app';
-const socialPortalLabel = process.env.MCS_SOCIAL_VENDOR_PORTAL_LABEL || 'Buka WA CRM';
+const socialPortalLabel = process.env.MCS_SOCIAL_VENDOR_PORTAL_LABEL || 'Buka inbox';
 
 const marketplaceLaunchUrl = process.env.MCS_MARKETPLACE_CONNECT_URL;
-const marketplaceProviderName = process.env.MCS_MARKETPLACE_PROVIDER_NAME || 'Jubelio';
-const marketplacePricingUrl = process.env.MCS_MARKETPLACE_PRICING_URL || 'https://jubelio.com/en/pricing/';
-const marketplaceDocsUrl = process.env.MCS_MARKETPLACE_DOCS_URL || 'https://docs-wms.jubelio.com/';
-const marketplaceSupportUrl = process.env.MCS_MARKETPLACE_SUPPORT_URL || 'https://jubelio.com/en/api-integration/';
-const marketplacePortalUrl = process.env.MCS_MARKETPLACE_VENDOR_PORTAL_URL || 'https://v2.jubelio.com/auth/register';
-const marketplacePortalLabel = process.env.MCS_MARKETPLACE_VENDOR_PORTAL_LABEL || 'Buka portal Jubelio';
+const marketplaceProviderName = process.env.MCS_MARKETPLACE_PROVIDER_NAME || 'Marketplace Chat Engine';
+const marketplacePricingUrl = process.env.MCS_MARKETPLACE_PRICING_URL || '';
+const marketplaceDocsUrl = process.env.MCS_MARKETPLACE_DOCS_URL || '';
+const marketplaceSupportUrl = process.env.MCS_MARKETPLACE_SUPPORT_URL || '';
+const marketplacePortalUrl = process.env.MCS_MARKETPLACE_VENDOR_PORTAL_URL || '';
+const marketplacePortalLabel = process.env.MCS_MARKETPLACE_VENDOR_PORTAL_LABEL || 'Lihat status aktivasi';
 
 const adsLaunchUrl = process.env.MCS_META_ADS_CONNECT_URL;
 const adsProviderName = process.env.MCS_META_ADS_PROVIDER_NAME || 'Meta';
@@ -64,7 +65,7 @@ const adsPricingUrl = process.env.MCS_META_ADS_PRICING_URL || '';
 const adsDocsUrl = process.env.MCS_META_ADS_DOCS_URL || 'https://developers.facebook.com/docs/marketing-apis/';
 const adsSupportUrl = process.env.MCS_META_ADS_SUPPORT_URL || 'https://www.facebook.com/business/help';
 const adsPortalUrl = process.env.MCS_META_ADS_VENDOR_PORTAL_URL || 'https://ads.facebook.com';
-const adsPortalLabel = process.env.MCS_META_ADS_VENDOR_PORTAL_LABEL || 'Buka Meta Ads Manager';
+const adsPortalLabel = process.env.MCS_META_ADS_VENDOR_PORTAL_LABEL || 'Buka ads workspace';
 
 export const managedIntegrationsCatalog: Record<ManagedIntegrationSlug, ManagedIntegrationDefinition> = {
   'social-hub': {
@@ -72,7 +73,7 @@ export const managedIntegrationsCatalog: Record<ManagedIntegrationSlug, ManagedI
     integrationType: 'managed_social_hub',
     category: 'social',
     name: 'WA Inbox',
-    description: 'Chat inbox berbasis WhatsApp — sambungkan Customer Service CRM untuk sinkronkan pesan masuk, stats, dan eskalasi langsung dari dashboard.',
+    description: 'Chat inbox berbasis WhatsApp — sambungkan workspace inbox agar pesan masuk, statistik, dan eskalasi dapat dipantau langsung dari dashboard.',
     providerName: socialProviderName,
     providerKey: 'wa_crm',
     launchMode: socialLaunchUrl ? 'hosted_link' : 'manual_reference',
@@ -85,52 +86,54 @@ export const managedIntegrationsCatalog: Record<ManagedIntegrationSlug, ManagedI
     docsUrl: socialDocsUrl || undefined,
     supportUrl: socialSupportUrl || undefined,
     webhookSecret: process.env.MCS_SOCIAL_WEBHOOK_SECRET,
-    billingNote: 'Biaya hosting CRM ditanggung sendiri. MyCommerSocial hanya menjadi command center dan routing layer.',
+    billingNote: 'Biaya operasional inbox mengikuti workspace yang aktif. MyCommerSocial tetap menjadi command center dan routing layer.',
     dashboardFeeNote: 'Rp300.000/bulan untuk dashboard orchestration, stats, dan eskalasi.',
     supportedChannels: [
       { brand: 'whatsapp', label: 'WhatsApp Inbox' },
     ],
     capabilities: ['unified WA inbox', 'live chat stats', 'eskalasi alert', 'blast campaign', 'lead tracking'],
     setupChecklist: [
-      'Pastikan instance Customer Service CRM sudah berjalan dan aktif.',
-      'Salin API key tenant dari panel admin CRM (Settings → API Key).',
+      'Pastikan workspace inbox sudah aktif dan siap dipakai.',
+      'Salin API key workspace dari panel admin yang mengelola inbox.',
       'Masukkan API key tenant ke form finalisasi di dashboard ini.',
-      'Dashboard akan langsung membaca stats dan chat aktif dari CRM.',
+      'Dashboard akan langsung membaca statistik dan chat aktif dari workspace inbox.',
     ],
-    requiredUserActions: ['Jalankan instance CRM', 'Salin API key', 'Isi API key di form'],
+    requiredUserActions: ['Aktifkan workspace inbox', 'Salin API key', 'Isi API key di form'],
   },
   'marketplace-hub': {
     slug: 'marketplace-hub',
     integrationType: 'managed_marketplace_hub',
     category: 'marketplace',
-    name: 'Marketplace Hub',
-    description: 'Order, katalog, stok, dan buyer chat marketplace ditarik lewat Jubelio supaya seller tinggal daftar lalu menghubungkan toko.',
+    name: 'Marketplace Chat Hub',
+    description: 'Hubungkan toko marketplace yang sudah aktif agar semua chat buyer masuk ke satu inbox AI. Fokus v1 adalah chat marketplace lintas channel, bukan operasi stok dan order penuh.',
     providerName: marketplaceProviderName,
-    providerKey: 'jubelio',
+    providerKey: 'marketplace_chat_engine',
     launchMode: marketplaceLaunchUrl ? 'hosted_link' : 'manual_reference',
     launchUrl: marketplaceLaunchUrl,
     vendorPortalUrl: marketplacePortalUrl,
     vendorPortalLabel: marketplacePortalLabel,
-    pricingSummary: 'Jubelio mulai Rp150/order untuk order sync, inventory, catalog, dan chat marketplace.',
-    recommendedPlan: 'Mulai Rp150/order',
+    pricingSummary: 'Gunakan workspace marketplace chat yang sudah aktif, lalu arahkan seluruh percakapan buyer ke MyCommerSocial sebagai AI command center.',
+    recommendedPlan: 'Workspace marketplace chat aktif',
     pricingUrl: marketplacePricingUrl,
     docsUrl: marketplaceDocsUrl,
     supportUrl: marketplaceSupportUrl,
     webhookSecret: process.env.MCS_MARKETPLACE_WEBHOOK_SECRET,
-    billingNote: 'Biaya Jubelio dibayar langsung oleh user. MyCommerSocial hanya menjadi command center, alert, dan lapisan workflow.',
-    dashboardFeeNote: 'Rp300.000/bulan hanya untuk dashboard kontrol, alert, dan workflow tim internal.',
+    billingNote: 'Biaya engine marketplace chat mengikuti workspace yang aktif. MyCommerSocial tetap menjadi dashboard utama, layer AI, dan orkestrasi balasan.',
+    dashboardFeeNote: 'Rp300.000/bulan untuk inbox AI, workflow tim, dan orkestrasi webhook ke engine marketplace chat.',
     supportedChannels: [
       { brand: 'shopee', label: 'Shopee' },
       { brand: 'tokopedia', label: 'Tokopedia' },
+      { brand: 'tiktok', label: 'TikTok Shop' },
     ],
-    capabilities: ['buyer chat sync', 'order queue', 'catalog health', 'stock mismatch alert', 'pricing exception'],
+    capabilities: ['marketplace chat sync', 'AI auto-reply bridge', 'handover ke agent', 'channel orchestration', 'session webhook orchestration'],
     setupChecklist: [
-      'User klik connect lalu daftar / login Jubelio.',
-      'Jubelio mengelola sinkron order, inventory, token, dan retry sync marketplace.',
-      'Backend menerima connection reference dan status sync untuk ditampilkan di command center.',
-      'Queue pesanan dan buyer chat siap dipakai di unified inbox.',
+      'Pastikan klien sudah punya toko marketplace yang aktif.',
+      'Siapkan credential workspace chat marketplace dari panel internal aktivasi.',
+      'Aktifkan channel marketplace yang dibutuhkan di workspace chat.',
+      'Tempel webhook URL MyCommerSocial ke pengaturan inbound message workspace marketplace.',
+      'Lengkapi credential internal agar setiap pesan dapat diarahkan ke AI dan agent yang tepat.',
     ],
-    requiredUserActions: ['Daftar / login Jubelio', 'Hubungkan toko', 'Approve akses marketplace'],
+    requiredUserActions: ['Hubungkan toko marketplace yang sudah aktif', 'Simpan workspace marketplace', 'Tunggu aktivasi oleh tim onboarding'],
   },
   'meta-ads-hub': {
     slug: 'meta-ads-hub',
@@ -150,7 +153,7 @@ export const managedIntegrationsCatalog: Record<ManagedIntegrationSlug, ManagedI
     docsUrl: adsDocsUrl || undefined,
     supportUrl: adsSupportUrl || undefined,
     webhookSecret: process.env.MCS_META_ADS_WEBHOOK_SECRET,
-    billingNote: 'Spend iklan dibayar langsung ke Meta. Tidak ada biaya third-party — MyCommerSocial hanya menjadi command center.',
+    billingNote: 'Spend iklan mengikuti account ads yang aktif. MyCommerSocial hanya menjadi command center.',
     dashboardFeeNote: 'Rp300.000/bulan untuk command center, alert pacing, dan lead orchestration.',
     supportedChannels: [
       { brand: 'facebook', label: 'Facebook Ads' },

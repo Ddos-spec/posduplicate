@@ -8,6 +8,7 @@ import {
   disconnect,
   getIntegrationDetail,
   getIntegrationHub,
+  proxyMarketplaceStatus,
   proxyStatus,
   proxyStats,
   syncNow,
@@ -25,6 +26,7 @@ router.use(tenantMiddleware);
 router.get('/hub', getIntegrationHub);
 router.get('/proxy/social-hub/status', proxyStatus);
 router.get('/proxy/social-hub/stats', proxyStats);
+router.get('/proxy/marketplace-hub/status', proxyMarketplaceStatus);
 router.get('/:slug', getIntegrationDetail);
 router.post('/:slug/connect', beginConnect);
 router.post('/:slug/complete', completeConnect);

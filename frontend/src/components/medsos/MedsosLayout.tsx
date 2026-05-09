@@ -193,7 +193,7 @@ export default function MedsosLayout() {
               <div className={`h-8 w-px ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Focus</p>
-                <p className="text-sm font-semibold truncate max-w-[190px]">WA Inbox + Zernio • Marketplace soon</p>
+                <p className="text-sm font-semibold truncate max-w-[190px]">WA Inbox + Social Workspace • Marketplace AI</p>
               </div>
             </div>
             <button

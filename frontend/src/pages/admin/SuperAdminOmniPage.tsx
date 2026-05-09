@@ -350,7 +350,7 @@ export default function SuperAdminOmniPage() {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Channel status</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    Ringkasan cepat status WA, Zernio, dan paket MyCommerSocial tenant yang sedang dipilih.
+                    Ringkasan cepat status WA, social workspace, dan paket MyCommerSocial tenant yang sedang dipilih.
                   </p>
                 </div>
                 <Link
@@ -373,7 +373,7 @@ export default function SuperAdminOmniPage() {
                 </div>
               ) : !selectedTenant ? (
                 <div className="mt-5 rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
-                  Pilih tenant untuk melihat status WA dan Zernio.
+                  Pilih tenant untuk melihat status WA dan social workspace.
                 </div>
               ) : !mcsDetail ? (
                 <div className="mt-5 rounded-2xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500">
@@ -393,14 +393,14 @@ export default function SuperAdminOmniPage() {
                       <p className="mt-1 text-sm text-gray-500">{mcsDetail.workspace.waWorkspaceName || 'Belum ada workspace'}</p>
                     </div>
                     <div className="rounded-2xl bg-gray-50 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-gray-400">Profile Zernio</p>
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-400">Social workspace</p>
                       <p className="mt-2 text-lg font-bold text-gray-900">{mcsDetail.workspace.zernioProfileReady ? 'Siap' : 'Belum siap'}</p>
                       <p className="mt-1 text-sm text-gray-500">{mcsDetail.workspace.zernioProfileId || 'Belum ada profile'}</p>
                     </div>
                     <div className="rounded-2xl bg-gray-50 p-4">
                       <p className="text-xs uppercase tracking-[0.18em] text-gray-400">Ads account</p>
                       <p className="mt-2 text-lg font-bold text-gray-900">{mcsDetail.adsAccounts.length}/{mcsDetail.config.maxAdsAccounts}</p>
-                      <p className="mt-1 text-sm text-gray-500">Connected via Zernio</p>
+                      <p className="mt-1 text-sm text-gray-500">Connected via social workspace</p>
                     </div>
                   </div>
 
