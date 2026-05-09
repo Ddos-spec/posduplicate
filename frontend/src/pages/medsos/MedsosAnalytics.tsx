@@ -111,6 +111,59 @@ const demoSocialPosts: SocialPost[] = [
   },
 ];
 
+const previewSocialPosts: SocialPost[] = [
+  {
+    id: 9901,
+    content: 'Contoh konten akan tampil di area ini setelah channel social tersambung dan post pertama mulai terkumpul.',
+    media_urls: [],
+    platform: 'instagram',
+    scheduled_at: '2026-05-06T09:00:00.000Z',
+    published_at: '2026-05-06T09:00:00.000Z',
+    account_id: null,
+    status: 'published',
+    external_id: 'preview-ig-1',
+    error_message: null,
+    social_accounts: { account_name: 'Preview Instagram', platform: 'instagram' },
+    social_analytics: { impressions: 0, reach: 0, likes: 0, comments: 0, shares: 0, saves: 0, engagement_rate: 0 },
+  },
+  {
+    id: 9902,
+    content: 'Detail performa konten seperti caption, angka engagement, dan analysis akan muncul otomatis di panel yang sama.',
+    media_urls: [],
+    platform: 'facebook',
+    scheduled_at: '2026-05-05T13:00:00.000Z',
+    published_at: '2026-05-05T13:00:00.000Z',
+    account_id: null,
+    status: 'published',
+    external_id: 'preview-fb-1',
+    error_message: null,
+    social_accounts: { account_name: 'Preview Facebook', platform: 'facebook' },
+    social_analytics: { impressions: 0, reach: 0, likes: 0, comments: 0, shares: 0, saves: 0, engagement_rate: 0 },
+  },
+];
+
+const neutralReplySpeedTrend = [
+  { day: 'Mon', marketplace: 0 },
+  { day: 'Tue', marketplace: 0 },
+  { day: 'Wed', marketplace: 0 },
+  { day: 'Thu', marketplace: 0 },
+  { day: 'Fri', marketplace: 0 },
+  { day: 'Sat', marketplace: 0 },
+  { day: 'Sun', marketplace: 0 },
+];
+
+const neutralSlaTrend = [
+  { channel: 'WA', compliance: 0 },
+  { channel: 'Medsos', compliance: 0 },
+  { channel: 'Marketplace', compliance: 0 },
+];
+
+const neutralMarketplaceCards = [
+  { channel: 'Shopee', conversion: 0, responseRate: 0 },
+  { channel: 'Tokopedia', conversion: 0, responseRate: 0 },
+  { channel: 'TikTok Shop', conversion: 0, responseRate: 0 },
+];
+
 function normalizeAnalyticsChannel(value?: string): AnalyticsChannel {
   if (value === 'social') return 'social';
   if (value === 'marketplace') return 'marketplace';
@@ -194,23 +247,30 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
     return basePosts.filter((post) => post.platform.toLowerCase() === platformFilter);
   }, [platformFilter, posts]);
 
+  const previewMode = !filteredPosts.length;
+  const displayPosts = previewMode ? previewSocialPosts : filteredPosts;
+  const displayPlatforms = previewMode
+    ? Array.from(new Set(previewSocialPosts.map((post) => post.platform.toLowerCase())))
+    : availablePlatforms;
+
   useEffect(() => {
-    if (!filteredPosts.length) {
+    if (!displayPosts.length) {
       setSelectedPostId(0);
       setAnalysisResult(null);
+      setAnalysisError(null);
       return;
     }
-    if (!filteredPosts.some((post) => post.id === selectedPostId)) {
-      setSelectedPostId(filteredPosts[0].id);
+    if (!displayPosts.some((post) => post.id === selectedPostId)) {
+      setSelectedPostId(displayPosts[0].id);
       setAnalysisResult(null);
       setAnalysisError(null);
     }
-  }, [filteredPosts, selectedPostId]);
+  }, [displayPosts, selectedPostId]);
 
-  const selectedPost = filteredPosts.find((post) => post.id === selectedPostId) ?? filteredPosts[0] ?? null;
+  const selectedPost = displayPosts.find((post) => post.id === selectedPostId) ?? displayPosts[0] ?? null;
 
   const aggregate = useMemo(() => {
-    return filteredPosts.reduce(
+    return displayPosts.reduce(
       (summary, post) => {
         summary.likes += safeNumber(post.social_analytics?.likes);
         summary.comments += safeNumber(post.social_analytics?.comments);
@@ -223,13 +283,13 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
       },
       { likes: 0, comments: 0, shares: 0, views: 0, reach: 0, saves: 0, engagementRateTotal: 0 },
     );
-  }, [filteredPosts]);
+  }, [displayPosts]);
 
-  const averageEngagementRate = filteredPosts.length ? Number((aggregate.engagementRateTotal / filteredPosts.length).toFixed(2)) : 0;
+  const averageEngagementRate = displayPosts.length ? Number((aggregate.engagementRateTotal / displayPosts.length).toFixed(2)) : 0;
 
   const platformBreakdown = useMemo(() => {
     const map = new Map<string, { platform: string; posts: number; views: number; likes: number; engagementRateTotal: number }>();
-    filteredPosts.forEach((post) => {
+    displayPosts.forEach((post) => {
       const key = post.platform.toLowerCase();
       const current = map.get(key) ?? { platform: key, posts: 0, views: 0, likes: 0, engagementRateTotal: 0 };
       current.posts += 1;
@@ -244,22 +304,28 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
         engagementRate: item.posts ? Number((item.engagementRateTotal / item.posts).toFixed(2)) : 0,
       }))
       .sort((left, right) => right.views - left.views);
-  }, [filteredPosts]);
+  }, [displayPosts]);
 
-  const trendRows = useMemo(() => buildTrendRows(filteredPosts), [filteredPosts]);
+  const trendRows = useMemo(() => buildTrendRows(displayPosts), [displayPosts]);
 
   const topPosts = useMemo(
     () =>
-      [...filteredPosts]
+      [...displayPosts]
         .sort((left, right) => getPostEngagementRate(right) - getPostEngagementRate(left))
         .slice(0, 5),
-    [filteredPosts],
+    [displayPosts],
   );
 
   const filteredWindows = useMemo(() => {
+    if (previewMode) {
+      return [
+        { id: 9001, channel: 'Instagram', time: '09:00 - 10:00', confidence: 'Preview', note: 'Waktu terbaik akan muncul setelah data cukup.' },
+        { id: 9002, channel: 'Facebook', time: '12:00 - 13:00', confidence: 'Preview', note: 'Insight jam tayang akan dihitung otomatis.' },
+      ];
+    }
     if (platformFilter === 'all') return bestPostingWindows;
     return bestPostingWindows.filter((item) => item.channel.toLowerCase().includes(platformFilter));
-  }, [platformFilter]);
+  }, [platformFilter, previewMode]);
 
   const handleGenerateAnalysis = async () => {
     if (!selectedPost) return;
@@ -308,34 +374,14 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
     );
   }
 
-  if (!filteredPosts.length) {
-    return (
-      <div className="space-y-6">
-        <SectionHeader
-          isDark={isDark}
-          title="Analytics Medsos"
-          description="Ringkasan performa konten per channel social yang sudah tersambung."
-          icon={<LineChartIcon size={22} />}
-        />
-        <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className={`mx-auto mb-4 inline-flex rounded-2xl p-4 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
-            <FileText size={34} />
-          </div>
-          <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Belum ada data konten untuk dianalisis</h2>
-          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Publish konten atau sambungkan lebih banyak channel social. Begitu data post tersedia, daftar konten dan generate analysis akan aktif.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <SectionHeader
         isDark={isDark}
         title="Analytics Medsos"
-        description="Lihat performa konten per channel, buka detail post, lalu jalankan analysis hanya saat tombol generate ditekan."
+        description={previewMode
+          ? 'Belum ada channel social yang aktif. Layout analytics tetap ditampilkan dengan angka netral agar tim bisa melihat bentuk dashboard.'
+          : 'Lihat performa konten per channel, buka detail post, lalu jalankan analysis hanya saat tombol generate ditekan.'}
         icon={<LineChartIcon size={22} />}
       />
 
@@ -347,20 +393,31 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
             className={`rounded-2xl border px-4 py-2.5 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
           >
             <option value="all">All platforms</option>
-            {availablePlatforms.map((platform) => (
+            {displayPlatforms.map((platform) => (
               <option key={platform} value={platform}>
                 {platform.charAt(0).toUpperCase() + platform.slice(1)}
               </option>
             ))}
           </select>
           <div className={`rounded-2xl px-4 py-2.5 text-sm ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
-            {filteredPosts.length} post tampil
+            {displayPosts.length} post tampil
           </div>
           <div className={`rounded-2xl px-4 py-2.5 text-sm ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
-            Channel aktif: {availablePlatforms.length}
+            Channel aktif: {displayPlatforms.length}
           </div>
+          {previewMode ? (
+            <div className={`rounded-2xl px-4 py-2.5 text-sm ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
+              Preview netral
+            </div>
+          ) : null}
         </div>
       </div>
+
+      {previewMode ? (
+        <div className={`rounded-2xl border border-dashed p-4 text-sm ${isDark ? 'border-slate-700 text-gray-300 bg-slate-800/60' : 'border-gray-200 text-gray-600 bg-white'}`}>
+          Belum ada post yang tersambung. Semua angka dan grafik di bawah ini masih netral agar bentuk dashboard tetap bisa dilihat lebih dulu.
+        </div>
+      ) : null}
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
         {[
@@ -371,7 +428,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
           { label: 'Reach', value: aggregate.reach },
           { label: 'Saves', value: aggregate.saves },
           { label: 'Avg ER', value: `${averageEngagementRate}%` },
-          { label: 'Published posts', value: filteredPosts.length },
+          { label: 'Published posts', value: displayPosts.length },
         ].map((card) => (
           <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
             <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
@@ -518,8 +575,8 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
             <FieldHelp title="Post details" description="Setelah post dipilih, Anda bisa membaca deskripsi konten, metrik, dan menjalankan analysis hanya saat diperlukan." />
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            {filteredPosts.map((post) => (
-              <button
+              {displayPosts.map((post) => (
+                <button
                 key={post.id}
                 type="button"
                 onClick={() => {
@@ -564,7 +621,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
             <button
               type="button"
               onClick={() => void handleGenerateAnalysis()}
-              disabled={!selectedPost || analysisLoading}
+              disabled={!selectedPost || analysisLoading || previewMode}
               className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
             >
               {analysisLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
@@ -626,7 +683,9 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
                 </div>
               ) : (
                 <div className={`rounded-2xl border border-dashed p-5 text-sm ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
-                  Belum ada analysis. Tekan tombol <strong>Generate Analysis</strong> untuk membuat insight AI terhadap post yang sedang dipilih.
+                  {previewMode
+                    ? <>Generate analysis akan aktif setelah channel dan post pertama sudah masuk ke workspace ini.</>
+                    : <>Belum ada analysis. Tekan tombol <strong>Generate Analysis</strong> untuk membuat insight AI terhadap post yang sedang dipilih.</>}
                 </div>
               )}
             </div>
@@ -657,13 +716,18 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
   }
 
   const stats = status?.stats;
+  const previewMode = !status?.configured || !status?.statsAvailable;
+  const waTrend = previewMode ? neutralReplySpeedTrend : replySpeedTrend;
+  const slaTrend = previewMode ? neutralSlaTrend : slaCompliance;
 
   return (
     <div className="space-y-6">
       <SectionHeader
         isDark={isDark}
         title="Analytics WA"
-        description="Ringkasan performa inbox, kecepatan respons, dan stabilitas operasional WA."
+        description={previewMode
+          ? 'WA belum aktif penuh. Dashboard tetap menampilkan angka netral agar tim bisa melihat struktur analytics lebih dulu.'
+          : 'Ringkasan performa inbox, kecepatan respons, dan stabilitas operasional WA.'}
         icon={<MessageSquareQuote size={22} />}
       />
 
@@ -692,7 +756,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
           </div>
           <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={replySpeedTrend}>
+              <AreaChart data={waTrend}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
                 <XAxis dataKey="day" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
                 <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
@@ -713,7 +777,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
           </div>
           <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={slaCompliance}>
+              <BarChart data={slaTrend}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
                 <XAxis dataKey="channel" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
                 <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
@@ -748,21 +812,33 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
   }
 
   const channels = status?.channels ?? [];
+  const previewMode = !status?.configured || channels.length === 0;
+  const marketplaceCards = previewMode
+    ? neutralMarketplaceCards
+    : channelPerformance
+        .filter((item) => ['Shopee', 'Tokopedia'].includes(item.channel))
+        .map((item) => ({
+          channel: item.channel,
+          conversion: item.conversion,
+          responseRate: item.responseRate,
+        }));
 
   return (
     <div className="space-y-6">
       <SectionHeader
         isDark={isDark}
         title="Analytics Marketplace"
-        description="Pantau kesiapan workspace buyer chat, channel aktif, dan fokus tindak lanjut marketplace."
+        description={previewMode
+          ? 'Marketplace belum tersambung penuh. Dashboard tetap menampilkan angka netral agar bentuk analytics tetap terlihat.'
+          : 'Pantau kesiapan workspace buyer chat, channel aktif, dan fokus tindak lanjut marketplace.'}
         icon={<Store size={22} />}
       />
 
       <div className="grid md:grid-cols-3 gap-4">
         {[
-          { label: 'Workspace', value: status?.workspaceName || 'Marketplace AI', helper: 'workspace aktif' },
-          { label: 'Channel aktif', value: String(channels.length), helper: 'tersambung ke inbox' },
-          { label: 'Status', value: status?.reachable ? 'Healthy' : 'Needs check', helper: status?.message || 'Belum ada status' },
+          { label: 'Workspace', value: status?.workspaceName || 'Marketplace Preview', helper: previewMode ? 'preview netral' : 'workspace aktif' },
+          { label: 'Channel aktif', value: String(channels.length), helper: previewMode ? 'akan terisi setelah connect' : 'tersambung ke inbox' },
+          { label: 'Status', value: previewMode ? 'Preview' : status?.reachable ? 'Healthy' : 'Needs check', helper: previewMode ? 'belum ada channel aktif' : status?.message || 'Belum ada status' },
         ].map((card) => (
           <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
             <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
@@ -783,7 +859,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
           </div>
           <div className="space-y-3">
             {channels.length === 0 ? (
-              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/50 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>Belum ada channel marketplace aktif.</div>
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/50 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>Channel marketplace akan muncul di sini setelah toko tersambung.</div>
             ) : (
               channels.map((channel) => (
                 <div key={channel.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
@@ -809,7 +885,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            {channelPerformance.filter((item) => ['Shopee', 'Tokopedia'].includes(item.channel)).map((item) => (
+            {marketplaceCards.map((item) => (
               <div key={item.channel} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
                 <p className="font-semibold">{item.channel}</p>
                 <div className="mt-3 grid grid-cols-2 gap-3 text-sm">

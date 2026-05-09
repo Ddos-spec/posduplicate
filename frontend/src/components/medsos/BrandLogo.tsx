@@ -74,7 +74,7 @@ const brandStyles: Record<BrandKey, { bg: string; fg?: string }> = {
   tiktok: { bg: '#111111', fg: '#FFFFFF' },
   youtube: { bg: '#FF0000' },
   shopee: { bg: '#EE4D2D' },
-  lazada: { bg: '#5F27CD', fg: '#FFFFFF' },
+  lazada: { bg: '#FFFFFF' },
   tokopedia: { bg: '#FFFFFF' },
   whatsapp: { bg: '#25D366' },
   linkedin: { bg: '#0A66C2', fg: '#FFFFFF' },
@@ -96,23 +96,47 @@ const brandStyles: Record<BrandKey, { bg: string; fg?: string }> = {
 function renderInner(brand: BrandKey, size: number): ReactNode {
   if (brand === 'tokopedia') {
     return (
-      <img
-        src="/assets/brands/tokopedia.svg"
-        alt="Tokopedia"
-        className="block"
-        style={{ height: size * 0.46, width: 'auto', maxWidth: size * 1.8 }}
-      />
+      <svg viewBox="0 0 24 24" width={size * 0.68} height={size * 0.68} aria-hidden="true" className="block">
+        <path
+          fill="#42B549"
+          d="M12 3c-4.97 0-9 3.925-9 8.75 0 1.46.372 2.838 1.032 4.05.515.947.968 1.608 1.968 2.61V21h2.78l1.05-1.368c.378.072.768.118 1.17.118 5.523 0 10-4.03 10-9S17.523 3 12 3z"
+        />
+        <circle cx="8.45" cy="10.9" r="2.65" fill="#FFFFFF" />
+        <circle cx="15.55" cy="10.9" r="2.65" fill="#FFFFFF" />
+        <circle cx="8.45" cy="10.9" r="1.05" fill="#1F2937" />
+        <circle cx="15.55" cy="10.9" r="1.05" fill="#1F2937" />
+        <path fill="#F59E0B" d="M12 12.2 10.65 14h2.7z" />
+      </svg>
     );
   }
 
   if (brand === 'lazada') {
     return (
-      <span
-        className="block font-black uppercase"
-        style={{ color: '#FFFFFF', fontSize: size * 0.34, lineHeight: 1 }}
-      >
-        Lz
-      </span>
+      <svg viewBox="0 0 24 24" width={size * 0.7} height={size * 0.7} aria-hidden="true" className="block">
+        <defs>
+          <linearGradient id="lazadaPrimary" x1="0%" x2="100%" y1="0%" y2="100%">
+            <stop offset="0%" stopColor="#FF7A00" />
+            <stop offset="100%" stopColor="#FF4D6D" />
+          </linearGradient>
+          <linearGradient id="lazadaAccent" x1="0%" x2="100%" y1="0%" y2="100%">
+            <stop offset="0%" stopColor="#6D28D9" />
+            <stop offset="100%" stopColor="#2563EB" />
+          </linearGradient>
+        </defs>
+        <path fill="url(#lazadaPrimary)" d="M12 4.2 19.6 8.4v7.2L12 19.8 4.4 15.6V8.4z" />
+        <path fill="url(#lazadaAccent)" d="m12 8.1 4.1 2.24v3.32L12 15.9l-4.1-2.24v-3.32z" />
+        <path fill="#FFFFFF" fillOpacity="0.88" d="m12 8.1 2.98 1.63L12 12.55 9.02 9.73z" />
+      </svg>
+    );
+  }
+
+  if (brand === 'googleads') {
+    return (
+      <svg viewBox="0 0 24 24" width={size * 0.7} height={size * 0.7} aria-hidden="true" className="block">
+        <path fill="#4285F4" d="M10.75 3.5a3 3 0 0 1 4.07 1.1l4.61 7.98a3 3 0 1 1-5.2 3l-4.62-7.99a3 3 0 0 1 1.14-4.08Z" />
+        <path fill="#34A853" d="M9.18 7.53a3 3 0 0 1 1.1 4.09l-4.5 7.77H1.7l5-8.66a3 3 0 0 1 2.48-3.2Z" opacity="0.95" />
+        <circle cx="6.1" cy="18.15" r="3.1" fill="#FBBC04" />
+      </svg>
     );
   }
 

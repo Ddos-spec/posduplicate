@@ -19,6 +19,7 @@ import {
   Menu,
   MessageSquareText,
   Moon,
+  PanelLeft,
   PlugZap,
   Plus,
   Settings,
@@ -56,6 +57,7 @@ export default function MedsosLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     inbox: true,
     analytics: true,
@@ -63,7 +65,6 @@ export default function MedsosLayout() {
 
   const isDemo = location.pathname.startsWith('/demo');
   const basePath = isDemo ? '/demo/medsos' : '/medsos';
-
   const [liveActiveChannels, setLiveActiveChannels] = useState<number | null>(null);
 
   useEffect(() => {
@@ -79,7 +80,9 @@ export default function MedsosLayout() {
   }, [isDemo]);
 
   useEffect(() => {
-    setSidebarOpen(false);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
   }, [location.pathname]);
 
   const allMenus = useMemo<MenuItem[]>(
@@ -162,6 +165,25 @@ export default function MedsosLayout() {
 
   const isActiveLink = (path: string) => location.pathname === path;
 
+  const handleSidebarToggle = () => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setSidebarCollapsed((current) => !current);
+      return;
+    }
+    setSidebarOpen((current) => !current);
+  };
+
+  const handleGroupToggle = (key: string) => {
+    if (sidebarCollapsed) {
+      setSidebarCollapsed(false);
+      return;
+    }
+    toggleGroup(key);
+  };
+
+  const asideWidthClass = sidebarCollapsed ? 'md:w-24' : 'md:w-64';
+  const contentOffsetClass = sidebarCollapsed ? 'md:ml-24' : 'md:ml-64';
+
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDark ? 'bg-slate-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {sidebarOpen ? (
@@ -173,57 +195,62 @@ export default function MedsosLayout() {
         />
       ) : null}
 
-      <aside className={`fixed top-0 left-0 z-40 h-screen transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 w-64 border-r ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
-        <div className="h-full px-3 py-4 overflow-y-auto pb-40">
-          <div className="flex items-center gap-3 mb-8 px-2">
+      <aside className={`fixed top-0 left-0 z-40 h-screen w-64 ${asideWidthClass} transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 border-r ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+        <div className="h-full overflow-y-auto px-3 py-4 pb-40">
+          <div className={`mb-8 px-2 ${sidebarCollapsed ? 'flex justify-center' : 'flex items-center gap-3'}`}>
             <MyCommerSocialLogo size={40} className="shadow-lg shadow-blue-500/30" />
-            <div>
-              <h2 className="font-bold text-lg leading-tight">MyCommerSocial</h2>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {currentRole === 'medsos_manager'
-                  ? 'Omnichannel Manager'
-                  : currentRole === 'content_creator'
-                    ? 'Content Creator'
-                    : currentRole === 'medsos_cs'
-                      ? 'Inbox Operator'
-                      : 'WA + Social + Marketplace'}
-              </p>
-              <div className="flex items-center gap-1.5 mt-2">
-                <BrandLogo brand="whatsapp" size={20} className="rounded-md" />
-                <BrandLogo brand="instagram" size={20} className="rounded-md" />
-                <BrandLogo brand="facebook" size={20} className="rounded-md" />
-                <BrandLogo brand="metaads" size={20} className="rounded-md" withRing />
-              </div>
-            </div>
-          </div>
-
-          <div className={`mb-6 rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-blue-100 bg-blue-50'}`}>
-            <div className="flex items-center justify-between mb-3">
+            {!sidebarCollapsed ? (
               <div>
-                <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>War Room</p>
-                <h3 className="font-semibold">Omnichannel Control</h3>
+                <h2 className="text-lg font-bold leading-tight">MyCommerSocial</h2>
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {currentRole === 'medsos_manager'
+                    ? 'Omnichannel Manager'
+                    : currentRole === 'content_creator'
+                      ? 'Content Creator'
+                      : currentRole === 'medsos_cs'
+                        ? 'Inbox Operator'
+                        : 'WA + Social + Marketplace'}
+                </p>
+                <div className="mt-2 flex items-center gap-1.5">
+                  <BrandLogo brand="whatsapp" size={20} className="rounded-md" />
+                  <BrandLogo brand="instagram" size={20} className="rounded-md" />
+                  <BrandLogo brand="facebook" size={20} className="rounded-md" />
+                  <BrandLogo brand="metaads" size={20} className="rounded-md" withRing />
+                </div>
               </div>
-              <Share2 className={`${isDark ? 'text-blue-300' : 'text-blue-500'}`} size={18} />
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
-                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs`}>Active Channels</p>
-                <p className="text-lg font-bold">{activeChannels}</p>
-              </div>
-              <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
-                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs`}>Unread</p>
-                <p className="text-lg font-bold">{inboxCount}</p>
-              </div>
-            </div>
+            ) : null}
           </div>
 
-          <div className="px-2 mb-4">
+          {!sidebarCollapsed ? (
+            <div className={`mb-6 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-blue-100 bg-blue-50'}`}>
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>War Room</p>
+                  <h3 className="font-semibold">Omnichannel Control</h3>
+                </div>
+                <Share2 className={`${isDark ? 'text-blue-300' : 'text-blue-500'}`} size={18} />
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs`}>Active Channels</p>
+                  <p className="text-lg font-bold">{activeChannels}</p>
+                </div>
+                <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+                  <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs`}>Unread</p>
+                  <p className="text-lg font-bold">{inboxCount}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <div className={`mb-4 px-2 ${sidebarCollapsed ? 'flex justify-center' : ''}`}>
             <button
               onClick={() => navigate(`${basePath}/create`)}
               title="Buka composer untuk membuat campaign atau post baru"
-              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all"
+              className={`${sidebarCollapsed ? 'h-11 w-11 rounded-xl' : 'w-full rounded-xl py-3'} flex items-center justify-center gap-2 bg-blue-600 font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700`}
             >
-              <Plus size={20} /> Create Campaign
+              <Plus size={20} />
+              {!sidebarCollapsed ? 'Create Campaign' : null}
             </button>
           </div>
 
@@ -236,7 +263,7 @@ export default function MedsosLayout() {
                     <button
                       onClick={() => navigate(item.path)}
                       title={`Buka halaman ${item.label}`}
-                      className={`flex items-center w-full p-3 rounded-xl transition-all duration-200 ${
+                      className={`flex w-full items-center rounded-xl transition-all duration-200 ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'p-3'} ${
                         isActive
                           ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
                           : isDark
@@ -244,8 +271,8 @@ export default function MedsosLayout() {
                             : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
                       }`}
                     >
-                      <item.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
-                      <span className="ml-3">{item.label}</span>
+                      <item.icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
+                      {!sidebarCollapsed ? <span className="ml-3">{item.label}</span> : null}
                     </button>
                   </li>
                 );
@@ -257,9 +284,9 @@ export default function MedsosLayout() {
               return (
                 <li key={`${item.label}-${idx}`}>
                   <button
-                    onClick={() => toggleGroup(item.key)}
+                    onClick={() => handleGroupToggle(item.key)}
                     title={`Buka submenu ${item.label}`}
-                    className={`flex items-center w-full p-3 rounded-xl transition-all duration-200 ${
+                    className={`flex w-full items-center rounded-xl transition-all duration-200 ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'p-3'} ${
                       isGroupActive
                         ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
                         : isDark
@@ -267,11 +294,15 @@ export default function MedsosLayout() {
                           : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
                     }`}
                   >
-                    <item.icon className={`w-5 h-5 transition-transform duration-200 ${isGroupActive ? 'scale-110' : ''}`} />
-                    <span className="ml-3 flex-1 text-left">{item.label}</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    <item.icon className={`h-5 w-5 transition-transform duration-200 ${isGroupActive ? 'scale-110' : ''}`} />
+                    {!sidebarCollapsed ? (
+                      <>
+                        <span className="ml-3 flex-1 text-left">{item.label}</span>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      </>
+                    ) : null}
                   </button>
-                  {isExpanded ? (
+                  {isExpanded && !sidebarCollapsed ? (
                     <div className="mt-2 ml-3 space-y-1 border-l border-blue-200/40 pl-3">
                       {item.children.map((child) => {
                         const active = location.pathname === child.path;
@@ -305,38 +336,41 @@ export default function MedsosLayout() {
           </ul>
         </div>
 
-        <div className={`absolute bottom-0 left-0 w-full p-4 border-t ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
-          <div className={`mb-3 rounded-xl px-3 py-2 text-xs flex items-center gap-2 ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
-            <BellRing size={14} />
-            2 channel butuh follow up hari ini
-          </div>
+        <div className={`absolute bottom-0 left-0 w-full border-t p-4 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
+          {!sidebarCollapsed ? (
+            <div className={`mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
+              <BellRing size={14} />
+              2 channel butuh follow up hari ini
+            </div>
+          ) : null}
           <button
             onClick={() => navigate(isDemo ? '/demo' : '/module-selector')}
             title={isDemo ? 'Kembali ke pemilihan demo' : 'Kembali ke pemilihan modul'}
-            className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-xl transition-colors ${
-              isDark ? 'text-gray-400 hover:bg-slate-700 text-white' : 'text-gray-600 hover:bg-gray-100'
+            className={`flex items-center rounded-xl py-3 text-sm font-medium transition-colors ${sidebarCollapsed ? 'justify-center px-2' : 'w-full px-4'} ${
+              isDark ? 'text-white hover:bg-slate-700' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            {isDemo ? 'Kembali ke Demo' : 'Ganti Modul'}
+            <ArrowLeft className={`h-5 w-5 ${sidebarCollapsed ? '' : 'mr-2'}`} />
+            {!sidebarCollapsed ? (isDemo ? 'Kembali ke Demo' : 'Ganti Modul') : null}
           </button>
         </div>
       </aside>
 
-      <div className="p-4 md:ml-64">
-        <div className="flex justify-between items-center mb-6">
+      <div className={`p-4 transition-[margin] duration-300 ${contentOffsetClass}`}>
+        <div className="mb-6 flex items-center justify-between gap-3">
           <button
             type="button"
-            title={sidebarOpen ? 'Tutup navigasi MyCommerSocial' : 'Buka navigasi MyCommerSocial'}
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
+            title={sidebarCollapsed || !sidebarOpen ? 'Buka navigasi MyCommerSocial' : 'Tutup navigasi MyCommerSocial'}
+            onClick={handleSidebarToggle}
+            className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 transition ${isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700' : 'border-gray-200 bg-white hover:bg-gray-100'}`}
           >
-            <Menu className="w-6 h-6" />
+            {sidebarCollapsed ? <PanelLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <span className="hidden md:inline text-sm font-semibold">{sidebarCollapsed ? 'Buka sidebar' : 'Ringkas sidebar'}</span>
           </button>
 
-          <div className="flex items-center gap-2 ml-auto">
-            <div className={`hidden md:flex items-center gap-3 rounded-2xl px-4 py-2 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <div className="flex -space-x-2 mr-1">
+          <div className="ml-auto flex items-center gap-2">
+            <div className={`hidden items-center gap-3 rounded-2xl border px-4 py-2 md:flex ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white shadow-sm'}`}>
+              <div className="mr-1 flex -space-x-2">
                 <BrandLogo brand="whatsapp" size={28} className="rounded-xl border-2 border-white" />
                 <BrandLogo brand="instagram" size={28} className="rounded-xl border-2 border-white" />
                 <BrandLogo brand="facebook" size={28} className="rounded-xl border-2 border-white" />
@@ -349,15 +383,15 @@ export default function MedsosLayout() {
               <div className={`h-8 w-px ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Focus</p>
-                <p className="text-sm font-semibold truncate max-w-[220px]">Inbox, analytics, dan AI workspace</p>
+                <p className="max-w-[220px] truncate text-sm font-semibold">Inbox, analytics, dan AI workspace</p>
               </div>
             </div>
             <button
               onClick={toggleTheme}
               title={isDark ? 'Pakai mode terang' : 'Pakai mode gelap'}
-              className={`p-2 rounded-xl transition-colors ${isDark ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' : 'bg-white text-slate-600 hover:bg-gray-100 border border-gray-200 shadow-sm'}`}
+              className={`rounded-xl p-2 transition-colors ${isDark ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' : 'border border-gray-200 bg-white text-slate-600 shadow-sm hover:bg-gray-100'}`}
             >
-              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
           </div>
         </div>
