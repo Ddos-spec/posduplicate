@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useLocation } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import {
   approvalFlows,
@@ -11,6 +12,7 @@ import {
 import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   BellRing,
+  Bot,
   CheckCircle2,
   Loader2,
   MessageSquareText,
@@ -34,12 +36,25 @@ type WorkspaceSeat = {
   channels: string;
 };
 
+type AnalysisModelPreset = 'auto' | 'fast' | 'balanced' | 'deep' | 'custom';
+
+type AiAnalysisSettings = {
+  hasApiKey: boolean;
+  apiKeyMasked: string | null;
+  modelPreset: AnalysisModelPreset;
+  model: string;
+  customModel: string;
+  temperature: number;
+  maxTokens: number;
+};
+
 type SettingsState = {
   channelAccess: {
     waInbox: boolean;
     socialAds: boolean;
     marketplace: boolean;
   };
+  aiAnalysis: AiAnalysisSettings;
   activeSlaIds: number[];
   activeRoutingIds: number[];
   activeApprovalIds: number[];
@@ -53,6 +68,15 @@ const defaultSettings: SettingsState = {
     waInbox: true,
     socialAds: true,
     marketplace: false,
+  },
+  aiAnalysis: {
+    hasApiKey: false,
+    apiKeyMasked: null,
+    modelPreset: 'auto',
+    model: 'openrouter/auto',
+    customModel: '',
+    temperature: 0.3,
+    maxTokens: 900,
   },
   activeSlaIds: slaPolicies.map((policy) => policy.id),
   activeRoutingIds: routingRules.filter((rule) => rule.active).map((rule) => rule.id),
@@ -73,6 +97,40 @@ const emptySeatDraft: SeatDraft = {
   role: '',
   channels: '',
 };
+
+const MODEL_PRESET_MAP: Record<Exclude<AnalysisModelPreset, 'custom'>, string> = {
+  auto: 'openrouter/auto',
+  fast: 'google/gemini-3-flash-preview',
+  balanced: 'openai/gpt-5.1',
+  deep: 'anthropic/claude-sonnet-4.5',
+};
+
+function inferModelPreset(model?: string): AnalysisModelPreset {
+  if (!model) return 'auto';
+  const entry = Object.entries(MODEL_PRESET_MAP).find(([, value]) => value === model);
+  return (entry?.[0] as AnalysisModelPreset | undefined) ?? 'custom';
+}
+
+function buildAiAnalysisSettings(value?: Partial<AiAnalysisSettings>) {
+  const preset = inferModelPreset(value?.model);
+  return {
+    ...defaultSettings.aiAnalysis,
+    ...value,
+    modelPreset: value?.modelPreset ?? preset,
+    model: value?.model || MODEL_PRESET_MAP.auto,
+    customModel: preset === 'custom' ? value?.model || value?.customModel || '' : value?.customModel || '',
+    temperature: typeof value?.temperature === 'number' ? value.temperature : defaultSettings.aiAnalysis.temperature,
+    maxTokens: typeof value?.maxTokens === 'number' ? value.maxTokens : defaultSettings.aiAnalysis.maxTokens,
+  };
+}
+
+function maskKeyLocally(value: string) {
+  if (!value) return null;
+  if (value.length <= 8) {
+    return `${value.slice(0, 2)}•••${value.slice(-2)}`;
+  }
+  return `${value.slice(0, 4)}••••${value.slice(-4)}`;
+}
 
 function formatSavedAt(value: string | null) {
   if (!value) return 'Belum pernah disimpan';
@@ -111,33 +169,39 @@ function ToggleButton({
 
 export default function MedsosSettings() {
   const { isDark } = useThemeStore();
+  const location = useLocation();
+  const isDemo = location.pathname.startsWith('/demo');
   const [settings, setSettings] = useState<SettingsState>(defaultSettings);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [seatDraft, setSeatDraft] = useState<SeatDraft>(emptySeatDraft);
+  const [analysisApiKeyInput, setAnalysisApiKeyInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const backendResponse = await settingsService.getSettings();
-        const backendSettings = (backendResponse.data as { myCommerSocialSettings?: Partial<SettingsState>; myCommerSocialSettingsSavedAt?: string }) || {};
-        const workspaceSettings = backendSettings.myCommerSocialSettings;
+        if (!isDemo) {
+          const backendResponse = await settingsService.getSettings();
+          const backendSettings = (backendResponse.data as { myCommerSocialSettings?: Partial<SettingsState>; myCommerSocialSettingsSavedAt?: string }) || {};
+          const workspaceSettings = backendSettings.myCommerSocialSettings;
 
-        if (workspaceSettings) {
-          setSettings({
-            ...defaultSettings,
-            ...workspaceSettings,
-            channelAccess: {
-              ...defaultSettings.channelAccess,
-              ...(workspaceSettings.channelAccess ?? {}),
-            },
-            seats: workspaceSettings.seats ?? [],
-          });
-          setLastSavedAt(backendSettings.myCommerSocialSettingsSavedAt || null);
-          setDirty(false);
-          return;
+          if (workspaceSettings) {
+            setSettings({
+              ...defaultSettings,
+              ...workspaceSettings,
+              channelAccess: {
+                ...defaultSettings.channelAccess,
+                ...(workspaceSettings.channelAccess ?? {}),
+              },
+              aiAnalysis: buildAiAnalysisSettings(workspaceSettings.aiAnalysis),
+              seats: workspaceSettings.seats ?? [],
+            });
+            setLastSavedAt(backendSettings.myCommerSocialSettingsSavedAt || null);
+            setDirty(false);
+            return;
+          }
         }
 
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -151,6 +215,7 @@ export default function MedsosSettings() {
                 ...defaultSettings.channelAccess,
                 ...(parsed.settings.channelAccess ?? {}),
               },
+              aiAnalysis: buildAiAnalysisSettings(parsed.settings.aiAnalysis),
               seats: parsed.settings.seats ?? [],
             });
           }
@@ -160,14 +225,16 @@ export default function MedsosSettings() {
         }
       } catch (error) {
         console.error('Failed to load MyCommerSocial settings', error);
-        toast.error('Gagal memuat settings workspace.');
+        if (!isDemo) {
+          toast.error('Gagal memuat settings workspace.');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     void load();
-  }, []);
+  }, [isDemo]);
 
   const activeSummary = useMemo(
     () => ({
@@ -184,17 +251,87 @@ export default function MedsosSettings() {
     const savedAt = new Date().toISOString();
     try {
       setSaving(true);
-      await settingsService.updateSettings({
-        myCommerSocialSettings: settings,
-        myCommerSocialSettingsSavedAt: savedAt,
-      });
+      const resolvedModel = settings.aiAnalysis.modelPreset === 'custom'
+        ? settings.aiAnalysis.customModel.trim() || settings.aiAnalysis.model || MODEL_PRESET_MAP.auto
+        : MODEL_PRESET_MAP[settings.aiAnalysis.modelPreset as Exclude<AnalysisModelPreset, 'custom'>];
+
+      const settingsPayload: Omit<SettingsState, 'aiAnalysis'> & { aiAnalysis: Record<string, unknown> } = {
+        ...settings,
+        aiAnalysis: {
+          hasApiKey: settings.aiAnalysis.hasApiKey,
+          apiKeyMasked: settings.aiAnalysis.apiKeyMasked,
+          modelPreset: settings.aiAnalysis.modelPreset,
+          model: resolvedModel,
+          customModel: settings.aiAnalysis.customModel.trim(),
+          temperature: settings.aiAnalysis.temperature,
+          maxTokens: settings.aiAnalysis.maxTokens,
+        },
+      };
+
+      if (analysisApiKeyInput.trim()) {
+        settingsPayload.aiAnalysis.apiKey = analysisApiKeyInput.trim();
+      }
+
+      let nextSettings: SettingsState;
+
+      if (isDemo) {
+        nextSettings = {
+          ...settings,
+          aiAnalysis: buildAiAnalysisSettings({
+            ...settings.aiAnalysis,
+            hasApiKey: analysisApiKeyInput.trim() ? true : settings.aiAnalysis.hasApiKey,
+            apiKeyMasked: analysisApiKeyInput.trim()
+              ? maskKeyLocally(analysisApiKeyInput.trim())
+              : settings.aiAnalysis.apiKeyMasked,
+            model: resolvedModel,
+          }),
+        };
+      } else {
+        const response = await settingsService.updateSettings({
+          myCommerSocialSettings: settingsPayload,
+          myCommerSocialSettingsSavedAt: savedAt,
+        });
+
+        const returnedSettings = (response.data as { myCommerSocialSettings?: Partial<SettingsState> }).myCommerSocialSettings;
+        nextSettings = returnedSettings
+          ? {
+              ...defaultSettings,
+              ...returnedSettings,
+              channelAccess: {
+                ...defaultSettings.channelAccess,
+                ...(returnedSettings.channelAccess ?? {}),
+              },
+              aiAnalysis: buildAiAnalysisSettings({
+                ...returnedSettings.aiAnalysis,
+                hasApiKey: analysisApiKeyInput.trim() ? true : returnedSettings.aiAnalysis?.hasApiKey ?? settings.aiAnalysis.hasApiKey,
+                apiKeyMasked: analysisApiKeyInput.trim()
+                  ? maskKeyLocally(analysisApiKeyInput.trim())
+                  : returnedSettings.aiAnalysis?.apiKeyMasked ?? settings.aiAnalysis.apiKeyMasked,
+              }),
+              seats: returnedSettings.seats ?? settings.seats,
+            }
+          : {
+              ...settings,
+              aiAnalysis: buildAiAnalysisSettings({
+                ...settings.aiAnalysis,
+                hasApiKey: analysisApiKeyInput.trim() ? true : settings.aiAnalysis.hasApiKey,
+                apiKeyMasked: analysisApiKeyInput.trim()
+                  ? maskKeyLocally(analysisApiKeyInput.trim())
+                  : settings.aiAnalysis.apiKeyMasked,
+                model: resolvedModel,
+              }),
+            };
+      }
+
       localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
-          settings,
+          settings: nextSettings,
           lastSavedAt: savedAt,
         })
       );
+      setSettings(nextSettings);
+      setAnalysisApiKeyInput('');
       setLastSavedAt(savedAt);
       setDirty(false);
       toast.success('Settings berhasil disimpan.');
@@ -430,6 +567,165 @@ export default function MedsosSettings() {
           </div>
         </section>
       </div>
+
+      <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className="flex items-center gap-2 mb-5">
+          <Bot size={18} className="text-blue-500" />
+          <div>
+            <h2 className="font-bold text-lg">Content analysis</h2>
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Simpan akses analysis agar halaman Analytics bisa menghasilkan insight per konten saat tombol generate ditekan.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid xl:grid-cols-[1.1fr_0.9fr] gap-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                API key analysis
+                <FieldHelp title="API key analysis" description="Kunci ini dipakai untuk menjalankan generate analysis di halaman Analytics. Jika sudah tersimpan, Anda hanya perlu mengisi lagi saat ingin mengganti key." />
+              </span>
+              <input
+                value={analysisApiKeyInput}
+                onChange={(event) => {
+                  setAnalysisApiKeyInput(event.target.value);
+                  setDirty(true);
+                }}
+                placeholder={settings.aiAnalysis.hasApiKey ? 'API key sudah tersimpan — isi lagi untuk mengganti' : 'Masukkan API key analysis'}
+                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+              />
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {settings.aiAnalysis.hasApiKey ? (
+                  <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 ${isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+                    API key tersimpan {settings.aiAnalysis.apiKeyMasked ? `(${settings.aiAnalysis.apiKeyMasked})` : ''}
+                  </span>
+                ) : (
+                  <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada API key yang tersimpan.</span>
+                )}
+              </div>
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Mode model
+                <FieldHelp title="Mode model" description="Pilih mode model untuk analysis konten. Auto cocok untuk mulai cepat, sedangkan custom dipakai bila ingin mengisi model sendiri." />
+              </span>
+              <select
+                value={settings.aiAnalysis.modelPreset}
+                onChange={(event) =>
+                  updateSettings((current) => ({
+                    ...current,
+                    aiAnalysis: {
+                      ...current.aiAnalysis,
+                      modelPreset: event.target.value as AnalysisModelPreset,
+                    },
+                  }))
+                }
+                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+              >
+                <option value="auto">Auto</option>
+                <option value="fast">Fast</option>
+                <option value="balanced">Balanced</option>
+                <option value="deep">Deep</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Temperature
+                <FieldHelp title="Temperature" description="Nilai rendah membuat analisis lebih stabil. Nilai lebih tinggi membuat gaya jawaban lebih variatif." />
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={2}
+                step={0.1}
+                value={settings.aiAnalysis.temperature}
+                onChange={(event) =>
+                  updateSettings((current) => ({
+                    ...current,
+                    aiAnalysis: {
+                      ...current.aiAnalysis,
+                      temperature: Number(event.target.value || 0),
+                    },
+                  }))
+                }
+                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Max tokens
+                <FieldHelp title="Max tokens" description="Batasi panjang hasil analysis supaya lebih ringkas dan hemat." />
+              </span>
+              <input
+                type="number"
+                min={200}
+                max={4000}
+                step={50}
+                value={settings.aiAnalysis.maxTokens}
+                onChange={(event) =>
+                  updateSettings((current) => ({
+                    ...current,
+                    aiAnalysis: {
+                      ...current.aiAnalysis,
+                      maxTokens: Number(event.target.value || 0),
+                    },
+                  }))
+                }
+                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+              />
+            </label>
+
+            {settings.aiAnalysis.modelPreset === 'custom' ? (
+              <label className="space-y-2 md:col-span-2">
+                <span className="text-sm font-semibold inline-flex items-center gap-2">
+                  Custom model ID
+                  <FieldHelp title="Custom model ID" description="Isi model ID khusus jika ingin memakai model analysis tertentu di luar preset yang tersedia." />
+                </span>
+                <input
+                  value={settings.aiAnalysis.customModel}
+                  onChange={(event) =>
+                    updateSettings((current) => ({
+                      ...current,
+                      aiAnalysis: {
+                        ...current.aiAnalysis,
+                        customModel: event.target.value,
+                      },
+                    }))
+                  }
+                  placeholder="Masukkan model ID custom"
+                  className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                />
+              </label>
+            ) : null}
+          </div>
+
+          <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle2 size={18} className="text-blue-500" />
+              <h3 className="font-bold">Ringkasan analysis</h3>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
+                Mode model aktif: <strong>{settings.aiAnalysis.modelPreset}</strong>
+              </div>
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
+                Temperature: <strong>{settings.aiAnalysis.temperature}</strong>
+              </div>
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
+                Max tokens: <strong>{settings.aiAnalysis.maxTokens}</strong>
+              </div>
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
+                Generate analysis hanya berjalan saat tombol di halaman Analytics ditekan.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-6">
         <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>

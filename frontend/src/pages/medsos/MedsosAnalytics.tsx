@@ -1,34 +1,45 @@
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   bestPostingWindows,
   channelPerformance,
-  contentTypePerformance,
   replySpeedTrend,
-  sentimentTrend,
   slaCompliance,
 } from '../../data/omnichannelMock';
 import {
+  generateSocialPostAnalysis,
+  getMarketplaceHubStatus,
+  getPosts,
+  getWACrmStatus,
+  getZernioAccounts,
+  type MarketplaceHubConnectionStatus,
+  type SocialPost,
+  type SocialPostAnalysisResult,
+  type WACrmConnectionStatus,
+  type ZernioAccount,
+} from '../../services/medsosPostsService';
+import {
   Activity,
   BarChart3,
-  Clock3,
+  Bot,
+  FileText,
   LineChart as LineChartIcon,
   Loader2,
-  MessageCircleHeart,
-  ShieldCheck,
+  MessageSquareQuote,
+  Sparkles,
+  Store,
   TrendingUp,
+  Workflow,
 } from 'lucide-react';
-import { getPosts, type SocialPost } from '../../services/medsosPostsService';
 import {
   Area,
   AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -37,279 +48,357 @@ import {
   YAxis,
 } from 'recharts';
 
-function LiveAnalytics({ posts, isDark }: { posts: SocialPost[]; isDark: boolean }) {
-  const published = posts.filter((p) => p.status === 'published');
-  const scheduled = posts.filter((p) => p.status === 'scheduled');
-  const draft = posts.filter((p) => p.status === 'draft');
+const ADS_PLATFORMS = new Set(['metaads', 'googleads', 'linkedinads', 'tiktokads', 'pinterestads', 'xads']);
 
-  const totalImpressions = published.reduce((sum, p) => sum + (p.social_analytics?.impressions ?? 0), 0);
-  const totalLikes = published.reduce((sum, p) => sum + (p.social_analytics?.likes ?? 0), 0);
-  const totalComments = published.reduce((sum, p) => sum + (p.social_analytics?.comments ?? 0), 0);
+type AnalyticsChannel = 'wa' | 'social' | 'marketplace';
 
-  const platformCount: Record<string, number> = {};
-  for (const p of posts) {
-    platformCount[p.platform] = (platformCount[p.platform] ?? 0) + 1;
-  }
+const demoSocialPosts: SocialPost[] = [
+  {
+    id: 7001,
+    content: 'Banyak pemilik bisnis berjuang tiap hari karena masih repot jawab chat berulang. Konten ini membuka percakapan soal efisiensi agent AI.',
+    media_urls: [],
+    platform: 'instagram',
+    scheduled_at: '2026-05-06T09:00:00.000Z',
+    published_at: '2026-05-06T09:00:00.000Z',
+    account_id: 1,
+    status: 'published',
+    external_id: 'demo-ig-1',
+    error_message: null,
+    social_accounts: { account_name: '@myaicustom', platform: 'instagram' },
+    social_analytics: { impressions: 390, reach: 181, likes: 18, comments: 9, shares: 0, saves: 7, engagement_rate: 6.92 },
+  },
+  {
+    id: 7002,
+    content: 'Dari desain ke kenyataan, proses campaign yang rapi selalu dimulai dari workflow yang jelas dan insight yang bisa ditindaklanjuti.',
+    media_urls: [],
+    platform: 'instagram',
+    scheduled_at: '2026-05-05T18:30:00.000Z',
+    published_at: '2026-05-05T18:30:00.000Z',
+    account_id: 1,
+    status: 'published',
+    external_id: 'demo-ig-2',
+    error_message: null,
+    social_accounts: { account_name: '@myaicustom', platform: 'instagram' },
+    social_analytics: { impressions: 204, reach: 129, likes: 16, comments: 6, shares: 4, saves: 5, engagement_rate: 8.1 },
+  },
+  {
+    id: 7003,
+    content: 'Masalah utama bisnis bukan kurang ide, tapi terlalu banyak pekerjaan berulang yang memakan fokus tim operasional.',
+    media_urls: [],
+    platform: 'facebook',
+    scheduled_at: '2026-05-04T11:30:00.000Z',
+    published_at: '2026-05-04T11:30:00.000Z',
+    account_id: 2,
+    status: 'published',
+    external_id: 'demo-fb-1',
+    error_message: null,
+    social_accounts: { account_name: 'My AI Custom', platform: 'facebook' },
+    social_analytics: { impressions: 165, reach: 120, likes: 12, comments: 4, shares: 3, saves: 0, engagement_rate: 7.5 },
+  },
+  {
+    id: 7004,
+    content: 'Banyak bisnis masih membiarkan insight konten menumpuk tanpa ditarik menjadi keputusan konkret di tim marketing.',
+    media_urls: [],
+    platform: 'instagram',
+    scheduled_at: '2026-05-03T20:15:00.000Z',
+    published_at: '2026-05-03T20:15:00.000Z',
+    account_id: 1,
+    status: 'published',
+    external_id: 'demo-ig-3',
+    error_message: null,
+    social_accounts: { account_name: '@myaicustom', platform: 'instagram' },
+    social_analytics: { impressions: 233, reach: 156, likes: 20, comments: 10, shares: 5, saves: 8, engagement_rate: 10.2 },
+  },
+];
 
-  return (
-    <div className="space-y-6">
-      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="flex items-center gap-2">
-          <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics</h1>
-          <FieldHelp title="Analytics live" description="Halaman ini menampilkan ringkasan performa dari post yang benar-benar tersimpan di tenant. Jika belum ada post live, metrik detail memang masih kosong." />
-        </div>
-        <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Berdasarkan {posts.length} post yang tersimpan</p>
-      </div>
-
-      <div className="grid md:grid-cols-4 gap-4">
-        {[
-          { label: 'Published', value: published.length, helper: 'post live' },
-          { label: 'Scheduled', value: scheduled.length, helper: 'siap publish' },
-          { label: 'Draft', value: draft.length, helper: 'belum publish' },
-          { label: 'Total Posts', value: posts.length, helper: 'semua status' },
-        ].map((stat) => (
-          <div key={stat.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
-            <p className="mt-2 text-3xl font-bold">{stat.value}</p>
-            <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stat.helper}</p>
-          </div>
-        ))}
-      </div>
-
-      {published.length > 0 && (
-        <div className="grid md:grid-cols-3 gap-4">
-          {[
-            { label: 'Total Impressions', value: totalImpressions.toLocaleString('id-ID') },
-            { label: 'Total Likes', value: totalLikes.toLocaleString('id-ID') },
-            { label: 'Total Comments', value: totalComments.toLocaleString('id-ID') },
-          ].map((stat) => (
-            <div key={stat.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-              <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
-              <p className="mt-2 text-2xl font-bold">{stat.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {Object.keys(platformCount).length > 0 && (
-        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <p className={`font-semibold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>Post per Platform</p>
-          <div className="flex flex-wrap gap-3">
-            {Object.entries(platformCount).map(([plat, count]) => (
-              <div key={plat} className={`rounded-2xl px-4 py-3 flex items-center gap-2 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
-                <span className="capitalize text-sm font-semibold">{plat}</span>
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{count} post</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {published.length === 0 && (
-        <div className={`rounded-2xl border p-6 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Analytics detail akan tersedia setelah post dipublish dan data diambil dari platform.</p>
-        </div>
-      )}
-    </div>
-  );
+function normalizeAnalyticsChannel(value?: string): AnalyticsChannel {
+  if (value === 'social') return 'social';
+  if (value === 'marketplace') return 'marketplace';
+  return 'wa';
 }
 
-export default function MedsosAnalytics() {
-  const { isDark } = useThemeStore();
-  const location = useLocation();
-  const isDemo = location.pathname.startsWith('/demo');
-  const [posts, setPosts] = useState<SocialPost[]>([]);
+function safeNumber(value?: number | null) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function truncateText(value: string, limit = 120) {
+  const compact = value.replace(/\s+/g, ' ').trim();
+  if (compact.length <= limit) return compact;
+  return `${compact.slice(0, limit).trim()}…`;
+}
+
+function getPostEngagementRate(post: SocialPost) {
+  const analytics = post.social_analytics;
+  if (analytics?.engagement_rate != null) {
+    return safeNumber(analytics.engagement_rate);
+  }
+  const impressions = safeNumber(analytics?.impressions) || safeNumber(analytics?.reach);
+  if (!impressions) return 0;
+  const interactions = safeNumber(analytics?.likes) + safeNumber(analytics?.comments) + safeNumber(analytics?.shares) + safeNumber(analytics?.saves);
+  return Number(((interactions / impressions) * 100).toFixed(2));
+}
+
+function buildTrendRows(posts: SocialPost[]) {
+  const rows = new Map<string, { date: string; views: number; engagement: number; posts: number }>();
+
+  posts.forEach((post) => {
+    const rawDate = post.published_at || post.scheduled_at;
+    const key = rawDate ? new Date(rawDate).toISOString().slice(0, 10) : 'draft';
+    const current = rows.get(key) ?? { date: key === 'draft' ? 'Draft' : key.slice(5), views: 0, engagement: 0, posts: 0 };
+    current.views += safeNumber(post.social_analytics?.impressions);
+    current.engagement += safeNumber(post.social_analytics?.likes) + safeNumber(post.social_analytics?.comments) + safeNumber(post.social_analytics?.shares) + safeNumber(post.social_analytics?.saves);
+    current.posts += 1;
+    rows.set(key, current);
+  });
+
+  return Array.from(rows.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, row]) => row);
+}
+
+function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: boolean }) {
   const [loading, setLoading] = useState(!isDemo);
+  const [posts, setPosts] = useState<SocialPost[]>(isDemo ? demoSocialPosts : []);
+  const [accounts, setAccounts] = useState<ZernioAccount[]>([]);
+  const [platformFilter, setPlatformFilter] = useState('all');
+  const [selectedPostId, setSelectedPostId] = useState<number>(isDemo ? demoSocialPosts[0].id : 0);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<SocialPostAnalysisResult | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isDemo) {
-      getPosts()
-        .then(setPosts)
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }
+    if (isDemo) return;
+
+    Promise.all([getPosts({ status: 'published' }), getZernioAccounts()])
+      .then(([postRows, accountRows]) => {
+        setPosts(postRows);
+        setAccounts(accountRows.filter((item) => !ADS_PLATFORMS.has(item.platform.toLowerCase())));
+      })
+      .catch(() => {
+        setPosts([]);
+        setAccounts([]);
+      })
+      .finally(() => setLoading(false));
   }, [isDemo]);
 
-  if (!isDemo) {
-    if (loading) {
-      return (
-        <div className="min-h-[60vh] flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-        </div>
-      );
+  const availablePlatforms = useMemo(() => {
+    const platformSet = new Set<string>();
+    accounts.forEach((account) => platformSet.add(account.platform.toLowerCase()));
+    posts.forEach((post) => platformSet.add(post.platform.toLowerCase()));
+    return Array.from(platformSet.values());
+  }, [accounts, posts]);
+
+  const filteredPosts = useMemo(() => {
+    const basePosts = posts.filter((post) => post.status === 'published');
+    if (platformFilter === 'all') return basePosts;
+    return basePosts.filter((post) => post.platform.toLowerCase() === platformFilter);
+  }, [platformFilter, posts]);
+
+  useEffect(() => {
+    if (!filteredPosts.length) {
+      setSelectedPostId(0);
+      setAnalysisResult(null);
+      return;
     }
-    return <LiveAnalytics posts={posts} isDark={isDark} />;
+    if (!filteredPosts.some((post) => post.id === selectedPostId)) {
+      setSelectedPostId(filteredPosts[0].id);
+      setAnalysisResult(null);
+      setAnalysisError(null);
+    }
+  }, [filteredPosts, selectedPostId]);
+
+  const selectedPost = filteredPosts.find((post) => post.id === selectedPostId) ?? filteredPosts[0] ?? null;
+
+  const aggregate = useMemo(() => {
+    return filteredPosts.reduce(
+      (summary, post) => {
+        summary.likes += safeNumber(post.social_analytics?.likes);
+        summary.comments += safeNumber(post.social_analytics?.comments);
+        summary.shares += safeNumber(post.social_analytics?.shares);
+        summary.views += safeNumber(post.social_analytics?.impressions);
+        summary.reach += safeNumber(post.social_analytics?.reach);
+        summary.saves += safeNumber(post.social_analytics?.saves);
+        summary.engagementRateTotal += getPostEngagementRate(post);
+        return summary;
+      },
+      { likes: 0, comments: 0, shares: 0, views: 0, reach: 0, saves: 0, engagementRateTotal: 0 },
+    );
+  }, [filteredPosts]);
+
+  const averageEngagementRate = filteredPosts.length ? Number((aggregate.engagementRateTotal / filteredPosts.length).toFixed(2)) : 0;
+
+  const platformBreakdown = useMemo(() => {
+    const map = new Map<string, { platform: string; posts: number; views: number; likes: number; engagementRateTotal: number }>();
+    filteredPosts.forEach((post) => {
+      const key = post.platform.toLowerCase();
+      const current = map.get(key) ?? { platform: key, posts: 0, views: 0, likes: 0, engagementRateTotal: 0 };
+      current.posts += 1;
+      current.views += safeNumber(post.social_analytics?.impressions);
+      current.likes += safeNumber(post.social_analytics?.likes);
+      current.engagementRateTotal += getPostEngagementRate(post);
+      map.set(key, current);
+    });
+    return Array.from(map.values())
+      .map((item) => ({
+        ...item,
+        engagementRate: item.posts ? Number((item.engagementRateTotal / item.posts).toFixed(2)) : 0,
+      }))
+      .sort((left, right) => right.views - left.views);
+  }, [filteredPosts]);
+
+  const trendRows = useMemo(() => buildTrendRows(filteredPosts), [filteredPosts]);
+
+  const topPosts = useMemo(
+    () =>
+      [...filteredPosts]
+        .sort((left, right) => getPostEngagementRate(right) - getPostEngagementRate(left))
+        .slice(0, 5),
+    [filteredPosts],
+  );
+
+  const filteredWindows = useMemo(() => {
+    if (platformFilter === 'all') return bestPostingWindows;
+    return bestPostingWindows.filter((item) => item.channel.toLowerCase().includes(platformFilter));
+  }, [platformFilter]);
+
+  const handleGenerateAnalysis = async () => {
+    if (!selectedPost) return;
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+
+    try {
+      if (isDemo) {
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        setAnalysisResult({
+          generatedAt: new Date().toISOString(),
+          model: 'Demo Analysis',
+          analysis: [
+            '1. Ringkasan singkat',
+            `Konten ini punya engagement ${getPostEngagementRate(selectedPost)}% dan paling kuat menarik perhatian lewat hook pembuka yang langsung ke masalah utama audiens.`,
+            '',
+            '2. Yang bekerja',
+            '- Kalimat pembuka cukup tajam dan mudah dipahami.',
+            '- Interaksi komentar menunjukkan topik ini relevan untuk audiens bisnis.',
+            '',
+            '3. Yang perlu dibenahi',
+            '- CTA masih bisa dibuat lebih spesifik.',
+            '- Visual dan caption bisa lebih diarahkan ke aksi berikutnya.',
+            '',
+            '4. Rekomendasi eksperimen berikutnya',
+            '- Uji caption yang lebih pendek dengan CTA langsung.',
+            '- Bandingkan format carousel vs single image untuk tema serupa.',
+          ].join('\n'),
+        });
+      } else {
+        const result = await generateSocialPostAnalysis(selectedPost.id);
+        setAnalysisResult(result);
+      }
+    } catch (error) {
+      setAnalysisError(error instanceof Error ? error.message : 'Gagal membuat analysis.');
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (!filteredPosts.length) {
+    return (
+      <div className="space-y-6">
+        <SectionHeader
+          isDark={isDark}
+          title="Analytics Medsos"
+          description="Ringkasan performa konten per channel social yang sudah tersambung."
+          icon={<LineChartIcon size={22} />}
+        />
+        <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className={`mx-auto mb-4 inline-flex rounded-2xl p-4 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
+            <FileText size={34} />
+          </div>
+          <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Belum ada data konten untuk dianalisis</h2>
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            Publish konten atau sambungkan lebih banyak channel social. Begitu data post tersedia, daftar konten dan generate analysis akan aktif.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-2">
-              <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics yang menjawab “kenapa”, bukan cuma “apa”</h1>
-              <FieldHelp title="Analytics demo" description="Contoh insight ini menunjukkan jenis analisis yang nantinya muncul saat data tenant sudah cukup: waktu terbaik, SLA, sentimen, performa channel, dan catatan revenue." />
-            </div>
-            <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Best posting time, reply speed, sentiment, conversion, revenue share, dan SLA compliance sudah dibentuk supaya layer insight terasa lebih mahal.
-            </p>
+      <SectionHeader
+        isDark={isDark}
+        title="Analytics Medsos"
+        description="Lihat performa konten per channel, buka detail post, lalu jalankan analysis hanya saat tombol generate ditekan."
+        icon={<LineChartIcon size={22} />}
+      />
+
+      <div className={`rounded-3xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={platformFilter}
+            onChange={(event) => setPlatformFilter(event.target.value)}
+            className={`rounded-2xl border px-4 py-2.5 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+          >
+            <option value="all">All platforms</option>
+            {availablePlatforms.map((platform) => (
+              <option key={platform} value={platform}>
+                {platform.charAt(0).toUpperCase() + platform.slice(1)}
+              </option>
+            ))}
+          </select>
+          <div className={`rounded-2xl px-4 py-2.5 text-sm ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
+            {filteredPosts.length} post tampil
           </div>
-          <div className="grid sm:grid-cols-2 gap-3 w-full lg:w-auto lg:min-w-[300px]">
-            <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60 text-white' : 'bg-gray-50 text-gray-900'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp size={16} className="text-blue-500" />
-                <span className="text-sm font-semibold">Best uplift</span>
-              </div>
-              <p className="text-xl font-bold">Instagram Reels</p>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>save rate tertinggi jam 11:30 - 12:30</p>
-            </div>
-            <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60 text-white' : 'bg-gray-50 text-gray-900'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <ShieldCheck size={16} className="text-emerald-500" />
-                <span className="text-sm font-semibold">Best SLA</span>
-              </div>
-              <p className="text-xl font-bold">WhatsApp 98%</p>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>paling stabil di inbox support harian</p>
-            </div>
+          <div className={`rounded-2xl px-4 py-2.5 text-sm ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
+            Channel aktif: {availablePlatforms.length}
           </div>
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {bestPostingWindows.map((window) => (
-          <div key={window.id} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <div className="flex items-center gap-3 mb-3">
-              <BrandLogo brand={resolveBrandKey(window.channel)} size={28} className="rounded-xl px-1" withRing />
-              <div>
-                <p className="font-semibold text-sm">{window.channel}</p>
-                <p className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{window.confidence} confidence</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 mb-2">
-              <Clock3 size={14} className="text-blue-500" />
-              <p className="font-bold">{window.time}</p>
-            </div>
-            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{window.note}</p>
+        {[
+          { label: 'Likes', value: aggregate.likes },
+          { label: 'Comments', value: aggregate.comments },
+          { label: 'Shares', value: aggregate.shares },
+          { label: 'Views', value: aggregate.views },
+          { label: 'Reach', value: aggregate.reach },
+          { label: 'Saves', value: aggregate.saves },
+          { label: 'Avg ER', value: `${averageEngagementRate}%` },
+          { label: 'Published posts', value: filteredPosts.length },
+        ].map((card) => (
+          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
+            <p className="mt-2 text-2xl font-bold">{card.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid xl:grid-cols-2 gap-6">
+      <div className="grid xl:grid-cols-[1.1fr_0.9fr] gap-6">
         <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-5">
-            <LineChartIcon size={18} className="text-blue-500" />
+            <Activity size={18} className="text-blue-500" />
             <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Reply Speed Trend</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Bandingkan kecepatan respon WA Inbox vs social media.</p>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Performance trend</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Views dan engagement per tanggal publish.</p>
             </div>
           </div>
           <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={replySpeedTrend}>
+              <LineChart data={trendRows}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
-                <XAxis dataKey="day" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                <XAxis dataKey="date" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
                 <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
                 <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }} />
-                <Legend />
-                <Line type="monotone" dataKey="social" stroke="#3b82f6" strokeWidth={3} dot={false} name="Social (mnt)" />
-                <Line type="monotone" dataKey="marketplace" stroke="#10b981" strokeWidth={3} dot={false} name="WA Inbox (mnt)" />
+                <Line type="monotone" dataKey="views" stroke="#3b82f6" strokeWidth={3} dot={false} />
+                <Line type="monotone" dataKey="engagement" stroke="#10b981" strokeWidth={3} dot={false} />
               </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-5">
-            <MessageCircleHeart size={18} className="text-purple-500" />
-            <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Sentiment Trend</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Lihat arah sentimen supaya tim tahu apakah problem makin parah atau membaik.</p>
-            </div>
-          </div>
-          <div className="h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={sentimentTrend}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
-                <XAxis dataKey="week" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
-                <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
-                <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }} />
-                <Legend />
-                <Area type="monotone" dataKey="positive" stackId="1" stroke="#10b981" fill="#6ee7b7" />
-                <Area type="monotone" dataKey="neutral" stackId="1" stroke="#60a5fa" fill="#93c5fd" />
-                <Area type="monotone" dataKey="negative" stackId="1" stroke="#f97316" fill="#fdba74" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid xl:grid-cols-2 gap-6">
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-5">
-            <BarChart3 size={18} className="text-emerald-500" />
-            <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Channel Comparison</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Engagement, conversion, dan revenue share per channel.</p>
-            </div>
-          </div>
-          <div className="h-[340px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={channelPerformance}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
-                <XAxis dataKey="channel" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
-                <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
-                <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }} />
-                <Legend />
-                <Bar dataKey="engagement" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="conversion" fill="#10b981" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="revenue" fill="#f59e0b" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-5">
-            <ShieldCheck size={18} className="text-blue-500" />
-            <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Response SLA Compliance</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Channel mana yang konsisten menjaga response target.</p>
-            </div>
-          </div>
-          <div className="h-[340px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={slaCompliance} layout="vertical" margin={{ left: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.12} />
-                <XAxis type="number" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
-                <YAxis dataKey="channel" type="category" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} width={90} />
-                <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }} />
-                <Bar dataKey="compliance" fill="#3b82f6" radius={[0, 8, 8, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-5">
-            <Activity size={18} className="text-orange-500" />
-            <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Content Type Performance</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Mana format konten yang paling kuat dorong engagement dan conversion.</p>
-            </div>
-          </div>
-          <div className="h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={contentTypePerformance}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
-                <XAxis dataKey="type" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
-                <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
-                <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }} />
-                <Legend />
-                <Bar dataKey="engagement" fill="#f97316" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="conversion" fill="#14b8a6" radius={[6, 6, 0, 0]} />
-              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -318,33 +407,419 @@ export default function MedsosAnalytics() {
           <div className="flex items-center gap-2 mb-5">
             <TrendingUp size={18} className="text-purple-500" />
             <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Revenue vs Engagement Notes</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Insight cepat untuk membantu interpretasi chart.</p>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Platform breakdown</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Performa per channel yang benar-benar aktif.</p>
             </div>
           </div>
           <div className="space-y-3">
-            {channelPerformance.map((channel) => (
-              <div key={channel.channel} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-                <div className="flex items-start justify-between gap-3">
+            {platformBreakdown.map((item) => (
+              <div key={item.platform} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <BrandLogo brand={resolveBrandKey(channel.channel)} size={34} className="rounded-xl px-1" withRing />
+                    <BrandLogo brand={resolveBrandKey(item.platform)} size={34} className="rounded-xl" withRing />
                     <div>
-                      <p className="font-semibold text-sm">{channel.channel}</p>
-                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>response {channel.responseRate}% • revenue share {channel.revenue}%</p>
+                      <p className="font-semibold capitalize">{item.platform}</p>
+                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.posts} post</p>
                     </div>
                   </div>
-                  <span className={`text-[10px] px-2 py-1 rounded-full ${channel.conversion >= 5 ? 'bg-emerald-100 text-emerald-600' : channel.engagement >= 5 ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-700'}`}>
-                    {channel.conversion >= 5 ? 'conversion driver' : channel.engagement >= 5 ? 'engagement driver' : 'supporting'}
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'bg-white text-gray-700 border border-gray-200'}`}>
+                    ER {item.engagementRate}%
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Engagement</p>
-                    <p className="font-bold">{channel.engagement}%</p>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Views</p>
+                    <p className="font-bold">{item.views}</p>
                   </div>
                   <div>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Likes</p>
+                    <p className="font-bold">{item.likes}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-6">
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-5">
+            <BarChart3 size={18} className="text-emerald-500" />
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Best time to post</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Referensi waktu terbaik berdasarkan pola performa konten.</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {filteredWindows.map((item) => (
+              <div key={item.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className="flex items-center gap-3">
+                  <BrandLogo brand={resolveBrandKey(item.channel)} size={34} className="rounded-xl" withRing />
+                  <div>
+                    <p className="font-semibold">{item.channel}</p>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.time} • {item.confidence} confidence</p>
+                  </div>
+                </div>
+                <p className={`mt-3 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{item.note}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-5">
+            <TrendingUp size={18} className="text-orange-500" />
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Top performing posts</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Konten dengan engagement rate tertinggi pada filter aktif.</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {topPosts.map((post) => (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => {
+                  setSelectedPostId(post.id);
+                  setAnalysisResult(null);
+                  setAnalysisError(null);
+                }}
+                className={`w-full rounded-2xl border p-4 text-left transition ${selectedPost?.id === post.id ? 'ring-2 ring-blue-500' : ''} ${isDark ? 'border-slate-700 bg-slate-900/40 hover:bg-slate-900/70' : 'border-gray-100 bg-gray-50 hover:bg-white'}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <BrandLogo brand={resolveBrandKey(post.platform)} size={34} className="rounded-xl" withRing />
+                    <div>
+                      <p className="font-semibold">{truncateText(post.content, 54)}</p>
+                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{post.published_at?.slice(0, 10) || 'Draft'} • ER {getPostEngagementRate(post)}%</p>
+                    </div>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+                    {safeNumber(post.social_analytics?.likes)} likes
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-2">
+              <FileText size={18} className="text-blue-500" />
+              <div>
+                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Post details</h3>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Klik salah satu post untuk melihat detail lengkap.</p>
+              </div>
+            </div>
+            <FieldHelp title="Post details" description="Setelah post dipilih, Anda bisa membaca deskripsi konten, metrik, dan menjalankan analysis hanya saat diperlukan." />
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            {filteredPosts.map((post) => (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => {
+                  setSelectedPostId(post.id);
+                  setAnalysisResult(null);
+                  setAnalysisError(null);
+                }}
+                className={`rounded-2xl border p-4 text-left transition ${selectedPost?.id === post.id ? 'ring-2 ring-blue-500' : ''} ${isDark ? 'border-slate-700 bg-slate-900/40 hover:bg-slate-900/70' : 'border-gray-100 bg-gray-50 hover:bg-white'}`}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <BrandLogo brand={resolveBrandKey(post.platform)} size={34} className="rounded-xl" withRing />
+                  <div>
+                    <p className="font-semibold capitalize">{post.platform}</p>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{post.social_accounts?.account_name || 'Connected account'}</p>
+                  </div>
+                </div>
+                <p className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{truncateText(post.content, 110)}</p>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Views</p>
+                    <p className="font-bold">{safeNumber(post.social_analytics?.impressions)}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>ER</p>
+                    <p className="font-bold">{getPostEngagementRate(post)}%</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-2">
+              <Sparkles size={18} className="text-purple-500" />
+              <div>
+                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Content analysis</h3>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Insight akan dibuat hanya saat tombol generate ditekan.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleGenerateAnalysis()}
+              disabled={!selectedPost || analysisLoading}
+              className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              {analysisLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+              Generate Analysis
+            </button>
+          </div>
+
+          {selectedPost ? (
+            <div className="space-y-4">
+              <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className="flex items-center gap-3 mb-3">
+                  <BrandLogo brand={resolveBrandKey(selectedPost.platform)} size={34} className="rounded-xl" withRing />
+                  <div>
+                    <p className="font-semibold capitalize">{selectedPost.platform}</p>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{selectedPost.social_accounts?.account_name || 'Connected account'}</p>
+                  </div>
+                </div>
+                <p className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{selectedPost.content}</p>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Views</p>
+                    <p className="font-bold">{safeNumber(selectedPost.social_analytics?.impressions)}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Reach</p>
+                    <p className="font-bold">{safeNumber(selectedPost.social_analytics?.reach)}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Likes + Comments</p>
+                    <p className="font-bold">{safeNumber(selectedPost.social_analytics?.likes) + safeNumber(selectedPost.social_analytics?.comments)}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Engagement rate</p>
+                    <p className="font-bold">{getPostEngagementRate(selectedPost)}%</p>
+                  </div>
+                </div>
+              </div>
+
+              {analysisError ? (
+                <div className={`rounded-2xl border p-4 ${isDark ? 'border-rose-500/30 bg-rose-500/10 text-rose-200' : 'border-rose-100 bg-rose-50 text-rose-700'}`}>
+                  {analysisError}
+                </div>
+              ) : null}
+
+              {analysisResult ? (
+                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="font-semibold">Analysis generated</p>
+                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {new Date(analysisResult.generatedAt).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'bg-white text-gray-700 border border-gray-200'}`}>
+                      {analysisResult.model}
+                    </span>
+                  </div>
+                  <div className={`whitespace-pre-wrap text-sm leading-6 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{analysisResult.analysis}</div>
+                </div>
+              ) : (
+                <div className={`rounded-2xl border border-dashed p-5 text-sm ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+                  Belum ada analysis. Tekan tombol <strong>Generate Analysis</strong> untuk membuat insight AI terhadap post yang sedang dipilih.
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WaAnalyticsView({ isDark }: { isDark: boolean }) {
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<WACrmConnectionStatus | null>(null);
+
+  useEffect(() => {
+    getWACrmStatus()
+      .then(setStatus)
+      .catch(() => setStatus(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  const stats = status?.stats;
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        isDark={isDark}
+        title="Analytics WA"
+        description="Ringkasan performa inbox, kecepatan respons, dan stabilitas operasional WA."
+        icon={<MessageSquareQuote size={22} />}
+      />
+
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {[
+          { label: 'Open chats', value: stats?.openChats ?? 0 },
+          { label: 'Pending reply', value: stats?.pendingChats ?? 0 },
+          { label: 'Unread', value: stats?.totalUnread ?? 0 },
+          { label: 'Today messages', value: stats?.todayMessages ?? 0 },
+        ].map((card) => (
+          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
+            <p className="mt-2 text-2xl font-bold">{card.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid xl:grid-cols-2 gap-6">
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-5">
+            <Activity size={18} className="text-blue-500" />
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Reply speed trend</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Pola waktu respons untuk inbox yang aktif.</p>
+            </div>
+          </div>
+          <div className="h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={replySpeedTrend}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
+                <XAxis dataKey="day" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }} />
+                <Area type="monotone" dataKey="marketplace" stroke="#10b981" fill="#6ee7b7" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-5">
+            <Workflow size={18} className="text-emerald-500" />
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>SLA compliance</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Perbandingan disiplin respons untuk channel operasional.</p>
+            </div>
+          </div>
+          <div className="h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={slaCompliance}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
+                <XAxis dataKey="channel" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }} />
+                <Bar dataKey="compliance" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<MarketplaceHubConnectionStatus | null>(null);
+
+  useEffect(() => {
+    getMarketplaceHubStatus()
+      .then(setStatus)
+      .catch(() => setStatus(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  const channels = status?.channels ?? [];
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        isDark={isDark}
+        title="Analytics Marketplace"
+        description="Pantau kesiapan workspace buyer chat, channel aktif, dan fokus tindak lanjut marketplace."
+        icon={<Store size={22} />}
+      />
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {[
+          { label: 'Workspace', value: status?.workspaceName || 'Marketplace AI', helper: 'workspace aktif' },
+          { label: 'Channel aktif', value: String(channels.length), helper: 'tersambung ke inbox' },
+          { label: 'Status', value: status?.reachable ? 'Healthy' : 'Needs check', helper: status?.message || 'Belum ada status' },
+        ].map((card) => (
+          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
+            <p className="mt-2 text-2xl font-bold">{card.value}</p>
+            <p className={`mt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.helper}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-6">
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-5">
+            <Store size={18} className="text-orange-500" />
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Channel marketplace aktif</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Channel yang benar-benar tersambung ke workspace buyer chat.</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {channels.length === 0 ? (
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/50 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>Belum ada channel marketplace aktif.</div>
+            ) : (
+              channels.map((channel) => (
+                <div key={channel.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className="flex items-center gap-3">
+                    <BrandLogo brand={resolveBrandKey(channel.source)} size={34} className="rounded-xl" withRing />
+                    <div>
+                      <p className="font-semibold">{channel.name}</p>
+                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{channel.source}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-5">
+            <Bot size={18} className="text-blue-500" />
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Peran dashboard</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Dashboard ini dipakai untuk memusatkan buyer chat, respons AI, dan monitoring channel yang aktif.</p>
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            {channelPerformance.filter((item) => ['Shopee', 'Tokopedia'].includes(item.channel)).map((item) => (
+              <div key={item.channel} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <p className="font-semibold">{item.channel}</p>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                  <div>
                     <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Conversion</p>
-                    <p className="font-bold">{channel.conversion}%</p>
+                    <p className="font-bold">{item.conversion}%</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Response rate</p>
+                    <p className="font-bold">{item.responseRate}%</p>
                   </div>
                 </div>
               </div>
@@ -354,4 +829,46 @@ export default function MedsosAnalytics() {
       </div>
     </div>
   );
+}
+
+function SectionHeader({
+  isDark,
+  title,
+  description,
+  icon,
+}: {
+  isDark: boolean;
+  title: string;
+  description: string;
+  icon: ReactNode;
+}) {
+  return (
+    <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <div className="flex items-start gap-4">
+        <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>{icon}</div>
+        <div>
+          <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h1>
+          <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function MedsosAnalytics() {
+  const { isDark } = useThemeStore();
+  const location = useLocation();
+  const { channel } = useParams();
+  const isDemo = location.pathname.startsWith('/demo');
+  const analyticsChannel = normalizeAnalyticsChannel(channel);
+
+  if (analyticsChannel === 'social') {
+    return <SocialAnalyticsView isDemo={isDemo} isDark={isDark} />;
+  }
+
+  if (analyticsChannel === 'marketplace') {
+    return <MarketplaceAnalyticsView isDark={isDark} />;
+  }
+
+  return <WaAnalyticsView isDark={isDark} />;
 }

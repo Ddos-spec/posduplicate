@@ -127,6 +127,17 @@ export async function getWACrmStats(): Promise<WACrmStats | null> {
   return (data.data ?? null) as WACrmStats | null;
 }
 
+export interface SocialPostAnalysisResult {
+  analysis: string;
+  generatedAt: string;
+  model: string;
+}
+
+export async function generateSocialPostAnalysis(postId: number): Promise<SocialPostAnalysisResult> {
+  const { data } = await api.post(`/medsos/posts/${postId}/analysis`);
+  return data.data as SocialPostAnalysisResult;
+}
+
 export async function getWACrmStatus(): Promise<WACrmConnectionStatus> {
   const { data } = await api.get('/medsos/integrations/proxy/social-hub/status');
   return data.data as WACrmConnectionStatus;

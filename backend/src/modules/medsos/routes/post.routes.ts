@@ -9,6 +9,7 @@ import {
   stopScheduler,
   getSchedulerStatus,
   getPostAnalytics,
+  generatePostAnalysis,
   syncAllAnalytics
 } from '../controllers/post.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
@@ -246,6 +247,7 @@ router.get('/scheduler/status', getSchedulerStatus);
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/:id/analytics', getPostAnalytics);
+router.post('/:id/analysis', generatePostAnalysis);
 /**
  * @swagger
  * /api/medsos/posts/analytics/sync:

@@ -39,6 +39,82 @@ const normalizeApprovalSettings = (value: unknown) => {
   };
 };
 
+const isPlainObject = (value: unknown): value is Record<string, any> => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+};
+
+const maskSecretValue = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.length <= 8) {
+    return `${trimmed.slice(0, 2)}•••${trimmed.slice(-2)}`;
+  }
+  return `${trimmed.slice(0, 4)}••••${trimmed.slice(-4)}`;
+};
+
+const sanitizeMyCommerSocialSettings = (value: unknown) => {
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const cloned = JSON.parse(JSON.stringify(value)) as Record<string, any>;
+
+  if (isPlainObject(cloned.aiAnalysis)) {
+    const apiKey = typeof cloned.aiAnalysis.apiKey === 'string' ? cloned.aiAnalysis.apiKey.trim() : '';
+    cloned.aiAnalysis = {
+      ...cloned.aiAnalysis,
+      hasApiKey: Boolean(apiKey),
+      apiKeyMasked: apiKey ? maskSecretValue(apiKey) : null,
+    };
+    delete cloned.aiAnalysis.apiKey;
+  }
+
+  return cloned;
+};
+
+const mergeMyCommerSocialSettings = (currentValue: unknown, incomingValue: unknown) => {
+  const current = isPlainObject(currentValue)
+    ? (JSON.parse(JSON.stringify(currentValue)) as Record<string, any>)
+    : {};
+  const incoming = isPlainObject(incomingValue)
+    ? (JSON.parse(JSON.stringify(incomingValue)) as Record<string, any>)
+    : {};
+
+  const merged: Record<string, any> = {
+    ...current,
+    ...incoming,
+  };
+
+  if (isPlainObject(current.aiAnalysis) || isPlainObject(incoming.aiAnalysis)) {
+    const currentAi = isPlainObject(current.aiAnalysis) ? { ...current.aiAnalysis } : {};
+    const incomingAi = isPlainObject(incoming.aiAnalysis) ? { ...incoming.aiAnalysis } : {};
+
+    delete incomingAi.hasApiKey;
+    delete incomingAi.apiKeyMasked;
+
+    const mergedAi: Record<string, any> = {
+      ...currentAi,
+      ...incomingAi,
+    };
+
+    if (Object.prototype.hasOwnProperty.call(incomingAi, 'apiKey')) {
+      const apiKey = typeof incomingAi.apiKey === 'string' ? incomingAi.apiKey.trim() : '';
+      if (apiKey) {
+        mergedAi.apiKey = apiKey;
+      } else {
+        delete mergedAi.apiKey;
+      }
+    }
+
+    delete mergedAi.hasApiKey;
+    delete mergedAi.apiKeyMasked;
+
+    merged.aiAnalysis = mergedAi;
+  }
+
+  return merged;
+};
+
 const NOTIFICATION_SETTING_KEYS = new Set([
   'notificationEmail',
   'emailNotifications',
@@ -100,7 +176,13 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     // Merge tenant data with settings JSON
-    const settingsData = typeof tenant.settings === 'object' ? tenant.settings : {};
+    const rawSettingsData = typeof tenant.settings === 'object' ? tenant.settings : {};
+    const settingsData = isPlainObject(rawSettingsData)
+      ? {
+          ...rawSettingsData,
+          myCommerSocialSettings: sanitizeMyCommerSocialSettings((rawSettingsData as any).myCommerSocialSettings),
+        }
+      : {};
     const approvalSettings = normalizeApprovalSettings((settingsData as any).approvalSettings);
     const notificationPreferences = normalizeTenantNotificationPreferences(settingsData, tenant.email || null);
     const cashierSecurity = normalizeCashierSecuritySettings((settingsData as any).cashierSecurity);
@@ -185,6 +267,14 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
         continue;
       }
 
+      if (key === 'myCommerSocialSettings') {
+        settingsData.myCommerSocialSettings = mergeMyCommerSocialSettings(
+          settingsData.myCommerSocialSettings,
+          updateData[key]
+        );
+        continue;
+      }
+
       if (NOTIFICATION_SETTING_KEYS.has(key)) {
         settingsData[key] = sanitizeNotificationSettingValue(key, updateData[key]);
         continue;
@@ -208,6 +298,11 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
       }
     });
 
+    const responseSettingsData = {
+      ...settingsData,
+      myCommerSocialSettings: sanitizeMyCommerSocialSettings(settingsData.myCommerSocialSettings),
+    };
+
     res.json({
       success: true,
       message: 'Settings updated successfully',
@@ -218,11 +313,11 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
         email: updatedTenant.email,
         phone: updatedTenant.phone,
         address: updatedTenant.address,
-        ...settingsData,
+        ...responseSettingsData,
         ...normalizeTenantNotificationPreferences(settingsData, updatedTenant.email || null),
-        approvalSettings: normalizeApprovalSettings(settingsData.approvalSettings || DEFAULT_APPROVAL_SETTINGS),
-        cashierSecurity: normalizeCashierSecuritySettings(settingsData.cashierSecurity),
-        printerRouting: normalizePrinterRoutingSettings(settingsData.printerRouting),
+        approvalSettings: normalizeApprovalSettings(responseSettingsData.approvalSettings || DEFAULT_APPROVAL_SETTINGS),
+        cashierSecurity: normalizeCashierSecuritySettings(responseSettingsData.cashierSecurity),
+        printerRouting: normalizePrinterRoutingSettings(responseSettingsData.printerRouting),
         notificationDeliveryStatus: getNotificationDeliveryStatus()
       }
     });
