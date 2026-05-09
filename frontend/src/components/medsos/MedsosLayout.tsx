@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import { channelConnections, priorityThreads } from '../../data/omnichannelMock';
@@ -9,9 +8,47 @@ import { getZernioAccounts } from '../../services/medsosPostsService';
 import { BrandLogo } from './BrandLogo';
 import MyCommerSocialLogo from './MyCommerSocialLogo';
 import {
-  LayoutDashboard, Calendar, Share2, Settings,
-  Menu, Sun, Moon, ArrowLeft, Plus, Store, LineChart, BellRing, Megaphone, PlugZap, CreditCard, MessageSquareText
+  ArrowLeft,
+  BellRing,
+  Calendar,
+  ChevronDown,
+  CreditCard,
+  LayoutDashboard,
+  LineChart,
+  Megaphone,
+  Menu,
+  MessageSquareText,
+  Moon,
+  PlugZap,
+  Plus,
+  Settings,
+  Share2,
+  Store,
+  Sun,
 } from 'lucide-react';
+
+type BaseMenu = {
+  icon: typeof LayoutDashboard;
+  label: string;
+  roles: string[];
+};
+
+type LinkMenu = BaseMenu & {
+  type: 'link';
+  path: string;
+};
+
+type GroupMenu = BaseMenu & {
+  type: 'group';
+  key: string;
+  children: Array<{
+    label: string;
+    path: string;
+    helper: string;
+  }>;
+};
+
+type MenuItem = LinkMenu | GroupMenu;
 
 export default function MedsosLayout() {
   const { isDark, toggleTheme } = useThemeStore();
@@ -19,6 +56,10 @@ export default function MedsosLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    inbox: true,
+    analytics: true,
+  });
 
   const isDemo = location.pathname.startsWith('/demo');
   const basePath = isDemo ? '/demo/medsos' : '/medsos';
@@ -41,34 +82,85 @@ export default function MedsosLayout() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  const allMenus = [
-    { icon: LayoutDashboard, label: 'Overview', path: `${basePath}/dashboard`, roles: ['all'] },
-    { icon: PlugZap, label: 'Connections', path: `${basePath}/connections`, roles: ['medsos_manager', 'all'] },
-    { icon: Calendar, label: 'Planner', path: `${basePath}/calendar`, roles: ['medsos_manager', 'content_creator', 'all'] },
-    { icon: MessageSquareText, label: isDemo ? 'Unified Inbox' : 'WA Inbox', path: `${basePath}/inbox`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
-    { icon: Store, label: 'Marketplace', path: `${basePath}/marketplace`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
-    { icon: Megaphone, label: 'Ads Workspace', path: `${basePath}/ads`, roles: ['medsos_manager', 'all'] },
-    { icon: LineChart, label: 'Analytics', path: `${basePath}/analytics`, roles: ['medsos_manager', 'all'] },
-    { icon: CreditCard, label: 'Plans & Pricing', path: `${basePath}/pricing`, roles: ['medsos_manager', 'all'] },
-    { icon: Settings, label: 'Settings', path: `${basePath}/settings`, roles: ['medsos_manager', 'all'] },
-  ];
+  const allMenus = useMemo<MenuItem[]>(
+    () => [
+      { type: 'link', icon: LayoutDashboard, label: 'Overview', path: `${basePath}/dashboard`, roles: ['all'] },
+      { type: 'link', icon: PlugZap, label: 'Connections', path: `${basePath}/connections`, roles: ['medsos_manager', 'all'] },
+      { type: 'link', icon: Calendar, label: 'Planner', path: `${basePath}/calendar`, roles: ['medsos_manager', 'content_creator', 'all'] },
+      {
+        type: 'group',
+        key: 'inbox',
+        icon: MessageSquareText,
+        label: 'Inbox',
+        roles: ['medsos_manager', 'medsos_cs', 'all'],
+        children: [
+          { label: 'WA', path: `${basePath}/inbox/wa`, helper: 'WhatsApp workspace' },
+          { label: 'Medsos', path: `${basePath}/inbox/social`, helper: 'DM & komentar social' },
+          { label: 'Marketplace', path: `${basePath}/inbox/marketplace`, helper: 'Buyer chat marketplace' },
+        ],
+      },
+      { type: 'link', icon: Store, label: 'Marketplace', path: `${basePath}/marketplace`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
+      { type: 'link', icon: Megaphone, label: 'Ads Workspace', path: `${basePath}/ads`, roles: ['medsos_manager', 'all'] },
+      {
+        type: 'group',
+        key: 'analytics',
+        icon: LineChart,
+        label: 'Analytics',
+        roles: ['medsos_manager', 'all'],
+        children: [
+          { label: 'WA', path: `${basePath}/analytics/wa`, helper: 'Kinerja inbox WA' },
+          { label: 'Medsos', path: `${basePath}/analytics/social`, helper: 'Konten & engagement' },
+          { label: 'Marketplace', path: `${basePath}/analytics/marketplace`, helper: 'Kinerja buyer chat' },
+        ],
+      },
+      { type: 'link', icon: CreditCard, label: 'Plans & Pricing', path: `${basePath}/pricing`, roles: ['medsos_manager', 'all'] },
+      { type: 'link', icon: Settings, label: 'Settings', path: `${basePath}/settings`, roles: ['medsos_manager', 'all'] },
+    ],
+    [basePath],
+  );
 
-  const menuItems = allMenus.filter(item => {
-    if (currentRole === 'super_admin') return true;
-    if (item.roles.includes('all')) return true;
-    return item.roles.includes(currentRole);
-  });
+  const menuItems = useMemo(
+    () =>
+      allMenus.filter((item) => {
+        if (currentRole === 'super_admin') return true;
+        if (item.roles.includes('all')) return true;
+        return item.roles.includes(currentRole);
+      }),
+    [allMenus, currentRole],
+  );
+
+  useEffect(() => {
+    setExpandedGroups((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const item of menuItems) {
+        if (item.type === 'group' && item.children.some((child) => location.pathname.startsWith(child.path)) && !current[item.key]) {
+          next[item.key] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [location.pathname, menuItems]);
 
   const inboxCount = useMemo(
-    () => isDemo ? priorityThreads.reduce((total, item) => total + item.unread, 0) : 0,
-    [isDemo]
+    () => (isDemo ? priorityThreads.reduce((total, item) => total + item.unread, 0) : 0),
+    [isDemo],
   );
+
   const activeChannels = useMemo(
-    () => isDemo
-      ? channelConnections.filter(item => item.status !== 'offline').length
-      : (liveActiveChannels ?? '…'),
-    [isDemo, liveActiveChannels]
+    () => (isDemo ? channelConnections.filter((item) => item.status !== 'offline').length : liveActiveChannels ?? '…'),
+    [isDemo, liveActiveChannels],
   );
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  };
+
+  const isActiveLink = (path: string) => location.pathname === path;
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDark ? 'bg-slate-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -88,9 +180,13 @@ export default function MedsosLayout() {
             <div>
               <h2 className="font-bold text-lg leading-tight">MyCommerSocial</h2>
               <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {currentRole === 'medsos_manager' ? 'Omnichannel Manager' :
-                 currentRole === 'content_creator' ? 'Content Creator' :
-                 currentRole === 'medsos_cs' ? 'WA Inbox Operator' : 'WA + Social + Ads Hub'}
+                {currentRole === 'medsos_manager'
+                  ? 'Omnichannel Manager'
+                  : currentRole === 'content_creator'
+                    ? 'Content Creator'
+                    : currentRole === 'medsos_cs'
+                      ? 'Inbox Operator'
+                      : 'WA + Social + Marketplace'}
               </p>
               <div className="flex items-center gap-1.5 mt-2">
                 <BrandLogo brand="whatsapp" size={20} className="rounded-md" />
@@ -122,7 +218,7 @@ export default function MedsosLayout() {
           </div>
 
           <div className="px-2 mb-4">
-            <button 
+            <button
               onClick={() => navigate(`${basePath}/create`)}
               title="Buka composer untuk membuat campaign atau post baru"
               className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all"
@@ -133,21 +229,76 @@ export default function MedsosLayout() {
 
           <ul className="space-y-2 font-medium">
             {menuItems.map((item, idx) => {
-              const isActive = location.pathname === item.path;
+              if (item.type === 'link') {
+                const isActive = isActiveLink(item.path);
+                return (
+                  <li key={`${item.label}-${idx}`}>
+                    <button
+                      onClick={() => navigate(item.path)}
+                      title={`Buka halaman ${item.label}`}
+                      className={`flex items-center w-full p-3 rounded-xl transition-all duration-200 ${
+                        isActive
+                          ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
+                          : isDark
+                            ? 'text-gray-400 hover:bg-slate-700 hover:text-white'
+                            : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+                      }`}
+                    >
+                      <item.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
+                      <span className="ml-3">{item.label}</span>
+                    </button>
+                  </li>
+                );
+              }
+
+              const isGroupActive = item.children.some((child) => location.pathname.startsWith(child.path));
+              const isExpanded = expandedGroups[item.key] ?? false;
+
               return (
-                <li key={idx}>
+                <li key={`${item.label}-${idx}`}>
                   <button
-                    onClick={() => navigate(item.path)}
-                    title={`Buka halaman ${item.label}`}
+                    onClick={() => toggleGroup(item.key)}
+                    title={`Buka submenu ${item.label}`}
                     className={`flex items-center w-full p-3 rounded-xl transition-all duration-200 ${
-                      isActive
+                      isGroupActive
                         ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
-                        : isDark ? 'text-gray-400 hover:bg-slate-700 hover:text-white' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+                        : isDark
+                          ? 'text-gray-400 hover:bg-slate-700 hover:text-white'
+                          : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
                     }`}
                   >
-                    <item.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
-                    <span className="ml-3">{item.label}</span>
+                    <item.icon className={`w-5 h-5 transition-transform duration-200 ${isGroupActive ? 'scale-110' : ''}`} />
+                    <span className="ml-3 flex-1 text-left">{item.label}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                   </button>
+                  {isExpanded ? (
+                    <div className="mt-2 ml-3 space-y-1 border-l border-blue-200/40 pl-3">
+                      {item.children.map((child) => {
+                        const active = location.pathname === child.path;
+                        return (
+                          <button
+                            key={child.path}
+                            onClick={() => navigate(child.path)}
+                            title={child.helper}
+                            className={`w-full rounded-xl px-3 py-2.5 text-left transition ${
+                              active
+                                ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-slate-700 dark:text-white dark:ring-slate-600'
+                                : isDark
+                                  ? 'text-gray-300 hover:bg-slate-700/60'
+                                  : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-sm font-semibold">{child.label}</span>
+                            </div>
+                            <p className={`mt-1 text-[11px] ${active ? (isDark ? 'text-gray-200' : 'text-blue-600') : (isDark ? 'text-gray-500' : 'text-gray-500')}`}>
+                              {child.helper}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </li>
               );
             })}
@@ -174,26 +325,31 @@ export default function MedsosLayout() {
 
       <div className="p-4 md:ml-64">
         <div className="flex justify-between items-center mb-6">
-          <button type="button" title={sidebarOpen ? 'Tutup navigasi MyCommerSocial' : 'Buka navigasi MyCommerSocial'} onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
+          <button
+            type="button"
+            title={sidebarOpen ? 'Tutup navigasi MyCommerSocial' : 'Buka navigasi MyCommerSocial'}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
+          >
             <Menu className="w-6 h-6" />
           </button>
 
           <div className="flex items-center gap-2 ml-auto">
             <div className={`hidden md:flex items-center gap-3 rounded-2xl px-4 py-2 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
-            <div className="flex -space-x-2 mr-1">
-              <BrandLogo brand="whatsapp" size={28} className="rounded-xl border-2 border-white" />
-              <BrandLogo brand="instagram" size={28} className="rounded-xl border-2 border-white" />
-              <BrandLogo brand="facebook" size={28} className="rounded-xl border-2 border-white" />
-              <BrandLogo brand="metaads" size={28} className="rounded-xl border-2 border-white" withRing />
-            </div>
-            <div>
-              <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Mode</p>
-              <p className="text-sm font-semibold">MyCommerSocial</p>
-            </div>
+              <div className="flex -space-x-2 mr-1">
+                <BrandLogo brand="whatsapp" size={28} className="rounded-xl border-2 border-white" />
+                <BrandLogo brand="instagram" size={28} className="rounded-xl border-2 border-white" />
+                <BrandLogo brand="facebook" size={28} className="rounded-xl border-2 border-white" />
+                <BrandLogo brand="metaads" size={28} className="rounded-xl border-2 border-white" withRing />
+              </div>
+              <div>
+                <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Mode</p>
+                <p className="text-sm font-semibold">MyCommerSocial</p>
+              </div>
               <div className={`h-8 w-px ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Focus</p>
-                <p className="text-sm font-semibold truncate max-w-[190px]">WA Inbox + Social Workspace • Marketplace AI</p>
+                <p className="text-sm font-semibold truncate max-w-[220px]">Inbox, analytics, dan AI workspace</p>
               </div>
             </div>
             <button

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
+import { generatePostPerformanceAnalysis } from '../services/contentAnalysis.service';
 
 // Scheduler state (in production, use a proper job queue like Bull/BullMQ)
 let schedulerRunning = false;
@@ -511,6 +512,40 @@ export const getPostAnalytics = async (req: Request, res: Response, next: NextFu
     });
   } catch (error) {
     next(error);
+  }
+};
+
+/**
+ * Generate on-demand AI analysis for a post
+ */
+export const generatePostAnalysis = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = (req as any).tenantId;
+    const { id } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'TENANT_ID_REQUIRED', message: 'Tenant tidak valid.' }
+      });
+    }
+
+    const postId = Number(id);
+    if (!Number.isFinite(postId)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_POST_ID', message: 'ID post tidak valid.' }
+      });
+    }
+
+    const analysis = await generatePostPerformanceAnalysis(tenantId, postId);
+
+    return res.json({
+      success: true,
+      data: analysis,
+    });
+  } catch (error) {
+    return next(error);
   }
 };
 

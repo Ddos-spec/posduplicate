@@ -304,10 +304,12 @@ function App() {
           <Route path="connections" element={<MedsosConnections />} />
           <Route path="create" element={<CreatePost />} />
           <Route path="calendar" element={<ContentCalendar />} />
-          <Route path="inbox" element={<MedsosInbox />} />
+          <Route path="inbox" element={<Navigate to="/demo/medsos/inbox/wa" replace />} />
+          <Route path="inbox/:channel" element={<MedsosInbox />} />
           <Route path="marketplace" element={<MarketplaceControl />} />
           <Route path="ads" element={<MetaAdsControl />} />
-          <Route path="analytics" element={<MedsosAnalytics />} />
+          <Route path="analytics" element={<Navigate to="/demo/medsos/analytics/wa" replace />} />
+          <Route path="analytics/:channel" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />
           <Route path="pricing" element={<MedsosPricing />} />
           <Route index element={<Navigate to="/demo/medsos/dashboard" />} />
@@ -430,10 +432,12 @@ function App() {
           <Route path="connections" element={<MedsosConnections />} />
           <Route path="create" element={<CreatePost />} />
           <Route path="calendar" element={<ContentCalendar />} />
-          <Route path="inbox" element={<MedsosInbox />} />
+          <Route path="inbox" element={<Navigate to="/medsos/inbox/wa" replace />} />
+          <Route path="inbox/:channel" element={<MedsosInbox />} />
           <Route path="marketplace" element={<MarketplaceControl />} />
           <Route path="ads" element={<MetaAdsControl />} />
-          <Route path="analytics" element={<MedsosAnalytics />} />
+          <Route path="analytics" element={<Navigate to="/medsos/analytics/wa" replace />} />
+          <Route path="analytics/:channel" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />
           <Route path="pricing" element={<MedsosPricing />} />
           <Route index element={<Navigate to="/medsos/dashboard" />} />

@@ -1,9 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { getWACrmStatus, type WACrmConnectionStatus, type WACrmStats } from '../../services/medsosPostsService';
+import {
+  getMarketplaceHubStatus,
+  getWACrmStatus,
+  getZernioAccounts,
+  type MarketplaceChatChannel,
+  type MarketplaceHubConnectionStatus,
+  type WACrmConnectionStatus,
+  type WACrmStats,
+  type ZernioAccount,
+} from '../../services/medsosPostsService';
 import { getMyCommerSocialIntegrationHub, type ManagedIntegrationConnector } from '../../services/myCommerSocialIntegrations';
 import {
   conversationMessages,
@@ -12,27 +21,193 @@ import {
   replyTemplates,
   teamSeats,
   threadDetails,
+  type ConversationMessage,
+  type PriorityThread,
+  type ThreadDetail,
 } from '../../data/omnichannelMock';
 import {
   AlertTriangle,
   Bot,
-  ChevronDown,
-  Clock3,
   ExternalLink,
   Loader2,
   MessageSquareQuote,
-  MoreVertical,
   NotebookPen,
   Paperclip,
   PlugZap,
-  Settings,
   Search,
   Send,
+  Settings,
   ShieldAlert,
   Smile,
+  Store,
   Tag,
   UserRoundCheck,
+  Workflow,
 } from 'lucide-react';
+
+const ADS_PLATFORMS = new Set(['metaads', 'googleads', 'linkedinads', 'tiktokads', 'pinterestads', 'xads']);
+
+type InboxChannel = 'wa' | 'social' | 'marketplace';
+
+const demoWaThreads: PriorityThread[] = [
+  {
+    id: 901,
+    customer: 'Aulia Retail',
+    channel: 'WhatsApp',
+    kind: 'social',
+    inboxType: 'dm',
+    subject: 'Tanya katalog grosir',
+    snippet: 'Kalau ambil 50 pcs masih dapat harga grosir seperti bulan lalu?',
+    time: '1 menit lalu',
+    unread: 2,
+    priority: 'high',
+    assignee: 'Nisa',
+    tags: ['repeat buyer', 'harga'],
+    sla: '05:12',
+  },
+  {
+    id: 902,
+    customer: 'Lina Project',
+    channel: 'WhatsApp',
+    kind: 'social',
+    inboxType: 'dm',
+    subject: 'Minta update pesanan',
+    snippet: 'Boleh cek invoice INV-8821 sudah diproses sampai mana?',
+    time: '9 menit lalu',
+    unread: 1,
+    priority: 'medium',
+    assignee: 'Alya',
+    tags: ['follow up', 'order'],
+    sla: '17:40',
+  },
+  {
+    id: 903,
+    customer: 'Bram Service',
+    channel: 'WhatsApp',
+    kind: 'social',
+    inboxType: 'dm',
+    subject: 'Butuh panduan instalasi',
+    snippet: 'Barang sudah datang, tapi saya butuh panduan versi terbaru.',
+    time: '18 menit lalu',
+    unread: 1,
+    priority: 'low',
+    assignee: 'Damar',
+    tags: ['support', 'panduan'],
+    sla: '28:00',
+  },
+];
+
+const demoWaDetails: Record<number, ThreadDetail> = {
+  901: {
+    threadId: 901,
+    sentiment: 'positive',
+    customerTier: 'Returning',
+    preferredChannel: 'WhatsApp',
+    lifetimeValue: 'Rp18.400.000',
+    summary: 'Pelanggan lama meminta harga grosir untuk repeat order dan butuh respons cepat.',
+    recommendedActions: ['Kirim price list grosir', 'Tawarkan bundling pengiriman', 'Tandai lead panas'],
+    macros: ['Balasan harga grosir', 'Template follow up katalog'],
+    internalNotes: ['Lead bagus untuk campaign repeat order minggu ini.'],
+    activities: [
+      { time: '09:14', title: 'Thread masuk', description: 'Pelanggan mengirim pertanyaan harga grosir.' },
+      { time: '09:16', title: 'Draft siap', description: 'Draft balasan awal sudah disiapkan.' },
+    ],
+    orderContext: {
+      orderId: 'INV-8802',
+      amount: 'Rp6.250.000',
+      status: 'Repeat inquiry',
+      lastUpdate: 'Order terakhir 12 hari lalu',
+    },
+  },
+  902: {
+    threadId: 902,
+    sentiment: 'neutral',
+    customerTier: 'VIP',
+    preferredChannel: 'WhatsApp',
+    lifetimeValue: 'Rp43.200.000',
+    summary: 'Pelanggan meminta update invoice aktif dan perlu kepastian ETA.',
+    recommendedActions: ['Cek status invoice', 'Kirim estimasi update', 'Tawarkan jalur prioritas'],
+    macros: ['Template update order', 'Template cek invoice'],
+    internalNotes: ['Biasanya respon cepat menurunkan follow up ganda.'],
+    activities: [{ time: '09:05', title: 'Operator ditugaskan', description: 'Seat Alya mengambil alih thread.' }],
+    orderContext: {
+      orderId: 'INV-8821',
+      amount: 'Rp2.980.000',
+      status: 'Diproses',
+      lastUpdate: 'Packing dimulai 30 menit lalu',
+    },
+  },
+  903: {
+    threadId: 903,
+    sentiment: 'neutral',
+    customerTier: 'New',
+    preferredChannel: 'WhatsApp',
+    lifetimeValue: 'Rp1.250.000',
+    summary: 'Pelanggan baru butuh panduan pemasangan. Cocok diarahkan ke knowledge base.',
+    recommendedActions: ['Kirim panduan PDF', 'Tawarkan bantuan singkat'],
+    macros: ['Template kirim panduan', 'Template after-sales'],
+    internalNotes: ['Tidak perlu eskalasi.'],
+    activities: [{ time: '08:54', title: 'Pesan diterima', description: 'Pelanggan meminta panduan instalasi terbaru.' }],
+  },
+};
+
+const demoWaMessages: Record<number, ConversationMessage[]> = {
+  901: [
+    { id: 1, sender: 'user', text: 'Kalau ambil 50 pcs masih dapat harga grosir seperti bulan lalu?', time: '09:14' },
+    { id: 2, sender: 'system', text: 'Percakapan ditandai sebagai peluang repeat order.', time: '09:15' },
+    { id: 3, sender: 'me', text: 'Bisa. Saya cek price list grosir terbaru dan siapkan opsi pengirimannya ya.', time: '09:17' },
+  ],
+  902: [
+    { id: 1, sender: 'user', text: 'Boleh cek invoice INV-8821 sudah diproses sampai mana?', time: '09:02' },
+    { id: 2, sender: 'me', text: 'Siap, saya cek dulu dan update beberapa menit lagi ya.', time: '09:05' },
+  ],
+  903: [
+    { id: 1, sender: 'user', text: 'Barang sudah datang, tapi saya butuh panduan versi terbaru.', time: '08:54' },
+    { id: 2, sender: 'me', text: 'Baik, saya kirimkan panduan terbaru dan langkah pemasangannya.', time: '08:58' },
+  ],
+};
+
+function normalizeInboxChannel(value?: string): InboxChannel {
+  if (value === 'social') return 'social';
+  if (value === 'marketplace') return 'marketplace';
+  return 'wa';
+}
+
+function titleByChannel(channel: InboxChannel) {
+  if (channel === 'social') return 'Inbox Medsos';
+  if (channel === 'marketplace') return 'Inbox Marketplace';
+  return 'Inbox WA';
+}
+
+function descriptionByChannel(channel: InboxChannel) {
+  if (channel === 'social') return 'DM, komentar, dan percakapan social yang sudah tersambung.';
+  if (channel === 'marketplace') return 'Buyer chat marketplace yang aktif di workspace AI.';
+  return 'Percakapan WhatsApp operasional yang aktif di workspace inbox.';
+}
+
+function SectionHeader({
+  isDark,
+  title,
+  description,
+  icon,
+}: {
+  isDark: boolean;
+  title: string;
+  description: string;
+  icon: ReactNode;
+}) {
+  return (
+    <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <div className="flex items-start gap-4">
+        <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>{icon}</div>
+        <div>
+          <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h1>
+          <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void }) {
   const [stats, setStats] = useState<WACrmStats | null>(null);
@@ -45,6 +220,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
 
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
       setError(null);
       try {
@@ -52,10 +228,11 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
           getWACrmStatus(),
           getMyCommerSocialIntegrationHub(),
         ]);
+
         if (cancelled) return;
 
         const hub = hubResult.status === 'fulfilled' ? hubResult.value : null;
-        const socialHub = hub?.connectors?.find((c: { slug: string }) => c.slug === 'social-hub');
+        const socialHub = hub?.connectors?.find((item: { slug: string }) => item.slug === 'social-hub');
         setConnector(socialHub ?? null);
         setCrmUrl(socialHub?.vendorPortalUrl ?? socialHub?.vendorWorkspaceUrl ?? null);
 
@@ -66,110 +243,102 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
             setError(statusResult.value.message || 'Workspace inbox belum merespons.');
           }
         } else {
-          setCrmStatus(null);
+          setError('Gagal memuat status inbox.');
           setStats(null);
-          setError('Gagal memuat stats inbox.');
+          setCrmStatus(null);
         }
       } catch {
-        if (!cancelled) setError('Gagal memuat stats inbox.');
+        if (!cancelled) {
+          setError('Gagal memuat status inbox.');
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     })();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, [reloadTick]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-blue-500" size={32} />
+      <div className="min-h-[40vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
   const hasStoredConfig = Boolean(
-    crmStatus?.configured || (
-      connector && (
-      connector.status === 'connected'
-      || connector.status === 'syncing'
-      || connector.connectionRefMasked
-      || connector.vendorWorkspaceUrl
-      || connector.vendorPortalUrl
-      || connector.workspaceName
-    ))
+    crmStatus?.configured ||
+      (connector &&
+        (connector.status === 'connected' ||
+          connector.status === 'syncing' ||
+          connector.connectionRefMasked ||
+          connector.vendorWorkspaceUrl ||
+          connector.vendorPortalUrl ||
+          connector.workspaceName)),
   );
 
   if (error || !stats) {
     return (
-      <div className={`rounded-3xl border p-10 flex flex-col items-center text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className={`rounded-2xl p-4 mb-5 ${isDark ? 'bg-amber-500/20' : 'bg-amber-50'}`}>
-          {error ? <AlertTriangle size={36} className="text-amber-500" /> : <PlugZap size={36} className="text-blue-500" />}
+      <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`mx-auto mb-4 inline-flex rounded-2xl p-4 ${isDark ? 'bg-amber-500/20' : 'bg-amber-50'}`}>
+          <AlertTriangle size={36} className="text-amber-500" />
         </div>
-        <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          {hasStoredConfig ? 'WA Inbox sudah tersimpan, tetapi layanan inbox belum merespons' : 'WA Inbox belum dikonfigurasi'}
+        <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          {hasStoredConfig ? 'Inbox sudah tersimpan, tetapi layanan belum merespons' : 'Inbox WA belum dikonfigurasi'}
         </h2>
-        <p className={`text-sm max-w-md mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           {hasStoredConfig
-            ? 'API key atau workspace sudah tersimpan. Sistem belum berhasil mengambil data live dari inbox saat ini. Coba buka inbox atau periksa ulang koneksinya di halaman Connections.'
-            : 'Isi API key workspace di halaman Connections untuk mengaktifkan inbox live.'}
+            ? 'Konfigurasi sudah ada, namun sistem belum berhasil memuat data live saat ini.'
+            : 'Simpan API key workspace dulu dari halaman Connections.'}
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <button
-            onClick={() => setReloadTick((current) => current + 1)}
-            title="Coba muat ulang status WA Inbox"
+            type="button"
+            onClick={() => setReloadTick((value) => value + 1)}
             className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
           >
             <Loader2 size={18} />
             Coba lagi
           </button>
           <button
+            type="button"
             onClick={onSetup}
-            title="Buka halaman Connections untuk memeriksa konfigurasi WA"
-            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold"
+            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
           >
             <PlugZap size={18} />
             {hasStoredConfig ? 'Periksa Connections' : 'Lengkapi Setup'}
           </button>
-          {crmUrl && (
+          {crmUrl ? (
             <a
               href={crmUrl}
               target="_blank"
               rel="noreferrer"
-              title="Buka workspace inbox di tab baru"
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 font-semibold"
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 font-semibold text-white hover:bg-emerald-700"
             >
               <ExternalLink size={18} />
               Buka inbox
             </a>
-          )}
+          ) : null}
         </div>
       </div>
     );
   }
 
   const statCards = [
-    { label: 'Chat aktif', value: stats.openChats, color: 'blue' },
-    { label: 'Pending reply', value: stats.pendingChats, color: 'amber' },
-    { label: 'Pesan belum dibaca', value: stats.totalUnread, color: 'red' },
-    { label: 'Eskalasi terbuka', value: stats.openEscalations, color: 'orange' },
-    { label: 'Chat masuk hari ini', value: stats.todayChats, color: 'emerald' },
-    { label: 'Total kontak', value: stats.totalCustomers, color: 'slate' },
+    { label: 'Chat aktif', value: stats.openChats },
+    { label: 'Pending reply', value: stats.pendingChats },
+    { label: 'Pesan belum dibaca', value: stats.totalUnread },
+    { label: 'Eskalasi terbuka', value: stats.openEscalations },
+    { label: 'Chat masuk hari ini', value: stats.todayChats },
+    { label: 'Total kontak', value: stats.totalCustomers },
   ];
 
-  const colorMap: Record<string, string> = {
-    blue: isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700',
-    amber: isDark ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-50 text-amber-700',
-    red: isDark ? 'bg-red-500/20 text-red-300' : 'bg-red-50 text-red-700',
-    orange: isDark ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-50 text-orange-700',
-    emerald: isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-50 text-emerald-700',
-    slate: isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-50 text-gray-700',
-  };
-
-  const capabilities = connector?.capabilities?.length
-    ? connector.capabilities
-    : ['live chat inbox', 'agent routing', 'lead tracking', 'tagging & escalation'];
-
-  const workspaceDetails = [
+  const details = [
     { label: 'Workspace', value: connector?.workspaceName || stats.tenant?.company_name || 'Belum diatur' },
     { label: 'Email', value: connector?.vendorWorkspaceEmail || 'Belum diisi' },
     { label: 'Connection ref', value: connector?.connectionRefMasked || 'Belum diisi' },
@@ -178,124 +347,330 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <BrandLogo brand="whatsapp" size={44} className="rounded-2xl" />
-          <div>
-            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              WA Workspace{stats.tenant?.company_name ? ` — ${stats.tenant.company_name}` : ''}
-            </h2>
-            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Live data dari workspace inbox
-              {stats.tenant?.session_id
-                ? ` • Session ${stats.tenant.session_id}`
-                : ' • Session tidak aktif'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={onSetup}
-            title="Buka halaman Connections"
-            className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-          >
-            <Settings size={16} />
-            Connections
-          </button>
-          {crmUrl && (
-          <a
-            href={crmUrl}
-            target="_blank"
-            rel="noreferrer"
-            title="Buka workspace inbox di tab baru"
-            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 font-semibold text-sm"
-          >
-              <ExternalLink size={16} />
-              Buka inbox
-            </a>
-          )}
-        </div>
-      </div>
+      <SectionHeader
+        isDark={isDark}
+        title="Inbox WA"
+        description="Status, volume percakapan, dan akses cepat ke workspace inbox yang aktif."
+        icon={<MessageSquareQuote size={22} />}
+      />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {statCards.map((card) => (
-          <div
-            key={card.label}
-            className={`rounded-2xl p-5 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}
-          >
-            <p className={`text-xs font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
-            <p className={`text-3xl font-bold ${colorMap[card.color]?.split(' ')[1] ?? ''}`}>{card.value}</p>
+          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
+            <p className="mt-2 text-3xl font-bold">{card.value}</p>
           </div>
         ))}
-      </div>
-
-      <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <p className={`text-sm font-semibold mb-3 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Agent online</p>
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
-            {stats.agentCount ?? stats.totalUsers} agent aktif
-          </span>
-          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Pesan hari ini: {stats.todayMessages}
-          </span>
-        </div>
       </div>
 
       <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
         <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
           <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Workspace details</h3>
           <div className="grid sm:grid-cols-2 gap-3">
-            {workspaceDetails.map((item) => (
+            {details.map((item) => (
               <div key={item.label} className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
                 <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.label}</p>
-                <p className="text-sm font-semibold mt-1 break-all">{item.value}</p>
+                <p className="mt-1 text-sm font-semibold break-all">{item.value}</p>
               </div>
             ))}
           </div>
         </div>
 
         <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Fitur yang dikelola lewat workspace inbox</h3>
-          <div className="grid gap-3">
-            {capabilities.map((item) => (
-              <div key={item} className={`rounded-2xl p-4 text-sm ${isDark ? 'bg-slate-900/60 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
+          <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Operasional workspace</h3>
+          <div className="space-y-3 text-sm">
+            {[
+              `Agent aktif: ${stats.agentCount ?? stats.totalUsers}`,
+              `Pesan hari ini: ${stats.todayMessages}`,
+              `Session: ${stats.tenant?.session_id || 'belum aktif'}`,
+            ].map((line) => (
+              <div key={line} className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
+                {line}
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={onSetup}
+              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              <Settings size={16} />
+              Connections
+            </button>
+            {crmUrl ? (
+              <a href={crmUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                <ExternalLink size={16} />
+                Buka inbox
+              </a>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SocialInboxLiveView({ isDark }: { isDark: boolean }) {
+  const navigate = useNavigate();
+  const [accounts, setAccounts] = useState<ZernioAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getZernioAccounts()
+      .then((result) => setAccounts(result.filter((item) => !ADS_PLATFORMS.has(item.platform.toLowerCase()))))
+      .catch(() => setAccounts([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const groupedPlatforms = useMemo(() => {
+    const groups = new Map<string, ZernioAccount[]>();
+    for (const account of accounts) {
+      const key = account.platform.toLowerCase();
+      const bucket = groups.get(key) ?? [];
+      bucket.push(account);
+      groups.set(key, bucket);
+    }
+    return Array.from(groups.entries());
+  }, [accounts]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (groupedPlatforms.length === 0) {
+    return (
+      <div className="space-y-6">
+        <SectionHeader
+          isDark={isDark}
+          title="Inbox Medsos"
+          description="Hanya channel social yang benar-benar aktif yang akan muncul di halaman ini."
+          icon={<Workflow size={22} />}
+        />
+        <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className={`mx-auto mb-4 inline-flex rounded-2xl p-4 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
+            <PlugZap size={34} />
+          </div>
+          <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Belum ada channel social yang aktif</h2>
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            Sambungkan channel social dari halaman Connections. Begitu aktif, channel itu otomatis tampil di Inbox Medsos.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/medsos/connections')}
+            className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+          >
+            <PlugZap size={18} />
+            Buka Connections
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        isDark={isDark}
+        title="Inbox Medsos"
+        description="Jika hanya Instagram yang tersambung, hanya Instagram yang tampil. Jika Instagram dan Facebook tersambung, keduanya akan muncul di sini."
+        icon={<Workflow size={22} />}
+      />
+
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {groupedPlatforms.map(([platform, platformAccounts]) => (
+          <div key={platform} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <BrandLogo brand={resolveBrandKey(platform)} size={40} className="rounded-2xl" withRing />
+                <div>
+                  <p className="font-semibold capitalize">{platform}</p>
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{platformAccounts.length} akun tersambung</p>
+                </div>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+                Live
+              </span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {platformAccounts.map((account) => (
+                <div key={account.id} className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900/50' : 'bg-gray-50'}`}>
+                  <p className="text-sm font-semibold">{account.displayName}</p>
+                  <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{account.username || 'Handle belum tersedia'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MarketplaceChannelCard({ channel, isDark }: { channel: MarketplaceChatChannel; isDark: boolean }) {
+  return (
+    <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+      <div className="flex items-center gap-3">
+        <BrandLogo brand={resolveBrandKey(channel.source)} size={38} className="rounded-2xl" withRing />
+        <div>
+          <p className="font-semibold">{channel.name}</p>
+          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{channel.source}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MarketplaceInboxLiveView({ isDark }: { isDark: boolean }) {
+  const navigate = useNavigate();
+  const [status, setStatus] = useState<MarketplaceHubConnectionStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getMarketplaceHubStatus()
+      .then(setStatus)
+      .catch(() => setStatus(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  const channels = status?.channels ?? [];
+
+  if (!status?.configured) {
+    return (
+      <div className="space-y-6">
+        <SectionHeader
+          isDark={isDark}
+          title="Inbox Marketplace"
+          description="Buyer chat marketplace yang aktif akan muncul di sini setelah workspace siap."
+          icon={<Store size={22} />}
+        />
+        <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className={`mx-auto mb-4 inline-flex rounded-2xl p-4 ${isDark ? 'bg-slate-900 text-orange-300' : 'bg-orange-50 text-orange-600'}`}>
+            <Store size={34} />
+          </div>
+          <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Inbox marketplace belum aktif</h2>
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            Simpan konfigurasi workspace marketplace di halaman Connections dulu.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/medsos/connections')}
+            className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+          >
+            <PlugZap size={18} />
+            Buka Connections
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader
+        isDark={isDark}
+        title="Inbox Marketplace"
+        description="Hanya channel marketplace yang benar-benar tersambung yang akan tampil di halaman ini."
+        icon={<Store size={22} />}
+      />
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {[
+          { label: 'Workspace', value: status.workspaceName || 'Marketplace AI', helper: 'workspace aktif' },
+          { label: 'Channel aktif', value: String(channels.length), helper: 'buyer chat siap masuk' },
+          { label: 'Status', value: status.reachable ? 'Healthy' : 'Needs check', helper: status.message },
+        ].map((card) => (
+          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
+            <p className="mt-2 text-2xl font-bold">{card.value}</p>
+            <p className={`mt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.helper}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
+        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-4">
+            <Store size={16} className="text-orange-500" />
+            <h3 className="font-bold text-lg">Channel marketplace yang tampil</h3>
+            <FieldHelp title="Channel marketplace" description="Hanya channel yang benar-benar tersambung ke workspace marketplace yang akan tampil di inbox dan analytics marketplace." />
+          </div>
+          {channels.length === 0 ? (
+            <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/50 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
+              Belum ada channel marketplace aktif.
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {channels.map((channel) => (
+                <MarketplaceChannelCard key={channel.id} channel={channel} isDark={isDark} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-4">
+            <Bot size={16} className="text-blue-500" />
+            <h3 className="font-bold text-lg">Alur operasional</h3>
+          </div>
+          <div className="space-y-3 text-sm">
+            {[
+              'Buyer chat yang aktif akan masuk ke dashboard ini setelah koneksi siap.',
+              'AI agent bisa menjawab pertanyaan awal sebelum diambil alih operator.',
+              'Channel yang belum terhubung tidak akan muncul di inbox maupun analytics marketplace.',
+            ].map((item) => (
+              <div key={item} className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/50 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
                 {item}
               </div>
             ))}
           </div>
         </div>
       </div>
-
-      {crmUrl && (
-        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800/60 border-slate-700' : 'bg-blue-50 border-blue-100'}`}>
-          <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-blue-800'}`}>
-            Untuk membalas chat, assign agent, menggunakan tag, dan mengelola eskalasi, klik tombol <strong>Buka inbox</strong>. MyCommerSocial berfungsi sebagai command center, sedangkan operasional WA dijalankan langsung dari workspace inbox.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
 
-export default function MedsosInbox() {
-  const { isDark } = useThemeStore();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const isDemo = location.pathname.startsWith('/demo');
-  const [selectedChat, setSelectedChat] = useState(priorityThreads[0]);
-  const [reply, setReply] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
+function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark: boolean }) {
+  const dataThreads = useMemo(() => {
+    if (channel === 'social') return priorityThreads.filter((item) => item.kind === 'social');
+    if (channel === 'marketplace') return priorityThreads.filter((item) => item.kind === 'marketplace');
+    return demoWaThreads;
+  }, [channel]);
 
-  const selectedDetail = threadDetails[selectedChat.id];
-  const selectedMessages = conversationMessages[selectedChat.id] ?? [];
-  const assignedSeat = useMemo(
-    () => teamSeats.find((member) => member.name === selectedChat.assignee),
-    [selectedChat.assignee]
-  );
-  const filterTabs = useMemo(
-    () => [...inboxFilters, { id: 'social', label: 'Social', count: 23, tone: 'slate' as const }],
-    []
-  );
+  const allDetails = useMemo<Record<number, ThreadDetail>>(() => ({ ...threadDetails, ...demoWaDetails }), []);
+  const allMessages = useMemo<Record<number, ConversationMessage[]>>(() => ({ ...conversationMessages, ...demoWaMessages }), []);
+  const [selectedThreadId, setSelectedThreadId] = useState<number>(dataThreads[0]?.id ?? 0);
+  const [reply, setReply] = useState('');
+  const [activeFilter, setActiveFilter] = useState(channel === 'marketplace' ? 'marketplace' : channel === 'social' ? 'social' : 'all');
+
+  useEffect(() => {
+    setSelectedThreadId(dataThreads[0]?.id ?? 0);
+    setReply('');
+    setActiveFilter(channel === 'marketplace' ? 'marketplace' : channel === 'social' ? 'social' : 'all');
+  }, [channel, dataThreads]);
+
+  const selectedChat = dataThreads.find((item) => item.id === selectedThreadId) ?? dataThreads[0];
+  const selectedDetail = selectedChat ? allDetails[selectedChat.id] : null;
+  const selectedMessages = selectedChat ? allMessages[selectedChat.id] ?? [] : [];
+  const assignedSeat = selectedChat ? teamSeats.find((member) => member.name === selectedChat.assignee) : null;
+
+  const filterTabs = channel === 'marketplace'
+    ? [...inboxFilters.filter((item) => ['all', 'urgent'].includes(item.id)), { id: 'marketplace', label: 'Marketplace', count: 12, tone: 'orange' as const }]
+    : channel === 'social'
+      ? [...inboxFilters.filter((item) => ['all', 'assigned'].includes(item.id)), { id: 'social', label: 'Medsos', count: 14, tone: 'blue' as const }]
+      : inboxFilters.filter((item) => ['all', 'assigned', 'urgent'].includes(item.id));
 
   const toneClasses = {
     high: 'bg-red-100 text-red-600',
@@ -303,46 +678,41 @@ export default function MedsosInbox() {
     low: 'bg-emerald-100 text-emerald-600',
   } as const;
 
-  if (!isDemo) {
-    return (
-      <div className={`p-6 rounded-3xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <WACrmPanel isDark={isDark} onSetup={() => navigate('/medsos/connections')} />
-      </div>
-    );
+  if (!selectedChat || !selectedDetail) {
+    return null;
   }
 
+  const templateMatches = replyTemplates.filter((template) => {
+    const templateChannel = template.channel.toLowerCase();
+    const selectedChannel = selectedChat.channel.toLowerCase();
+    if (channel === 'wa') {
+      return templateChannel.includes('whatsapp') || templateChannel.includes('reservation');
+    }
+    return templateChannel.includes(selectedChannel);
+  });
+
   return (
-    <div className={`h-[calc(100vh-100px)] grid lg:grid-cols-[330px_minmax(0,1fr)] xl:grid-cols-[330px_minmax(0,1fr)_340px] rounded-3xl border overflow-hidden ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
+    <div className={`h-[calc(100vh-100px)] grid lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_320px] rounded-3xl border overflow-hidden ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
       <aside className={`border-r flex flex-col ${isDark ? 'border-slate-700 bg-slate-850' : 'border-gray-200 bg-white'}`}>
         <div className="p-4 border-b dark:border-slate-700">
           <div className="flex items-center justify-between mb-3">
             <div>
               <div className="flex items-center gap-2">
-                <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Unified Inbox</p>
-                <FieldHelp title="Unified Inbox" description="Area ini dipakai untuk mencari thread, membaca prioritas percakapan, dan menyiapkan balasan." />
+                <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{titleByChannel(channel)}</p>
+                <FieldHelp title={titleByChannel(channel)} description={descriptionByChannel(channel)} />
               </div>
               <h2 className="text-lg font-bold">Queue & Response Desk</h2>
             </div>
             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-blue-50 text-blue-600'}`}>
-              5 SLA at risk
+              {channel === 'wa' ? '5 pesan masuk' : channel === 'social' ? '3 percakapan aktif' : '4 buyer chat aktif'}
             </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900/60' : 'bg-blue-50'}`}>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Assigned to team</p>
-              <p className="text-xl font-bold">18</p>
-            </div>
-            <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900/60' : 'bg-orange-50'}`}>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Urgent queue</p>
-              <p className="text-xl font-bold">5</p>
-            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 mb-3">
             {filterTabs.map((filter) => (
               <button
                 key={filter.id}
+                type="button"
                 onClick={() => setActiveFilter(filter.id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
                   activeFilter === filter.id
@@ -357,83 +727,57 @@ export default function MedsosInbox() {
             ))}
           </div>
 
-          <div className="relative mb-3">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Cari thread / buyer / order..."
-              title="Cari percakapan berdasarkan nama customer, channel, atau referensi order"
               className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            {['Channel', 'SLA', 'Assignee', 'Sentiment'].map((filterName) => (
-              <button
-                key={filterName}
-                title={`Filter percakapan berdasarkan ${filterName}`}
-                className={`px-3 py-2 rounded-xl border flex items-center justify-between ${isDark ? 'border-slate-600 bg-slate-700 text-gray-300' : 'border-gray-200 bg-gray-50 text-gray-600'}`}
-              >
-                <span>{filterName}</span>
-                <ChevronDown size={14} />
-              </button>
-            ))}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {priorityThreads.map((chat) => {
-            const detail = threadDetails[chat.id];
-            const isActive = selectedChat.id === chat.id;
-            return (
-              <button
-                key={chat.id}
-                onClick={() => setSelectedChat(chat)}
-                title={`Buka thread ${chat.customer}`}
-                className={`w-full text-left p-4 border-b transition ${
-                  isActive
-                    ? isDark ? 'bg-slate-700 border-slate-600' : 'bg-blue-50 border-blue-100'
-                    : isDark ? 'border-slate-700 hover:bg-slate-700/40' : 'border-gray-100 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <BrandLogo brand={resolveBrandKey(chat.channel)} size={40} className="rounded-2xl px-1" withRing />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div>
-                        <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{chat.customer}</h4>
-                        <p className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{chat.channel} • {chat.subject}</p>
-                      </div>
-                      <span className={`text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{chat.time}</span>
+          {dataThreads.map((chat) => (
+            <button
+              key={chat.id}
+              type="button"
+              onClick={() => setSelectedThreadId(chat.id)}
+              className={`w-full text-left p-4 border-b transition ${
+                selectedThreadId === chat.id
+                  ? isDark
+                    ? 'bg-slate-700 border-slate-600'
+                    : 'bg-blue-50 border-blue-100'
+                  : isDark
+                    ? 'border-slate-700 hover:bg-slate-700/40'
+                    : 'border-gray-100 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <BrandLogo brand={resolveBrandKey(chat.channel)} size={38} className="rounded-2xl px-1" withRing />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{chat.customer}</p>
+                      <p className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{chat.channel} • {chat.subject}</p>
                     </div>
-                    <p className={`text-xs line-clamp-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{chat.snippet}</p>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <span className={`text-[10px] px-2 py-1 rounded-full ${toneClasses[chat.priority]}`}>
-                        {chat.priority}
-                      </span>
-                      <span className={`text-[10px] px-2 py-1 rounded-full ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-white text-gray-600'}`}>
-                        {detail.customerTier}
-                      </span>
-                      <span className={`text-[10px] px-2 py-1 rounded-full ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-white text-gray-600'}`}>
-                        {chat.assignee}
-                      </span>
-                      {chat.tags.slice(0, 2).map((tag) => (
-                        <span key={tag} className={`text-[10px] px-2 py-1 rounded-full ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-white text-gray-600'}`}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                    <span className={`text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{chat.time}</span>
+                  </div>
+                  <p className={`mt-2 text-xs line-clamp-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{chat.snippet}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className={`text-[10px] px-2 py-1 rounded-full ${toneClasses[chat.priority]}`}>{chat.priority}</span>
+                    <span className={`text-[10px] px-2 py-1 rounded-full ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-white text-gray-600'}`}>{chat.assignee}</span>
                   </div>
                 </div>
-              </button>
-            );
-          })}
+              </div>
+            </button>
+          ))}
         </div>
       </aside>
 
-      <main className="flex flex-col min-w-0 border-r border-slate-700/40">
-        <div className={`px-6 py-4 border-b flex items-center justify-between gap-4 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
-          <div className="flex items-center gap-3 min-w-0">
+      <main className={`flex flex-col min-w-0 ${isDark ? 'bg-slate-900' : 'bg-slate-50'}`}>
+        <div className={`px-6 py-4 border-b ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
+          <div className="flex items-center gap-3">
             <BrandLogo brand={resolveBrandKey(selectedChat.channel)} size={44} className="rounded-2xl px-1" withRing />
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -445,17 +789,6 @@ export default function MedsosInbox() {
                 Via {selectedChat.channel} • assignee {selectedChat.assignee} • prefer {selectedDetail.preferredChannel}
               </p>
             </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button title="Pilih staff penanggung jawab thread ini" className={`px-3 py-2 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
-              Assign
-            </button>
-            <button title="Masukkan template balasan cepat" className={`px-3 py-2 rounded-xl text-sm font-medium ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
-              Macro
-            </button>
-            <button title="Lihat aksi tambahan untuk thread ini" className={`p-2 rounded-xl ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
-              <MoreVertical size={18} />
-            </button>
           </div>
         </div>
 
@@ -470,19 +803,19 @@ export default function MedsosInbox() {
           </span>
         </div>
 
-        <div className={`flex-1 overflow-y-auto px-6 py-5 ${isDark ? 'bg-slate-900' : 'bg-slate-50'}`}>
-          <div className="grid gap-4 mb-5 md:grid-cols-3">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className="grid md:grid-cols-3 gap-4 mb-5">
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-100 shadow-sm'}`}>
               <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Customer value</p>
-              <p className="text-xl font-bold">{selectedDetail.lifetimeValue}</p>
+              <p className="mt-2 text-xl font-bold">{selectedDetail.lifetimeValue}</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-100 shadow-sm'}`}>
               <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Response target</p>
-              <p className="text-xl font-bold">{selectedChat.sla}</p>
+              <p className="mt-2 text-xl font-bold">{selectedChat.sla}</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-100 shadow-sm'}`}>
               <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Assigned seat</p>
-              <p className="text-xl font-bold">{selectedChat.assignee}</p>
+              <p className="mt-2 text-xl font-bold">{selectedChat.assignee}</p>
             </div>
           </div>
 
@@ -495,19 +828,23 @@ export default function MedsosInbox() {
           </div>
 
           <div className="space-y-4">
-            {selectedMessages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+            {selectedMessages.map((message) => (
+              <div key={message.id} className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm ${
-                    msg.sender === 'me'
+                    message.sender === 'me'
                       ? 'bg-blue-600 text-white rounded-tr-sm'
-                      : msg.sender === 'system'
-                        ? isDark ? 'bg-amber-500/10 text-amber-200 border border-amber-500/20' : 'bg-amber-50 text-amber-700 border border-amber-100'
-                        : isDark ? 'bg-slate-700 text-white rounded-tl-sm' : 'bg-white text-gray-800 rounded-tl-sm shadow-sm border border-gray-100'
+                      : message.sender === 'system'
+                        ? isDark
+                          ? 'bg-amber-500/10 text-amber-200 border border-amber-500/20'
+                          : 'bg-amber-50 text-amber-700 border border-amber-100'
+                        : isDark
+                          ? 'bg-slate-700 text-white rounded-tl-sm'
+                          : 'bg-white text-gray-800 rounded-tl-sm shadow-sm border border-gray-100'
                   }`}
                 >
-                  {msg.text}
-                  <p className={`text-[10px] mt-2 text-right ${msg.sender === 'me' ? 'text-blue-200' : isDark ? 'text-gray-400' : 'text-gray-400'}`}>{msg.time}</p>
+                  {message.text}
+                  <p className={`mt-2 text-[10px] text-right ${message.sender === 'me' ? 'text-blue-200' : isDark ? 'text-gray-400' : 'text-gray-400'}`}>{message.time}</p>
                 </div>
               </div>
             ))}
@@ -515,35 +852,35 @@ export default function MedsosInbox() {
         </div>
 
         <div className={`p-4 border-t ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
-          <div className="flex flex-wrap gap-2 mb-3">
+          <div className="mb-3 flex flex-wrap gap-2">
             {selectedDetail.macros.map((macro) => (
-              <button
-                key={macro}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
-              >
+              <button key={macro} type="button" className={`px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
                 {macro}
               </button>
             ))}
           </div>
           <div className={`mb-3 rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-gray-50'}`}>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="mb-2 flex items-center gap-2">
               <NotebookPen size={15} className="text-purple-500" />
               <p className="text-sm font-semibold">Internal note</p>
             </div>
             <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{selectedDetail.internalNotes[0]}</p>
           </div>
           <div className={`flex items-center gap-2 rounded-2xl border px-2 py-2 ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
-            <button title="Lampirkan file atau media" className="p-2 text-gray-400 hover:text-gray-600"><Paperclip size={20} /></button>
+            <button type="button" title="Lampirkan file" className="p-2 text-gray-400 hover:text-gray-600">
+              <Paperclip size={20} />
+            </button>
             <input
               type="text"
-              placeholder="Ketik balasan / macro / resolution..."
+              placeholder="Ketik balasan..."
               value={reply}
-              onChange={(e) => setReply(e.target.value)}
-              title="Tulis balasan untuk thread aktif"
+              onChange={(event) => setReply(event.target.value)}
               className={`flex-1 bg-transparent outline-none text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}
             />
-            <button title="Pilih emoji" className="p-2 text-gray-400 hover:text-gray-600"><Smile size={20} /></button>
-            <button title="Kirim balasan" className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
+            <button type="button" title="Emoji" className="p-2 text-gray-400 hover:text-gray-600">
+              <Smile size={20} />
+            </button>
+            <button type="button" title="Kirim" className="rounded-xl bg-blue-600 p-2 text-white hover:bg-blue-700">
               <Send size={18} />
             </button>
           </div>
@@ -553,9 +890,8 @@ export default function MedsosInbox() {
       <aside className={`hidden xl:flex flex-col ${isDark ? 'bg-slate-850' : 'bg-gray-50/70'}`}>
         <div className={`p-5 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
           <h3 className="font-bold text-lg">Customer Context</h3>
-          <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Biar thread terasa seperti tiket operasional, bukan chat biasa.</p>
+          <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ringkasan cepat untuk operator sebelum membalas.</p>
         </div>
-
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
             <div className="flex items-center gap-3 mb-3">
@@ -567,41 +903,37 @@ export default function MedsosInbox() {
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs`}>Lifetime value</p>
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Lifetime value</p>
                 <p className="font-semibold">{selectedDetail.lifetimeValue}</p>
               </div>
               <div>
-                <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs`}>Sentiment</p>
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Sentiment</p>
                 <p className="font-semibold capitalize">{selectedDetail.sentiment}</p>
               </div>
             </div>
           </div>
 
-          {selectedDetail.orderContext && (
+          {selectedDetail.orderContext ? (
             <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <Clock3 size={16} className="text-orange-500" />
-                <p className="font-semibold">Order Context</p>
-              </div>
-              <div className="space-y-2 text-sm">
+              <p className="font-semibold">Order context</p>
+              <div className="mt-3 space-y-2 text-sm">
                 <div className="flex justify-between"><span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Order</span><span className="font-semibold">{selectedDetail.orderContext.orderId}</span></div>
                 <div className="flex justify-between"><span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Amount</span><span className="font-semibold">{selectedDetail.orderContext.amount}</span></div>
                 <div className="flex justify-between"><span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Status</span><span className="font-semibold">{selectedDetail.orderContext.status}</span></div>
               </div>
-              <p className={`text-xs mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{selectedDetail.orderContext.lastUpdate}</p>
             </div>
-          )}
+          ) : null}
 
           <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
             <div className="flex items-center gap-2 mb-3">
               <Bot size={16} className="text-blue-500" />
-              <p className="font-semibold">Template Reply / Macro</p>
+              <p className="font-semibold">Template reply</p>
             </div>
             <div className="space-y-2">
-              {replyTemplates.filter((template) => template.channel.includes(selectedChat.channel) || template.channel.includes('Shopee') && selectedChat.channel === 'Shopee' || template.channel.includes('Tokopedia') && selectedChat.channel === 'Tokopedia').slice(0, 2).map((template) => (
+              {templateMatches.slice(0, 2).map((template) => (
                 <div key={template.id} className={`rounded-xl p-3 ${isDark ? 'bg-slate-900/50' : 'bg-gray-50'}`}>
                   <p className="text-sm font-semibold">{template.title}</p>
-                  <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{template.preview}</p>
+                  <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{template.preview}</p>
                 </div>
               ))}
             </div>
@@ -610,54 +942,43 @@ export default function MedsosInbox() {
           <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
             <div className="flex items-center gap-2 mb-3">
               <UserRoundCheck size={16} className="text-emerald-500" />
-              <p className="font-semibold">Assign to Staff</p>
+              <p className="font-semibold">Assign to staff</p>
             </div>
-            {assignedSeat && (
-              <div className={`rounded-xl p-3 mb-3 ${isDark ? 'bg-slate-900/50' : 'bg-blue-50'}`}>
+            {assignedSeat ? (
+              <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-900/50' : 'bg-blue-50'}`}>
                 <p className="font-semibold text-sm">{assignedSeat.name}</p>
-                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{assignedSeat.role} • {assignedSeat.shift}</p>
-                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Workload: {assignedSeat.workload}</p>
+                <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{assignedSeat.role} • {assignedSeat.shift}</p>
+                <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Workload: {assignedSeat.workload}</p>
               </div>
-            )}
-            <div className="space-y-2">
-              {teamSeats.slice(0, 3).map((member) => (
-                <button key={member.id} className={`w-full text-left rounded-xl px-3 py-2 border ${isDark ? 'border-slate-700 bg-slate-900/40 hover:bg-slate-900/70' : 'border-gray-200 bg-gray-50 hover:bg-white'}`}>
-                  <p className="text-sm font-medium">{member.name}</p>
-                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{member.role}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <MessageSquareQuote size={16} className="text-purple-500" />
-              <p className="font-semibold">Activity Feed</p>
-            </div>
-            <div className="space-y-3">
-              {selectedDetail.activities.map((item) => (
-                <div key={item.time + item.title} className="relative pl-4">
-                  <span className="absolute left-0 top-1.5 h-2 w-2 rounded-full bg-blue-500" />
-                  <p className="text-sm font-medium">{item.title}</p>
-                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.description}</p>
-                  <p className={`text-[10px] mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{item.time}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
-            <h4 className="font-semibold mb-3">Suggested actions</h4>
-            <div className="space-y-2">
-              {selectedDetail.recommendedActions.map((action) => (
-                <button key={action} className={`w-full text-left rounded-xl px-3 py-2 text-sm ${isDark ? 'bg-slate-900/50 hover:bg-slate-900' : 'bg-gray-50 hover:bg-gray-100'}`}>
-                  {action}
-                </button>
-              ))}
-            </div>
+            ) : null}
           </div>
         </div>
       </aside>
     </div>
   );
+}
+
+export default function MedsosInbox() {
+  const { isDark } = useThemeStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { channel } = useParams();
+  const normalizedChannel = normalizeInboxChannel(channel);
+  const isDemo = location.pathname.startsWith('/demo');
+
+  if (!isDemo) {
+    return (
+      <div className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        {normalizedChannel === 'social' ? (
+          <SocialInboxLiveView isDark={isDark} />
+        ) : normalizedChannel === 'marketplace' ? (
+          <MarketplaceInboxLiveView isDark={isDark} />
+        ) : (
+          <WACrmPanel isDark={isDark} onSetup={() => navigate('/medsos/connections')} />
+        )}
+      </div>
+    );
+  }
+
+  return <DemoInboxWorkspace channel={normalizedChannel} isDark={isDark} />;
 }
