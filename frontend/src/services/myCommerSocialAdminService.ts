@@ -63,6 +63,17 @@ export interface MyCommerSocialAdminTenantDetail extends MyCommerSocialAdminTena
     maxUsers: number;
   };
   integrationHub: ManagedIntegrationHub;
+  internalConnectors: {
+    marketplaceHub: {
+      workspaceName: string | null;
+      appIdMasked: string | null;
+      hasSecretKey: boolean;
+      botSenderEmail: string | null;
+      aiWebhookUrl: string | null;
+      aiWebhookTimeoutMs: number;
+      notes: string;
+    };
+  };
   zernioAccounts: ZernioAccount[];
   socialAccounts: ZernioAccount[];
   adsAccounts: ZernioAccount[];
@@ -76,6 +87,24 @@ export interface MyCommerSocialAdminListResponse {
 
 export interface UpdateMyCommerSocialAdminConfigPayload extends Partial<MyCommerSocialAdminConfig> {
   moduleEnabled?: boolean;
+}
+
+export interface SaveMyCommerSocialInternalConnectorPayload {
+  connectionId?: string;
+  appId?: string;
+  secretKey?: string;
+  botSenderEmail?: string;
+  aiWebhookUrl?: string;
+  aiWebhookAuthToken?: string;
+  aiWebhookTimeoutMs?: number;
+  workspaceName?: string;
+  notes?: string;
+  selectedAssets?: Array<{
+    id?: string;
+    label: string;
+    kind: string;
+    status?: string;
+  }>;
 }
 
 export const myCommerSocialAdminService = {
@@ -101,6 +130,15 @@ export const myCommerSocialAdminService = {
 
   async syncConnector(tenantId: number, slug: 'social-hub' | 'marketplace-hub' | 'meta-ads-hub') {
     const { data } = await api.post(`/admin/mycommersocial/tenants/${tenantId}/connectors/${slug}/sync`);
+    return data.data as { connector: unknown; detail: MyCommerSocialAdminTenantDetail };
+  },
+
+  async saveInternalConnectorConfig(
+    tenantId: number,
+    slug: 'social-hub' | 'marketplace-hub' | 'meta-ads-hub',
+    payload: SaveMyCommerSocialInternalConnectorPayload,
+  ) {
+    const { data } = await api.patch(`/admin/mycommersocial/tenants/${tenantId}/connectors/${slug}/internal`, payload);
     return data.data as { connector: unknown; detail: MyCommerSocialAdminTenantDetail };
   },
 };

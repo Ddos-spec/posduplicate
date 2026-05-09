@@ -38,7 +38,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     connectPlatform: 'facebook',
     accountPlatforms: ['facebook'],
     brand: 'facebook',
-    hint: 'Page connect dipakai juga untuk membuka jalur Meta Ads via Zernio.',
+    hint: 'Page connect dipakai juga untuk membuka jalur ads di workspace yang sama.',
   },
   {
     id: 'youtube',
@@ -74,7 +74,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     connectPlatform: 'threads',
     accountPlatforms: ['threads'],
     brand: 'threads',
-    hint: 'Masuk ke profile Zernio tenant yang sama dengan akun sosial lainnya.',
+    hint: 'Masuk ke workspace tenant yang sama dengan akun sosial lainnya.',
   },
   {
     id: 'bluesky',
@@ -119,7 +119,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     connectPlatform: null,
     accountPlatforms: ['snapchat'],
     brand: 'snapchat',
-    hint: 'Disiapkan di roadmap Zernio, tapi belum diaktifkan di launch awal ini.',
+    hint: 'Disiapkan di roadmap workspace social, tetapi belum diaktifkan di launch awal ini.',
     soon: true,
   },
 ];
@@ -132,8 +132,8 @@ export const zernioAdsPlatforms: ZernioPlatformCard[] = [
     connectPlatform: 'facebook',
     accountPlatforms: ['metaads'],
     brand: 'metaads',
-    hint: 'Meta Ads dipusatkan ke Zernio, bukan connector terpisah lagi.',
-    requirement: 'Hubungkan Facebook Page atau Instagram Business dulu agar Zernio bisa membuat workspace ads-nya.',
+    hint: 'Meta Ads dipusatkan ke workspace ads yang sama, bukan connector terpisah lagi.',
+    requirement: 'Hubungkan Facebook Page atau Instagram Business lebih dulu agar workspace ads bisa membaca akun yang tersedia.',
   },
   {
     id: 'linkedinads',

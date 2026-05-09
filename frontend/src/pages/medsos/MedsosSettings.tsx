@@ -237,13 +237,13 @@ export default function MedsosSettings() {
     {
       key: 'waInbox' as const,
       title: 'WA Inbox',
-      description: 'Aktifkan akses WhatsApp melalui Customer Service CRM.',
+      description: 'Aktifkan akses WhatsApp melalui workspace inbox internal.',
       icon: MessageSquareText,
     },
     {
       key: 'socialAds' as const,
       title: 'Social + Ads',
-      description: 'Aktifkan koneksi social media dan ads melalui Zernio.',
+      description: 'Aktifkan koneksi social media dan ads melalui workspace sosial.',
       icon: PlugZap,
     },
     {

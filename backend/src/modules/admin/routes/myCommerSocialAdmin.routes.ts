@@ -4,6 +4,7 @@ import { superAdminOnly } from '../../../middlewares/tenant.middleware';
 import {
   ensureMyCommerSocialZernioProfile,
   getMyCommerSocialTenantDetail,
+  saveMyCommerSocialConnectorInternalConfig,
   listMyCommerSocialTenants,
   syncMyCommerSocialConnector,
   updateMyCommerSocialTenantConfig,
@@ -18,5 +19,6 @@ router.get('/tenants/:tenantId', getMyCommerSocialTenantDetail);
 router.patch('/tenants/:tenantId/config', updateMyCommerSocialTenantConfig);
 router.post('/tenants/:tenantId/ensure-profile', ensureMyCommerSocialZernioProfile);
 router.post('/tenants/:tenantId/connectors/:slug/sync', syncMyCommerSocialConnector);
+router.patch('/tenants/:tenantId/connectors/:slug/internal', saveMyCommerSocialConnectorInternalConfig);
 
 export default router;

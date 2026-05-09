@@ -137,6 +137,30 @@ function buildConfigForm(detail: MyCommerSocialAdminTenantDetail) {
 
 type ConfigFormState = MyCommerSocialAdminConfig & { moduleEnabled: boolean };
 
+type MarketplaceInternalForm = {
+  workspaceName: string;
+  appId: string;
+  secretKey: string;
+  botSenderEmail: string;
+  aiWebhookUrl: string;
+  aiWebhookAuthToken: string;
+  aiWebhookTimeoutMs: string;
+  notes: string;
+};
+
+function buildMarketplaceInternalForm(detail: MyCommerSocialAdminTenantDetail): MarketplaceInternalForm {
+  return {
+    workspaceName: detail.internalConnectors.marketplaceHub.workspaceName || detail.businessName,
+    appId: '',
+    secretKey: '',
+    botSenderEmail: detail.internalConnectors.marketplaceHub.botSenderEmail || '',
+    aiWebhookUrl: detail.internalConnectors.marketplaceHub.aiWebhookUrl || '',
+    aiWebhookAuthToken: '',
+    aiWebhookTimeoutMs: String(detail.internalConnectors.marketplaceHub.aiWebhookTimeoutMs || 15000),
+    notes: detail.internalConnectors.marketplaceHub.notes || '',
+  };
+}
+
 export default function MyCommerSocialAdminPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [listState, setListState] = useState<MyCommerSocialAdminListResponse>(defaultListResponse);
@@ -154,6 +178,8 @@ export default function MyCommerSocialAdminPage() {
   });
   const [detail, setDetail] = useState<MyCommerSocialAdminTenantDetail | null>(null);
   const [form, setForm] = useState<ConfigFormState | null>(null);
+  const [marketplaceInternalForm, setMarketplaceInternalForm] = useState<MarketplaceInternalForm | null>(null);
+  const [savingMarketplaceInternal, setSavingMarketplaceInternal] = useState(false);
 
   const loadList = async (params?: { focusTenantId?: number | null }) => {
     try {
@@ -187,6 +213,7 @@ export default function MyCommerSocialAdminPage() {
       const data = await myCommerSocialAdminService.getTenantDetail(tenantId);
       setDetail(data);
       setForm(buildConfigForm(data));
+      setMarketplaceInternalForm(buildMarketplaceInternalForm(data));
       setSelectedTenantId(tenantId);
       const nextParams = new URLSearchParams(searchParams);
       nextParams.set('tenantId', String(tenantId));
@@ -248,6 +275,7 @@ export default function MyCommerSocialAdminPage() {
       const updated = await myCommerSocialAdminService.updateTenantConfig(detail.id, form);
       setDetail(updated);
       setForm(buildConfigForm(updated));
+      setMarketplaceInternalForm(buildMarketplaceInternalForm(updated));
       await loadList({ focusTenantId: updated.id });
       toast.success('Konfigurasi MyCommerSocial berhasil diperbarui.');
     } catch (error) {
@@ -265,10 +293,11 @@ export default function MyCommerSocialAdminPage() {
       const data = await myCommerSocialAdminService.ensureProfile(detail.id);
       setDetail(data.detail);
       setForm(buildConfigForm(data.detail));
+      setMarketplaceInternalForm(buildMarketplaceInternalForm(data.detail));
       await loadList({ focusTenantId: detail.id });
-      toast.success(`Profile Zernio siap: ${data.profileId}`);
+      toast.success(`Social workspace siap: ${data.profileId}`);
     } catch (error) {
-      toast.error(getErrorMessage(error, 'Gagal menyiapkan profile Zernio.'));
+      toast.error(getErrorMessage(error, 'Gagal menyiapkan social workspace.'));
     } finally {
       setEnsuringProfile(false);
     }
@@ -282,12 +311,71 @@ export default function MyCommerSocialAdminPage() {
       const data = await myCommerSocialAdminService.syncConnector(detail.id, slug);
       setDetail(data.detail);
       setForm(buildConfigForm(data.detail));
+      setMarketplaceInternalForm(buildMarketplaceInternalForm(data.detail));
       await loadList({ focusTenantId: detail.id });
       toast.success('Status connector diperbarui.');
     } catch (error) {
       toast.error(getErrorMessage(error, 'Gagal menyegarkan status connector.'));
     } finally {
       setSyncingSlug(null);
+    }
+  };
+
+  const handleSaveMarketplaceInternal = async () => {
+    if (!detail || !marketplaceInternalForm) return;
+
+    if (!marketplaceInternalForm.workspaceName.trim()) {
+      toast.error('Workspace marketplace wajib diisi.');
+      return;
+    }
+
+    if (!marketplaceInternalForm.appId.trim()) {
+      toast.error('App ID internal marketplace wajib diisi.');
+      return;
+    }
+
+    if (!marketplaceInternalForm.secretKey.trim() && !detail.internalConnectors.marketplaceHub.hasSecretKey) {
+      toast.error('Secret Key internal marketplace wajib diisi.');
+      return;
+    }
+
+    if (!marketplaceInternalForm.botSenderEmail.trim()) {
+      toast.error('Bot sender email wajib diisi.');
+      return;
+    }
+
+    if (!marketplaceInternalForm.aiWebhookUrl.trim()) {
+      toast.error('Webhook AI internal wajib diisi.');
+      return;
+    }
+
+    try {
+      setSavingMarketplaceInternal(true);
+      const data = await myCommerSocialAdminService.saveInternalConnectorConfig(detail.id, 'marketplace-hub', {
+        connectionId: marketplaceInternalForm.appId.trim(),
+        appId: marketplaceInternalForm.appId.trim(),
+        secretKey: marketplaceInternalForm.secretKey.trim() || undefined,
+        botSenderEmail: marketplaceInternalForm.botSenderEmail.trim(),
+        aiWebhookUrl: marketplaceInternalForm.aiWebhookUrl.trim(),
+        aiWebhookAuthToken: marketplaceInternalForm.aiWebhookAuthToken.trim() || undefined,
+        aiWebhookTimeoutMs: Number(marketplaceInternalForm.aiWebhookTimeoutMs || 15000),
+        workspaceName: marketplaceInternalForm.workspaceName.trim(),
+        notes: marketplaceInternalForm.notes.trim() || undefined,
+        selectedAssets: [
+          { id: 'shopee-chat', label: 'Shopee Chat', kind: 'marketplace_chat', status: 'connected' },
+          { id: 'lazada-chat', label: 'Lazada Chat', kind: 'marketplace_chat', status: 'connected' },
+          { id: 'tokopedia-tiktok-chat', label: 'Tokopedia / TikTok Shop Chat', kind: 'marketplace_chat', status: 'connected' },
+        ],
+      });
+      setDetail(data.detail);
+      setForm(buildConfigForm(data.detail));
+      setMarketplaceInternalForm(buildMarketplaceInternalForm(data.detail));
+      await loadList({ focusTenantId: detail.id });
+      toast.success('Konfigurasi internal marketplace chat berhasil disimpan.');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Gagal menyimpan konfigurasi internal marketplace chat.'));
+    } finally {
+      setSavingMarketplaceInternal(false);
     }
   };
 
@@ -303,8 +391,8 @@ export default function MyCommerSocialAdminPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">MyCommerSocial Ops</h1>
           <p className="text-gray-600 mt-2 max-w-4xl">
-            Kelola paket, limit, workspace WA, dan profile Zernio per tenant dari satu panel. Model yang dipakai:
-            <span className="font-medium text-gray-800"> satu tenant = satu profile Zernio</span>, lalu harga dibedakan lewat quota internal seperti 500K atau 1JT.
+            Kelola paket, limit, workspace WA, dan social workspace per tenant dari satu panel. Model yang dipakai:
+            <span className="font-medium text-gray-800"> satu tenant = satu social workspace</span>, lalu harga dibedakan lewat quota internal seperti 500K atau 1JT.
           </p>
         </div>
 
@@ -337,7 +425,7 @@ export default function MyCommerSocialAdminPage() {
             <span className="text-xs uppercase tracking-[0.2em] text-gray-400">Profiles</span>
           </div>
           <p className="mt-4 text-3xl font-bold text-gray-900">{listState.summary.zernioProfileReadyTenants}</p>
-          <p className="mt-2 text-sm text-gray-500">Tenant sudah punya profile Zernio</p>
+          <p className="mt-2 text-sm text-gray-500">Tenant sudah punya social workspace</p>
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -471,7 +559,7 @@ export default function MyCommerSocialAdminPage() {
                           {tenant.workspace.waWorkspaceName || 'Belum ada nama workspace'}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {tenant.workspace.zernioProfileReady ? 'Profile Zernio siap' : 'Profile Zernio belum siap'}
+                          {tenant.workspace.zernioProfileReady ? 'Social workspace siap' : 'Social workspace belum siap'}
                         </p>
                       </div>
                     </div>
@@ -513,7 +601,7 @@ export default function MyCommerSocialAdminPage() {
                 <Settings2 className="h-10 w-10 text-gray-300" />
                 <h3 className="mt-4 text-lg font-semibold text-gray-900">Pilih tenant untuk dikelola</h3>
                 <p className="mt-2 max-w-md text-sm text-gray-500">
-                  Panel kanan akan menampilkan paket internal, kesiapan WA, detail Zernio, dan limit yang bisa dibedakan untuk tenant 500K atau 1JT.
+                  Panel kanan akan menampilkan paket internal, kesiapan WA, detail social workspace, dan limit yang bisa dibedakan untuk tenant 500K atau 1JT.
                 </p>
               </div>
             ) : (
@@ -549,7 +637,7 @@ export default function MyCommerSocialAdminPage() {
                       className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {ensuringProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-                      Pastikan profile Zernio
+                      Pastikan social workspace
                     </button>
                     <button
                       type="button"
@@ -572,7 +660,7 @@ export default function MyCommerSocialAdminPage() {
                   <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-gray-400">Quota akun</p>
                     <p className="mt-2 text-2xl font-bold text-gray-900">{form.maxSocialAccounts}</p>
-                    <p className="mt-1 text-sm text-gray-500">Social account via Zernio</p>
+                    <p className="mt-1 text-sm text-gray-500">Social account workspace</p>
                   </div>
                   <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-gray-400">Ads account</p>
@@ -591,7 +679,7 @@ export default function MyCommerSocialAdminPage() {
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Paket & pengaturan internal</h3>
                       <p className="mt-1 text-sm text-gray-500">
-                        Atur perbedaan tenant 500K vs 1JT dari limit internal. Akun master Zernio tetap satu, isolasinya ada di profile tenant.
+                        Atur perbedaan tenant 500K vs 1JT dari limit internal. Isolasi social workspace tetap per tenant.
                       </p>
                     </div>
                     <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
@@ -637,8 +725,8 @@ export default function MyCommerSocialAdminPage() {
 
                     <label className="rounded-2xl border border-gray-200 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                        Auto create Zernio profile
-                        <FieldHelp title="Auto create profile" description="Saat aktif, save konfigurasi akan memastikan tenant langsung punya profile Zernio sendiri." />
+                        Auto create social workspace
+                        <FieldHelp title="Auto create profile" description="Saat aktif, save konfigurasi akan memastikan tenant langsung punya social workspace sendiri." />
                       </div>
                       <div className="mt-3 flex items-center gap-3">
                         <input
@@ -654,7 +742,7 @@ export default function MyCommerSocialAdminPage() {
                     <div>
                       <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
                         Nama plan
-                        <FieldHelp title="Nama plan" description="Nama internal paket tenant. Tidak harus sama dengan pricing vendor." />
+                        <FieldHelp title="Nama plan" description="Nama internal paket tenant. Tidak harus sama dengan struktur harga engine yang dipakai di belakang layar." />
                       </label>
                       <input
                         value={form.planName}
@@ -695,7 +783,7 @@ export default function MyCommerSocialAdminPage() {
                     <div>
                       <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
                         Max profile
-                        <FieldHelp title="Max profile" description="Jumlah brand/workspace Zernio yang boleh dimiliki tenant ini." />
+                        <FieldHelp title="Max profile" description="Jumlah brand/workspace social yang boleh dimiliki tenant ini." />
                       </label>
                       <input
                         type="number"
@@ -723,7 +811,7 @@ export default function MyCommerSocialAdminPage() {
                     <div>
                       <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
                         Max ads account
-                        <FieldHelp title="Max ads account" description="Berapa account iklan yang boleh ditautkan tenant ke Zernio." />
+                        <FieldHelp title="Max ads account" description="Berapa account iklan yang boleh ditautkan tenant ke workspace ads." />
                       </label>
                       <input
                         type="number"
@@ -760,7 +848,7 @@ export default function MyCommerSocialAdminPage() {
                       <div>
                         <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                           WA Inbox
-                          <FieldHelp title="WA Inbox" description="Aktifkan jika tenant boleh menggunakan integrasi Customer Service CRM untuk WhatsApp." />
+                          <FieldHelp title="WA Inbox" description="Aktifkan jika tenant boleh menggunakan workspace inbox internal untuk WhatsApp." />
                         </div>
                         <p className="mt-1 text-sm text-gray-500">Operasional WhatsApp dari produk internal.</p>
                       </div>
@@ -775,8 +863,8 @@ export default function MyCommerSocialAdminPage() {
                       />
                       <div>
                         <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                          Social + Ads via Zernio
-                          <FieldHelp title="Social + Ads" description="Jika dimatikan, tenant tidak seharusnya menghubungkan akun social atau ads walau profile Zernio masih ada." />
+                          Social + Ads Workspace
+                          <FieldHelp title="Social + Ads" description="Jika dimatikan, tenant tidak seharusnya menghubungkan akun social atau ads walau workspace-nya masih ada." />
                         </div>
                         <p className="mt-1 text-sm text-gray-500">Instagram, Facebook, TikTok, LinkedIn, Meta Ads, Google Ads, dan lainnya.</p>
                       </div>
@@ -792,7 +880,7 @@ export default function MyCommerSocialAdminPage() {
                       <div>
                         <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                           Marketplace
-                          <FieldHelp title="Marketplace" description="Saat ini sebaiknya tetap Coming Soon sambil menunggu arah kerja sama dengan Jubelio final." />
+                          <FieldHelp title="Marketplace" description="Aktivasi marketplace chat ditangani terpisah oleh tim onboarding sampai workspace klien siap dipakai." />
                         </div>
                         <p className="mt-1 text-sm text-gray-500">Simpan toggle ini untuk roadmap, bukan untuk live use.</p>
                       </div>
@@ -901,10 +989,148 @@ export default function MyCommerSocialAdminPage() {
                   </div>
 
                   <div className="space-y-4">
+                    {marketplaceInternalForm && (
+                      <div className="rounded-3xl border border-gray-200 p-5">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">Internal marketplace chat engine</h3>
+                            <p className="mt-1 text-sm text-gray-500">
+                              Form ini khusus super admin untuk menyimpan kredensial engine chat marketplace, alamat webhook AI internal, dan detail takeover onboarding.
+                            </p>
+                          </div>
+                          <div className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                            Internal only
+                          </div>
+                        </div>
+
+                        <div className="mt-5 grid gap-4 md:grid-cols-2">
+                          <div>
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                              Workspace marketplace
+                              <FieldHelp title="Workspace marketplace" description="Nama workspace internal untuk tenant ini. Biasanya mengikuti nama bisnis atau brand yang akan diaktifkan untuk marketplace chat." />
+                            </label>
+                            <input
+                              value={marketplaceInternalForm.workspaceName}
+                              onChange={(event) => setMarketplaceInternalForm({ ...marketplaceInternalForm, workspaceName: event.target.value })}
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                              App ID
+                              <FieldHelp title="App ID" description="Credential internal untuk engine marketplace chat. Nilai ini tidak ditampilkan di sisi tenant." />
+                            </label>
+                            <input
+                              value={marketplaceInternalForm.appId}
+                              onChange={(event) => setMarketplaceInternalForm({ ...marketplaceInternalForm, appId: event.target.value })}
+                              placeholder={detail.internalConnectors.marketplaceHub.appIdMasked || 'app_xxxxx'}
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                              Secret Key
+                              <FieldHelp title="Secret Key" description="Secret internal untuk server-to-server auth. Jika sebelumnya sudah ada, field boleh dibiarkan kosong saat tidak ingin mengganti nilai." />
+                            </label>
+                            <input
+                              type="password"
+                              value={marketplaceInternalForm.secretKey}
+                              onChange={(event) => setMarketplaceInternalForm({ ...marketplaceInternalForm, secretKey: event.target.value })}
+                              placeholder={detail.internalConnectors.marketplaceHub.hasSecretKey ? 'Sudah tersimpan' : 'Masukkan secret key'}
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                              Bot sender email
+                              <FieldHelp title="Bot sender email" description="Identitas bot yang dipakai saat AI mengirim balasan kembali ke workspace marketplace chat." />
+                            </label>
+                            <input
+                              value={marketplaceInternalForm.botSenderEmail}
+                              onChange={(event) => setMarketplaceInternalForm({ ...marketplaceInternalForm, botSenderEmail: event.target.value })}
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div className="md:col-span-2">
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                              Webhook AI internal
+                              <FieldHelp title="Webhook AI internal" description="Alamat endpoint automation internal yang menerima pesan marketplace, menjalankan AI, lalu mengembalikan jawaban ke platform chat engine." />
+                            </label>
+                            <input
+                              value={marketplaceInternalForm.aiWebhookUrl}
+                              onChange={(event) => setMarketplaceInternalForm({ ...marketplaceInternalForm, aiWebhookUrl: event.target.value })}
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                              Webhook auth token
+                              <FieldHelp title="Webhook auth token" description="Opsional. Dipakai kalau automation internal mengharuskan bearer token pada request masuk." />
+                            </label>
+                            <input
+                              type="password"
+                              value={marketplaceInternalForm.aiWebhookAuthToken}
+                              onChange={(event) => setMarketplaceInternalForm({ ...marketplaceInternalForm, aiWebhookAuthToken: event.target.value })}
+                              placeholder="Opsional"
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                              Timeout webhook (ms)
+                              <FieldHelp title="Timeout webhook" description="Batas waktu request ke automation internal. Jika AI workflow cenderung berat, naikkan secukupnya agar tidak terlalu cepat time out." />
+                            </label>
+                            <input
+                              type="number"
+                              min={1000}
+                              value={marketplaceInternalForm.aiWebhookTimeoutMs}
+                              onChange={(event) => setMarketplaceInternalForm({ ...marketplaceInternalForm, aiWebhookTimeoutMs: event.target.value })}
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div className="md:col-span-2">
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                              Catatan takeover
+                              <FieldHelp title="Catatan takeover" description="Gunakan untuk catatan onboarding, PIC klien, channel prioritas, atau aturan fallback human saat aktivasi marketplace chat dilakukan oleh tim internal." />
+                            </label>
+                            <textarea
+                              rows={4}
+                              value={marketplaceInternalForm.notes}
+                              onChange={(event) => setMarketplaceInternalForm({ ...marketplaceInternalForm, notes: event.target.value })}
+                              className="w-full rounded-2xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                              placeholder="Contoh: tenant prioritas Shopee dulu, AI aktif 24/7, refund wajib handover ke human."
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                          <div className="text-sm text-gray-500">
+                            Tenant tidak melihat form ini. Semua konfigurasi teknis disimpan dari panel internal super admin.
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleSaveMarketplaceInternal}
+                            disabled={savingMarketplaceInternal}
+                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {savingMarketplaceInternal ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquareShare className="h-4 w-4" />}
+                            Simpan engine marketplace
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="rounded-3xl border border-gray-200 p-5">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900">Zernio accounts</h3>
+                          <h3 className="text-lg font-semibold text-gray-900">Social accounts</h3>
                           <p className="mt-1 text-sm text-gray-500">
                             Akun tenant ini tetap berada di bawah master account yang sama, tapi dipisah lewat profile per tenant.
                           </p>
@@ -926,7 +1152,7 @@ export default function MyCommerSocialAdminPage() {
                             <p className="text-sm font-semibold text-gray-900">Profile tenant</p>
                             <ShieldCheck className="h-4 w-4 text-emerald-600" />
                           </div>
-                          <p className="mt-2 break-all text-sm text-gray-600">{detail.workspace.zernioProfileId || 'Belum ada profile Zernio'}</p>
+                          <p className="mt-2 break-all text-sm text-gray-600">{detail.workspace.zernioProfileId || 'Belum ada social workspace'}</p>
                         </div>
 
                         <div className="rounded-2xl bg-gray-50 p-4">
@@ -951,7 +1177,7 @@ export default function MyCommerSocialAdminPage() {
                       <div className="mt-4 space-y-2">
                         {detail.zernioAccounts.length === 0 ? (
                           <div className="rounded-2xl border border-dashed border-gray-300 px-4 py-5 text-center text-sm text-gray-500">
-                            Belum ada akun Zernio yang terhubung.
+                            Belum ada akun social yang terhubung.
                           </div>
                         ) : (
                           detail.zernioAccounts.map((account) => (
@@ -978,10 +1204,10 @@ export default function MyCommerSocialAdminPage() {
                         <h3 className="text-lg font-semibold text-gray-900">Marketplace</h3>
                       </div>
                       <p className="mt-2 text-sm text-gray-500">
-                        Untuk sekarang tetap jadikan marketplace sebagai <span className="font-medium text-gray-700">Coming Soon</span> sampai arah integrasi Jubelio benar-benar matang.
+                        Marketplace chat sekarang bisa diaktifkan dari panel internal ini. Fokus tahap awal ada pada inbox buyer dan AI takeover, sedangkan order/stock ops yang lebih dalam tetap bisa menyusul.
                       </p>
                       <div className="mt-4 rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                        Toggle marketplace boleh disimpan untuk roadmap tenant, tapi jangan dipromosikan sebagai fitur live dulu.
+                        Aktifkan toggle marketplace untuk tenant yang sudah siap, lalu simpan kredensial engine chat marketplace di kartu internal di atas agar workflow AI bisa berjalan.
                       </div>
                     </div>
                   </div>

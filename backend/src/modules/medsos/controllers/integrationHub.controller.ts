@@ -12,6 +12,10 @@ import {
   syncManagedIntegration,
   type ManagedAssetInput,
 } from '../services/integrationHub.service';
+import {
+  getMarketplaceHubConnectionStatus,
+  handleMarketplaceHubWebhook,
+} from '../services/marketplaceChat.service';
 
 function parseSelectedAssets(input: unknown): ManagedAssetInput[] {
   if (!Array.isArray(input)) {
@@ -126,6 +130,16 @@ export const completeConnect = async (req: Request, res: Response, next: NextFun
 
     const result = await completeManagedIntegrationConnect(req.tenantId, req.params.slug, {
       connectionId: typeof req.body?.connectionId === 'string' ? req.body.connectionId : undefined,
+      appId: typeof req.body?.appId === 'string' ? req.body.appId : undefined,
+      secretKey: typeof req.body?.secretKey === 'string' ? req.body.secretKey : undefined,
+      botSenderEmail: typeof req.body?.botSenderEmail === 'string' ? req.body.botSenderEmail : undefined,
+      aiWebhookUrl: typeof req.body?.aiWebhookUrl === 'string' ? req.body.aiWebhookUrl : undefined,
+      aiWebhookAuthToken: typeof req.body?.aiWebhookAuthToken === 'string' ? req.body.aiWebhookAuthToken : undefined,
+      aiWebhookTimeoutMs: typeof req.body?.aiWebhookTimeoutMs === 'number'
+        ? req.body.aiWebhookTimeoutMs
+        : typeof req.body?.aiWebhookTimeoutMs === 'string'
+          ? Number(req.body.aiWebhookTimeoutMs)
+          : undefined,
       workspaceName: typeof req.body?.workspaceName === 'string' ? req.body.workspaceName : undefined,
       notes: typeof req.body?.notes === 'string' ? req.body.notes : undefined,
       vendorWorkspaceUrl: typeof req.body?.vendorWorkspaceUrl === 'string' ? req.body.vendorWorkspaceUrl : undefined,
@@ -256,9 +270,32 @@ export const proxyStatus = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
+export const proxyMarketplaceStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.tenantId) {
+      res.status(400).json({ success: false, error: { code: 'NO_TENANT', message: 'Tenant context is required' } });
+      return;
+    }
+
+    const data = await getMarketplaceHubConnectionStatus(req.tenantId);
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const webhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await handleManagedIntegrationWebhook(req.params.slug, req.headers, req.body);
+    const result = req.params.slug === 'marketplace-hub'
+      ? await handleMarketplaceHubWebhook({
+          headers: req.headers,
+          body: req.body,
+          query: {
+            tenantId: typeof req.query.tenant_id === 'string' ? Number(req.query.tenant_id) : undefined,
+            token: typeof req.query.token === 'string' ? req.query.token : undefined,
+          },
+        })
+      : await handleManagedIntegrationWebhook(req.params.slug, req.headers, req.body);
     res.json({
       success: true,
       data: result,
