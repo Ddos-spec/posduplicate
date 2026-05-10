@@ -65,32 +65,77 @@ async function getOrSetCache<T>(key: string, factory: () => Promise<T>, refresh 
 
 // ─── Profile per tenant ────────────────────────────────────────────────────
 
-async function getStoredProfileId(tenantId: number): Promise<string | null> {
+type StoredZernioProfile = {
+  profileId: string | null;
+  profileName: string | null;
+};
+
+async function getStoredProfile(tenantId: number): Promise<StoredZernioProfile> {
   const row = await prisma.integrations.findUnique({
     where: { tenant_id_integration_type: { tenant_id: tenantId, integration_type: 'zernio_profile' } },
     select: { metadata: true },
   });
-  return (row?.metadata as any)?.profileId ?? null;
+  const metadata = (row?.metadata as Record<string, unknown> | null) ?? null;
+  return {
+    profileId: typeof metadata?.profileId === 'string' ? metadata.profileId : null,
+    profileName: typeof metadata?.profileName === 'string' ? metadata.profileName : null,
+  };
 }
 
-async function storeProfileId(tenantId: number, profileId: string): Promise<void> {
+async function resolveTenantProfileName(tenantId: number, tenantName?: string): Promise<string> {
+  const explicitName = tenantName?.trim();
+  if (explicitName) {
+    return explicitName;
+  }
+
+  const tenant = await prisma.tenants.findUnique({
+    where: { id: tenantId },
+    select: {
+      business_name: true,
+    },
+  });
+
+  const resolvedName = tenant?.business_name?.trim() || `Tenant ${tenantId}`;
+
+  return resolvedName;
+}
+
+async function updateProfileName(profileId: string, profileName: string): Promise<void> {
+  await zFetch(`/profiles/${profileId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name: profileName }),
+  });
+}
+
+async function storeProfileId(tenantId: number, profileId: string, profileName?: string): Promise<void> {
   await prisma.integrations.upsert({
     where: { tenant_id_integration_type: { tenant_id: tenantId, integration_type: 'zernio_profile' } },
-    update: { metadata: { profileId }, is_active: true, status: 'active', updated_at: new Date() },
-    create: { tenant_id: tenantId, integration_type: 'zernio_profile', status: 'active', is_active: true, metadata: { profileId } },
+    update: { metadata: { profileId, profileName: profileName || null }, is_active: true, status: 'active', updated_at: new Date() },
+    create: { tenant_id: tenantId, integration_type: 'zernio_profile', status: 'active', is_active: true, metadata: { profileId, profileName: profileName || null } },
   });
 }
 
 export async function getOrCreateZernioProfile(tenantId: number, tenantName?: string): Promise<string> {
-  const existing = await getStoredProfileId(tenantId);
-  if (existing) return existing;
+  const profileName = await resolveTenantProfileName(tenantId, tenantName);
+  const existing = await getStoredProfile(tenantId);
+  if (existing.profileId) {
+    if (existing.profileName !== profileName) {
+      try {
+        await updateProfileName(existing.profileId, profileName);
+      } catch {
+        // Ignore remote rename failures so reads/connects keep working.
+      }
+      await storeProfileId(tenantId, existing.profileId, profileName);
+    }
+    return existing.profileId;
+  }
 
   const data = await zFetch<{ profile: { _id: string } }>('/profiles', {
     method: 'POST',
-    body: JSON.stringify({ name: tenantName ?? `Tenant ${tenantId}` }),
+    body: JSON.stringify({ name: profileName }),
   });
 
-  await storeProfileId(tenantId, data.profile._id);
+  await storeProfileId(tenantId, data.profile._id, profileName);
   return data.profile._id;
 }
 
@@ -138,7 +183,11 @@ export interface ZernioAccount {
 
 export async function listZernioAccounts(tenantId: number, tenantName?: string): Promise<ZernioAccount[]> {
   const profileId = await getOrCreateZernioProfile(tenantId, tenantName);
-  const data = await zFetch<{ accounts: any[] }>(`/accounts?profileId=${profileId}`);
+  const qs = new URLSearchParams({
+    profileId,
+    includeOverLimit: 'true',
+  });
+  const data = await zFetch<{ accounts: any[] }>(`/accounts?${qs.toString()}`);
   return (data.accounts ?? []).map((a) => ({
     id: a._id ?? a.id,
     platform: a.platform,
@@ -149,8 +198,9 @@ export async function listZernioAccounts(tenantId: number, tenantName?: string):
   }));
 }
 
-export async function disconnectZernioAccount(accountId: string): Promise<void> {
+export async function disconnectZernioAccount(accountId: string, _tenantId?: number): Promise<void> {
   await zFetch(`/accounts/${accountId}`, { method: 'DELETE' });
+  zernioCache.clear();
 }
 
 // ─── Ads summary ──────────────────────────────────────────────────────────

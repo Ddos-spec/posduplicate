@@ -30,6 +30,12 @@ const demoStatus: MarketplaceHubConnectionStatus = {
   ],
 };
 
+const previewMarketplaceChannels = [
+  { id: 'preview-shopee', name: 'Shopee Chat Preview', source: 'shopee' },
+  { id: 'preview-lazada', name: 'Lazada Chat Preview', source: 'lazada' },
+  { id: 'preview-tokopedia', name: 'Tokopedia Preview', source: 'tokopedia' },
+];
+
 function toLocalDate(value?: string | null) {
   if (!value) return 'Belum ada';
   const date = new Date(value);
@@ -105,6 +111,9 @@ export default function MarketplaceControl() {
     },
   ]), [status]);
 
+  const previewMode = !isDemo && !status?.configured;
+  const displayChannels = previewMode ? previewMarketplaceChannels : (status?.channels ?? []);
+
   if (!isDemo && loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
@@ -129,6 +138,11 @@ export default function MarketplaceControl() {
             <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Fokus modul ini adalah menyatukan chat dari toko yang sudah berjalan, lalu menyerahkan percakapan repetitif ke AI dengan fallback ke agent manusia saat perlu.
             </p>
+            {previewMode ? (
+              <div className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-900 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
+                Preview netral • workspace marketplace belum aktif
+              </div>
+            ) : null}
           </div>
           <button
             type="button"
@@ -164,17 +178,19 @@ export default function MarketplaceControl() {
           <div className="grid md:grid-cols-3 gap-4 mt-6">
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
               <p className="font-semibold">Workspace</p>
-              <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{connector?.workspaceName || status?.workspaceName || 'Belum diatur'}</p>
+              <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{connector?.workspaceName || status?.workspaceName || (previewMode ? 'Marketplace Preview' : 'Belum diatur')}</p>
             </div>
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
               <p className="font-semibold">Status live</p>
               <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {status?.reachable ? 'Marketplace chat sudah live dan siap diarahkan ke AI.' : status?.message || 'Masih menunggu aktivasi.'}
+                {previewMode
+                  ? 'Preview netral. Setelah workspace aktif, status live dan AI routing akan muncul di sini.'
+                  : status?.reachable ? 'Marketplace chat sudah live dan siap diarahkan ke AI.' : status?.message || 'Masih menunggu aktivasi.'}
               </p>
             </div>
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
               <p className="font-semibold">Update terakhir</p>
-              <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{toLocalDate(connector?.updatedAt || status?.checkedAt)}</p>
+              <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{previewMode ? 'Menunggu aktivasi pertama' : toLocalDate(connector?.updatedAt || status?.checkedAt)}</p>
             </div>
           </div>
 
@@ -197,16 +213,23 @@ export default function MarketplaceControl() {
             <FieldHelp title="Channel marketplace" description="Daftar ini menunjukkan marketplace mana saja yang sudah aktif di workspace. Bila sebuah channel belum muncul, cek lagi halaman Connections untuk melanjutkan aktivasi." />
           </div>
 
-          {status?.channels?.length ? (
+          {displayChannels.length ? (
             <div className="space-y-3 mt-6">
-              {status.channels.map((channel) => (
+              {displayChannels.map((channel) => (
                 <div key={channel.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
                     <PlatformBadge label={channel.name} brand={brandFromSource(channel.source)} size={40} />
                     <div>
                       <p className="font-semibold">{channel.name}</p>
                       <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{channel.source}</p>
                     </div>
+                    </div>
+                    {previewMode ? (
+                      <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'border border-gray-200 bg-white text-gray-600'}`}>
+                        Preview
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               ))}

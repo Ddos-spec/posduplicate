@@ -54,6 +54,33 @@ const demoAccounts: ZernioAccount[] = [
   },
 ];
 
+const previewAccounts: ZernioAccount[] = [
+  {
+    id: 'preview-social-instagram',
+    platform: 'instagram',
+    username: 'preview_instagram',
+    displayName: 'Instagram Preview',
+    profileUrl: null,
+    isActive: false,
+  },
+  {
+    id: 'preview-social-facebook',
+    platform: 'facebook',
+    username: 'preview_facebook',
+    displayName: 'Facebook Preview',
+    profileUrl: null,
+    isActive: false,
+  },
+  {
+    id: 'preview-ads-meta',
+    platform: 'metaads',
+    username: 'preview_metaads',
+    displayName: 'Meta Ads Preview',
+    profileUrl: null,
+    isActive: false,
+  },
+];
+
 const liveFlow = [
   {
     title: 'Buat workspace',
@@ -151,6 +178,14 @@ export default function MedsosDashboard() {
     [accounts]
   );
 
+  const previewMode = !isDemo
+    && accounts.length === 0
+    && !waStatus?.configured
+    && !waConnector?.connectionRefMasked
+    && !marketplaceStatus?.configured;
+
+  const displayAccounts = previewMode ? previewAccounts : accounts;
+
   const waState = useMemo(
     () => {
       if (isDemo) {
@@ -173,28 +208,32 @@ export default function MedsosDashboard() {
   const quickStatus = [
     {
       label: 'WA Inbox',
-      value: waState.label,
-      helper: waState.helper,
+      value: previewMode ? 'Preview' : waState.label,
+      helper: previewMode ? 'Akan aktif setelah API key inbox disimpan.' : waState.helper,
       icon: MessageSquareText,
     },
     {
       label: 'Social workspace',
-      value: String(socialAccounts.length),
-      helper: 'Akun sosial tenant yang sudah aktif',
+      value: previewMode ? '0' : String(socialAccounts.length),
+      helper: previewMode ? 'Preview netral channel social.' : 'Akun sosial tenant yang sudah aktif',
       icon: PlugZap,
     },
     {
       label: 'Ads workspace',
-      value: String(adsAccounts.length),
-      helper: 'Ad account tenant yang sudah aktif',
+      value: previewMode ? '0' : String(adsAccounts.length),
+      helper: previewMode ? 'Preview netral account ads.' : 'Ad account tenant yang sudah aktif',
       icon: Sparkles,
     },
     {
       label: 'Marketplace',
-      value: marketplaceStatus?.reachable ? String(marketplaceStatus.channels.length) : marketplaceStatus?.configured ? 'Check' : 'Setup',
-      helper: marketplaceStatus?.reachable
-        ? `${marketplaceStatus.channels.length} channel marketplace chat aktif`
-        : marketplaceStatus?.message || 'Marketplace chat belum diaktifkan',
+      value: previewMode
+        ? 'Preview'
+        : marketplaceStatus?.reachable ? String(marketplaceStatus.channels.length) : marketplaceStatus?.configured ? 'Check' : 'Setup',
+      helper: previewMode
+        ? 'Marketplace chat akan muncul setelah workspace aktif.'
+        : marketplaceStatus?.reachable
+          ? `${marketplaceStatus.channels.length} channel marketplace chat aktif`
+          : marketplaceStatus?.message || 'Marketplace chat belum diaktifkan',
       icon: ShoppingBag,
     },
   ];
@@ -226,6 +265,11 @@ export default function MedsosDashboard() {
                 <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   Pantau status WA Inbox, koneksi social media, marketplace chat, dan ads dari satu ringkasan operasional.
                 </p>
+                {previewMode ? (
+                  <div className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-900 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
+                    Preview netral • channel belum tersambung
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -274,17 +318,21 @@ export default function MedsosDashboard() {
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
                   <p className="font-semibold">WA Inbox</p>
                   <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {waStatus?.reachable
-                  ? 'Workspace inbox sudah siap dipakai dari inbox live.'
-                  : waStatus?.configured
-                    ? waStatus.message || 'Konfigurasi WA ada, tetapi koneksi live perlu dicek.'
-                    : 'Belum ada API key inbox yang disimpan.'}
+                {previewMode
+                  ? 'Preview netral. Status inbox live akan muncul setelah API key tersimpan.'
+                  : waStatus?.reachable
+                    ? 'Workspace inbox sudah siap dipakai dari inbox live.'
+                    : waStatus?.configured
+                      ? waStatus.message || 'Konfigurasi WA ada, tetapi koneksi live perlu dicek.'
+                      : 'Belum ada API key inbox yang disimpan.'}
               </p>
             </div>
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
               <p className="font-semibold">Social workspace</p>
               <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {socialAccounts.length > 0
+                {previewMode
+                  ? 'Preview netral untuk akun social yang nanti akan tampil di workspace ini.'
+                  : socialAccounts.length > 0
                   ? `${socialAccounts.length} akun sosial sudah terhubung ke workspace ini.`
                   : 'Belum ada akun sosial yang dihubungkan.'}
               </p>
@@ -292,7 +340,9 @@ export default function MedsosDashboard() {
             <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
               <p className="font-semibold">Ads workspace</p>
               <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {adsAccounts.length > 0
+                {previewMode
+                  ? 'Preview netral untuk ad account yang nanti masuk ke dashboard.'
+                  : adsAccounts.length > 0
                   ? `${adsAccounts.length} ad account sudah aktif.`
                   : 'Belum ada ad account yang dihubungkan.'}
               </p>
@@ -305,7 +355,7 @@ export default function MedsosDashboard() {
             <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Channel yang terlihat dari workspace ini</h2>
             <FieldHelp title="Daftar channel" description="Semua channel di sini diambil dari data live tenant. Jika sebuah akun belum muncul, cek lagi halaman Connections atau status sinkronisasinya." />
           </div>
-          {accounts.length === 0 ? (
+          {displayAccounts.length === 0 ? (
             <div className={`rounded-2xl border p-5 mt-6 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Belum ada channel yang terhubung. Lanjut ke halaman Connections untuk menyalakan WA Inbox, marketplace chat, atau mulai menghubungkan social workspace.
@@ -313,9 +363,10 @@ export default function MedsosDashboard() {
             </div>
           ) : (
             <div className="space-y-3 mt-6">
-              {accounts.map((account) => (
+              {displayAccounts.map((account) => (
                 <div key={account.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 justify-between">
+                    <div className="flex items-center gap-3">
                     <PlatformBadge label={humanizePlatform(account.platform)} size={40} />
                     <div>
                       <p className="font-semibold">{humanizePlatform(account.platform)}</p>
@@ -323,6 +374,12 @@ export default function MedsosDashboard() {
                         {account.displayName || account.username || 'Connected account'}
                       </p>
                     </div>
+                    </div>
+                    {previewMode ? (
+                      <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'border border-gray-200 bg-white text-gray-600'}`}>
+                        Preview
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               ))}
