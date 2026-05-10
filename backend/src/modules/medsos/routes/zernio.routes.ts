@@ -64,7 +64,7 @@ router.get('/accounts', async (req, res, next) => {
 // DELETE /api/medsos/zernio/accounts/:accountId
 router.delete('/accounts/:accountId', async (req, res, next) => {
   try {
-    await disconnectZernioAccount(req.params.accountId);
+    await disconnectZernioAccount(req.params.accountId, req.tenantId);
     return res.json({ success: true, data: null });
   } catch (err) {
     next(err);

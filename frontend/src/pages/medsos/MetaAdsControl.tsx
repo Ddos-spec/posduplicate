@@ -58,6 +58,27 @@ const demoAccounts: ZernioAccount[] = [
   },
 ];
 
+const previewAdChartData = [
+  { date: 'D-6', spend: 0, clicks: 0, conversions: 0 },
+  { date: 'D-5', spend: 0, clicks: 0, conversions: 0 },
+  { date: 'D-4', spend: 0, clicks: 0, conversions: 0 },
+  { date: 'D-3', spend: 0, clicks: 0, conversions: 0 },
+  { date: 'D-2', spend: 0, clicks: 0, conversions: 0 },
+  { date: 'D-1', spend: 0, clicks: 0, conversions: 0 },
+  { date: 'Today', spend: 0, clicks: 0, conversions: 0 },
+];
+
+const previewNetworkCards = [
+  { key: 'metaads', label: 'Meta Ads', connectedAccounts: 0, linkedAdAccounts: 0, totalCampaigns: 0, activeCampaigns: 0, impressions: 0, clicks: 0, ctr: 0, conversions: 0 },
+  { key: 'googleads', label: 'Google Ads', connectedAccounts: 0, linkedAdAccounts: 0, totalCampaigns: 0, activeCampaigns: 0, impressions: 0, clicks: 0, ctr: 0, conversions: 0 },
+  { key: 'tiktokads', label: 'TikTok Ads', connectedAccounts: 0, linkedAdAccounts: 0, totalCampaigns: 0, activeCampaigns: 0, impressions: 0, clicks: 0, ctr: 0, conversions: 0 },
+];
+
+const previewCampaignRows = [
+  { id: 'preview-meta', name: 'Preview Campaign • Meta Ads', networkLabel: 'Meta Ads', adAccountName: 'Belum ada ad account', status: 'preview', spend: 0, clicks: 0, ctr: 0, roas: null as number | null },
+  { id: 'preview-google', name: 'Preview Campaign • Google Ads', networkLabel: 'Google Ads', adAccountName: 'Belum ada ad account', status: 'preview', spend: 0, clicks: 0, ctr: 0, roas: null as number | null },
+];
+
 type DatePreset = '7d' | '30d' | '90d' | 'custom';
 
 function formatDateInput(date: Date) {
@@ -248,6 +269,8 @@ export default function MetaAdsControl() {
     () => accounts.filter((account) => isZernioAdsAccount(account.platform)),
     [accounts]
   );
+
+  const previewMode = !isDemo && adAccounts.length === 0 && !summary;
 
   const platformSummaries = summary?.platforms ?? [];
   const workspaceAccounts = summary?.accounts ?? [];
@@ -532,6 +555,11 @@ export default function MetaAdsControl() {
             <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Workspace ini sekarang membaca account, ad account, campaign, dan metrik lintas network langsung dari layer ads terpusat. Jadi kalau tenant menghubungkan beberapa network sekaligus, semuanya bisa tetap muncul di satu tempat.
             </p>
+            {previewMode ? (
+              <div className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-900 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
+                Preview netral • belum ada ad account aktif
+              </div>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:min-w-[260px]">
@@ -655,6 +683,121 @@ export default function MetaAdsControl() {
                 <p className={`text-sm mt-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{alert.detail}</p>
               </div>
             ))}
+          </div>
+        </section>
+      ) : null}
+
+      {previewMode ? (
+        <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="text-blue-500" size={18} />
+            <div>
+              <h2 className="font-bold text-xl">Preview analytics ads</h2>
+              <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Angka dan chart di bawah ini masih netral agar bentuk dashboard tetap terlihat sebelum network ads pertama tersambung.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-3 mb-6">
+            {previewNetworkCards.map((platform) => (
+              <div key={platform.key} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{platform.label}</p>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {platform.connectedAccounts} workspace • {platform.linkedAdAccounts} ad account • {platform.totalCampaigns} campaign
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'border border-gray-200 bg-white text-gray-600'}`}>
+                    Preview
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Impressions</p>
+                    <p className="font-semibold">{formatCompactNumber(platform.impressions)}</p>
+                  </div>
+                  <div>
+                    <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Clicks</p>
+                    <p className="font-semibold">{formatCompactNumber(platform.clicks)}</p>
+                  </div>
+                  <div>
+                    <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>CTR</p>
+                    <p className="font-semibold">{formatMetricValue(platform.ctr)}%</p>
+                  </div>
+                  <div>
+                    <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Conversions</p>
+                    <p className="font-semibold">{formatCompactNumber(platform.conversions)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid xl:grid-cols-2 gap-4 mb-6">
+            <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+              <p className="font-semibold mb-4">Preview spend timeline</p>
+              <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={previewAdChartData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
+                    <XAxis dataKey="date" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                    <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="spend" stroke="#3B82F6" fill="#93C5FD" fillOpacity={0.35} strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+              <p className="font-semibold mb-4">Preview engagement timeline</p>
+              <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={previewAdChartData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
+                    <XAxis dataKey="date" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                    <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
+                    <Tooltip />
+                    <Bar dataKey="clicks" fill="#60A5FA" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="conversions" fill="#34D399" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          <div className={`rounded-2xl border ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+            <div className="px-4 py-3 border-b border-inherit">
+              <p className="font-semibold">Preview campaign table</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead>
+                  <tr className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {['Campaign', 'Network', 'Ad account', 'Status', 'Spend', 'Clicks', 'CTR', 'ROAS'].map((header) => (
+                      <th key={header} className="px-4 py-3 text-left font-medium text-xs">{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-inherit">
+                  {previewCampaignRows.map((campaign) => (
+                    <tr key={campaign.id}>
+                      <td className="px-4 py-3 font-medium">{campaign.name}</td>
+                      <td className="px-4 py-3">{campaign.networkLabel}</td>
+                      <td className="px-4 py-3">{campaign.adAccountName}</td>
+                      <td className="px-4 py-3">{campaign.status}</td>
+                      <td className="px-4 py-3">{formatMetricValue(campaign.spend)}</td>
+                      <td className="px-4 py-3">{formatCompactNumber(campaign.clicks)}</td>
+                      <td className="px-4 py-3">{formatMetricValue(campaign.ctr)}%</td>
+                      <td className="px-4 py-3">{campaign.roas == null ? '—' : `${formatMetricValue(campaign.roas)}x`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       ) : null}
