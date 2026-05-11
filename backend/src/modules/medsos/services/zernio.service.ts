@@ -1394,7 +1394,3 @@ export async function getZernioAdsSummary(
     return null;
   }
 }
-atch {
-    return null;
-  }
-}
