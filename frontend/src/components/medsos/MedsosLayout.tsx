@@ -28,6 +28,7 @@ import {
   Store,
   Sun,
   Users,
+  X,
 } from 'lucide-react';
 import { useZernioPushNotifications } from '../../hooks/useZernioPushNotifications';
 
@@ -240,28 +241,35 @@ export default function MedsosLayout() {
 
       <aside className={`fixed top-0 left-0 z-40 h-screen w-64 ${asideWidthClass} transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 border-r ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
         <div className="h-full overflow-y-auto px-3 py-4 pb-40">
-          <div className={`mb-8 px-2 ${sidebarCollapsed ? 'flex justify-center' : 'flex items-center gap-3'}`}>
-            <MyCommerSocialLogo size={40} className="shadow-lg shadow-blue-500/30" />
-            {!sidebarCollapsed ? (
-              <div>
-                <h2 className="text-lg font-bold leading-tight">MyCommerSocial</h2>
-                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {currentRole === 'medsos_manager'
-                    ? 'Omnichannel Manager'
-                    : currentRole === 'content_creator'
-                      ? 'Content Creator'
-                      : currentRole === 'medsos_cs'
-                        ? 'Inbox Operator'
-                        : 'WA + Social + Marketplace'}
-                </p>
-                <div className="mt-2 flex items-center gap-1.5">
-                  <BrandLogo brand="whatsapp" size={20} className="rounded-md" />
-                  <BrandLogo brand="instagram" size={20} className="rounded-md" />
-                  <BrandLogo brand="facebook" size={20} className="rounded-md" />
-                  <BrandLogo brand="metaads" size={20} className="rounded-md" withRing />
+          <div className={`mb-8 px-2 flex ${sidebarCollapsed ? 'justify-center' : 'items-center justify-between'}`}>
+            <div className={`flex ${sidebarCollapsed ? 'justify-center' : 'items-center gap-3'}`}>
+              <MyCommerSocialLogo size={40} className="shadow-lg shadow-blue-500/30" />
+              {!sidebarCollapsed ? (
+                <div>
+                  <h2 className="text-lg font-bold leading-tight">MyCommerSocial</h2>
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {currentRole === 'medsos_manager'
+                      ? 'Omnichannel Manager'
+                      : currentRole === 'content_creator'
+                        ? 'Content Creator'
+                        : currentRole === 'medsos_cs'
+                          ? 'Inbox Operator'
+                          : 'WA + Social + Marketplace'}
+                  </p>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
+            
+            {/* Sidebar toggle buttons (X for mobile, PanelLeft for PC) */}
+            {!sidebarCollapsed && (
+              <button 
+                onClick={handleSidebarToggle}
+                className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
+              >
+                <X className="w-5 h-5 md:hidden" />
+                <PanelLeft className="w-5 h-5 hidden md:block" />
+              </button>
+            )}
           </div>
 
           {!sidebarCollapsed ? (
