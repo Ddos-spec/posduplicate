@@ -283,19 +283,54 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
   );
 
   if (error || !stats) {
+    const statusCode = crmStatus?.status;
+    const statusMsg = crmStatus?.message;
+    const isNotConfigured = statusCode === 'not_configured' || !hasStoredConfig;
+    const isIncomplete = statusCode === 'configuration_incomplete';
+    const isDegraded = statusCode === 'degraded';
+
     return (
       <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className={`mx-auto mb-4 inline-flex rounded-2xl p-4 ${isDark ? 'bg-amber-500/20' : 'bg-amber-50'}`}>
           <AlertTriangle size={36} className="text-amber-500" />
         </div>
         <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          {hasStoredConfig ? 'Inbox sudah tersimpan, tetapi layanan belum merespons' : 'Inbox WA belum dikonfigurasi'}
+          {isNotConfigured ? 'Inbox WA belum dikonfigurasi'
+            : isIncomplete ? 'Konfigurasi WA Inbox tidak lengkap'
+            : isDegraded ? 'Layanan inbox belum merespons'
+            : 'Inbox WA belum tersedia'}
         </h2>
         <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-          {hasStoredConfig
-            ? 'Konfigurasi sudah ada, namun sistem belum berhasil memuat data live saat ini.'
-            : 'Simpan API key workspace dulu dari halaman Connections.'}
+          {statusMsg
+            ? statusMsg
+            : isNotConfigured
+            ? 'Simpan API key workspace dari halaman Connections untuk mengaktifkan statistik inbox.'
+            : 'Konfigurasi sudah ada, namun sistem belum berhasil memuat data live saat ini.'}
         </p>
+
+        {isIncomplete && (
+          <div className={`mt-4 rounded-2xl border p-4 text-left text-xs ${isDark ? 'border-slate-700 bg-slate-900/50 text-gray-300' : 'border-amber-100 bg-amber-50/60 text-amber-800'}`}>
+            <p className="font-semibold mb-1">Yang perlu dilengkapi:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li>API key workspace WA CRM (dari sistem WA yang digunakan)</li>
+              <li>Masuk ke <strong>Connections → WA Inbox</strong> → isi field API key / Connection ref</li>
+            </ul>
+          </div>
+        )}
+
+        {isDegraded && (
+          <div className={`mt-4 rounded-2xl border p-4 text-left text-xs ${isDark ? 'border-slate-700 bg-slate-900/50 text-gray-300' : 'border-red-50 bg-red-50 text-red-800'}`}>
+            <p className="font-semibold mb-1">Info diagnostik:</p>
+            <p>Status: <code>{statusCode ?? 'unknown'}</code></p>
+            {crmStatus?.baseUrl && <p>URL: <code>{crmStatus.baseUrl}</code></p>}
+            <p className="mt-1">Pastikan layanan WA CRM aktif dan API key masih valid.</p>
+          </div>
+        )}
+
+        <p className={`mt-4 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          Catatan: Inbox WA menampilkan statistik dan tombol buka workspace — bukan riwayat chat langsung. Chat tetap diakses melalui portal WA CRM.
+        </p>
+
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
