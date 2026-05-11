@@ -74,8 +74,8 @@ const brandStyles: Record<BrandKey, { bg: string; fg?: string }> = {
   tiktok: { bg: '#111111', fg: '#FFFFFF' },
   youtube: { bg: '#FF0000' },
   shopee: { bg: '#EE4D2D' },
-  lazada: { bg: '#FFFFFF' },
-  tokopedia: { bg: '#FFFFFF' },
+  lazada: { bg: '#EF4823' },
+  tokopedia: { bg: '#42B549' },
   whatsapp: { bg: '#25D366' },
   linkedin: { bg: '#0A66C2', fg: '#FFFFFF' },
   threads: { bg: '#101010', fg: '#FFFFFF' },
@@ -95,37 +95,35 @@ const brandStyles: Record<BrandKey, { bg: string; fg?: string }> = {
 
 function renderInner(brand: BrandKey, size: number): ReactNode {
   if (brand === 'tokopedia') {
+    // Tokopedia owl mascot (Toped) - white on green bg
     return (
-      <svg viewBox="0 0 24 24" width={size * 0.68} height={size * 0.68} aria-hidden="true" className="block">
-        <path
-          fill="#42B549"
-          d="M12 3c-4.97 0-9 3.925-9 8.75 0 1.46.372 2.838 1.032 4.05.515.947.968 1.608 1.968 2.61V21h2.78l1.05-1.368c.378.072.768.118 1.17.118 5.523 0 10-4.03 10-9S17.523 3 12 3z"
-        />
-        <circle cx="8.45" cy="10.9" r="2.65" fill="#FFFFFF" />
-        <circle cx="15.55" cy="10.9" r="2.65" fill="#FFFFFF" />
-        <circle cx="8.45" cy="10.9" r="1.05" fill="#1F2937" />
-        <circle cx="15.55" cy="10.9" r="1.05" fill="#1F2937" />
-        <path fill="#F59E0B" d="M12 12.2 10.65 14h2.7z" />
+      <svg viewBox="0 0 40 40" width={size * 0.72} height={size * 0.72} aria-hidden="true" className="block">
+        {/* ear tufts */}
+        <polygon points="11,4 14,12 8,11" fill="#FFFFFF" opacity="0.9" />
+        <polygon points="29,4 26,12 32,11" fill="#FFFFFF" opacity="0.9" />
+        {/* head */}
+        <ellipse cx="20" cy="22" rx="14" ry="13" fill="#FFFFFF" opacity="0.95" />
+        {/* left eye ring */}
+        <circle cx="13.5" cy="19" r="5.5" fill="#42B549" />
+        <circle cx="13.5" cy="19" r="3.8" fill="#FFFFFF" />
+        <circle cx="14" cy="18.5" r="2" fill="#1a3d20" />
+        <circle cx="14.7" cy="17.7" r="0.7" fill="#FFFFFF" />
+        {/* right eye ring */}
+        <circle cx="26.5" cy="19" r="5.5" fill="#42B549" />
+        <circle cx="26.5" cy="19" r="3.8" fill="#FFFFFF" />
+        <circle cx="27" cy="18.5" r="2" fill="#1a3d20" />
+        <circle cx="27.7" cy="17.7" r="0.7" fill="#FFFFFF" />
+        {/* beak */}
+        <path d="M18 25 L20 28.5 L22 25 Q20 26.5 18 25Z" fill="#F5A623" />
       </svg>
     );
   }
 
   if (brand === 'lazada') {
+    // Lazada — white bold "L" on orange-red bg
     return (
-      <svg viewBox="0 0 24 24" width={size * 0.7} height={size * 0.7} aria-hidden="true" className="block">
-        <defs>
-          <linearGradient id="lazadaPrimary" x1="0%" x2="100%" y1="0%" y2="100%">
-            <stop offset="0%" stopColor="#FF7A00" />
-            <stop offset="100%" stopColor="#FF4D6D" />
-          </linearGradient>
-          <linearGradient id="lazadaAccent" x1="0%" x2="100%" y1="0%" y2="100%">
-            <stop offset="0%" stopColor="#6D28D9" />
-            <stop offset="100%" stopColor="#2563EB" />
-          </linearGradient>
-        </defs>
-        <path fill="url(#lazadaPrimary)" d="M12 4.2 19.6 8.4v7.2L12 19.8 4.4 15.6V8.4z" />
-        <path fill="url(#lazadaAccent)" d="m12 8.1 4.1 2.24v3.32L12 15.9l-4.1-2.24v-3.32z" />
-        <path fill="#FFFFFF" fillOpacity="0.88" d="m12 8.1 2.98 1.63L12 12.55 9.02 9.73z" />
+      <svg viewBox="0 0 28 28" width={size * 0.6} height={size * 0.6} aria-hidden="true" className="block">
+        <path fill="#FFFFFF" d="M4 3 h6 v17 h14 v5 H4 Z" />
       </svg>
     );
   }
