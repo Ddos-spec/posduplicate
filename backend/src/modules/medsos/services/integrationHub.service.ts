@@ -35,6 +35,7 @@ export interface CompleteConnectionInput {
   aiWebhookUrl?: string;
   aiWebhookAuthToken?: string;
   aiWebhookTimeoutMs?: number;
+  aiSystemMessage?: string;
   workspaceName?: string;
   notes?: string;
   vendorWorkspaceUrl?: string;
@@ -636,6 +637,9 @@ export async function completeManagedIntegrationConnect(
   const webhookToken = String(configuration.webhookToken || '').trim() || randomBytes(18).toString('hex');
   const aiWebhookUrl = input.aiWebhookUrl?.trim() || String(configuration.aiWebhookUrl || '').trim() || null;
   const aiWebhookTimeoutMs = Number(input.aiWebhookTimeoutMs || configuration.aiWebhookTimeoutMs || 15000);
+  const aiSystemMessage = input.aiSystemMessage !== undefined
+    ? (input.aiSystemMessage.trim() || null)
+    : (String(configuration.aiSystemMessage || '').trim() || null);
   const nextCredentials = {
     ...credentials,
     connectionId: input.connectionId || input.appId || credentials.connectionId || null,
@@ -670,6 +674,7 @@ export async function completeManagedIntegrationConnect(
       webhookToken,
       aiWebhookUrl,
       aiWebhookTimeoutMs,
+      ...(aiSystemMessage !== null ? { aiSystemMessage } : {}),
     },
     metadata: {
       ...metadata,

@@ -97,6 +97,7 @@ const MetaAdsControl = lazy(() => import('./pages/medsos/MetaAdsControl'));
 const MedsosAnalytics = lazy(() => import('./pages/medsos/MedsosAnalytics'));
 const MedsosSettings = lazy(() => import('./pages/medsos/MedsosSettings'));
 const MedsosPricing = lazy(() => import('./pages/medsos/MedsosPricing'));
+const MedsosTeamPage = lazy(() => import('./pages/medsos/MedsosTeamPage'));
 
 // Loading fallback
 const PageLoader = () => (
@@ -440,6 +441,7 @@ function App() {
           <Route path="analytics/:channel" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />
           <Route path="pricing" element={<MedsosPricing />} />
+          <Route path="team" element={<MedsosTeamPage />} />
           <Route index element={<Navigate to="/medsos/dashboard" />} />
         </Route>
 

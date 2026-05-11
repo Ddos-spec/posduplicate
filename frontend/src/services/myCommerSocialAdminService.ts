@@ -71,6 +71,7 @@ export interface MyCommerSocialAdminTenantDetail extends MyCommerSocialAdminTena
       botSenderEmail: string | null;
       aiWebhookUrl: string | null;
       aiWebhookTimeoutMs: number;
+      aiSystemMessage: string | null;
       notes: string;
     };
   };
@@ -97,6 +98,7 @@ export interface SaveMyCommerSocialInternalConnectorPayload {
   aiWebhookUrl?: string;
   aiWebhookAuthToken?: string;
   aiWebhookTimeoutMs?: number;
+  aiSystemMessage?: string;
   workspaceName?: string;
   notes?: string;
   selectedAssets?: Array<{
@@ -131,6 +133,11 @@ export const myCommerSocialAdminService = {
   async syncConnector(tenantId: number, slug: 'social-hub' | 'marketplace-hub' | 'meta-ads-hub') {
     const { data } = await api.post(`/admin/mycommersocial/tenants/${tenantId}/connectors/${slug}/sync`);
     return data.data as { connector: unknown; detail: MyCommerSocialAdminTenantDetail };
+  },
+
+  async generateTenantAnalysis(tenantId: number) {
+    const { data } = await api.post(`/admin/mycommersocial/tenants/${tenantId}/analyze`);
+    return data.data as { analysis: string; generatedAt: string; model: string };
   },
 
   async saveInternalConnectorConfig(

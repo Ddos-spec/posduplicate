@@ -1,6 +1,11 @@
-import { createHmac, timingSafeEqual } from 'crypto';
 import prisma from '../../../utils/prisma';
 import { decrypt } from '../../../utils/crypto';
+import {
+  checkJubelioConnectionStatus,
+  handOverJubelioRoom,
+  sendJubelioBotMessage,
+  verifyJubelioWebhookSignature,
+} from './jubelioMarketplace.service';
 
 type JsonRecord = Record<string, any>;
 
@@ -29,7 +34,7 @@ export interface MarketplaceHubConnectionStatus {
   channels: MarketplaceChatChannel[];
 }
 
-interface QiscusWebhookContext {
+interface MarketplaceWebhookContext {
   tenantId?: number;
   token?: string;
 }
@@ -76,10 +81,6 @@ function getBackendPublicUrl(): string {
   return configured.replace(/\/$/, '');
 }
 
-function getQiscusBaseUrl(): string {
-  return (process.env.MCS_MARKETPLACE_QISCUS_BASE_URL || 'https://omnichannel.qiscus.com').replace(/\/$/, '');
-}
-
 function normalizeChannels(payload: unknown): MarketplaceChatChannel[] {
   const root = asRecord(payload);
   const arrays = [
@@ -97,23 +98,6 @@ function normalizeChannels(payload: unknown): MarketplaceChatChannel[] {
       source: String(record.source || record.channel || record.name || 'unknown'),
     };
   });
-}
-
-function verifyQiscusSignature(payload: unknown, signatureHeader: string | string[] | undefined, secretKey: string): boolean {
-  const provided = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
-  const normalizedSignature = String(provided || '').trim();
-  if (!normalizedSignature || !secretKey) {
-    return true;
-  }
-
-  const plainText = typeof payload === 'string' ? payload : JSON.stringify(payload ?? {});
-  const expected = createHmac('sha256', secretKey).update(plainText).digest('base64');
-
-  try {
-    return timingSafeEqual(Buffer.from(normalizedSignature), Buffer.from(expected));
-  } catch {
-    return false;
-  }
 }
 
 async function getMarketplaceRow(tenantId: number) {
@@ -214,6 +198,9 @@ export async function getMarketplaceHubConnectionStatus(tenantId: number): Promi
   const checkedAt = new Date().toISOString();
   const configured = Boolean(row && (appId || secretKey || botSenderEmail || aiWebhookUrl || workspaceName));
 
+  // suppress unused warning
+  void metadata;
+
   if (!configured) {
     return {
       configured: false,
@@ -257,37 +244,11 @@ export async function getMarketplaceHubConnectionStatus(tenantId: number): Promi
   }
 
   try {
-    const response = await fetch(`${getQiscusBaseUrl()}/api/v2/channels`, {
-      headers: {
-        'Qiscus-App-Id': appId,
-        'Qiscus-Secret-Key': secretKey,
-      },
-      signal: AbortSignal.timeout(8000),
-    });
+    const jubelioResult = await checkJubelioConnectionStatus(credentials);
+    const reachable = jubelioResult.reachable;
+    const channels = normalizeChannels(jubelioResult.channels);
+    const probeMessage = jubelioResult.message;
 
-    if (!response.ok) {
-      return {
-        configured: true,
-        active: Boolean(row?.is_active),
-        hasAppId: true,
-        hasSecretKey: true,
-        hasBotSenderEmail: true,
-        hasAiWebhook: Boolean(aiWebhookUrl),
-        reachable: false,
-        checkedAt,
-        status: 'degraded',
-        message: `Marketplace chat engine returned ${response.status}.`,
-        workspaceName,
-        appIdMasked: maskReference(appId),
-        botSenderEmail,
-        aiWebhookUrl: aiWebhookUrl || null,
-        webhookUrl,
-        channels: [],
-      };
-    }
-
-    const json = await response.json() as unknown;
-    const channels = normalizeChannels(json);
     const status: MarketplaceHubConnectionStatus = {
       configured: true,
       active: Boolean(row?.is_active),
@@ -295,12 +256,10 @@ export async function getMarketplaceHubConnectionStatus(tenantId: number): Promi
       hasSecretKey: true,
       hasBotSenderEmail: true,
       hasAiWebhook: Boolean(aiWebhookUrl),
-      reachable: true,
+      reachable,
       checkedAt,
-      status: 'reachable',
-      message: channels.length > 0
-        ? `${channels.length} channel marketplace chat terdeteksi.`
-        : 'Kredensial valid. Channel marketplace belum terlihat aktif.',
+      status: reachable ? 'reachable' : 'degraded',
+      message: probeMessage,
       workspaceName,
       appIdMasked: maskReference(appId),
       botSenderEmail,
@@ -392,93 +351,6 @@ function getIncomingMessage(payload: JsonRecord) {
   };
 }
 
-async function sendQiscusBotMessage(input: {
-  appId: string;
-  secretKey: string;
-  senderEmail: string;
-  roomId: string;
-  message: string;
-  type?: string;
-  payload?: JsonRecord | null;
-}) {
-  const response = await fetch(`${getQiscusBaseUrl()}/${input.appId}/bot`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'QISCUS_SDK_SECRET': input.secretKey,
-    },
-    body: JSON.stringify({
-      sender_email: input.senderEmail,
-      message: input.message,
-      type: input.type || 'text',
-      room_id: input.roomId,
-      ...(input.payload ? { payload: input.payload } : {}),
-    }),
-    signal: AbortSignal.timeout(12000),
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`Qiscus send message failed (${response.status}): ${body || 'unknown error'}`);
-  }
-
-  return response.json().catch(() => ({}));
-}
-
-async function handOverQiscusRoom(input: {
-  appId: string;
-  secretKey: string;
-  roomId: string;
-  role?: string | null;
-  roles?: string[] | null;
-  findOnlineAgent?: boolean;
-}) {
-  const headers: Record<string, string> = {
-    Authorization: input.secretKey,
-  };
-
-  if (input.role || (input.roles && input.roles.length > 0)) {
-    const body = new URLSearchParams();
-    if (input.role) body.set('role', input.role);
-    for (const role of input.roles || []) {
-      body.append('roles[]', role);
-    }
-    if (typeof input.findOnlineAgent === 'boolean') {
-      body.set('find_online_agent', String(input.findOnlineAgent));
-    }
-
-    const response = await fetch(`${getQiscusBaseUrl()}/${input.appId}/bot/${input.roomId}/hand_over_to_role`, {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: body.toString(),
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`Qiscus handover to role failed (${response.status}): ${errorText || 'unknown error'}`);
-    }
-
-    return response.json().catch(() => ({}));
-  }
-
-  const response = await fetch(`${getQiscusBaseUrl()}/${input.appId}/bot/${input.roomId}/hand_over`, {
-    method: 'POST',
-    headers,
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`Qiscus handover failed (${response.status}): ${errorText || 'unknown error'}`);
-  }
-
-  return response.json().catch(() => ({}));
-}
-
 async function triggerAiWebhook(config: {
   tenantId: number;
   appId: string;
@@ -487,6 +359,7 @@ async function triggerAiWebhook(config: {
   aiWebhookUrl: string;
   aiWebhookAuthToken?: string | null;
   aiWebhookTimeoutMs?: number | null;
+  aiSystemMessage?: string | null;
   event: ReturnType<typeof getIncomingMessage>;
 }) {
   const headers: Record<string, string> = {
@@ -503,7 +376,7 @@ async function triggerAiWebhook(config: {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      provider: 'qiscus_omnichannel',
+      provider: 'jubelio_marketplace',
       tenantId: config.tenantId,
       appId: config.appId,
       senderEmail: config.senderEmail,
@@ -513,6 +386,7 @@ async function triggerAiWebhook(config: {
       message: config.event.message,
       room: config.event.room,
       raw: config.event.raw,
+      ...(config.aiSystemMessage ? { systemMessage: config.aiSystemMessage } : {}),
     }),
     signal: AbortSignal.timeout(config.aiWebhookTimeoutMs || 15000),
   });
@@ -566,7 +440,7 @@ function normalizeAiResult(raw: unknown) {
 export async function handleMarketplaceHubWebhook(input: {
   headers: Record<string, string | string[] | undefined>;
   body: unknown;
-  query: QiscusWebhookContext;
+  query: MarketplaceWebhookContext;
 }) {
   const tenantId = Number(input.query.tenantId);
   const token = String(input.query.token || '');
@@ -600,7 +474,6 @@ export async function handleMarketplaceHubWebhook(input: {
   }
 
   const configuration = asRecord(row.configuration);
-  const metadata = asRecord(row.metadata);
   const credentials = decryptCredentials(row.credentials);
 
   if (String(configuration.webhookToken || '') !== token) {
@@ -616,6 +489,7 @@ export async function handleMarketplaceHubWebhook(input: {
   const aiWebhookUrl = String(configuration.aiWebhookUrl || '').trim();
   const aiWebhookAuthToken = String(credentials.aiWebhookAuthToken || '').trim() || null;
   const aiWebhookTimeoutMs = Number(configuration.aiWebhookTimeoutMs || 15000);
+  const aiSystemMessage = String(configuration.aiSystemMessage || '').trim() || null;
 
   if (event.appCode && appId && event.appCode !== appId) {
     const error = new Error('Webhook app code does not match stored marketplace app id');
@@ -623,9 +497,8 @@ export async function handleMarketplaceHubWebhook(input: {
     throw error;
   }
 
-  const signatureHeader = input.headers['qiscus-signature-key'];
-  if (!verifyQiscusSignature(input.body, signatureHeader, secretKey)) {
-    const error = new Error('Invalid Qiscus webhook signature');
+  if (!verifyJubelioWebhookSignature(input.body, input.headers, secretKey)) {
+    const error = new Error('Invalid marketplace webhook signature');
     (error as Error & { status?: number }).status = 401;
     throw error;
   }
@@ -674,30 +547,29 @@ export async function handleMarketplaceHubWebhook(input: {
     aiWebhookUrl,
     aiWebhookAuthToken,
     aiWebhookTimeoutMs,
+    aiSystemMessage,
     event,
   });
 
   const aiResult = normalizeAiResult(aiRaw);
+
   for (const item of aiResult.messages) {
-    await sendQiscusBotMessage({
+    await sendJubelioBotMessage({
       appId,
       secretKey,
       senderEmail: botSenderEmail,
       roomId: event.roomId,
       message: item.message,
       type: item.type,
-      payload: item.payload,
     });
   }
 
   if (aiResult.handover || aiResult.handoverRole || aiResult.roles.length > 0) {
-    await handOverQiscusRoom({
+    await handOverJubelioRoom({
       appId,
       secretKey,
       roomId: event.roomId,
       role: aiResult.handoverRole,
-      roles: aiResult.roles,
-      findOnlineAgent: aiResult.findOnlineAgent,
     });
   }
 

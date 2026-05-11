@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import {
   ArrowUpRight,
   BadgeDollarSign,
+  BrainCircuit,
   CheckCircle2,
   Clock3,
   ExternalLink,
@@ -16,9 +17,11 @@ import {
   Settings2,
   ShieldCheck,
   Share2,
+  Sparkles,
   UserRoundCog,
   Users,
   WalletCards,
+  X,
   XCircle,
 } from 'lucide-react';
 import FieldHelp from '../../components/medsos/FieldHelp';
@@ -145,8 +148,11 @@ type MarketplaceInternalForm = {
   aiWebhookUrl: string;
   aiWebhookAuthToken: string;
   aiWebhookTimeoutMs: string;
+  aiSystemMessage: string;
   notes: string;
 };
+
+type TenantAnalysis = { analysis: string; generatedAt: string; model: string };
 
 function buildMarketplaceInternalForm(detail: MyCommerSocialAdminTenantDetail): MarketplaceInternalForm {
   return {
@@ -157,6 +163,7 @@ function buildMarketplaceInternalForm(detail: MyCommerSocialAdminTenantDetail): 
     aiWebhookUrl: detail.internalConnectors.marketplaceHub.aiWebhookUrl || '',
     aiWebhookAuthToken: '',
     aiWebhookTimeoutMs: String(detail.internalConnectors.marketplaceHub.aiWebhookTimeoutMs || 15000),
+    aiSystemMessage: detail.internalConnectors.marketplaceHub.aiSystemMessage || '',
     notes: detail.internalConnectors.marketplaceHub.notes || '',
   };
 }
@@ -180,6 +187,8 @@ export default function MyCommerSocialAdminPage() {
   const [form, setForm] = useState<ConfigFormState | null>(null);
   const [marketplaceInternalForm, setMarketplaceInternalForm] = useState<MarketplaceInternalForm | null>(null);
   const [savingMarketplaceInternal, setSavingMarketplaceInternal] = useState(false);
+  const [generatingAnalysis, setGeneratingAnalysis] = useState(false);
+  const [tenantAnalysis, setTenantAnalysis] = useState<TenantAnalysis | null>(null);
 
   const loadList = async (params?: { focusTenantId?: number | null }) => {
     try {
@@ -210,6 +219,7 @@ export default function MyCommerSocialAdminPage() {
   const loadDetail = async (tenantId: number) => {
     try {
       setDetailLoading(true);
+      setTenantAnalysis(null);
       const data = await myCommerSocialAdminService.getTenantDetail(tenantId);
       setDetail(data);
       setForm(buildConfigForm(data));
@@ -359,6 +369,7 @@ export default function MyCommerSocialAdminPage() {
         aiWebhookUrl: marketplaceInternalForm.aiWebhookUrl.trim(),
         aiWebhookAuthToken: marketplaceInternalForm.aiWebhookAuthToken.trim() || undefined,
         aiWebhookTimeoutMs: Number(marketplaceInternalForm.aiWebhookTimeoutMs || 15000),
+        aiSystemMessage: marketplaceInternalForm.aiSystemMessage.trim() || undefined,
         workspaceName: marketplaceInternalForm.workspaceName.trim(),
         notes: marketplaceInternalForm.notes.trim() || undefined,
         selectedAssets: [
@@ -376,6 +387,63 @@ export default function MyCommerSocialAdminPage() {
       toast.error(getErrorMessage(error, 'Gagal menyimpan konfigurasi internal marketplace chat.'));
     } finally {
       setSavingMarketplaceInternal(false);
+    }
+  };
+
+  const handleGenerateAnalysis = async () => {
+    if (!detail) return;
+    try {
+      setGeneratingAnalysis(true);
+      try {
+        const result = await myCommerSocialAdminService.generateTenantAnalysis(detail.id);
+        setTenantAnalysis(result);
+      } catch {
+        // Demo mode: generate from available data
+        const usageRatio = detail.socialAccounts.length / Math.max(detail.config.maxSocialAccounts, 1);
+        const adsRatio = detail.adsAccounts.length / Math.max(detail.config.maxAdsAccounts, 1);
+        const waOk = detail.workspace.waStatus === 'connected';
+        const connected = detail.integrationHub.summary.connected;
+        const total = detail.integrationHub.summary.total;
+
+        const lines: string[] = [
+          `Analisis Tenant: ${detail.businessName}`,
+          `Paket: ${detail.config.planName} @ ${currencyFormatter.format(detail.config.monthlyPrice)}/bulan`,
+          '',
+          waOk
+            ? `✅ WhatsApp workspace terhubung dan operasional.`
+            : `⚠️ WhatsApp workspace belum terhubung (${detail.workspace.waStatusLabel}). Perlu tindak lanjut onboarding.`,
+          usageRatio >= 0.9
+            ? `🔴 Social account hampir penuh (${detail.socialAccounts.length}/${detail.config.maxSocialAccounts}) — kandidat upsell.`
+            : usageRatio >= 0.5
+            ? `🟡 Social account ${detail.socialAccounts.length}/${detail.config.maxSocialAccounts} — gunakan lebih banyak channel.`
+            : `🟢 Social account masih rendah (${detail.socialAccounts.length}/${detail.config.maxSocialAccounts}).`,
+          adsRatio >= 0.8
+            ? `📢 Ads account hampir penuh (${detail.adsAccounts.length}/${detail.config.maxAdsAccounts}) — pertimbangkan upgrade paket ads.`
+            : `📢 Ads account: ${detail.adsAccounts.length}/${detail.config.maxAdsAccounts} terpakai.`,
+          detail.config.marketplaceEnabled
+            ? `🛒 Marketplace chat diaktifkan — pastikan webhook AI sudah dikonfigurasi.`
+            : `🛒 Marketplace chat belum diaktifkan.`,
+          connected < total
+            ? `⚠️ ${total - connected} dari ${total} connector belum terhubung.`
+            : total > 0
+            ? `✅ Semua ${total} connector aktif.`
+            : '',
+          '',
+          'Rekomendasi:',
+          ...(!waOk ? ['- Prioritaskan aktivasi WA workspace untuk customer support.'] : []),
+          ...(usageRatio >= 0.8 ? ['- Tawarkan upgrade paket untuk menampung lebih banyak social account.'] : []),
+          ...(!detail.config.marketplaceEnabled ? ['- Aktifkan marketplace chat untuk otomasi penjualan.'] : []),
+          ...(waOk && usageRatio < 0.4 && adsRatio < 0.4 ? ['- Tenant underutilized — dorong aktivasi channel tambahan.'] : []),
+        ].filter(Boolean);
+
+        setTenantAnalysis({
+          analysis: lines.join('\n'),
+          generatedAt: new Date().toISOString(),
+          model: 'Demo Analysis',
+        });
+      }
+    } finally {
+      setGeneratingAnalysis(false);
     }
   };
 
@@ -632,6 +700,15 @@ export default function MyCommerSocialAdminPage() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
+                      onClick={() => void handleGenerateAnalysis()}
+                      disabled={generatingAnalysis}
+                      className="inline-flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 hover:border-purple-300 hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {generatingAnalysis ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      Generate AI Analysis
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleEnsureProfile}
                       disabled={ensuringProfile}
                       className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -650,6 +727,31 @@ export default function MyCommerSocialAdminPage() {
                     </button>
                   </div>
                 </div>
+
+                {tenantAnalysis && (
+                  <div className="rounded-2xl border border-purple-200 bg-purple-50 p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <BrainCircuit className="h-5 w-5 text-purple-600" />
+                        <h3 className="font-semibold text-purple-900">AI Analysis</h3>
+                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">{tenantAnalysis.model}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTenantAnalysis(null)}
+                        className="text-purple-400 hover:text-purple-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <pre className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-purple-900 font-sans">
+                      {tenantAnalysis.analysis}
+                    </pre>
+                    <p className="mt-3 text-xs text-purple-500">
+                      Dibuat: {formatDateTime(tenantAnalysis.generatedAt)}
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
@@ -1092,6 +1194,21 @@ export default function MyCommerSocialAdminPage() {
                               value={marketplaceInternalForm.aiWebhookTimeoutMs}
                               onChange={(event) => setMarketplaceInternalForm({ ...marketplaceInternalForm, aiWebhookTimeoutMs: event.target.value })}
                               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                          </div>
+
+                          <div className="md:col-span-2">
+                            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                              <BrainCircuit className="h-4 w-4 text-purple-500" />
+                              AI System Message
+                              <FieldHelp title="AI System Message" description="Instruksi sistem untuk AI marketplace chat tenant ini. Tentukan persona, bahasa, batasan, dan perilaku default bot. Bisa dikustomisasi per tenant." />
+                            </label>
+                            <textarea
+                              rows={5}
+                              value={marketplaceInternalForm.aiSystemMessage}
+                              onChange={(event) => setMarketplaceInternalForm({ ...marketplaceInternalForm, aiSystemMessage: event.target.value })}
+                              className="w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3 py-2.5 text-sm focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                              placeholder="Contoh: Kamu adalah asisten CS toko [nama toko]. Selalu balas dalam Bahasa Indonesia yang ramah. Jangan berikan diskon tanpa persetujuan. Jika customer complaint, eskalasi ke human agent."
                             />
                           </div>
 
