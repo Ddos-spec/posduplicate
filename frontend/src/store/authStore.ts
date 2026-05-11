@@ -9,6 +9,15 @@ interface TenantInfo {
   // Add other relevant tenant properties if known
 }
 
+export interface McsPermissions {
+  inbox: boolean;
+  analytics: boolean;
+  content: boolean;
+  ads: boolean;
+  settings: boolean;
+  marketplace: boolean;
+}
+
 interface User {
   id: number;
   name: string;
@@ -20,6 +29,10 @@ interface User {
   tenants_users_tenant_idTotenants?: any;
   outletId?: number;
   outlets?: any;
+  dashboard_preferences?: {
+    mcs?: McsPermissions;
+    [key: string]: any;
+  };
 }
 
 interface AuthState {

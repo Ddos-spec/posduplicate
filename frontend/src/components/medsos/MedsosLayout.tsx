@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
+import { useAuthStore } from '../../store/authStore';
 import { channelConnections, priorityThreads } from '../../data/omnichannelMock';
 import { getMyCommerSocialIntegrationHub } from '../../services/myCommerSocialIntegrations';
 import { getZernioAccounts } from '../../services/medsosPostsService';
@@ -26,6 +27,7 @@ import {
   Share2,
   Store,
   Sun,
+  Users,
 } from 'lucide-react';
 
 type BaseMenu = {
@@ -54,8 +56,13 @@ type MenuItem = LinkMenu | GroupMenu;
 export default function MedsosLayout() {
   const { isDark, toggleTheme } = useThemeStore();
   const { currentRole } = useDemoUser();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isOwnerOrManager = user?.roles?.name === 'owner' || user?.roles?.name === 'manager' || user?.role?.name === 'owner' || user?.role?.name === 'manager';
+  const isMcsMember = user?.roles?.name === 'mcs_member' || user?.role?.name === 'mcs_member';
+  const mcsPerms = user?.dashboard_preferences?.mcs;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
@@ -117,6 +124,7 @@ export default function MedsosLayout() {
         ],
       },
       { type: 'link', icon: CreditCard, label: 'Plans & Pricing', path: `${basePath}/pricing`, roles: ['medsos_manager', 'all'] },
+      { type: 'link', icon: Users, label: 'Tim MCS', path: `${basePath}/team`, roles: ['medsos_manager', 'all'] },
       { type: 'link', icon: Settings, label: 'Settings', path: `${basePath}/settings`, roles: ['medsos_manager', 'all'] },
     ],
     [basePath],
@@ -126,10 +134,28 @@ export default function MedsosLayout() {
     () =>
       allMenus.filter((item) => {
         if (currentRole === 'super_admin') return true;
+        // Demo mode: use currentRole
+        if (isDemo) {
+          if (item.roles.includes('all')) return true;
+          return item.roles.includes(currentRole);
+        }
+        // Real mode: owner/manager see all; mcs_member sees only permitted modules
+        if (isOwnerOrManager) return true;
+        if (isMcsMember && mcsPerms) {
+          if (item.path?.endsWith('/team')) return false;
+          if (item.path?.endsWith('/settings')) return Boolean(mcsPerms.settings);
+          if (item.path?.endsWith('/ads')) return Boolean(mcsPerms.ads);
+          if (item.path?.endsWith('/marketplace')) return Boolean(mcsPerms.marketplace);
+          if (item.path?.endsWith('/calendar') || item.path?.endsWith('/create')) return Boolean(mcsPerms.content);
+          if (item.key === 'inbox') return Boolean(mcsPerms.inbox);
+          if (item.key === 'analytics') return Boolean(mcsPerms.analytics);
+          if (item.path?.endsWith('/pricing') || item.path?.endsWith('/connections')) return false;
+          return item.roles.includes('all');
+        }
         if (item.roles.includes('all')) return true;
         return item.roles.includes(currentRole);
       }),
-    [allMenus, currentRole],
+    [allMenus, currentRole, isDemo, isOwnerOrManager, isMcsMember, mcsPerms],
   );
 
   useEffect(() => {

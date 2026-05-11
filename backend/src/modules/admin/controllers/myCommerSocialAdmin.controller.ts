@@ -406,6 +406,7 @@ const buildAdminDetail = async (tenantId: number) => {
         botSenderEmail: parseString(marketplaceCredentials.botSenderEmail, '') || null,
         aiWebhookUrl: parseString(marketplaceConfiguration.aiWebhookUrl, '') || null,
         aiWebhookTimeoutMs: asPositiveNumber(marketplaceConfiguration.aiWebhookTimeoutMs, 15000),
+        aiSystemMessage: parseString(marketplaceConfiguration.aiSystemMessage, '') || null,
         notes: parseString(marketplaceMetadata.notes, ''),
       },
     },
@@ -727,6 +728,7 @@ export const saveMyCommerSocialConnectorInternalConfig = async (req: Request, re
         : typeof req.body?.aiWebhookTimeoutMs === 'string'
           ? Number(req.body.aiWebhookTimeoutMs)
           : undefined,
+      aiSystemMessage: typeof req.body?.aiSystemMessage === 'string' ? req.body.aiSystemMessage : undefined,
       workspaceName: typeof req.body?.workspaceName === 'string' ? req.body.workspaceName : undefined,
       notes: typeof req.body?.notes === 'string' ? req.body.notes : undefined,
       vendorWorkspaceUrl: typeof req.body?.vendorWorkspaceUrl === 'string' ? req.body.vendorWorkspaceUrl : undefined,
