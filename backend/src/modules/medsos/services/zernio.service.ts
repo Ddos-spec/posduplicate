@@ -484,7 +484,7 @@ export async function getZernioConversationMessages(
   const qs = new URLSearchParams();
   if (accountId) qs.set('accountId', accountId);
   const suffix = qs.size > 0 ? `?${qs}` : '';
-  const raw = await zFetch<any>(`/inbox/messages/${encodeURIComponent(conversationId)}${suffix}`);
+  const raw = await zFetch<any>(`/inbox/conversations/${encodeURIComponent(conversationId)}/messages${suffix}`);
   const list: any[] = raw.messages ?? raw.data ?? (Array.isArray(raw) ? raw : []);
   return list.map((m: any): ZernioMessage => ({
     id: String(m.id ?? m._id ?? ''),
@@ -503,7 +503,7 @@ export async function sendZernioDirectMessage(
   message: string,
 ): Promise<{ messageId: string; status: string }> {
   zernioCache.clear();
-  const raw = await zFetch<any>(`/inbox/send/${encodeURIComponent(conversationId)}`, {
+  const raw = await zFetch<any>(`/inbox/conversations/${encodeURIComponent(conversationId)}/send`, {
     method: 'POST',
     body: JSON.stringify({ accountId, message }),
   });
@@ -1391,6 +1391,10 @@ export async function getZernioAdsSummary(
       options?.refresh ?? false,
     );
   } catch {
+    return null;
+  }
+}
+atch {
     return null;
   }
 }
