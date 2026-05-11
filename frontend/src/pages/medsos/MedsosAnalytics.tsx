@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import FieldHelp from '../../components/medsos/FieldHelp';
@@ -23,6 +23,7 @@ import {
 } from '../../services/medsosPostsService';
 import {
   Activity,
+  ArrowRight,
   BarChart3,
   Bot,
   Download,
@@ -30,6 +31,8 @@ import {
   LineChart as LineChartIcon,
   Loader2,
   MessageSquareQuote,
+  PenLine,
+  Settings,
   Sparkles,
   Store,
   TrendingUp,
@@ -256,6 +259,7 @@ function buildTrendRows(posts: SocialPost[]) {
 }
 
 function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: boolean }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(!isDemo);
   const [posts, setPosts] = useState<SocialPost[]>(isDemo ? demoSocialPosts : []);
   const [accounts, setAccounts] = useState<ZernioAccount[]>([]);
@@ -463,10 +467,31 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
           </button>
         }
         description={previewMode
-          ? 'Belum ada channel social yang aktif. Layout analytics tetap ditampilkan dengan angka netral agar tim bisa melihat bentuk dashboard.'
+          ? 'Belum ada post yang dipublish via platform ini. Analytics hanya tersedia untuk konten yang dijadwalkan lewat Content Scheduler kami — bukan dari Zernio atau tool eksternal lainnya.'
           : 'Lihat performa konten per channel, buka detail post, lalu jalankan analysis hanya saat tombol generate ditekan.'}
         icon={<LineChartIcon size={22} />}
       />
+
+      {previewMode && !isDemo && (
+        <div className={`rounded-2xl border p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-100'}`}>
+          <PenLine size={22} className="text-blue-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className={`font-semibold text-sm ${isDark ? 'text-blue-300' : 'text-blue-800'}`}>Cara mendapatkan data analytics</p>
+            <p className={`text-xs mt-0.5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+              Buat dan jadwalkan post via Content Scheduler. Setelah post dipublish, data analytics akan muncul di sini secara otomatis. Post yang dipublish langsung di Zernio atau aplikasi platform tidak terlacak di sini.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/medsos/content')}
+            className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            <PenLine size={14} />
+            Buka Content Scheduler
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
 
       <div className={`rounded-3xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="flex flex-wrap items-center gap-3">
@@ -780,6 +805,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
 }
 
 function WaAnalyticsView({ isDark }: { isDark: boolean }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<WACrmConnectionStatus | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -851,10 +877,33 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
           </button>
         }
         description={previewMode
-          ? 'WA belum aktif penuh. Dashboard tetap menampilkan angka netral agar tim bisa melihat struktur analytics lebih dulu.'
+          ? (status?.message || 'WA Inbox belum dikonfigurasi atau belum terhubung ke workspace.')
           : 'Ringkasan performa inbox, kecepatan respons, dan stabilitas operasional WA.'}
         icon={<MessageSquareQuote size={22} />}
       />
+
+      {previewMode && (
+        <div className={`rounded-2xl border p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-100'}`}>
+          <Settings size={22} className="text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className={`font-semibold text-sm ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+              {status?.status === 'configuration_incomplete' ? 'API key WA Inbox belum tersimpan' : 'WA Inbox belum dikonfigurasi'}
+            </p>
+            <p className={`text-xs mt-0.5 ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+              Masuk ke <strong>Connections → WA Inbox</strong>, isi API key workspace WA CRM untuk mengaktifkan statistik live. Analytics WA menampilkan data dari WA CRM (bukan riwayat chat langsung).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/medsos/connections')}
+            className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+          >
+            <Settings size={14} />
+            Buka Connections
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
         {[
@@ -946,6 +995,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
 }
 
 function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<MarketplaceHubConnectionStatus | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -1022,10 +1072,31 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
           </button>
         }
         description={previewMode
-          ? 'Marketplace belum tersambung penuh. Dashboard tetap menampilkan angka netral agar bentuk analytics tetap terlihat.'
+          ? (status?.message || 'Marketplace Hub belum dikonfigurasi atau belum ada channel aktif.')
           : 'Pantau kesiapan workspace buyer chat, channel aktif, dan fokus tindak lanjut marketplace.'}
         icon={<Store size={22} />}
       />
+
+      {previewMode && (
+        <div className={`rounded-2xl border p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isDark ? 'bg-orange-500/10 border-orange-500/30' : 'bg-orange-50 border-orange-100'}`}>
+          <Store size={22} className="text-orange-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className={`font-semibold text-sm ${isDark ? 'text-orange-300' : 'text-orange-800'}`}>Marketplace Hub belum terhubung</p>
+            <p className={`text-xs mt-0.5 ${isDark ? 'text-orange-400' : 'text-orange-700'}`}>
+              Sambungkan toko Shopee atau marketplace lain melalui <strong>Connections → Marketplace Hub</strong> untuk mulai menerima dan membalas pesan buyer.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/medsos/connections')}
+            className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
+          >
+            <Settings size={14} />
+            Buka Connections
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-3 gap-4">
         {[
