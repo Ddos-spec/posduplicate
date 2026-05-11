@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
@@ -25,6 +25,7 @@ import {
   Activity,
   BarChart3,
   Bot,
+  Download,
   FileText,
   LineChart as LineChartIcon,
   Loader2,
@@ -34,6 +35,7 @@ import {
   TrendingUp,
   Workflow,
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import {
   Area,
   AreaChart,
@@ -164,6 +166,50 @@ const neutralMarketplaceCards = [
   { channel: 'TikTok Shop', conversion: 0, responseRate: 0 },
 ];
 
+function exportAnalyticsPdf(title: string, sections: { heading: string; rows: [string, string | number][] }[]) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const now = new Date().toLocaleString('id-ID');
+  let y = 18;
+
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('MyCommerSocial Analytics', 14, y);
+  y += 8;
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100);
+  doc.text(`${title}  •  Diekspor: ${now}`, 14, y);
+  doc.setTextColor(0);
+  y += 10;
+
+  for (const section of sections) {
+    if (y > 260) { doc.addPage(); y = 18; }
+
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text(section.heading, 14, y);
+    y += 6;
+    doc.setLineWidth(0.3);
+    doc.line(14, y, 196, y);
+    y += 5;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    for (const [label, value] of section.rows) {
+      if (y > 270) { doc.addPage(); y = 18; }
+      doc.text(`${label}:`, 16, y);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(value), 80, y);
+      doc.setFont('helvetica', 'normal');
+      y += 6;
+    }
+    y += 4;
+  }
+
+  doc.save(`mcs-analytics-${title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.pdf`);
+}
+
 function normalizeAnalyticsChannel(value?: string): AnalyticsChannel {
   if (value === 'social') return 'social';
   if (value === 'marketplace') return 'marketplace';
@@ -218,6 +264,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<SocialPostAnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isDemo) return;
@@ -366,6 +413,32 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
     }
   };
 
+  const handleExportPdf = () => {
+    exportAnalyticsPdf('Medsos Social', [
+      {
+        heading: 'Ringkasan Performa',
+        rows: [
+          ['Total Posts', displayPosts.length],
+          ['Total Views', aggregate.views],
+          ['Total Reach', aggregate.reach],
+          ['Total Likes', aggregate.likes],
+          ['Total Comments', aggregate.comments],
+          ['Total Shares', aggregate.shares],
+          ['Total Saves', aggregate.saves],
+          ['Avg Engagement Rate', `${averageEngagementRate}%`],
+        ],
+      },
+      {
+        heading: 'Platform Breakdown',
+        rows: platformBreakdown.map((item) => [item.platform.toUpperCase(), `${item.posts} post · ER ${item.engagementRate}%`]),
+      },
+      ...(analysisResult ? [{
+        heading: 'AI Analysis',
+        rows: [['Generated', new Date(analysisResult.generatedAt).toLocaleString('id-ID')], ['Model', analysisResult.model], ['Analysis', analysisResult.analysis.substring(0, 800)]],
+      }] : []),
+    ]);
+  };
+
   if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
@@ -375,10 +448,20 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={exportRef}>
       <SectionHeader
         isDark={isDark}
         title="Analytics Medsos"
+        exportButton={
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            className={`flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition ${isDark ? 'border-slate-600 hover:bg-slate-700' : 'border-gray-200 hover:bg-gray-50'}`}
+          >
+            <Download size={15} />
+            Export PDF
+          </button>
+        }
         description={previewMode
           ? 'Belum ada channel social yang aktif. Layout analytics tetap ditampilkan dengan angka netral agar tim bisa melihat bentuk dashboard.'
           : 'Lihat performa konten per channel, buka detail post, lalu jalankan analysis hanya saat tombol generate ditekan.'}
@@ -699,6 +782,8 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
 function WaAnalyticsView({ isDark }: { isDark: boolean }) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<WACrmConnectionStatus | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<string | null>(null);
 
   useEffect(() => {
     getWACrmStatus()
@@ -720,11 +805,51 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
   const waTrend = previewMode ? neutralReplySpeedTrend : replySpeedTrend;
   const slaTrend = previewMode ? neutralSlaTrend : slaCompliance;
 
+  const handleWaAnalysis = async () => {
+    setAiLoading(true);
+    await new Promise((r) => setTimeout(r, 800));
+    const openChats = stats?.openChats ?? 0;
+    const pending = stats?.pendingChats ?? 0;
+    const unread = stats?.totalUnread ?? 0;
+    const todayMsg = stats?.todayMessages ?? 0;
+    setAiResult(previewMode
+      ? `WA Inbox belum aktif penuh. Setelah tersambung, analisis AI akan menampilkan ringkasan beban inbox, kecepatan respons, dan rekomendasi operasional berdasarkan data live.`
+      : `Ringkasan Inbox WA:\n• ${openChats} chat sedang open — ${pending > 0 ? `${pending} menunggu balasan, perlu ditindaklanjuti.` : 'tidak ada backlog.'}\n• ${unread} pesan belum dibaca hari ini.\n• Volume: ${todayMsg} pesan masuk hari ini.\n\nRekomendasi:\n${pending > 5 ? '- Backlog cukup tinggi, pertimbangkan distribusi ke lebih banyak agent.' : '- Beban inbox masih terkontrol.'}\n${unread > 20 ? '- Pesan belum dibaca banyak, prioritaskan SLA respons.' : '- Kecepatan respons dalam batas wajar.'}`);
+    setAiLoading(false);
+  };
+
+  const handleExportPdf = () => {
+    exportAnalyticsPdf('WA Inbox', [
+      {
+        heading: 'Statistik WA Inbox',
+        rows: [
+          ['Open Chats', stats?.openChats ?? 0],
+          ['Pending Reply', stats?.pendingChats ?? 0],
+          ['Unread', stats?.totalUnread ?? 0],
+          ['Today Messages', stats?.todayMessages ?? 0],
+          ['Status', previewMode ? 'Preview' : status?.reachable ? 'Active' : 'Degraded'],
+          ['Workspace', status?.workspaceName || '-'],
+        ],
+      },
+      ...(aiResult ? [{ heading: 'AI Analysis', rows: [['Analysis', aiResult]] as [string, string | number][] }] : []),
+    ]);
+  };
+
   return (
     <div className="space-y-6">
       <SectionHeader
         isDark={isDark}
         title="Analytics WA"
+        exportButton={
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            className={`flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition ${isDark ? 'border-slate-600 hover:bg-slate-700' : 'border-gray-200 hover:bg-gray-50'}`}
+          >
+            <Download size={15} />
+            Export PDF
+          </button>
+        }
         description={previewMode
           ? 'WA belum aktif penuh. Dashboard tetap menampilkan angka netral agar tim bisa melihat struktur analytics lebih dulu.'
           : 'Ringkasan performa inbox, kecepatan respons, dan stabilitas operasional WA.'}
@@ -788,6 +913,34 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
           </div>
         </div>
       </div>
+
+      {/* AI Analysis panel */}
+      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-purple-500" />
+            <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>AI Analysis — WA Inbox</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleWaAnalysis()}
+            disabled={aiLoading}
+            className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
+          >
+            {aiLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            Generate Analysis
+          </button>
+        </div>
+        {aiResult ? (
+          <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+            <pre className={`whitespace-pre-wrap text-sm leading-6 font-sans ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{aiResult}</pre>
+          </div>
+        ) : (
+          <div className={`rounded-2xl border border-dashed p-4 text-sm ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+            Tekan <strong>Generate Analysis</strong> untuk insight AI dari data WA Inbox.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -795,6 +948,8 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
 function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<MarketplaceHubConnectionStatus | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<string | null>(null);
 
   useEffect(() => {
     getMarketplaceHubStatus()
@@ -823,11 +978,49 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
           responseRate: item.responseRate,
         }));
 
+  const handleMktAnalysis = async () => {
+    setAiLoading(true);
+    await new Promise((r) => setTimeout(r, 900));
+    setAiResult(previewMode
+      ? `Marketplace hub belum tersambung. Setelah channel aktif, analisis AI akan memberikan ringkasan performa buyer chat, konversi per platform, dan rekomendasi follow-up.`
+      : `Ringkasan Marketplace Hub:\n• ${channels.length} channel aktif: ${channels.map((c) => c.name).join(', ') || '-'}.\n• Status: ${status?.reachable ? 'Workspace merespons dengan baik.' : 'Workspace perlu pengecekan koneksi.'}\n\nRekomendasi:\n${channels.length === 0 ? '- Belum ada channel terdaftar, hubungkan toko marketplace melalui halaman Connections.' : `- ${channels.length} channel tersambung, pastikan SLA respons buyer chat terjaga di bawah 5 menit.`}\n- Pantau metrik konversi per platform secara berkala untuk mengidentifikasi toko dengan performa terbaik.`);
+    setAiLoading(false);
+  };
+
+  const handleExportPdf = () => {
+    exportAnalyticsPdf('Marketplace', [
+      {
+        heading: 'Status Marketplace Hub',
+        rows: [
+          ['Workspace', status?.workspaceName || 'Belum dikonfigurasi'],
+          ['Status', previewMode ? 'Preview' : status?.reachable ? 'Healthy' : 'Degraded'],
+          ['Channel Aktif', channels.length],
+          ...channels.map((c) => [`Channel: ${c.name}`, c.source] as [string, string]),
+        ],
+      },
+      {
+        heading: 'Performa Channel',
+        rows: marketplaceCards.map((item) => [item.channel, `Conversion ${item.conversion}% · Response Rate ${item.responseRate}%`]),
+      },
+      ...(aiResult ? [{ heading: 'AI Analysis', rows: [['Analysis', aiResult]] as [string, string | number][] }] : []),
+    ]);
+  };
+
   return (
     <div className="space-y-6">
       <SectionHeader
         isDark={isDark}
         title="Analytics Marketplace"
+        exportButton={
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            className={`flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition ${isDark ? 'border-slate-600 hover:bg-slate-700' : 'border-gray-200 hover:bg-gray-50'}`}
+          >
+            <Download size={15} />
+            Export PDF
+          </button>
+        }
         description={previewMode
           ? 'Marketplace belum tersambung penuh. Dashboard tetap menampilkan angka netral agar bentuk analytics tetap terlihat.'
           : 'Pantau kesiapan workspace buyer chat, channel aktif, dan fokus tindak lanjut marketplace.'}
@@ -903,6 +1096,34 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
           </div>
         </div>
       </div>
+
+      {/* AI Analysis panel */}
+      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-purple-500" />
+            <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>AI Analysis — Marketplace</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleMktAnalysis()}
+            disabled={aiLoading}
+            className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
+          >
+            {aiLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            Generate Analysis
+          </button>
+        </div>
+        {aiResult ? (
+          <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+            <pre className={`whitespace-pre-wrap text-sm leading-6 font-sans ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{aiResult}</pre>
+          </div>
+        ) : (
+          <div className={`rounded-2xl border border-dashed p-4 text-sm ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+            Tekan <strong>Generate Analysis</strong> untuk insight AI dari data Marketplace Hub.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -912,20 +1133,25 @@ function SectionHeader({
   title,
   description,
   icon,
+  exportButton,
 }: {
   isDark: boolean;
   title: string;
   description: string;
-  icon: ReactNode;
+  icon?: ReactNode;
+  exportButton?: ReactNode;
 }) {
   return (
     <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-      <div className="flex items-start gap-4">
-        <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>{icon}</div>
-        <div>
-          <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h1>
-          <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-4">
+          {icon ? <div className={`rounded-2xl p-3 shrink-0 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>{icon}</div> : null}
+          <div>
+            <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h1>
+            <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
+          </div>
         </div>
+        {exportButton ? <div className="shrink-0">{exportButton}</div> : null}
       </div>
     </div>
   );
