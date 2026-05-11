@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { io } from '../../../server';
 import {
   getAdsConnectUrl,
   getZernioAdAnalytics,
@@ -13,9 +14,37 @@ import {
   getZernioConversations,
   getZernioConversationMessages,
   sendZernioDirectMessage,
+  createZernioPost,
+  generateZernioUploadLink,
+  checkZernioUploadStatus,
+  listZernioContacts,
+  createZernioBroadcast,
+  createZernioSequence,
+  createZernioAutomation,
 } from '../services/zernio.service';
 
 const router = Router();
+
+// POST /api/medsos/zernio/webhook
+// This must be before authMiddleware because it's called by Zernio servers
+router.post('/webhook', async (req, res, next) => {
+  try {
+    const signature = req.headers['x-zernio-signature'];
+    // TODO: Verify signature using ZERNIO_WEBHOOK_SECRET
+    const payload = req.body;
+    console.log('[Zernio Webhook] Received:', payload.event, payload.id);
+    
+    // Process based on payload.event
+    // e.g. post.published, message.received, etc.
+    io.emit('zernio_event', payload);
+    
+    // We acknowledge the webhook quickly.
+    return res.status(200).json({ success: true, message: 'Webhook received' });
+  } catch (err) {
+    console.error('[Zernio Webhook] Error:', err);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
 
 router.use(authMiddleware);
 router.use(tenantMiddleware);
@@ -127,6 +156,77 @@ router.get('/ads/:adId/analytics', async (req, res, next) => {
     });
 
     return res.json({ success: true, data: analytics });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/medsos/zernio/post
+router.post('/post', async (req, res, next) => {
+  try {
+    const payload = req.body;
+    const result = await createZernioPost(req.tenantId!, payload);
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/medsos/zernio/media/upload-link
+router.post('/media/upload-link', async (req, res, next) => {
+  try {
+    const result = await generateZernioUploadLink(req.tenantId!);
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/medsos/zernio/media/status/:token
+router.get('/media/status/:token', async (req, res, next) => {
+  try {
+    const result = await checkZernioUploadStatus(req.tenantId!, req.params.token);
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/medsos/zernio/contacts
+router.get('/contacts', async (req, res, next) => {
+  try {
+    const result = await listZernioContacts(req.tenantId!);
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/medsos/zernio/broadcasts
+router.post('/broadcasts', async (req, res, next) => {
+  try {
+    const result = await createZernioBroadcast(req.tenantId!, req.body);
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/medsos/zernio/sequences
+router.post('/sequences', async (req, res, next) => {
+  try {
+    const result = await createZernioSequence(req.tenantId!, req.body);
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/medsos/zernio/automations
+router.post('/automations', async (req, res, next) => {
+  try {
+    const result = await createZernioAutomation(req.tenantId!, req.body);
+    return res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }

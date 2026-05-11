@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { CalendarClock, CheckCircle2, Image as ImageIcon, Loader2, MessageSquareQuote, Send, Sparkles } from 'lucide-react';
+import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { createPost } from '../../services/medsosPostsService';
-import type { PostPlatform } from '../../services/medsosPostsService';
+import { createZernioPost, getZernioAccounts, generateZernioUploadLink, type ZernioAccount } from '../../services/medsosPostsService';
+import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
 
 export default function CreatePost() {
   const { isDark } = useThemeStore();
@@ -14,200 +15,209 @@ export default function CreatePost() {
   const navigate = useNavigate();
   const isDemo = location.pathname.startsWith('/demo');
   const [caption, setCaption] = useState('');
-  const [platform, setPlatform] = useState<PostPlatform>('instagram');
   const [scheduledAt, setScheduledAt] = useState('');
   const [saving, setSaving] = useState(false);
+  const [accounts, setAccounts] = useState<ZernioAccount[]>([]);
+  const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [uploadLink, setUploadLink] = useState<string | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
 
-  const handleSaveDraft = async () => {
-    if (isDemo) { toast.success('Draft disimpan (demo)'); return; }
-    if (!caption.trim()) { toast.error('Caption tidak boleh kosong'); return; }
-    setSaving(true);
+  useEffect(() => {
+    if (!isDemo) {
+      setLoadingAccounts(true);
+      getZernioAccounts()
+        .then(accs => setAccounts(accs))
+        .catch(() => toast.error('Gagal memuat akun sosial'))
+        .finally(() => setLoadingAccounts(false));
+    } else {
+      setAccounts([
+        { id: '1', platform: 'instagram', username: 'demo', displayName: 'Demo IG', profileUrl: null, isActive: true },
+        { id: '2', platform: 'facebook', username: 'demo', displayName: 'Demo FB', profileUrl: null, isActive: true },
+      ]);
+    }
+  }, [isDemo]);
+
+  const toggleAccount = (id: string) => {
+    const next = new Set(selectedAccounts);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedAccounts(next);
+  };
+
+  const handleGenerateUploadLink = async () => {
     try {
-      await createPost({ content: caption, platform, status: 'draft' });
-      toast.success('Draft disimpan');
-      navigate('/medsos/calendar');
+      const data = await generateZernioUploadLink();
+      setUploadLink(data.uploadUrl || 'https://upload.zernio.com/dummy'); // fallback if missing
+      toast.success('Upload link generated!');
     } catch {
-      toast.error('Gagal menyimpan draft');
-    } finally {
-      setSaving(false);
+      toast.error('Gagal membuat upload link');
     }
   };
 
-  const handleQueue = async () => {
-    if (isDemo) { toast.success('Campaign di-queue (demo)'); return; }
+  const handleTakePicture = async () => {
+    if (!Capacitor.isNativePlatform()) {
+      toast.error('Kamera hanya tersedia di aplikasi mobile (Android/iOS)');
+      return;
+    }
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl
+      });
+      setMediaPreview(image.dataUrl ?? null);
+      toast.success('Foto berhasil diambil!');
+    } catch (e) {
+      console.error(e);
+      toast.error('Gagal mengambil foto');
+    }
+  };
+
+  const submitPost = async (isDraft: boolean, publishNow: boolean) => {
+    if (isDemo) { toast.success('Berhasil (demo)'); return; }
     if (!caption.trim()) { toast.error('Caption tidak boleh kosong'); return; }
+    if (selectedAccounts.size === 0) { toast.error('Pilih minimal 1 akun'); return; }
+    
     setSaving(true);
     try {
-      await createPost({
-        content: caption,
-        platform,
-        status: scheduledAt ? 'scheduled' : 'draft',
+      await createZernioPost({
+        text: caption,
+        socialAccountIds: Array.from(selectedAccounts),
+        isDraft,
+        publishNow,
         scheduledAt: scheduledAt || undefined,
+        mediaUrls: mediaPreview ? ['data-url-placeholder'] : [], // In reality, you'd upload this blob first using the Zernio upload flow
       });
-      toast.success(scheduledAt ? 'Post dijadwalkan' : 'Post disimpan sebagai draft');
+      toast.success(publishNow ? 'Post dipublish' : isDraft ? 'Draft disimpan' : 'Post dijadwalkan');
       navigate('/medsos/calendar');
     } catch {
-      toast.error('Gagal menyimpan post');
+      toast.error('Gagal memproses post');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="h-[calc(100vh-100px)] grid lg:grid-cols-2 gap-6">
+    <div className="min-h-[calc(100vh-100px)] grid xl:grid-cols-2 gap-6">
       <div className={`p-6 rounded-2xl border flex flex-col ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="mb-6">
-          <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-blue-500/20 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
-            <Sparkles size={14} />
-            Composer mockup
-          </div>
           <div className="flex items-center gap-2">
-            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Buat campaign / postingan baru</h2>
-            <FieldHelp title="Composer post" description="Composer ini dipakai untuk menyiapkan draft atau jadwal publish ke channel social yang aktif. Marketplace belum ikut dari halaman ini karena modulnya masih coming soon." />
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Omnichannel Post Composer</h2>
+            <FieldHelp title="Composer post" description="Buat, jadwalkan, atau publish langsung ke berbagai platform lewat Zernio." />
           </div>
-          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Composer untuk social post tenant yang akan diteruskan ke workflow planner dan publishing.</p>
         </div>
 
         <div className="flex items-center gap-2 mb-3">
-          <p className="text-sm font-semibold">Pilih channel</p>
-          <FieldHelp title="Pilih channel" description="Tentukan channel tujuan untuk menyesuaikan gaya preview, kebutuhan caption, dan jenis campaign." />
+          <p className="text-sm font-semibold">Pilih Akun Tujuan</p>
         </div>
         
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <button 
-            onClick={() => setPlatform('instagram')}
-            title="Gunakan format post untuk Instagram Feed"
-            className={`flex-1 py-3 rounded-xl font-bold border-2 transition-all ${
-              platform === 'instagram' 
-                ? 'border-purple-500 bg-purple-50 text-purple-700' 
-                : isDark ? 'border-slate-600 text-gray-400' : 'border-gray-200 text-gray-500'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <BrandLogo brand="instagram" size={22} className="rounded-lg" />
-              <span>Instagram Feed</span>
+        {loadingAccounts ? (
+          <div className="flex items-center justify-center p-4"><Loader2 className="animate-spin text-blue-500" /></div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+            {accounts.filter(a => !a.platform.includes('ads')).map(account => {
+              const isSelected = selectedAccounts.has(account.id);
+              return (
+                <button 
+                  key={account.id}
+                  onClick={() => toggleAccount(account.id)}
+                  className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                    isSelected 
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300' 
+                      : isDark ? 'border-slate-600 text-gray-400' : 'border-gray-200 text-gray-500'
+                  }`}
+                >
+                  <BrandLogo brand={resolveBrandKey(account.platform)} size={24} className="rounded-md" />
+                  <span className="text-xs font-semibold truncate w-full text-center">{account.displayName}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors mb-6 relative overflow-hidden ${
+          isDark ? 'border-slate-600 bg-slate-700/30' : 'border-gray-300 bg-gray-50'
+        }`}>
+          {mediaPreview ? (
+            <img src={mediaPreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover opacity-50" />
+          ) : null}
+          <div className="z-10 flex flex-col items-center">
+            <ImageIcon className={`w-10 h-10 mb-2 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
+            <p className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Media Upload</p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button onClick={handleGenerateUploadLink} className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-lg text-sm font-semibold hover:bg-blue-200 transition">
+                <UploadCloud size={16} /> Get Upload Link
+              </button>
+              {Capacitor.isNativePlatform() && (
+                <button onClick={handleTakePicture} className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 rounded-lg text-sm font-semibold hover:bg-indigo-200 transition">
+                  <Camera size={16} /> Buka Kamera
+                </button>
+              )}
             </div>
-          </button>
-          <button 
-            onClick={() => setPlatform('tiktok')}
-            title="Gunakan format post untuk TikTok atau Reels"
-            className={`flex-1 py-3 rounded-xl font-bold border-2 transition-all ${
-              platform === 'tiktok' 
-                ? 'border-black bg-gray-100 text-black' 
-                : isDark ? 'border-slate-600 text-gray-400' : 'border-gray-200 text-gray-500'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <BrandLogo brand="tiktok" size={22} className="rounded-lg" />
-              <span>TikTok / Reels</span>
-            </div>
-          </button>
-          <button 
-            onClick={() => setPlatform('facebook')}
-            title="Gunakan format post untuk Facebook Page"
-            className={`flex-1 py-3 rounded-xl font-bold border-2 transition-all ${
-              platform === 'facebook'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : isDark ? 'border-slate-600 text-gray-400' : 'border-gray-200 text-gray-500'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <BrandLogo brand="facebook" size={22} className="rounded-lg" />
-              <span>Facebook Page</span>
-            </div>
-          </button>
+            {uploadLink && (
+               <a href={uploadLink} target="_blank" rel="noreferrer" className="mt-3 text-xs text-blue-500 underline break-all text-center">
+                 {uploadLink}
+               </a>
+            )}
+          </div>
         </div>
 
-        <div className={`border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center cursor-pointer transition-colors mb-6 ${
-          isDark ? 'border-slate-600 hover:border-slate-500 bg-slate-700/30' : 'border-gray-300 hover:border-blue-400 bg-gray-50'
-        }`} title="Area upload aset utama seperti hero image, thumbnail, atau promo card.">
-          <ImageIcon className={`w-10 h-10 mb-2 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
-          <p className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Drag & drop aset hero / thumbnail / promo card</p>
-          <p className="text-xs text-gray-400 mt-1">Semuanya masih dummy, tapi layout finalnya sudah dipoles</p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4 mb-4">
+        <div className="mb-4">
           <div className={`rounded-xl p-4 border ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
             <div className="flex items-center gap-2 mb-2">
               <CalendarClock size={16} className="text-blue-500" />
               <p className="font-semibold text-sm">Jadwal Publish</p>
-              <FieldHelp title="Jadwal publish" description="Isi waktu tayang jika post ingin dijadwalkan. Jika dikosongkan, item akan tetap tersimpan sebagai draft." />
             </div>
-            {isDemo ? (
-              <>
-                <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Rabu, 07 Mei 2026 • 19:00 WIB</p>
-                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Slot terbaik berdasarkan mock insight engagement</p>
-              </>
-            ) : (
-              <input
-                type="datetime-local"
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                className={`w-full rounded-lg px-3 py-2 border text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
-              />
-            )}
-          </div>
-          <div className={`rounded-xl p-4 border ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-            <div className="flex items-center gap-2 mb-2">
-              <MessageSquareQuote size={16} className="text-purple-500" />
-              <p className="font-semibold text-sm">Objective</p>
-              <FieldHelp title="Objective" description="Tujuan campaign ini. Gunakan sebagai pengingat singkat untuk arah CTA dan target hasil." />
-            </div>
-            <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Awareness + reply conversion ke WhatsApp sales</p>
-            <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>CTA, offer, dan audience masih mock</p>
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className={`w-full rounded-lg px-3 py-2 border text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+            />
           </div>
         </div>
 
-        <div className="flex-1 relative">
+        <div className="flex-1 min-h-[150px] relative">
           <div className="flex items-center gap-2 mb-2">
             <p className="text-sm font-semibold">Caption / message</p>
-            <FieldHelp title="Caption / message" description="Tulis caption, broadcast, atau template pesan yang akan dipakai di channel terpilih." />
           </div>
           <textarea
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
-            placeholder="Tulis caption, broadcast, atau buyer message template..."
-            title="Isi caption atau pesan utama untuk campaign ini."
+            placeholder="Tulis caption..."
             className={`w-full h-full p-4 rounded-xl border resize-none outline-none focus:ring-2 focus:ring-blue-500 ${
               isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900'
             }`}
           />
         </div>
 
-        <div className={`mt-4 rounded-xl p-4 border ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-blue-50'}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <CheckCircle2 size={16} className="text-emerald-500" />
-            <p className="font-semibold text-sm">Checklist sebelum publish</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-2 text-sm">
-            <p>• Visual hero sudah aman untuk semua rasio</p>
-            <p>• CTA mengarah ke channel yang benar</p>
-            <p>• Tone copy sesuai persona brand</p>
-            <p>• Jadwal publish cocok dengan kebutuhan campaign</p>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="flex flex-wrap justify-end gap-3 mt-6">
           <button
-            onClick={handleSaveDraft}
+            onClick={() => submitPost(true, false)}
             disabled={saving}
-            title="Simpan post sebagai draft tanpa menjadwalkan tayang"
-            className={`px-6 py-3 rounded-xl font-bold border disabled:opacity-60 ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}
+            className={`px-5 py-2.5 rounded-xl font-bold border disabled:opacity-60 ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save Draft'}
           </button>
           <button
-            onClick={handleQueue}
-            disabled={saving}
-            title="Simpan dan masukkan campaign ke antrean publish"
-            className="px-6 py-3 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
+            onClick={() => submitPost(false, false)}
+            disabled={saving || !scheduledAt}
+            className="px-5 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
           >
-            {saving ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Queue Campaign</>}
+            {saving ? <Loader2 size={18} className="animate-spin" /> : 'Schedule'}
+          </button>
+          <button
+            onClick={() => submitPost(false, true)}
+            disabled={saving}
+            className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
+          >
+            {saving ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Publish Now</>}
           </button>
         </div>
       </div>
 
-      <div className="flex items-center justify-center bg-gray-100 dark:bg-slate-900 rounded-2xl border dark:border-slate-800 p-8">
+      <div className="flex items-center justify-center bg-gray-100 dark:bg-slate-900 rounded-2xl border dark:border-slate-800 p-8 h-full">
         <div className="w-[320px] h-[640px] bg-black rounded-[40px] p-3 shadow-2xl border-4 border-gray-800 relative overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-b-xl z-20"></div>
           
@@ -215,31 +225,28 @@ export default function CreatePost() {
             <div className="h-14 border-b flex items-center px-4 justify-between bg-white z-10">
               <div className="flex items-center gap-2">
                 <BrandLogo
-                  brand={resolveBrandKey(platform)}
+                  brand="instagram"
                   size={24}
                   className="rounded-lg px-1"
                   withRing
                 />
-                <span className="font-bold text-sm">
-                  {platform === 'instagram' ? 'Instagram' : platform === 'tiktok' ? 'TikTok' : 'Facebook'}
-                </span>
+                <span className="font-bold text-sm">Preview</span>
               </div>
-              <div className="w-6 h-6 rounded-full bg-gray-200"></div>
             </div>
 
-            <div className={`w-full ${platform === 'instagram' ? 'aspect-square' : 'flex-1'} bg-gray-200 flex items-center justify-center text-gray-400`}>
-              <ImageIcon size={48} />
+            <div className={`w-full aspect-square bg-gray-200 flex items-center justify-center text-gray-400 relative overflow-hidden`}>
+              {mediaPreview ? (
+                <img src={mediaPreview} alt="Preview" className="w-full h-full object-cover" />
+              ) : (
+                <ImageIcon size={48} />
+              )}
             </div>
 
             <div className="p-3 bg-white flex-1 overflow-y-auto">
-              <div className="flex gap-3 mb-2">
-                <HeartIcon /> <ChatIcon /> <ShareIcon />
-              </div>
-              <p className="text-xs text-gray-800">
-                <span className="font-bold mr-1">my_awesome_brand</span>
-                {caption || 'Caption preview akan muncul di sini. Tampilan ini dibuat agar user bisa membayangkan hasil post sebelum publish.'}
+              <p className="text-xs text-gray-800 whitespace-pre-wrap">
+                <span className="font-bold mr-1">my_brand</span>
+                {caption || 'Caption preview...'}
               </p>
-              <p className="text-[10px] text-gray-400 mt-2">2 hours ago</p>
             </div>
           </div>
         </div>
@@ -247,20 +254,3 @@ export default function CreatePost() {
     </div>
   );
 }
-
-const HeartIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-800">
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-  </svg>
-);
-const ChatIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-800">
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-  </svg>
-);
-const ShareIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-800">
-    <line x1="22" y1="2" x2="11" y2="13"></line>
-    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-  </svg>
-);

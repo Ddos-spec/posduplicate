@@ -29,6 +29,7 @@ import {
   Sun,
   Users,
 } from 'lucide-react';
+import { useZernioPushNotifications } from '../../hooks/useZernioPushNotifications';
 
 type BaseMenu = {
   icon: typeof LayoutDashboard;
@@ -54,6 +55,7 @@ type GroupMenu = BaseMenu & {
 type MenuItem = LinkMenu | GroupMenu;
 
 export default function MedsosLayout() {
+  useZernioPushNotifications();
   const { isDark, toggleTheme } = useThemeStore();
   const { currentRole } = useDemoUser();
   const { user } = useAuthStore();
@@ -113,6 +115,18 @@ export default function MedsosLayout() {
       { type: 'link', icon: Megaphone, label: 'Ads Workspace', path: `${basePath}/ads`, roles: ['medsos_manager', 'all'] },
       {
         type: 'group',
+        key: 'crm',
+        icon: Users,
+        label: 'CRM & Automation',
+        roles: ['medsos_manager', 'all'],
+        children: [
+          { label: 'Contacts', path: `${basePath}/crm`, helper: 'Database kontak Zernio' },
+          { label: 'Broadcasts', path: `${basePath}/broadcasts`, helper: 'Kirim pesan massal' },
+          { label: 'Automations', path: `${basePath}/automations`, helper: 'Bot Comment-to-DM' },
+        ],
+      },
+      {
+        type: 'group',
         key: 'analytics',
         icon: LineChart,
         label: 'Analytics',
@@ -142,14 +156,17 @@ export default function MedsosLayout() {
         // Real mode: owner/manager see all; mcs_member sees only permitted modules
         if (isOwnerOrManager) return true;
         if (isMcsMember && mcsPerms) {
-          if (item.path?.endsWith('/team')) return false;
-          if (item.path?.endsWith('/settings')) return Boolean(mcsPerms.settings);
-          if (item.path?.endsWith('/ads')) return Boolean(mcsPerms.ads);
-          if (item.path?.endsWith('/marketplace')) return Boolean(mcsPerms.marketplace);
-          if (item.path?.endsWith('/calendar') || item.path?.endsWith('/create')) return Boolean(mcsPerms.content);
-          if (item.key === 'inbox') return Boolean(mcsPerms.inbox);
-          if (item.key === 'analytics') return Boolean(mcsPerms.analytics);
-          if (item.path?.endsWith('/pricing') || item.path?.endsWith('/connections')) return false;
+          const isLink = item.type === 'link';
+          const isGroup = item.type === 'group';
+          if (isLink && item.path?.endsWith('/team')) return false;
+          if (isLink && item.path?.endsWith('/settings')) return Boolean(mcsPerms.settings);
+          if (isLink && item.path?.endsWith('/ads')) return Boolean(mcsPerms.ads);
+          if (isLink && item.path?.endsWith('/marketplace')) return Boolean(mcsPerms.marketplace);
+          if (isLink && (item.path?.endsWith('/calendar') || item.path?.endsWith('/create'))) return Boolean(mcsPerms.content);
+          if (isGroup && item.key === 'inbox') return Boolean(mcsPerms.inbox);
+          if (isGroup && item.key === 'analytics') return Boolean(mcsPerms.analytics);
+          if (isGroup && item.key === 'crm') return Boolean(mcsPerms.inbox);
+          if (isLink && (item.path?.endsWith('/pricing') || item.path?.endsWith('/connections'))) return false;
           return item.roles.includes('all');
         }
         if (item.roles.includes('all')) return true;
@@ -424,6 +441,50 @@ export default function MedsosLayout() {
 
         <Outlet />
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className={`fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t pb-safe md:hidden ${isDark ? 'border-slate-700 bg-slate-900/95 backdrop-blur-md' : 'border-gray-200 bg-white/95 backdrop-blur-md'}`}>
+        <button
+          onClick={() => navigate(`${basePath}/dashboard`)}
+          className={`flex flex-col items-center justify-center p-2.5 transition-colors ${location.pathname === `${basePath}/dashboard` ? 'text-blue-500' : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+        >
+          <LayoutDashboard size={20} />
+          <span className="mt-1 text-[10px] font-semibold">Home</span>
+        </button>
+        <button
+          onClick={() => navigate(`${basePath}/inbox/social`)}
+          className={`flex flex-col items-center justify-center p-2.5 transition-colors ${location.pathname.includes('/inbox') ? 'text-blue-500' : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+        >
+          <div className="relative">
+            <MessageSquareText size={20} />
+            {inboxCount > 0 && <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">{inboxCount > 9 ? '9+' : inboxCount}</span>}
+          </div>
+          <span className="mt-1 text-[10px] font-semibold">Inbox</span>
+        </button>
+        <button
+          onClick={() => navigate(`${basePath}/create`)}
+          className="group relative -top-5 flex flex-col items-center justify-center p-2"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-transform group-hover:scale-105">
+            <Plus size={24} />
+          </div>
+          <span className={`mt-1 text-[10px] font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Post</span>
+        </button>
+        <button
+          onClick={() => navigate(`${basePath}/analytics/social`)}
+          className={`flex flex-col items-center justify-center p-2.5 transition-colors ${location.pathname.includes('/analytics') ? 'text-blue-500' : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+        >
+          <LineChart size={20} />
+          <span className="mt-1 text-[10px] font-semibold">Analytics</span>
+        </button>
+        <button
+          onClick={handleSidebarToggle}
+          className={`flex flex-col items-center justify-center p-2.5 transition-colors ${sidebarOpen ? 'text-blue-500' : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+        >
+          <Menu size={20} />
+          <span className="mt-1 text-[10px] font-semibold">Menu</span>
+        </button>
+      </nav>
     </div>
   );
 }

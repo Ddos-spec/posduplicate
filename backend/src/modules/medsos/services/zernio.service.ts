@@ -203,6 +203,53 @@ export async function disconnectZernioAccount(accountId: string, _tenantId?: num
   zernioCache.clear();
 }
 
+// ─── Post Management ───────────────────────────────────────────────────────
+
+export interface ZernioPostPayload {
+  text?: string;
+  mediaUrls?: string[];
+  socialAccountIds?: string[];
+  platforms?: Array<{ platform: string; accountId: string }>;
+  scheduledAt?: string;
+  publishNow?: boolean;
+  isDraft?: boolean;
+}
+
+export async function createZernioPost(
+  tenantId: number,
+  payload: ZernioPostPayload
+): Promise<any> {
+  const profileId = await getOrCreateZernioProfile(tenantId);
+  const body = {
+    profileId,
+    ...payload,
+  };
+  
+  const raw = await zFetch<any>('/posts', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  
+  return raw;
+}
+
+// ─── Media Management ──────────────────────────────────────────────────────
+
+export async function generateZernioUploadLink(tenantId: number): Promise<any> {
+  const profileId = await getOrCreateZernioProfile(tenantId);
+  // Based on standard Zernio API for media
+  const raw = await zFetch<any>(`/media/upload-link?profileId=${profileId}`, {
+    method: 'POST',
+  });
+  return raw;
+}
+
+export async function checkZernioUploadStatus(tenantId: number, token: string): Promise<any> {
+  await getOrCreateZernioProfile(tenantId); // ensure profile exists
+  const raw = await zFetch<any>(`/media/status/${encodeURIComponent(token)}`);
+  return raw;
+}
+
 // ─── Post analytics ───────────────────────────────────────────────────────
 
 export interface ZernioPostAnalyticsItem {
@@ -317,6 +364,41 @@ export async function getZernioPostAnalytics(
     },
     params.refresh ?? false,
   );
+}
+
+// ─── CRM, Broadcasts, Sequences, Automations ───────────────────────────────
+
+export async function listZernioContacts(tenantId: number): Promise<any> {
+  const profileId = await getOrCreateZernioProfile(tenantId);
+  const raw = await zFetch<any>(`/contacts?profileId=${profileId}`);
+  return raw;
+}
+
+export async function createZernioBroadcast(tenantId: number, payload: any): Promise<any> {
+  const profileId = await getOrCreateZernioProfile(tenantId);
+  const raw = await zFetch<any>('/broadcasts', {
+    method: 'POST',
+    body: JSON.stringify({ profileId, ...payload }),
+  });
+  return raw;
+}
+
+export async function createZernioSequence(tenantId: number, payload: any): Promise<any> {
+  const profileId = await getOrCreateZernioProfile(tenantId);
+  const raw = await zFetch<any>('/sequences', {
+    method: 'POST',
+    body: JSON.stringify({ profileId, ...payload }),
+  });
+  return raw;
+}
+
+export async function createZernioAutomation(tenantId: number, payload: any): Promise<any> {
+  const profileId = await getOrCreateZernioProfile(tenantId);
+  const raw = await zFetch<any>('/automations', {
+    method: 'POST',
+    body: JSON.stringify({ profileId, ...payload }),
+  });
+  return raw;
 }
 
 // ─── Inbox conversations ──────────────────────────────────────────────────
