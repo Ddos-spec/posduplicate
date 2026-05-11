@@ -15,11 +15,13 @@ import {
   getPosts,
   getWACrmStatus,
   getZernioAccounts,
+  getZernioPostAnalytics,
   type MarketplaceHubConnectionStatus,
   type SocialPost,
   type SocialPostAnalysisResult,
   type WACrmConnectionStatus,
   type ZernioAccount,
+  type ZernioPostAnalyticsItem,
 } from '../../services/medsosPostsService';
 import {
   Activity,
@@ -54,6 +56,33 @@ import {
 } from 'recharts';
 
 const ADS_PLATFORMS = new Set(['metaads', 'googleads', 'linkedinads', 'tiktokads', 'pinterestads', 'xads']);
+
+function zernioPostToSocialPost(item: ZernioPostAnalyticsItem, index: number): SocialPost {
+  return {
+    id: -(index + 1),
+    content: item.content ?? '',
+    media_urls: item.thumbnailUrl ? [item.thumbnailUrl] : [],
+    platform: (item.platform?.toLowerCase() ?? 'instagram') as SocialPost['platform'],
+    scheduled_at: item.scheduledFor,
+    published_at: item.publishedAt,
+    account_id: null,
+    status: 'published',
+    external_id: item.postId,
+    error_message: null,
+    social_accounts: item.platformAnalytics[0]
+      ? { account_name: item.platformAnalytics[0].accountUsername ?? item.platform ?? '', platform: item.platform ?? '' }
+      : null,
+    social_analytics: {
+      impressions: item.analytics.impressions,
+      reach: item.analytics.reach,
+      likes: item.analytics.likes,
+      comments: item.analytics.comments,
+      shares: item.analytics.shares,
+      saves: item.analytics.saves,
+      engagement_rate: item.analytics.engagementRate,
+    },
+  };
+}
 
 type AnalyticsChannel = 'wa' | 'social' | 'marketplace';
 
@@ -273,13 +302,22 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
   useEffect(() => {
     if (isDemo) return;
 
-    Promise.all([getPosts({ status: 'published' }), getZernioAccounts()])
-      .then(([postRows, accountRows]) => {
-        setPosts(postRows);
+    Promise.all([
+      getZernioPostAnalytics({ limit: 100, sortBy: 'date', order: 'desc' }),
+      getPosts({ status: 'published' }),
+      getZernioAccounts(),
+    ])
+      .then(([zernioItems, dbPosts, accountRows]) => {
+        const zernioPosts = zernioItems.map(zernioPostToSocialPost);
+        const dbZernioIds = new Set(zernioPosts.map((p) => p.external_id).filter(Boolean));
+        const uniqueDbPosts = dbPosts.filter((p) => !p.external_id || !dbZernioIds.has(p.external_id));
+        setPosts([...zernioPosts, ...uniqueDbPosts]);
         setAccounts(accountRows.filter((item) => !ADS_PLATFORMS.has(item.platform.toLowerCase())));
       })
       .catch(() => {
-        setPosts([]);
+        getPosts({ status: 'published' })
+          .then((rows) => setPosts(rows))
+          .catch(() => setPosts([]));
         setAccounts([]);
       })
       .finally(() => setLoading(false));
@@ -405,6 +443,30 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
             '- Uji caption yang lebih pendek dengan CTA langsung.',
             '- Bandingkan format carousel vs single image untuk tema serupa.',
           ].join('\n'),
+        });
+      } else if (selectedPost.id < 0) {
+        // Zernio post — generate analysis from metrics
+        const a = selectedPost.social_analytics;
+        const er = a?.engagement_rate ?? 0;
+        const imp = a?.impressions ?? 0;
+        const reach = a?.reach ?? 0;
+        const likes = a?.likes ?? 0;
+        const comments = a?.comments ?? 0;
+        setAnalysisResult({
+          generatedAt: new Date().toISOString(),
+          model: 'Zernio Analytics',
+          analysis: [
+            '1. Ringkasan performa',
+            `Post ini meraih ${imp.toLocaleString('id-ID')} impressions, ${reach.toLocaleString('id-ID')} reach, dengan engagement rate ${er.toFixed(2)}%.`,
+            '',
+            '2. Insight',
+            `- Likes: ${likes.toLocaleString('id-ID')} | Comments: ${comments.toLocaleString('id-ID')} | Shares: ${(a?.shares ?? 0).toLocaleString('id-ID')} | Saves: ${(a?.saves ?? 0).toLocaleString('id-ID')}`,
+            er > 5 ? `- Engagement rate ${er.toFixed(2)}% di atas rata-rata — konten ini bekerja dengan baik.` : er > 2 ? `- Engagement rate ${er.toFixed(2)}% di kisaran rata-rata.` : `- Engagement rate ${er.toFixed(2)}% cukup rendah — pertimbangkan A/B test format atau waktu posting.`,
+            '',
+            '3. Rekomendasi',
+            likes > comments * 3 ? '- Interaksi didominasi likes — tambah CTA (pertanyaan, polling) untuk tingkatkan komentar.' : '- Engagement komentar bagus — balas komentar untuk memperpanjang jangkauan organik.',
+            (a?.saves ?? 0) > (likes ?? 0) * 0.1 ? '- Tingkat saves tinggi — konten ini bernilai sebagai referensi, pertimbangkan konten serupa.' : '',
+          ].filter((line) => line !== undefined).join('\n'),
         });
       } else {
         const result = await generateSocialPostAnalysis(selectedPost.id);

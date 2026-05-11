@@ -9,6 +9,10 @@ import {
   listZernioAccounts,
   disconnectZernioAccount,
   getZernioAdsSummary,
+  getZernioPostAnalytics,
+  getZernioConversations,
+  getZernioConversationMessages,
+  sendZernioDirectMessage,
 } from '../services/zernio.service';
 
 const router = Router();
@@ -123,6 +127,67 @@ router.get('/ads/:adId/analytics', async (req, res, next) => {
     });
 
     return res.json({ success: true, data: analytics });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/medsos/zernio/post-analytics
+router.get('/post-analytics', async (req, res, next) => {
+  try {
+    const platform = typeof req.query.platform === 'string' ? req.query.platform : undefined;
+    const fromDate = typeof req.query.fromDate === 'string' ? req.query.fromDate : undefined;
+    const toDate = typeof req.query.toDate === 'string' ? req.query.toDate : undefined;
+    const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 50;
+    const page = typeof req.query.page === 'string' ? Number(req.query.page) : 1;
+    const sortBy = typeof req.query.sortBy === 'string' ? req.query.sortBy : undefined;
+    const order = typeof req.query.order === 'string' ? req.query.order : undefined;
+    const refresh = String(req.query.refresh || '').toLowerCase() === 'true';
+
+    const posts = await getZernioPostAnalytics(req.tenantId!, { platform, fromDate, toDate, limit, page, sortBy, order, refresh });
+    return res.json({ success: true, data: { posts } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/medsos/zernio/conversations
+router.get('/conversations', async (req, res, next) => {
+  try {
+    const platform = typeof req.query.platform === 'string' ? req.query.platform : undefined;
+    const status = typeof req.query.status === 'string' ? (req.query.status as 'active' | 'archived') : undefined;
+    const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 50;
+    const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
+    const accountId = typeof req.query.accountId === 'string' ? req.query.accountId : undefined;
+    const refresh = String(req.query.refresh || '').toLowerCase() === 'true';
+
+    const result = await getZernioConversations(req.tenantId!, { platform, status, limit, cursor, accountId, refresh });
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/medsos/zernio/conversations/:conversationId/messages
+router.get('/conversations/:conversationId/messages', async (req, res, next) => {
+  try {
+    const accountId = typeof req.query.accountId === 'string' ? req.query.accountId : undefined;
+    const messages = await getZernioConversationMessages(req.params.conversationId, accountId);
+    return res.json({ success: true, data: { messages } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/medsos/zernio/conversations/:conversationId/send
+router.post('/conversations/:conversationId/send', async (req, res, next) => {
+  try {
+    const { accountId, message } = req.body as { accountId?: string; message?: string };
+    if (!accountId || !message?.trim()) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'accountId dan message wajib diisi.' } });
+    }
+    const result = await sendZernioDirectMessage(req.params.conversationId, accountId, message.trim());
+    return res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }

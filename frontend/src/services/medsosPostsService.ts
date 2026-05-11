@@ -351,6 +351,124 @@ export async function disconnectZernioAccount(accountId: string): Promise<void> 
   await api.delete(`/medsos/zernio/accounts/${accountId}`);
 }
 
+// ─── Zernio Post Analytics ─────────────────────────────────────────────────
+
+export interface ZernioPostAnalyticsItem {
+  postId: string;
+  content: string | null;
+  status: string | null;
+  scheduledFor: string | null;
+  publishedAt: string | null;
+  platform: string | null;
+  platformPostUrl: string | null;
+  thumbnailUrl: string | null;
+  mediaType: string | null;
+  analytics: {
+    impressions: number;
+    reach: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    saves: number;
+    clicks: number;
+    views: number;
+    engagementRate: number;
+    lastUpdated: string | null;
+  };
+  platformAnalytics: Array<{
+    platform: string;
+    accountId: string | null;
+    accountUsername: string | null;
+    analytics: { impressions: number; reach: number; likes: number; comments: number; shares: number; saves: number };
+  }>;
+}
+
+export async function getZernioPostAnalytics(params?: {
+  platform?: string;
+  fromDate?: string;
+  toDate?: string;
+  limit?: number;
+  page?: number;
+  sortBy?: string;
+  order?: string;
+  refresh?: boolean;
+}): Promise<ZernioPostAnalyticsItem[]> {
+  const { data } = await api.get('/medsos/zernio/post-analytics', {
+    params: {
+      platform: params?.platform,
+      fromDate: params?.fromDate,
+      toDate: params?.toDate,
+      limit: params?.limit,
+      page: params?.page,
+      sortBy: params?.sortBy,
+      order: params?.order,
+      refresh: params?.refresh ? 'true' : undefined,
+    },
+  });
+  return (data.data?.posts ?? []) as ZernioPostAnalyticsItem[];
+}
+
+// ─── Zernio Inbox Conversations ────────────────────────────────────────────
+
+export interface ZernioConversation {
+  id: string;
+  platform: string;
+  accountId: string;
+  accountUsername: string;
+  participantId: string;
+  participantName: string;
+  participantPicture: string | null;
+  participantVerifiedType: string | null;
+  lastMessage: string;
+  updatedTime: string;
+  status: 'active' | 'archived';
+  unreadCount: number;
+  url: string | null;
+}
+
+export interface ZernioMessage {
+  id: string;
+  conversationId: string;
+  text: string | null;
+  attachments?: Array<{ type: string; url: string }>;
+  timestamp: string;
+  fromParticipant: boolean;
+  senderName: string | null;
+}
+
+export async function getZernioConversations(params?: {
+  platform?: string;
+  status?: 'active' | 'archived';
+  limit?: number;
+  cursor?: string;
+  accountId?: string;
+  refresh?: boolean;
+}): Promise<{ conversations: ZernioConversation[]; hasMore: boolean; nextCursor: string | null }> {
+  const { data } = await api.get('/medsos/zernio/conversations', {
+    params: {
+      platform: params?.platform,
+      status: params?.status,
+      limit: params?.limit,
+      cursor: params?.cursor,
+      accountId: params?.accountId,
+      refresh: params?.refresh ? 'true' : undefined,
+    },
+  });
+  return data.data as { conversations: ZernioConversation[]; hasMore: boolean; nextCursor: string | null };
+}
+
+export async function getZernioMessages(conversationId: string, accountId?: string): Promise<ZernioMessage[]> {
+  const { data } = await api.get(`/medsos/zernio/conversations/${encodeURIComponent(conversationId)}/messages`, {
+    params: accountId ? { accountId } : undefined,
+  });
+  return (data.data?.messages ?? []) as ZernioMessage[];
+}
+
+export async function sendZernioMessage(conversationId: string, accountId: string, message: string): Promise<{ messageId: string; status: string }> {
+  const { data } = await api.post(`/medsos/zernio/conversations/${encodeURIComponent(conversationId)}/send`, { accountId, message });
+  return data.data as { messageId: string; status: string };
+}
+
 export async function getZernioAdsSummary(params?: {
   fromDate?: string;
   toDate?: string;
