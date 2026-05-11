@@ -203,6 +203,231 @@ export async function disconnectZernioAccount(accountId: string, _tenantId?: num
   zernioCache.clear();
 }
 
+// ─── Post analytics ───────────────────────────────────────────────────────
+
+export interface ZernioPostAnalyticsItem {
+  postId: string;
+  content: string | null;
+  status: string | null;
+  scheduledFor: string | null;
+  publishedAt: string | null;
+  platform: string | null;
+  platformPostUrl: string | null;
+  thumbnailUrl: string | null;
+  mediaType: string | null;
+  analytics: {
+    impressions: number;
+    reach: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    saves: number;
+    clicks: number;
+    views: number;
+    engagementRate: number;
+    lastUpdated: string | null;
+  };
+  platformAnalytics: Array<{
+    platform: string;
+    accountId: string | null;
+    accountUsername: string | null;
+    analytics: {
+      impressions: number;
+      reach: number;
+      likes: number;
+      comments: number;
+      shares: number;
+      saves: number;
+    };
+  }>;
+}
+
+function toNum(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function mapAnalyticsPost(raw: any): ZernioPostAnalyticsItem {
+  const a = raw.analytics ?? {};
+  return {
+    postId: String(raw.postId ?? raw._id ?? raw.id ?? ''),
+    content: raw.content ?? raw.caption ?? null,
+    status: raw.status ?? null,
+    scheduledFor: raw.scheduledFor ?? null,
+    publishedAt: raw.publishedAt ?? null,
+    platform: raw.platform ?? null,
+    platformPostUrl: raw.platformPostUrl ?? null,
+    thumbnailUrl: raw.thumbnailUrl ?? null,
+    mediaType: raw.mediaType ?? null,
+    analytics: {
+      impressions: toNum(a.impressions),
+      reach: toNum(a.reach),
+      likes: toNum(a.likes),
+      comments: toNum(a.comments),
+      shares: toNum(a.shares),
+      saves: toNum(a.saves),
+      clicks: toNum(a.clicks),
+      views: toNum(a.views),
+      engagementRate: toNum(a.engagementRate),
+      lastUpdated: a.lastUpdated ?? null,
+    },
+    platformAnalytics: (raw.platformAnalytics ?? []).map((p: any) => ({
+      platform: p.platform ?? '',
+      accountId: p.accountId ?? null,
+      accountUsername: p.accountUsername ?? null,
+      analytics: {
+        impressions: toNum(p.analytics?.impressions),
+        reach: toNum(p.analytics?.reach),
+        likes: toNum(p.analytics?.likes),
+        comments: toNum(p.analytics?.comments),
+        shares: toNum(p.analytics?.shares),
+        saves: toNum(p.analytics?.saves),
+      },
+    })),
+  };
+}
+
+export async function getZernioPostAnalytics(
+  tenantId: number,
+  params: {
+    platform?: string;
+    fromDate?: string;
+    toDate?: string;
+    limit?: number;
+    page?: number;
+    sortBy?: string;
+    order?: string;
+    refresh?: boolean;
+  } = {},
+): Promise<ZernioPostAnalyticsItem[]> {
+  const profileId = await getOrCreateZernioProfile(tenantId);
+  const cacheKey = `zernio-post-analytics-${tenantId}-${JSON.stringify(params)}`;
+  return getOrSetCache(
+    cacheKey,
+    async () => {
+      const qs = new URLSearchParams({ profileId, limit: String(params.limit ?? 50), page: String(params.page ?? 1) });
+      if (params.platform) qs.set('platform', params.platform);
+      if (params.fromDate) qs.set('fromDate', params.fromDate);
+      if (params.toDate) qs.set('toDate', params.toDate);
+      if (params.sortBy) qs.set('sortBy', params.sortBy);
+      if (params.order) qs.set('order', params.order);
+      const raw = await zFetch<any>(`/analytics?${qs}`);
+      const list: any[] = raw.posts ?? raw.data ?? (Array.isArray(raw) ? raw : []);
+      return list.map(mapAnalyticsPost);
+    },
+    params.refresh ?? false,
+  );
+}
+
+// ─── Inbox conversations ──────────────────────────────────────────────────
+
+export interface ZernioConversation {
+  id: string;
+  platform: string;
+  accountId: string;
+  accountUsername: string;
+  participantId: string;
+  participantName: string;
+  participantPicture: string | null;
+  participantVerifiedType: string | null;
+  lastMessage: string;
+  updatedTime: string;
+  status: 'active' | 'archived';
+  unreadCount: number;
+  url: string | null;
+}
+
+export interface ZernioMessage {
+  id: string;
+  conversationId: string;
+  text: string | null;
+  attachments?: Array<{ type: string; url: string }>;
+  timestamp: string;
+  fromParticipant: boolean;
+  senderName: string | null;
+}
+
+export async function getZernioConversations(
+  tenantId: number,
+  params: {
+    platform?: string;
+    status?: 'active' | 'archived';
+    limit?: number;
+    cursor?: string;
+    accountId?: string;
+    refresh?: boolean;
+  } = {},
+): Promise<{ conversations: ZernioConversation[]; hasMore: boolean; nextCursor: string | null }> {
+  const profileId = await getOrCreateZernioProfile(tenantId);
+  const cacheKey = `zernio-conversations-${tenantId}-${JSON.stringify(params)}`;
+  return getOrSetCache(
+    cacheKey,
+    async () => {
+      const qs = new URLSearchParams({ profileId, limit: String(params.limit ?? 50) });
+      if (params.platform) qs.set('platform', params.platform);
+      if (params.status) qs.set('status', params.status);
+      if (params.cursor) qs.set('cursor', params.cursor);
+      if (params.accountId) qs.set('accountId', params.accountId);
+      const raw = await zFetch<{ data: any[]; pagination?: { hasMore?: boolean; nextCursor?: string } }>(`/inbox/conversations?${qs}`);
+      const data = raw.data ?? (Array.isArray(raw) ? raw : []);
+      return {
+        conversations: data.map((c: any): ZernioConversation => ({
+          id: String(c.id ?? c._id ?? ''),
+          platform: c.platform ?? '',
+          accountId: c.accountId ?? '',
+          accountUsername: c.accountUsername ?? '',
+          participantId: c.participantId ?? '',
+          participantName: c.participantName ?? c.participantId ?? 'Unknown',
+          participantPicture: c.participantPicture ?? null,
+          participantVerifiedType: c.participantVerifiedType ?? null,
+          lastMessage: c.lastMessage ?? '',
+          updatedTime: c.updatedTime ?? new Date().toISOString(),
+          status: (c.status === 'archived' ? 'archived' : 'active') as 'active' | 'archived',
+          unreadCount: toNum(c.unreadCount),
+          url: c.url ?? null,
+        })),
+        hasMore: raw.pagination?.hasMore ?? false,
+        nextCursor: raw.pagination?.nextCursor ?? null,
+      };
+    },
+    params.refresh ?? false,
+    60 * 1000, // 1 min cache for inbox
+  );
+}
+
+export async function getZernioConversationMessages(
+  conversationId: string,
+  accountId?: string,
+): Promise<ZernioMessage[]> {
+  const qs = new URLSearchParams();
+  if (accountId) qs.set('accountId', accountId);
+  const suffix = qs.size > 0 ? `?${qs}` : '';
+  const raw = await zFetch<any>(`/inbox/messages/${encodeURIComponent(conversationId)}${suffix}`);
+  const list: any[] = raw.messages ?? raw.data ?? (Array.isArray(raw) ? raw : []);
+  return list.map((m: any): ZernioMessage => ({
+    id: String(m.id ?? m._id ?? ''),
+    conversationId,
+    text: m.text ?? m.message ?? null,
+    attachments: m.attachments ?? [],
+    timestamp: m.timestamp ?? m.createdAt ?? new Date().toISOString(),
+    fromParticipant: m.fromParticipant ?? m.from === 'participant',
+    senderName: m.senderName ?? m.from ?? null,
+  }));
+}
+
+export async function sendZernioDirectMessage(
+  conversationId: string,
+  accountId: string,
+  message: string,
+): Promise<{ messageId: string; status: string }> {
+  zernioCache.clear();
+  const raw = await zFetch<any>(`/inbox/send/${encodeURIComponent(conversationId)}`, {
+    method: 'POST',
+    body: JSON.stringify({ accountId, message }),
+  });
+  return { messageId: String(raw.messageId ?? raw.id ?? ''), status: raw.status ?? 'sent' };
+}
+
 // ─── Ads summary ──────────────────────────────────────────────────────────
 
 const ZERNIO_ADS_ACCOUNT_PLATFORMS = new Set(['metaads', 'googleads', 'linkedinads', 'tiktokads', 'pinterestads', 'xads']);

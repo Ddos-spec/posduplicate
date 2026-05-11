@@ -7,11 +7,16 @@ import {
   getMarketplaceHubStatus,
   getWACrmStatus,
   getZernioAccounts,
+  getZernioConversations,
+  getZernioMessages,
+  sendZernioMessage,
   type MarketplaceChatChannel,
   type MarketplaceHubConnectionStatus,
   type WACrmConnectionStatus,
   type WACrmStats,
   type ZernioAccount,
+  type ZernioConversation,
+  type ZernioMessage,
 } from '../../services/medsosPostsService';
 import { getMyCommerSocialIntegrationHub, type ManagedIntegrationConnector } from '../../services/myCommerSocialIntegrations';
 import {
@@ -34,6 +39,7 @@ import {
   NotebookPen,
   Paperclip,
   PlugZap,
+  RefreshCw,
   Search,
   Send,
   Settings,
@@ -483,26 +489,15 @@ function SocialInboxLiveView({ isDark }: { isDark: boolean }) {
         <SectionHeader
           isDark={isDark}
           title="Inbox Medsos"
-          description="Hanya channel social yang benar-benar aktif yang akan muncul di halaman ini."
+          description="Sambungkan akun social untuk melihat percakapan."
           icon={<Workflow size={22} />}
         />
-        <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className={`mx-auto mb-4 inline-flex rounded-2xl p-4 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
-            <PlugZap size={34} />
-          </div>
-          <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Belum ada channel social yang aktif</h2>
-          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Sambungkan channel social dari halaman Connections. Begitu aktif, channel itu otomatis tampil di Inbox Medsos.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/medsos/connections')}
-            className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
-          >
-            <PlugZap size={18} />
-            Buka Connections
-          </button>
+        <div className={`rounded-2xl border p-5 flex items-center gap-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-blue-50 border-blue-100'}`}>
+          <PlugZap size={22} className="text-blue-500 shrink-0" />
+          <p className={`text-sm flex-1 ${isDark ? 'text-gray-300' : 'text-blue-800'}`}>Belum ada akun social terhubung. Sambungkan dari <strong>Connections</strong>.</p>
+          <button type="button" onClick={() => navigate('/medsos/connections')} className="shrink-0 rounded-xl bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700">Buka Connections</button>
         </div>
+        <ZernioConversationPanel isDark={isDark} />
       </div>
     );
   }
@@ -512,35 +507,220 @@ function SocialInboxLiveView({ isDark }: { isDark: boolean }) {
       <SectionHeader
         isDark={isDark}
         title="Inbox Medsos"
-        description="Jika hanya Instagram yang tersambung, hanya Instagram yang tampil. Jika Instagram dan Facebook tersambung, keduanya akan muncul di sini."
+        description={`${accounts.length} akun terhubung — klik conversation untuk buka riwayat pesan.`}
         icon={<Workflow size={22} />}
       />
-
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 pb-1">
         {groupedPlatforms.map(([platform, platformAccounts]) => (
-          <div key={platform} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <BrandLogo brand={resolveBrandKey(platform)} size={40} className="rounded-2xl" withRing />
-                <div>
-                  <p className="font-semibold capitalize">{platform}</p>
-                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{platformAccounts.length} akun tersambung</p>
-                </div>
-              </div>
-              <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
-                Live
-              </span>
+          <div key={platform} className={`rounded-2xl border p-4 flex items-center gap-3 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <BrandLogo brand={resolveBrandKey(platform)} size={36} withRing />
+            <div className="min-w-0">
+              <p className="font-semibold capitalize text-sm">{platform}</p>
+              <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{platformAccounts.map((a) => a.username || a.displayName).join(', ')}</p>
             </div>
-            <div className="mt-4 space-y-3">
-              {platformAccounts.map((account) => (
-                <div key={account.id} className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900/50' : 'bg-gray-50'}`}>
-                  <p className="text-sm font-semibold">{account.displayName}</p>
-                  <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{account.username || 'Handle belum tersedia'}</p>
-                </div>
-              ))}
-            </div>
+            <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 ${isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>Live</span>
           </div>
         ))}
+      </div>
+      <ZernioConversationPanel isDark={isDark} />
+    </div>
+  );
+}
+
+function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
+  const [conversations, setConversations] = useState<ZernioConversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<ZernioConversation | null>(null);
+  const [messages, setMessages] = useState<ZernioMessage[]>([]);
+  const [msgLoading, setMsgLoading] = useState(false);
+  const [reply, setReply] = useState('');
+  const [sending, setSending] = useState(false);
+  const [platform, setPlatform] = useState('all');
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  useEffect(() => {
+    setLoading(true);
+    getZernioConversations({ limit: 50, status: 'active', refresh: refreshTick > 0 })
+      .then((r) => setConversations(r.conversations))
+      .catch(() => setConversations([]))
+      .finally(() => setLoading(false));
+  }, [refreshTick]);
+
+  useEffect(() => {
+    if (!selected) return;
+    setMsgLoading(true);
+    setMessages([]);
+    getZernioMessages(selected.id, selected.accountId)
+      .then(setMessages)
+      .catch(() => setMessages([]))
+      .finally(() => setMsgLoading(false));
+  }, [selected]);
+
+  const availablePlatforms = useMemo(() => {
+    const set = new Set(conversations.map((c) => c.platform.toLowerCase()));
+    return Array.from(set);
+  }, [conversations]);
+
+  const filtered = platform === 'all' ? conversations : conversations.filter((c) => c.platform.toLowerCase() === platform);
+
+  const handleSend = async () => {
+    if (!selected || !reply.trim() || sending) return;
+    setSending(true);
+    try {
+      await sendZernioMessage(selected.id, selected.accountId, reply.trim());
+      setReply('');
+      const fresh = await getZernioMessages(selected.id, selected.accountId);
+      setMessages(fresh);
+    } catch { /* ignore */ } finally {
+      setSending(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-[30vh] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`rounded-3xl border overflow-hidden ${isDark ? 'border-slate-700' : 'border-gray-100 shadow-sm'}`}>
+      {/* Header bar */}
+      <div className={`flex items-center gap-3 px-5 py-3 border-b ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
+        <MessageSquareQuote size={17} className="text-blue-500 shrink-0" />
+        <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Percakapan ({filtered.length})</span>
+        <div className="flex-1" />
+        <select
+          value={platform}
+          onChange={(e) => setPlatform(e.target.value)}
+          className={`text-xs rounded-xl border px-2 py-1 ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-700'}`}
+        >
+          <option value="all">Semua platform</option>
+          {availablePlatforms.map((p) => (
+            <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => { setSelected(null); setRefreshTick((t) => t + 1); }}
+          className={`rounded-xl p-1.5 ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-200'}`}
+          title="Refresh"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      <div className={`flex h-[520px] ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+        {/* Conversation list */}
+        <div className={`w-72 shrink-0 border-r overflow-y-auto ${isDark ? 'border-slate-700' : 'border-gray-100'}`}>
+          {filtered.length === 0 ? (
+            <div className={`p-6 text-center text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Belum ada percakapan aktif.
+            </div>
+          ) : (
+            filtered.map((conv) => (
+              <button
+                key={conv.id}
+                type="button"
+                onClick={() => setSelected(conv)}
+                className={`w-full text-left px-4 py-3 border-b flex items-start gap-3 transition ${selected?.id === conv.id
+                  ? (isDark ? 'bg-blue-600/20 border-slate-700' : 'bg-blue-50 border-gray-100')
+                  : (isDark ? 'hover:bg-slate-700/50 border-slate-700/50' : 'hover:bg-gray-50 border-gray-100/70')
+                }`}
+              >
+                <div className="shrink-0 mt-0.5">
+                  {conv.participantPicture ? (
+                    <img src={conv.participantPicture} alt="" className="w-9 h-9 rounded-full object-cover" />
+                  ) : (
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                      {(conv.participantName || '?').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-sm font-semibold truncate flex-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{conv.participantName || conv.participantId}</span>
+                    {conv.unreadCount > 0 && (
+                      <span className="shrink-0 rounded-full bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 leading-none">{conv.unreadCount}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <BrandLogo brand={resolveBrandKey(conv.platform)} size={12} />
+                    <span className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{conv.lastMessage || '—'}</span>
+                  </div>
+                  <p className={`text-[10px] mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{new Date(conv.updatedTime).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Message thread */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {!selected ? (
+            <div className={`flex-1 flex items-center justify-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              Pilih percakapan di sebelah kiri
+            </div>
+          ) : (
+            <>
+              <div className={`px-5 py-3 border-b flex items-center gap-3 ${isDark ? 'border-slate-700' : 'border-gray-100'}`}>
+                <BrandLogo brand={resolveBrandKey(selected.platform)} size={28} withRing />
+                <div className="min-w-0">
+                  <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{selected.participantName || selected.participantId}</p>
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>@{selected.accountUsername} · {selected.platform}</p>
+                </div>
+                {selected.url && (
+                  <a href={selected.url} target="_blank" rel="noreferrer" className={`ml-auto shrink-0 rounded-xl p-1.5 ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
+                    <ExternalLink size={14} />
+                  </a>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+                {msgLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-blue-500" /></div>
+                ) : messages.length === 0 ? (
+                  <p className={`text-sm text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Belum ada pesan dimuat.</p>
+                ) : (
+                  messages.map((msg) => (
+                    <div key={msg.id} className={`flex ${msg.fromParticipant ? 'justify-start' : 'justify-end'}`}>
+                      <div className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm ${
+                        msg.fromParticipant
+                          ? (isDark ? 'bg-slate-700 text-gray-100' : 'bg-gray-100 text-gray-900')
+                          : 'bg-blue-600 text-white'
+                      }`}>
+                        {msg.text || <em className="opacity-60">[media]</em>}
+                        <p className={`text-[10px] mt-1 ${msg.fromParticipant ? (isDark ? 'text-gray-500' : 'text-gray-400') : 'text-blue-200'}`}>
+                          {new Date(msg.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className={`px-4 py-3 border-t flex items-end gap-2 ${isDark ? 'border-slate-700' : 'border-gray-100'}`}>
+                <textarea
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
+                  placeholder="Ketik balasan… (Enter untuk kirim)"
+                  rows={2}
+                  className={`flex-1 resize-none rounded-2xl border px-3 py-2 text-sm ${isDark ? 'bg-slate-900 border-slate-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleSend()}
+                  disabled={!reply.trim() || sending}
+                  className="shrink-0 rounded-2xl bg-blue-600 p-2.5 text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
