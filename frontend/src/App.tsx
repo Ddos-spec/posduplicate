@@ -93,7 +93,10 @@ const ContentCalendar = lazy(() => import('./pages/medsos/ContentCalendar'));
 const CreatePost = lazy(() => import('./pages/medsos/CreatePost'));
 const MedsosInbox = lazy(() => import('./pages/medsos/MedsosInbox'));
 const MarketplaceControl = lazy(() => import('./pages/medsos/MarketplaceControl'));
-const MetaAdsControl = lazy(() => import('./pages/medsos/MetaAdsControl'));
+const ZernioAdsManager = lazy(() => import('./pages/medsos/ZernioAdsManager'));
+const ZernioCrmPage = lazy(() => import('./pages/medsos/ZernioCrmPage'));
+const ZernioBroadcastsPage = lazy(() => import('./pages/medsos/ZernioBroadcastsPage'));
+const ZernioAutomationsPage = lazy(() => import('./pages/medsos/ZernioAutomationsPage'));
 const MedsosAnalytics = lazy(() => import('./pages/medsos/MedsosAnalytics'));
 const MedsosSettings = lazy(() => import('./pages/medsos/MedsosSettings'));
 const MedsosPricing = lazy(() => import('./pages/medsos/MedsosPricing'));
@@ -308,7 +311,7 @@ function App() {
           <Route path="inbox" element={<Navigate to="/demo/medsos/inbox/wa" replace />} />
           <Route path="inbox/:channel" element={<MedsosInbox />} />
           <Route path="marketplace" element={<MarketplaceControl />} />
-          <Route path="ads" element={<MetaAdsControl />} />
+          <Route path="ads" element={<ZernioAdsManager />} />
           <Route path="analytics" element={<Navigate to="/demo/medsos/analytics/wa" replace />} />
           <Route path="analytics/:channel" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />
@@ -436,7 +439,10 @@ function App() {
           <Route path="inbox" element={<Navigate to="/medsos/inbox/wa" replace />} />
           <Route path="inbox/:channel" element={<MedsosInbox />} />
           <Route path="marketplace" element={<MarketplaceControl />} />
-          <Route path="ads" element={<MetaAdsControl />} />
+          <Route path="ads" element={<ZernioAdsManager />} />
+          <Route path="crm" element={<ZernioCrmPage />} />
+          <Route path="broadcasts" element={<ZernioBroadcastsPage />} />
+          <Route path="automations" element={<ZernioAutomationsPage />} />
           <Route path="analytics" element={<Navigate to="/medsos/analytics/wa" replace />} />
           <Route path="analytics/:channel" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />

@@ -1,4 +1,6 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
@@ -19,12 +21,9 @@ import scheduler from './services/scheduler.service';
 import { swaggerSpec } from './config/swagger';
 
 const app: Express = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3000;
 
-// Trust proxy (required for rate limiting behind proxies like Nginx/Easypanel)
-app.set('trust proxy', 1);
-
-// Middleware
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',')
   : [
@@ -34,6 +33,29 @@ const allowedOrigins = process.env.CORS_ORIGIN
       'capacitor://localhost'
     ];
 
+const io = new Server(httpServer, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    credentials: true,
+  }
+});
+
+// Export io so other modules (like webhooks) can emit events
+export { io };
+
+io.on('connection', (socket) => {
+  console.log(`[Socket.io] Client connected: ${socket.id}`);
+  
+  socket.on('disconnect', () => {
+    console.log(`[Socket.io] Client disconnected: ${socket.id}`);
+  });
+});
+
+// Trust proxy (required for rate limiting behind proxies like Nginx/Easypanel)
+app.set('trust proxy', 1);
+
+// Middleware
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl)
@@ -76,8 +98,6 @@ app.use(morgan('dev'));
 // Serve static files from uploads directory
 // Use process.cwd() to match the upload middleware path
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-
-
 
 // Root route
 app.get('/', (_req: Request, res: Response) => {
@@ -146,9 +166,6 @@ app.use('/api/admin', adminRoutes);
 // Medsos Module Routes
 app.use('/api/medsos', medsosRoutes);
 
-// DEBUG endpoints removed for security
-// Use proper logging and monitoring service in production
-
 // 404 Handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({
@@ -164,7 +181,7 @@ app.use((req: Request, res: Response) => {
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   console.error('Error:', err);
 
-  // Simple File Logging for easier debugging without asking AI
+  // Simple File Logging for easier debugging
   try {
     const logMessage = `[${new Date().toISOString()}] ${req.method} ${req.path} - Error: ${err.message}\nStack: ${err.stack}\n\n`;
     fs.appendFileSync(path.join(__dirname, '../server-error.log'), logMessage);
@@ -182,23 +199,12 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server using httpServer to support websockets
+httpServer.listen(PORT, () => {
   scheduler.start();
   console.log(`🚀 MyPOS API Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔄 Server Restart Triggered at: ${new Date().toISOString()}`);
   console.log(`🔗 Internal health check: http://localhost:${PORT}/health`);
-  console.log(`📦 Modular Structure:`);
-  console.log(`   ├─ FnB/POS Module`);
-  console.log(`   ├─ Accounting Module`);
-  console.log(`   ├─ Shared Services`);
-  console.log(`   └─ Admin Module`);
-
-  if (process.env.NODE_ENV === 'production') {
-    console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'Not set'}`);
-    console.log(`ℹ️  External access via reverse proxy (EasyPanel/Nginx)`);
-  }
 });
 
 export default app;

@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
@@ -537,6 +538,31 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
   const [sending, setSending] = useState(false);
   const [platform, setPlatform] = useState('all');
   const [refreshTick, setRefreshTick] = useState(0);
+
+  // Setup Socket.io
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    // Determine backend URL
+    const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+    socketRef.current = io(backendUrl, { withCredentials: true });
+
+    socketRef.current.on('zernio_event', (payload: any) => {
+      console.log('[Zernio Socket Event]', payload);
+      // Auto-refresh messages and conversations if there's a new message
+      if (
+        payload.event === 'message.received' ||
+        payload.event === 'message.sent' ||
+        payload.event === 'comment.received'
+      ) {
+        setRefreshTick(t => t + 1);
+      }
+    });
+
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     setLoading(true);

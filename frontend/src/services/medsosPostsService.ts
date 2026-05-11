@@ -351,6 +351,33 @@ export async function disconnectZernioAccount(accountId: string): Promise<void> 
   await api.delete(`/medsos/zernio/accounts/${accountId}`);
 }
 
+// ─── Zernio Post Management & Media ────────────────────────────────────────
+
+export interface ZernioPostPayload {
+  text?: string;
+  mediaUrls?: string[];
+  socialAccountIds?: string[];
+  platforms?: Array<{ platform: string; accountId: string }>;
+  scheduledAt?: string;
+  publishNow?: boolean;
+  isDraft?: boolean;
+}
+
+export async function createZernioPost(payload: ZernioPostPayload): Promise<any> {
+  const { data } = await api.post('/medsos/zernio/post', payload);
+  return data.data;
+}
+
+export async function generateZernioUploadLink(): Promise<any> {
+  const { data } = await api.post('/medsos/zernio/media/upload-link');
+  return data.data;
+}
+
+export async function checkZernioUploadStatus(token: string): Promise<any> {
+  const { data } = await api.get(`/medsos/zernio/media/status/${encodeURIComponent(token)}`);
+  return data.data;
+}
+
 // ─── Zernio Post Analytics ─────────────────────────────────────────────────
 
 export interface ZernioPostAnalyticsItem {
@@ -467,6 +494,28 @@ export async function getZernioMessages(conversationId: string, accountId?: stri
 export async function sendZernioMessage(conversationId: string, accountId: string, message: string): Promise<{ messageId: string; status: string }> {
   const { data } = await api.post(`/medsos/zernio/conversations/${encodeURIComponent(conversationId)}/send`, { accountId, message });
   return data.data as { messageId: string; status: string };
+}
+
+// ─── Zernio CRM, Broadcasts, Sequences, Automations ────────────────────────
+
+export async function listZernioContacts(): Promise<any> {
+  const { data } = await api.get('/medsos/zernio/contacts');
+  return data.data;
+}
+
+export async function createZernioBroadcast(payload: any): Promise<any> {
+  const { data } = await api.post('/medsos/zernio/broadcasts', payload);
+  return data.data;
+}
+
+export async function createZernioSequence(payload: any): Promise<any> {
+  const { data } = await api.post('/medsos/zernio/sequences', payload);
+  return data.data;
+}
+
+export async function createZernioAutomation(payload: any): Promise<any> {
+  const { data } = await api.post('/medsos/zernio/automations', payload);
+  return data.data;
 }
 
 export async function getZernioAdsSummary(params?: {

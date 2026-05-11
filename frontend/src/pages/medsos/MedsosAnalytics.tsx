@@ -500,7 +500,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
       },
       ...(analysisResult ? [{
         heading: 'AI Analysis',
-        rows: [['Generated', new Date(analysisResult.generatedAt).toLocaleString('id-ID')], ['Model', analysisResult.model], ['Analysis', analysisResult.analysis.substring(0, 800)]],
+        rows: [['Generated', new Date(analysisResult.generatedAt).toLocaleString('id-ID')], ['Model', analysisResult.model], ['Analysis', analysisResult.analysis.substring(0, 800)]] as [string, string | number][],
       }] : []),
     ]);
   };
@@ -916,7 +916,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
           ['Unread', stats?.totalUnread ?? 0],
           ['Today Messages', stats?.todayMessages ?? 0],
           ['Status', previewMode ? 'Preview' : status?.reachable ? 'Active' : 'Degraded'],
-          ['Workspace', status?.workspaceName || '-'],
+          ['Workspace', (status as any)?.baseUrl || '-'],
         ],
       },
       ...(aiResult ? [{ heading: 'AI Analysis', rows: [['Analysis', aiResult]] as [string, string | number][] }] : []),
@@ -1104,7 +1104,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
       {
         heading: 'Status Marketplace Hub',
         rows: [
-          ['Workspace', status?.workspaceName || 'Belum dikonfigurasi'],
+          ['Workspace', (status as any)?.workspaceName || 'Belum dikonfigurasi'],
           ['Status', previewMode ? 'Preview' : status?.reachable ? 'Healthy' : 'Degraded'],
           ['Channel Aktif', channels.length],
           ...channels.map((c) => [`Channel: ${c.name}`, c.source] as [string, string]),
@@ -1162,7 +1162,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
 
       <div className="grid md:grid-cols-3 gap-4">
         {[
-          { label: 'Workspace', value: status?.workspaceName || 'Marketplace Preview', helper: previewMode ? 'preview netral' : 'workspace aktif' },
+          { label: 'Workspace', value: (status as any)?.workspaceName || 'Marketplace Preview', helper: previewMode ? 'preview netral' : 'workspace aktif' },
           { label: 'Channel aktif', value: String(channels.length), helper: previewMode ? 'akan terisi setelah connect' : 'tersambung ke inbox' },
           { label: 'Status', value: previewMode ? 'Preview' : status?.reachable ? 'Healthy' : 'Needs check', helper: previewMode ? 'belum ada channel aktif' : status?.message || 'Belum ada status' },
         ].map((card) => (
