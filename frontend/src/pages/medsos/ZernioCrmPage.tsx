@@ -12,7 +12,10 @@ export default function ZernioCrmPage() {
 
   useEffect(() => {
     listZernioContacts()
-      .then((data) => setContacts(data || []))
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : data?.contacts || data?.data || [];
+        setContacts(arr);
+      })
       .catch(() => {
         toast.error('Gagal memuat daftar kontak Zernio');
         setContacts([]);

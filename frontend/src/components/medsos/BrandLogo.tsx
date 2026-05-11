@@ -95,36 +95,26 @@ const brandStyles: Record<BrandKey, { bg: string; fg?: string }> = {
 
 function renderInner(brand: BrandKey, size: number): ReactNode {
   if (brand === 'tokopedia') {
-    // Tokopedia owl mascot (Toped) - white on green bg
+    // Tokopedia simple text logo
     return (
-      <svg viewBox="0 0 40 40" width={size * 0.72} height={size * 0.72} aria-hidden="true" className="block">
-        {/* ear tufts */}
-        <polygon points="11,4 14,12 8,11" fill="#FFFFFF" opacity="0.9" />
-        <polygon points="29,4 26,12 32,11" fill="#FFFFFF" opacity="0.9" />
-        {/* head */}
-        <ellipse cx="20" cy="22" rx="14" ry="13" fill="#FFFFFF" opacity="0.95" />
-        {/* left eye ring */}
-        <circle cx="13.5" cy="19" r="5.5" fill="#42B549" />
-        <circle cx="13.5" cy="19" r="3.8" fill="#FFFFFF" />
-        <circle cx="14" cy="18.5" r="2" fill="#1a3d20" />
-        <circle cx="14.7" cy="17.7" r="0.7" fill="#FFFFFF" />
-        {/* right eye ring */}
-        <circle cx="26.5" cy="19" r="5.5" fill="#42B549" />
-        <circle cx="26.5" cy="19" r="3.8" fill="#FFFFFF" />
-        <circle cx="27" cy="18.5" r="2" fill="#1a3d20" />
-        <circle cx="27.7" cy="17.7" r="0.7" fill="#FFFFFF" />
-        {/* beak */}
-        <path d="M18 25 L20 28.5 L22 25 Q20 26.5 18 25Z" fill="#F5A623" />
-      </svg>
+      <span
+        className="block font-extrabold tracking-tighter"
+        style={{ color: '#FFFFFF', fontSize: size * 0.45, lineHeight: 1 }}
+      >
+        toko
+      </span>
     );
   }
 
   if (brand === 'lazada') {
-    // Lazada — white bold "L" on orange-red bg
+    // Lazada simple text logo
     return (
-      <svg viewBox="0 0 28 28" width={size * 0.6} height={size * 0.6} aria-hidden="true" className="block">
-        <path fill="#FFFFFF" d="M4 3 h6 v17 h14 v5 H4 Z" />
-      </svg>
+      <span
+        className="block font-black italic tracking-tighter"
+        style={{ color: '#FFFFFF', fontSize: size * 0.5, lineHeight: 1 }}
+      >
+        Laz
+      </span>
     );
   }
 
