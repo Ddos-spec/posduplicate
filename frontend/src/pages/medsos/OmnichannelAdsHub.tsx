@@ -208,7 +208,7 @@ const breakdownLabels: Record<string, string> = {
   ac: 'Network',
 };
 
-export default function ZernioAdsManager() {
+export default function OmnichannelAdsHub() {
   const { isDark } = useThemeStore();
   const location = useLocation();
   const isDemo = location.pathname.startsWith('/demo');

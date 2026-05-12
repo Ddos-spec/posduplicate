@@ -5,7 +5,7 @@ import FieldHelp from '../../components/medsos/FieldHelp';
 import { listZernioContacts } from '../../services/medsosPostsService';
 import toast from 'react-hot-toast';
 
-export default function ZernioCrmPage() {
+export default function CustomerDatabasePage() {
   const { isDark } = useThemeStore();
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
