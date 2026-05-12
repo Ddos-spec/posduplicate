@@ -548,7 +548,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
     socketRef.current = io(backendUrl, { withCredentials: true });
 
     socketRef.current.on('zernio_event', (payload: any) => {
-      console.log('[Zernio Socket Event]', payload);
+      console.log('[Socket Event]', payload);
       // Auto-refresh messages and conversations if there's a new message
       if (
         payload.event === 'message.received' ||

@@ -454,7 +454,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
         const comments = a?.comments ?? 0;
         setAnalysisResult({
           generatedAt: new Date().toISOString(),
-          model: 'Zernio Analytics',
+          model: 'Post Insights',
           analysis: [
             '1. Ringkasan performa',
             `Post ini meraih ${imp.toLocaleString('id-ID')} impressions, ${reach.toLocaleString('id-ID')} reach, dengan engagement rate ${er.toFixed(2)}%.`,
@@ -529,7 +529,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
           </button>
         }
         description={previewMode
-          ? 'Belum ada post yang dipublish via platform ini. Analytics hanya tersedia untuk konten yang dijadwalkan lewat Content Scheduler kami — bukan dari Zernio atau tool eksternal lainnya.'
+          ? 'Belum ada post yang dipublish via platform ini. Analytics hanya tersedia untuk konten yang dijadwalkan lewat Content Scheduler kami.'
           : 'Lihat performa konten per channel, buka detail post, lalu jalankan analysis hanya saat tombol generate ditekan.'}
         icon={<LineChartIcon size={22} />}
       />
@@ -540,7 +540,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
           <div className="flex-1 min-w-0">
             <p className={`font-semibold text-sm ${isDark ? 'text-blue-300' : 'text-blue-800'}`}>Cara mendapatkan data analytics</p>
             <p className={`text-xs mt-0.5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-              Buat dan jadwalkan post via Content Scheduler. Setelah post dipublish, data analytics akan muncul di sini secara otomatis. Post yang dipublish langsung di Zernio atau aplikasi platform tidak terlacak di sini.
+              Buat dan jadwalkan post via Content Scheduler. Setelah post dipublish, data analytics akan muncul di sini secara otomatis. Post yang dipublish langsung di aplikasi platform tidak terlacak di sini.
             </p>
           </div>
           <button

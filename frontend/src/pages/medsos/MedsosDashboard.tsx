@@ -126,7 +126,7 @@ export default function MedsosDashboard() {
       label: 'WA Inbox',
       icon: MessageSquareText,
       value: isDemo ? 'Active' : waStatus?.reachable ? 'Active' : waStatus?.configured ? 'Check' : 'Setup',
-      helper: isDemo ? 'Inbox workspace demo aktif' : waStatus?.message || (waStatus?.configured ? 'Konfigurasi ada, koneksi perlu dicek' : 'Belum dikonfigurasi'),
+      helper: isDemo ? 'Social inbox workspace demo aktif' : waStatus?.message || (waStatus?.configured ? 'Konfigurasi ada, koneksi perlu dicek' : 'Belum dikonfigurasi'),
       action: () => navigate(`${base}/inbox/wa`),
       actionLabel: 'Buka Inbox',
     },

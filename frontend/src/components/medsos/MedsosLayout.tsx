@@ -121,7 +121,7 @@ export default function MedsosLayout() {
         label: 'CRM & Automation',
         roles: ['medsos_manager', 'all'],
         children: [
-          { label: 'Contacts', path: `${basePath}/crm`, helper: 'Database kontak Zernio' },
+          { label: 'Contacts', path: `${basePath}/crm`, helper: 'Database kontak terpadu' },
           { label: 'Broadcasts', path: `${basePath}/broadcasts`, helper: 'Kirim pesan massal' },
           { label: 'Automations', path: `${basePath}/automations`, helper: 'Bot Comment-to-DM' },
         ],

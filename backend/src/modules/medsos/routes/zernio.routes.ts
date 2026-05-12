@@ -32,7 +32,7 @@ router.post('/webhook', async (req, res, next) => {
     const signature = req.headers['x-zernio-signature'];
     // TODO: Verify signature using ZERNIO_WEBHOOK_SECRET
     const payload = req.body;
-    console.log('[Zernio Webhook] Received:', payload.event, payload.id);
+    console.log('[Webhook] Received:', payload.event, payload.id);
     
     // Process based on payload.event
     // e.g. post.published, message.received, etc.

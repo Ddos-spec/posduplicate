@@ -25,7 +25,7 @@ async function zFetch<T>(path: string, init?: RequestInit): Promise<T> {
     signal: AbortSignal.timeout(10000),
   });
   const json = await resp.json() as T & { error?: string };
-  if (!resp.ok) throw new Error((json as any).error ?? `Zernio error ${resp.status}`);
+  if (!resp.ok) throw new Error((json as any).error ?? `Upstream service error ${resp.status}`);
   return json;
 }
 

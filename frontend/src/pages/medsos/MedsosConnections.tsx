@@ -392,8 +392,8 @@ export default function MedsosConnections() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const socialConnected = params.get('zernio_connected');
-    const adsConnected = params.get('zernio_ads_connected');
+    const socialConnected = params.get('channel_connected');
+    const adsConnected = params.get('ads_connected');
 
     if (socialConnected) {
       toast.success(`${humanizePlatform(socialConnected)} berhasil terhubung ke workspace social.`);
@@ -485,7 +485,7 @@ export default function MedsosConnections() {
       const url = await getZernioConnectUrl(platform, '/medsos/connections');
       window.location.href = url;
     } catch (error) {
-      console.error('Failed to start Zernio social connection', error);
+      console.error('Failed to start social connection', error);
       toast.error(`Gagal memulai koneksi ${humanizePlatform(platform)}.`);
       setBusyPlatform(null);
     }
@@ -518,7 +518,7 @@ export default function MedsosConnections() {
         await loadLiveData();
       }
     } catch (error) {
-      console.error('Failed to disconnect Zernio account', error);
+      console.error('Failed to disconnect account', error);
       toast.error('Gagal memutuskan account social atau ads.');
     }
   };
