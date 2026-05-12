@@ -41,7 +41,7 @@ router.post('/webhook', async (req, res, next) => {
     // We acknowledge the webhook quickly.
     return res.status(200).json({ success: true, message: 'Webhook received' });
   } catch (err) {
-    console.error('[Zernio Webhook] Error:', err);
+    console.error('[Webhook] Error:', err);
     return res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });

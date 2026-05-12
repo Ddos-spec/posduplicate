@@ -5,7 +5,7 @@ import FieldHelp from '../../components/medsos/FieldHelp';
 import { createZernioAutomation } from '../../services/medsosPostsService';
 import toast from 'react-hot-toast';
 
-export default function ZernioAutomationsPage() {
+export default function AutoReplyPage() {
   const { isDark } = useThemeStore();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
@@ -70,7 +70,7 @@ export default function ZernioAutomationsPage() {
               value={dmMessage} 
               onChange={e => setDmMessage(e.target.value)} 
               rows={3}
-              placeholder="Halo! Ini link promo yang kamu minta: https://zernio.com"
+              placeholder="Halo! Ini link promo yang kamu minta: https://mypos.id"
               className={`w-full p-3 rounded-xl border resize-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200'}`} 
             />
           </div>

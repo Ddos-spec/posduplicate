@@ -5,7 +5,7 @@ import FieldHelp from '../../components/medsos/FieldHelp';
 import { createZernioBroadcast } from '../../services/medsosPostsService';
 import toast from 'react-hot-toast';
 
-export default function ZernioBroadcastsPage() {
+export default function BroadcastManagerPage() {
   const { isDark } = useThemeStore();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
