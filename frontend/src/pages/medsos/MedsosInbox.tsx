@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import FieldHelp from '../../components/medsos/FieldHelp';
@@ -595,9 +596,12 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
     try {
       await sendZernioMessage(selected.id, selected.accountId, reply.trim());
       setReply('');
+      toast.success('Pesan terkirim');
       const fresh = await getZernioMessages(selected.id, selected.accountId);
       setMessages(fresh);
-    } catch { /* ignore */ } finally {
+    } catch {
+      toast.error('Gagal mengirim pesan');
+    } finally {
       setSending(false);
     }
   };

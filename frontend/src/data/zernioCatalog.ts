@@ -20,7 +20,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     connectPlatform: 'tiktok',
     accountPlatforms: ['tiktok'],
     brand: 'tiktok',
-    hint: 'Posting, analytics, dan workflow konten lintas tim lewat satu profile tenant.',
+    hint: 'Posting & analytics terpadu. Inbox saat ini masih dalam pengembangan (Coming Soon).',
   },
   {
     id: 'instagram',
@@ -74,7 +74,7 @@ export const zernioSocialPlatforms: ZernioPlatformCard[] = [
     connectPlatform: 'threads',
     accountPlatforms: ['threads'],
     brand: 'threads',
-    hint: 'Masuk ke workspace tenant yang sama dengan akun sosial lainnya.',
+    hint: 'Posting, analytics, dan inbox terpadu untuk Threads.',
   },
   {
     id: 'bluesky',

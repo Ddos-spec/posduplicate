@@ -497,7 +497,7 @@ export default function MedsosConnections() {
       const url = await getZernioAdsConnectUrl(platform, undefined, '/medsos/connections');
       window.location.href = url;
     } catch (error) {
-      console.error('Failed to start Zernio ads connection', error);
+      console.error('Failed to start ads connection', error);
       toast.error(`Gagal memulai koneksi ${humanizePlatform(platform)}.`);
       setBusyPlatform(null);
     }
