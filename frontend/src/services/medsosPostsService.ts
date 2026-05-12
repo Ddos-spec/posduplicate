@@ -571,3 +571,13 @@ export async function getZernioAdAnalytics(params: {
   });
   return (data.data ?? null) as ZernioAdAnalyticsSummary | null;
 }
+
+export async function generateAiCaption(prompt: string): Promise<string> {
+  const { data } = await api.post('/medsos/posts/generate-caption', { prompt });
+  return data.data.caption;
+}
+
+export async function generateAiReply(context: string): Promise<string> {
+  const { data } = await api.post('/medsos/posts/generate-reply', { context });
+  return data.data.suggestion;
+}

@@ -3,9 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera } from 'lucide-react';
+import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { createZernioPost, getZernioAccounts, generateZernioUploadLink, type ZernioAccount } from '../../services/medsosPostsService';
+import { createZernioPost, getZernioAccounts, generateZernioUploadLink, generateAiCaption, type ZernioAccount } from '../../services/medsosPostsService';
 import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 
@@ -22,6 +22,22 @@ export default function CreatePost() {
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [uploadLink, setUploadLink] = useState<string | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [generatingAi, setGeneratingAi] = useState(false);
+
+  const handleGenerateAi = async () => {
+    if (!aiPrompt.trim()) { toast.error('Isi instruksi caption dulu'); return; }
+    setGeneratingAi(true);
+    try {
+      const res = await generateAiCaption(aiPrompt);
+      setCaption(res);
+      toast.success('Caption berhasil dibuat!');
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal generate caption');
+    } finally {
+      setGeneratingAi(false);
+    }
+  };
 
   useEffect(() => {
     if (!isDemo) {
@@ -179,9 +195,40 @@ export default function CreatePost() {
         </div>
 
         <div className="flex-1 min-h-[150px] relative">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center justify-between gap-2 mb-2">
             <p className="text-sm font-semibold">Caption / message</p>
+            <button 
+              onClick={() => setAiPrompt('')}
+              className="text-[10px] font-bold text-blue-500 uppercase hover:underline"
+            >
+              Clear
+            </button>
           </div>
+          
+          {/* AI Caption Tool */}
+          <div className={`mb-4 p-4 rounded-2xl border-2 border-dashed ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-blue-100 bg-blue-50/50'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles size={16} className="text-purple-500" />
+              <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">AI Caption Generator</span>
+            </div>
+            <div className="flex gap-2">
+              <input 
+                value={aiPrompt}
+                onChange={e => setAiPrompt(e.target.value)}
+                placeholder="Tulis instruksi... (misal: Bikin caption promo diskon 50%)"
+                className={`flex-1 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200'}`}
+              />
+              <button 
+                onClick={handleGenerateAi}
+                disabled={generatingAi || !aiPrompt.trim()}
+                className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 disabled:opacity-50 transition-all flex items-center gap-2"
+              >
+                {generatingAi ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                Generate
+              </button>
+            </div>
+          </div>
+
           <textarea
             value={caption}
             onChange={(e) => setCaption(e.target.value)}

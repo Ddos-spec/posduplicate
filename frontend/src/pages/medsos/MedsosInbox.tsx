@@ -12,6 +12,7 @@ import {
   getZernioConversations,
   getZernioMessages,
   sendZernioMessage,
+  generateAiReply,
   type MarketplaceChatChannel,
   type MarketplaceHubConnectionStatus,
   type WACrmConnectionStatus,
@@ -48,6 +49,7 @@ import {
   Settings,
   ShieldAlert,
   Smile,
+  Sparkles,
   Store,
   Tag,
   UserRoundCheck,
@@ -590,6 +592,22 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
 
   const filtered = platform === 'all' ? conversations : conversations.filter((c) => c.platform.toLowerCase() === platform);
 
+  const handleAiReply = async () => {
+    if (!selected || messages.length === 0) return;
+    setSending(true);
+    try {
+      // Build context from last few messages
+      const context = messages.slice(-5).map(m => `${m.fromParticipant ? 'Customer' : 'Me'}: ${m.text}`).join('\n');
+      const suggestion = await generateAiReply(context);
+      setReply(suggestion);
+      toast.success('AI Suggestion siap!');
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal generate balasan AI');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleSend = async () => {
     if (!selected || !reply.trim() || sending) return;
     setSending(true);
@@ -825,6 +843,15 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                   className={`flex-1 py-2.5 bg-transparent outline-none text-sm resize-none custom-scrollbar min-h-[44px] ${isDark ? 'text-white' : 'text-gray-900'}`}
                 />
                 <div className="flex items-center gap-1">
+                  <button 
+                    type="button" 
+                    onClick={handleAiReply}
+                    disabled={sending || !selected}
+                    title="AI Smart Reply" 
+                    className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-700 text-purple-400' : 'hover:bg-purple-50 text-purple-600 shadow-sm'}`}
+                  >
+                    <Sparkles size={20} />
+                  </button>
                   <button type="button" title="Emoji" className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-white text-gray-400 hover:text-gray-600 shadow-sm'}`}>
                     <Smile size={20} />
                   </button>
