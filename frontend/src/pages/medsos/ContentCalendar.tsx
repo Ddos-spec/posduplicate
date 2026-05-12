@@ -25,7 +25,7 @@ import {
   UserRoundCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getPosts, deletePost, publishPost, type SocialPost } from '../../services/medsosPostsService';
+import { getPosts, type SocialPost } from '../../services/medsosPostsService';
 
 const stageConfig = [
   { id: 'idea', label: 'Idea', tone: 'bg-slate-100 text-slate-700' },
@@ -66,6 +66,8 @@ function createFallbackBrief(card: typeof plannerCards[number]): CampaignBrief {
   };
 }
 
+import { updatePost } from '../../services/medsosPostsService';
+
 function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
   posts: SocialPost[];
   isDark: boolean;
@@ -74,49 +76,51 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
 }) {
   const [busy, setBusy] = useState<number | null>(null);
 
-  const grouped = useMemo(() => {
-    const order = ['draft', 'scheduled', 'published', 'failed'];
-    const map: Record<string, SocialPost[]> = {};
-    for (const status of order) map[status] = [];
-    for (const post of posts) {
-      const key = post.status in map ? post.status : 'draft';
-      map[key].push(post);
-    }
-    return order.map((status) => ({ status, posts: map[status] }));
-  }, [posts]);
+  // Generate current month days
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  
+  const startPadding = firstDay.getDay(); // 0 = Sunday
+  const daysInMonth = lastDay.getDate();
 
-  const handlePublish = async (post: SocialPost) => {
-    setBusy(post.id);
+  const handleDragStart = (e: React.DragEvent, post: SocialPost) => {
+    e.dataTransfer.setData('text/plain', post.id.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent, dayNumber: number) => {
+    e.preventDefault();
+    const postIdStr = e.dataTransfer.getData('text/plain');
+    if (!postIdStr) return;
+    const postId = parseInt(postIdStr, 10);
+    const post = posts.find(p => p.id === postId);
+    
+    if (!post || post.status === 'published') {
+      toast.error('Post yang sudah tayang tidak bisa digeser jadwalnya.');
+      return;
+    }
+
+    setBusy(postId);
     try {
-      await publishPost(post.id);
-      toast.success('Post dipublish');
+      // Create new date for the target day at the same time, or default 12:00
+      const targetDate = new Date(year, month, dayNumber, 12, 0, 0);
+      await updatePost(postId, {
+        scheduledAt: targetDate.toISOString(),
+        status: 'scheduled'
+      });
+      toast.success(`Jadwal dipindah ke tgl ${dayNumber}`);
       onRefresh();
     } catch {
-      toast.error('Gagal publish post');
+      toast.error('Gagal memindah jadwal post');
     } finally {
       setBusy(null);
     }
-  };
-
-  const handleDelete = async (post: SocialPost) => {
-    if (!window.confirm('Hapus post ini?')) return;
-    setBusy(post.id);
-    try {
-      await deletePost(post.id);
-      toast.success('Post dihapus');
-      onRefresh();
-    } catch {
-      toast.error('Gagal hapus post');
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const stageLabel: Record<string, { label: string; tone: string }> = {
-    draft: { label: 'Draft', tone: 'bg-slate-100 text-slate-700' },
-    scheduled: { label: 'Scheduled', tone: 'bg-emerald-100 text-emerald-600' },
-    published: { label: 'Published', tone: 'bg-cyan-100 text-cyan-700' },
-    failed: { label: 'Failed', tone: 'bg-red-100 text-red-600' },
   };
 
   return (
@@ -126,9 +130,9 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
           <div>
             <div className="flex items-center gap-2">
               <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Content Planner</h1>
-              <FieldHelp title="Content Planner live" description="Planner live menampilkan post yang benar-benar tersimpan di tenant. Dari sini operator bisa melihat draft, jadwal tayang, post live, lalu publish atau hapus bila perlu." />
+              <FieldHelp title="Content Planner live" description="Tarik (drag) post draft/scheduled ke tanggal lain untuk mengubah jadwal. Post yang sudah published tidak bisa digeser." />
             </div>
-            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{posts.length} post tersimpan</p>
+            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{posts.length} post bulan ini</p>
           </div>
           <button
             onClick={() => navigate('/medsos/create')}
@@ -140,62 +144,65 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
         </div>
       </div>
 
-      {posts.length === 0 ? (
-        <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <CalendarRange size={40} className="mx-auto text-blue-500 mb-4" />
-          <h2 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Belum ada post</h2>
-          <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Buat post pertama kamu dari menu Create.</p>
-          <button title="Buka composer untuk membuat post pertama" onClick={() => navigate('/medsos/create')} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 text-white px-5 py-3 font-semibold">
-            <Plus size={16} /> Create Post
-          </button>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-4 gap-4">
-          {grouped.map(({ status, posts: colPosts }) => (
-            <div key={status} className={`rounded-2xl border p-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs px-2 py-1 rounded-full font-semibold ${stageLabel[status]?.tone ?? 'bg-slate-100 text-slate-700'}`}>
-                  {stageLabel[status]?.label ?? status}
-                </span>
-                <span className={`text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{colPosts.length}</span>
-              </div>
-              <div className="space-y-3">
-                {colPosts.map((post) => (
-                  <div key={post.id} className={`rounded-xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
-                    <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{post.content || '(no caption)'}</p>
-                    <p className={`text-xs mt-1 capitalize ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{post.platform}</p>
-                    {post.scheduled_at && (
-                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {new Date(post.scheduled_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    )}
-                    <div className="flex gap-2 mt-2">
-                      {post.status === 'draft' || post.status === 'scheduled' ? (
-                        <button
-                          onClick={() => handlePublish(post)}
-                          disabled={busy === post.id}
-                          title="Publish post ini sekarang"
-                          className="text-xs text-blue-500 font-semibold disabled:opacity-60"
-                        >
-                          {busy === post.id ? '…' : 'Publish'}
-                        </button>
-                      ) : null}
-                      <button
-                        onClick={() => handleDelete(post)}
-                        disabled={busy === post.id}
-                        title="Hapus post ini"
-                        className="text-xs text-red-400 font-semibold disabled:opacity-60 ml-auto"
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+      <div className={`rounded-3xl border overflow-hidden ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+        <div className="grid grid-cols-7 border-b dark:border-slate-700">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            <div key={day} className={`py-3 text-center text-xs font-bold uppercase tracking-widest ${isDark ? 'text-gray-400 bg-slate-900/50' : 'text-gray-500 bg-gray-50'}`}>
+              {day}
             </div>
           ))}
         </div>
-      )}
+        <div className="grid grid-cols-7 auto-rows-fr">
+          {Array.from({ length: startPadding }).map((_, i) => (
+            <div key={`empty-${i}`} className={`min-h-[120px] p-2 border-r border-b ${isDark ? 'border-slate-700 bg-slate-900/20' : 'border-gray-100 bg-gray-50/50'}`} />
+          ))}
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const dayNum = i + 1;
+            const isToday = dayNum === today.getDate();
+            // Find posts for this day
+            const dayPosts = posts.filter(p => {
+              const d = p.scheduled_at ? new Date(p.scheduled_at) : (p.published_at ? new Date(p.published_at) : new Date());
+              return d.getDate() === dayNum && d.getMonth() === month && d.getFullYear() === year;
+            });
+
+            return (
+              <div 
+                key={dayNum} 
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, dayNum)}
+                className={`min-h-[120px] p-2 border-r border-b transition-colors relative group ${isDark ? 'border-slate-700 hover:bg-slate-700/30' : 'border-gray-100 hover:bg-blue-50/30'} ${isToday ? (isDark ? 'bg-blue-900/20' : 'bg-blue-50/50') : ''}`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-500 text-white' : isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {dayNum}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {dayPosts.map(post => (
+                    <div 
+                      key={post.id}
+                      draggable={post.status !== 'published'}
+                      onDragStart={(e) => handleDragStart(e, post)}
+                      className={`p-2 rounded-lg text-xs border cursor-grab active:cursor-grabbing ${
+                        post.status === 'published' ? (isDark ? 'bg-cyan-900/30 border-cyan-800 text-cyan-200' : 'bg-cyan-50 border-cyan-200 text-cyan-700') :
+                        post.status === 'scheduled' ? (isDark ? 'bg-emerald-900/30 border-emerald-800 text-emerald-200' : 'bg-emerald-50 border-emerald-200 text-emerald-700') :
+                        post.status === 'failed' ? (isDark ? 'bg-rose-900/30 border-rose-800 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-700') :
+                        (isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-white border-gray-200 text-gray-700 shadow-sm')
+                      } ${busy === post.id ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <BrandLogo brand={resolveBrandKey(post.platform)} size={12} />
+                        <span className="font-bold truncate">{post.status}</span>
+                      </div>
+                      <p className="truncate font-medium">{post.content || '(no text)'}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
