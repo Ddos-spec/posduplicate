@@ -104,7 +104,7 @@ export default function CreatePost() {
         <div className="mb-6">
           <div className="flex items-center gap-2">
             <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Omnichannel Post Composer</h2>
-            <FieldHelp title="Composer post" description="Buat, jadwalkan, atau publish langsung ke berbagai platform lewat Zernio." />
+            <FieldHelp title="Composer post" description="Buat, jadwalkan, atau publish langsung ke berbagai platform lewat dashboard terpadu." />
           </div>
         </div>
 

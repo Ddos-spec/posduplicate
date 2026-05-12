@@ -375,7 +375,7 @@ export default function ZernioAdsManager() {
         await load();
       }
     } catch (error) {
-      console.error('Failed to disconnect Zernio ads account', error);
+      console.error('Failed to disconnect ads account', error);
     }
   };
 

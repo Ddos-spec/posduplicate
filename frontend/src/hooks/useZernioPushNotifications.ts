@@ -29,7 +29,7 @@ export function useZernioPushNotifications() {
       });
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        toast.success(`[Zernio] ${notification.title}: ${notification.body}`);
+        toast.success(`[Inbox] ${notification.title}: ${notification.body}`);
       });
 
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {

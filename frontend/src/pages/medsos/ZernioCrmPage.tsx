@@ -17,7 +17,7 @@ export default function ZernioCrmPage() {
         setContacts(arr);
       })
       .catch(() => {
-        toast.error('Gagal memuat daftar kontak Zernio');
+        toast.error('Gagal memuat daftar kontak');
         setContacts([]);
       })
       .finally(() => setLoading(false));
@@ -28,7 +28,7 @@ export default function ZernioCrmPage() {
       <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
         <div className="flex items-center gap-2 mb-6">
           <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>CRM & Contacts</h1>
-          <FieldHelp title="CRM Contacts" description="Daftar kontak yang pernah berinteraksi melalui inbox. Data diambil langsung dari Zernio CRM." />
+          <FieldHelp title="CRM Contacts" description="Daftar kontak yang pernah berinteraksi melalui inbox. Data diambil langsung dari CRM terpadu." />
         </div>
 
         {loading ? (
