@@ -148,7 +148,7 @@ export async function getConnectUrl(
   tenantName?: string,
 ): Promise<string> {
   const profileId = await getOrCreateZernioProfile(tenantId, tenantName);
-  const qs = new URLSearchParams({ profileId, redirectUrl });
+  const qs = new URLSearchParams({ profileId, redirect_url: redirectUrl });
   const data = await zFetch<{ authUrl: string }>(`/connect/${platform}?${qs}`);
   return data.authUrl;
 }
@@ -486,15 +486,18 @@ export async function getZernioConversationMessages(
   const suffix = qs.size > 0 ? `?${qs}` : '';
   const raw = await zFetch<any>(`/inbox/conversations/${encodeURIComponent(conversationId)}/messages${suffix}`);
   const list: any[] = raw.messages ?? raw.data ?? (Array.isArray(raw) ? raw : []);
-  return list.map((m: any): ZernioMessage => ({
-    id: String(m.id ?? m._id ?? ''),
-    conversationId,
-    text: m.text ?? m.message ?? null,
-    attachments: m.attachments ?? [],
-    timestamp: m.timestamp ?? m.createdAt ?? new Date().toISOString(),
-    fromParticipant: m.fromParticipant ?? m.from === 'participant',
-    senderName: m.senderName ?? m.from ?? null,
-  }));
+  return list.map((m: any): ZernioMessage => {
+    const isIncoming = m.direction === 'incoming' || m.from === 'participant' || m.fromParticipant === true;
+    return {
+      id: String(m.id ?? m._id ?? ''),
+      conversationId,
+      text: m.text ?? m.message ?? null,
+      attachments: m.attachments ?? [],
+      timestamp: m.timestamp ?? m.createdAt ?? new Date().toISOString(),
+      fromParticipant: isIncoming,
+      senderName: m.senderName ?? (isIncoming ? 'Customer' : 'Me'),
+    };
+  });
 }
 
 export async function sendZernioDirectMessage(
