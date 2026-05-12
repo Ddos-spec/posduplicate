@@ -35,6 +35,7 @@ import {
 import {
   AlertTriangle,
   Bot,
+  CheckCircle2,
   ExternalLink,
   Loader2,
   MessageSquareQuote,
@@ -544,18 +545,11 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    // Determine backend URL
     const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
     socketRef.current = io(backendUrl, { withCredentials: true });
 
     socketRef.current.on('zernio_event', (payload: any) => {
-      console.log('[Socket Event]', payload);
-      // Auto-refresh messages and conversations if there's a new message
-      if (
-        payload.event === 'message.received' ||
-        payload.event === 'message.sent' ||
-        payload.event === 'comment.received'
-      ) {
+      if (['message.received', 'message.sent', 'comment.received'].includes(payload.event)) {
         setRefreshTick(t => t + 1);
       }
     });
@@ -568,7 +562,13 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
   useEffect(() => {
     setLoading(true);
     getZernioConversations({ limit: 50, status: 'active', refresh: refreshTick > 0 })
-      .then((r) => setConversations(r.conversations))
+      .then((r) => {
+        setConversations(r.conversations);
+        if (r.conversations.length > 0 && !selected) {
+          // Auto select first on desktop if none selected
+          // setSelected(r.conversations[0]);
+        }
+      })
       .catch(() => setConversations([]))
       .finally(() => setLoading(false));
   }, [refreshTick]);
@@ -581,7 +581,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
       .then(setMessages)
       .catch(() => setMessages([]))
       .finally(() => setMsgLoading(false));
-  }, [selected]);
+  }, [selected, refreshTick]); // Also refresh messages on tick
 
   const availablePlatforms = useMemo(() => {
     const set = new Set(conversations.map((c) => c.platform.toLowerCase()));
@@ -606,151 +606,247 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
     }
   };
 
-  if (loading) {
+  if (loading && conversations.length === 0) {
     return (
-      <div className="min-h-[30vh] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
       </div>
     );
   }
 
   return (
-    <div className={`rounded-3xl border overflow-hidden ${isDark ? 'border-slate-700' : 'border-gray-100 shadow-sm'}`}>
-      {/* Header bar */}
-      <div className={`flex items-center gap-3 px-5 py-3 border-b ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
-        <MessageSquareQuote size={17} className="text-blue-500 shrink-0" />
-        <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Percakapan ({filtered.length})</span>
-        <div className="flex-1" />
-        <select
-          value={platform}
-          onChange={(e) => setPlatform(e.target.value)}
-          className={`text-xs rounded-xl border px-2 py-1 ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-700'}`}
-        >
-          <option value="all">Semua platform</option>
-          {availablePlatforms.map((p) => (
-            <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={() => { setSelected(null); setRefreshTick((t) => t + 1); }}
-          className={`rounded-xl p-1.5 ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-200'}`}
-          title="Refresh"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-        </button>
+    <div className={`flex flex-col xl:flex-row h-[750px] rounded-3xl border overflow-hidden ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200 shadow-xl'}`}>
+      
+      {/* Column 1: Filter & Conversation List */}
+      <div className={`w-full xl:w-96 flex flex-col border-r ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-100 bg-gray-50/30'}`}>
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold tracking-tight">Messages</h2>
+            <button
+              onClick={() => setRefreshTick(t => t + 1)}
+              className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'}`}
+            >
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            </button>
+          </div>
+          
+          <div className="flex gap-2">
+            <select
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value)}
+              className={`flex-1 text-xs rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20 ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-700 shadow-sm'}`}
+            >
+              <option value="all">All platforms</option>
+              {availablePlatforms.map((p) => (
+                <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+              ))}
+            </select>
+            <select className={`flex-1 text-xs rounded-xl border px-3 py-2 outline-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-700 shadow-sm'}`}>
+               <option>All accounts</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="px-3 pb-4">
+            <div className="flex items-center justify-between px-2 mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Conversations</span>
+              <select className="text-[10px] font-bold bg-transparent border-none outline-none text-gray-400">
+                <option>Newest first</option>
+              </select>
+            </div>
+            
+            {filtered.length === 0 ? (
+              <div className="py-20 text-center">
+                <MessageSquareQuote size={40} className="mx-auto mb-3 opacity-10" />
+                <p className="text-sm text-gray-400">No messages found</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {filtered.map((conv) => {
+                  const isActive = selected?.id === conv.id;
+                  return (
+                    <button
+                      key={conv.id}
+                      onClick={() => setSelected(conv)}
+                      className={`w-full text-left px-3 py-3 rounded-2xl flex items-start gap-3 transition-all ${
+                        isActive 
+                          ? (isDark ? 'bg-blue-600/20 text-blue-100 shadow-inner' : 'bg-white shadow-md border border-gray-100 ring-1 ring-black/5') 
+                          : (isDark ? 'hover:bg-slate-700/50 text-gray-300' : 'hover:bg-white/60 text-gray-600')
+                      }`}
+                    >
+                      <div className="relative shrink-0">
+                        {conv.participantPicture ? (
+                          <img src={conv.participantPicture} alt="" className="w-11 h-11 rounded-full object-cover ring-2 ring-transparent" />
+                        ) : (
+                          <div className={`w-11 h-11 rounded-full flex items-center justify-center text-lg font-bold ${isDark ? 'bg-slate-700 text-gray-400' : 'bg-gray-200 text-gray-500'}`}>
+                            {(conv.participantName || '?').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-gray-100 dark:border-slate-700">
+                          <BrandLogo brand={resolveBrandKey(conv.platform)} size={14} />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className={`text-sm font-bold truncate ${isActive ? (isDark ? 'text-blue-300' : 'text-blue-600') : (isDark ? 'text-white' : 'text-gray-900')}`}>
+                            {conv.participantName || conv.participantId}
+                          </span>
+                          <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                            {new Date(conv.updatedTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className={`text-xs mt-0.5 line-clamp-1 ${isActive ? (isDark ? 'text-blue-200/70' : 'text-blue-500') : 'text-gray-400'}`}>
+                          {conv.lastMessage || 'Sent an attachment'}
+                        </p>
+                        {conv.unreadCount > 0 && !isActive && (
+                          <div className="mt-1 flex justify-end">
+                            <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className={`flex h-[520px] ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
-        {/* Conversation list */}
-        <div className={`w-72 shrink-0 border-r overflow-y-auto ${isDark ? 'border-slate-700' : 'border-gray-100'}`}>
-          {filtered.length === 0 ? (
-            <div className={`p-6 text-center text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Belum ada percakapan aktif.
+      {/* Column 2: Active Chat Thread */}
+      <div className={`flex-1 flex flex-col min-w-0 relative ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
+        {!selected ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className={`mb-6 rounded-full p-6 ${isDark ? 'bg-slate-800' : 'bg-gray-50'}`}>
+              <MessageSquareQuote size={48} className="text-blue-500 opacity-20" />
             </div>
-          ) : (
-            filtered.map((conv) => (
-              <button
-                key={conv.id}
-                type="button"
-                onClick={() => setSelected(conv)}
-                className={`w-full text-left px-4 py-3 border-b flex items-start gap-3 transition ${selected?.id === conv.id
-                  ? (isDark ? 'bg-blue-600/20 border-slate-700' : 'bg-blue-50 border-gray-100')
-                  : (isDark ? 'hover:bg-slate-700/50 border-slate-700/50' : 'hover:bg-gray-50 border-gray-100/70')
-                }`}
-              >
-                <div className="shrink-0 mt-0.5">
-                  {conv.participantPicture ? (
-                    <img src={conv.participantPicture} alt="" className="w-9 h-9 rounded-full object-cover" />
+            <h3 className="text-lg font-bold mb-2">Select a conversation</h3>
+            <p className="text-sm text-gray-400 max-w-xs mx-auto">Choose a chat from the left panel to start responding to your customers.</p>
+          </div>
+        ) : (
+          <>
+            {/* Chat Header */}
+            <div className={`px-6 py-4 border-b flex items-center justify-between ${isDark ? 'border-slate-700 bg-slate-900/80 backdrop-blur' : 'border-gray-100 bg-white/80 backdrop-blur'}`}>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  {selected.participantPicture ? (
+                    <img src={selected.participantPicture} alt="" className="w-10 h-10 rounded-full object-cover" />
                   ) : (
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
-                      {(conv.participantName || '?').charAt(0).toUpperCase()}
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center font-bold">
+                      {selected.participantName?.charAt(0)}
                     </div>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`text-sm font-semibold truncate flex-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{conv.participantName || conv.participantId}</span>
-                    {conv.unreadCount > 0 && (
-                      <span className="shrink-0 rounded-full bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 leading-none">{conv.unreadCount}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <BrandLogo brand={resolveBrandKey(conv.platform)} size={12} />
-                    <span className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{conv.lastMessage || '—'}</span>
-                  </div>
-                  <p className={`text-[10px] mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{new Date(conv.updatedTime).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                <div>
+                   <h3 className="font-bold text-base leading-none mb-1">{selected.participantName || selected.participantId}</h3>
+                   <div className="flex items-center gap-2">
+                     <BrandLogo brand={resolveBrandKey(selected.platform)} size={12} />
+                     <span className="text-[11px] text-gray-400 font-medium tracking-tight">@{selected.accountUsername}</span>
+                   </div>
                 </div>
-              </button>
-            ))
-          )}
-        </div>
-
-        {/* Message thread */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {!selected ? (
-            <div className={`flex-1 flex items-center justify-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-              Pilih percakapan di sebelah kiri
-            </div>
-          ) : (
-            <>
-              <div className={`px-5 py-3 border-b flex items-center gap-3 ${isDark ? 'border-slate-700' : 'border-gray-100'}`}>
-                <BrandLogo brand={resolveBrandKey(selected.platform)} size={28} withRing />
-                <div className="min-w-0">
-                  <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{selected.participantName || selected.participantId}</p>
-                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>@{selected.accountUsername} · {selected.platform}</p>
-                </div>
+              </div>
+              <div className="flex items-center gap-2">
                 {selected.url && (
-                  <a href={selected.url} target="_blank" rel="noreferrer" className={`ml-auto shrink-0 rounded-xl p-1.5 ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}>
-                    <ExternalLink size={14} />
+                  <a href={selected.url} target="_blank" rel="noreferrer" title="Open original chat" className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+                    <ExternalLink size={18} />
                   </a>
                 )}
               </div>
+            </div>
 
-              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-                {msgLoading ? (
-                  <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-blue-500" /></div>
-                ) : messages.length === 0 ? (
-                  <p className={`text-sm text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Belum ada pesan dimuat.</p>
-                ) : (
-                  messages.map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.fromParticipant ? 'justify-start' : 'justify-end'}`}>
-                      <div className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm ${
-                        msg.fromParticipant
-                          ? (isDark ? 'bg-slate-700 text-gray-100' : 'bg-gray-100 text-gray-900')
-                          : 'bg-blue-600 text-white'
-                      }`}>
-                        {msg.text || <em className="opacity-60">[media]</em>}
-                        <p className={`text-[10px] mt-1 ${msg.fromParticipant ? (isDark ? 'text-gray-500' : 'text-gray-400') : 'text-blue-200'}`}>
-                          {new Date(msg.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-transparent via-transparent to-black/[0.01]">
+              {msgLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                  <p className="text-xs text-gray-400 animate-pulse font-medium">Loading history...</p>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="py-20 text-center opacity-20">
+                  <Bot size={64} className="mx-auto mb-4" />
+                  <p className="text-sm font-bold">Encrypted connection active</p>
+                </div>
+              ) : (
+                <div className="space-y-6 max-w-4xl mx-auto">
+                  <div className="flex justify-center mb-8">
+                     <span className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-slate-800 text-gray-500' : 'bg-gray-100 text-gray-400'}`}>Today</span>
+                  </div>
+                  
+                  {messages.map((msg) => {
+                    return (
+                      <div key={msg.id} className={`flex ${msg.fromParticipant ? 'justify-start' : 'justify-end animate-in fade-in slide-in-from-bottom-2'}`}>
+                        <div className={`max-w-[85%] sm:max-w-[70%] group`}>
+                          <div className={`relative px-5 py-3 text-sm shadow-sm transition-transform hover:scale-[1.01] ${
+                            msg.fromParticipant
+                              ? (isDark ? 'bg-slate-800 text-gray-100 rounded-2xl rounded-bl-none border border-slate-700' : 'bg-gray-50 text-gray-800 rounded-2xl rounded-bl-none border border-gray-100')
+                              : (isDark ? 'bg-blue-600 text-white rounded-2xl rounded-br-none shadow-blue-500/10' : 'bg-blue-600 text-white rounded-2xl rounded-br-none shadow-blue-600/20')
+                          }`}>
+                            {msg.text || (
+                              <div className="flex flex-wrap gap-2">
+                                {msg.attachments?.map((at, idx) => (
+                                   <img key={idx} src={at.url} alt="attachment" className="rounded-lg max-h-48 border border-black/10" />
+                                ))}
+                                {!msg.attachments?.length && <em className="opacity-60 text-xs italic">[Media / System Event]</em>}
+                              </div>
+                            )}
+                            <div className={`mt-1.5 flex items-center gap-2 ${msg.fromParticipant ? 'justify-start' : 'justify-end'}`}>
+                               <span className={`text-[10px] font-medium ${msg.fromParticipant ? 'text-gray-400' : 'text-blue-100/70'}`}>
+                                 {new Date(msg.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                               </span>
+                               {!msg.fromParticipant && <CheckCircle2 size={10} className="text-blue-100/50" />}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
+                    );
+                  })}
+                  <div id="chat-end" />
+                </div>
+              )}
+            </div>
 
-              <div className={`px-4 py-3 border-t flex items-end gap-2 ${isDark ? 'border-slate-700' : 'border-gray-100'}`}>
+            {/* Message Input */}
+            <div className={`p-6 border-t ${isDark ? 'border-slate-700 bg-slate-900' : 'border-gray-100 bg-white'}`}>
+              <div className={`relative flex items-end gap-3 p-2 rounded-2xl border-2 transition-all focus-within:ring-4 ${
+                isDark 
+                  ? 'bg-slate-800 border-slate-700 focus-within:border-blue-500 focus-within:ring-blue-500/10' 
+                  : 'bg-gray-50 border-gray-100 focus-within:border-blue-600 focus-within:ring-blue-600/5 shadow-inner'
+              }`}>
+                <button type="button" title="Attach" className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-white text-gray-400 hover:text-gray-600 shadow-sm'}`}>
+                  <Paperclip size={20} />
+                </button>
                 <textarea
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
-                  placeholder="Ketik balasan… (Enter untuk kirim)"
-                  rows={2}
-                  className={`flex-1 resize-none rounded-2xl border px-3 py-2 text-sm ${isDark ? 'bg-slate-900 border-slate-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'}`}
+                  placeholder="Type a message..."
+                  rows={1}
+                  className={`flex-1 py-2.5 bg-transparent outline-none text-sm resize-none custom-scrollbar min-h-[44px] ${isDark ? 'text-white' : 'text-gray-900'}`}
                 />
-                <button
-                  type="button"
-                  onClick={() => void handleSend()}
-                  disabled={!reply.trim() || sending}
-                  className="shrink-0 rounded-2xl bg-blue-600 p-2.5 text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button type="button" title="Emoji" className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-white text-gray-400 hover:text-gray-600 shadow-sm'}`}>
+                    <Smile size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleSend()}
+                    disabled={!reply.trim() || sending}
+                    className={`shrink-0 h-11 w-11 flex items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale ${!reply.trim() ? 'bg-gray-300 dark:bg-slate-700' : 'shadow-blue-600/30'}`}
+                  >
+                    {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                  </button>
+                </div>
               </div>
-            </>
-          )}
-        </div>
+              <p className="mt-2 text-[10px] text-center text-gray-400 font-medium">Response SLA: <span className="text-emerald-500">Under 5 minutes</span></p>
+            </div>
+            
+            {/* Floating context button like in reference */}
+            <button className="absolute bottom-32 right-10 h-14 w-14 rounded-full bg-orange-600 text-white shadow-2xl shadow-orange-600/40 flex items-center justify-center transition-transform hover:scale-110 active:scale-90 z-20">
+               <MessageSquareQuote size={28} />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
