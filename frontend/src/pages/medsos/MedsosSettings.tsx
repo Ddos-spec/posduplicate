@@ -60,6 +60,10 @@ type SettingsState = {
     contentGeneration: string;
     inboxReply: string;
   };
+  externalWebhook: {
+    active: boolean;
+    url: string;
+  };
   activeSlaIds: number[];
   activeRoutingIds: number[];
   activeApprovalIds: number[];
@@ -87,6 +91,10 @@ const defaultSettings: SettingsState = {
     postAnalysis: 'Anda adalah analis performa konten untuk dashboard bisnis. Tulis jawaban dalam Bahasa Indonesia yang ringkas, langsung, dan fokus tindakan.',
     contentGeneration: 'Anda adalah copywriter kreatif profesional yang ahli dalam membuat caption media sosial yang menarik dan berorientasi pada konversi.',
     inboxReply: 'Anda adalah staf layanan pelanggan yang ramah dan membantu. Balas pesan pelanggan dengan sopan dan berikan solusi yang tepat.',
+  },
+  externalWebhook: {
+    active: false,
+    url: '',
   },
   activeSlaIds: slaPolicies.map((policy) => policy.id),
   activeRoutingIds: routingRules.filter((rule) => rule.active).map((rule) => rule.id),
@@ -753,6 +761,37 @@ export default function MedsosSettings() {
                     rows={2}
                     className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
                     placeholder="Contoh: Balas dengan sangat sabar..."
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="md:col-span-2 pt-4 border-t dark:border-slate-700">
+              <div className="flex items-center gap-2 mb-4">
+                <Workflow size={16} className="text-emerald-500" />
+                <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Custom AI Webhook</h3>
+                <FieldHelp title="Custom AI Webhook" description="Gunakan fitur ini jika Anda memiliki sistem AI atau bot eksternal (seperti n8n atau custom server). Jika diaktifkan, semua pesan masuk akan diteruskan ke URL Webhook ini." />
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <ToggleButton
+                    active={settings.externalWebhook.active}
+                    label={settings.externalWebhook.active ? 'Webhook Aktif' : 'Webhook Off'}
+                    onClick={() => updateSettings(curr => ({ ...curr, externalWebhook: { ...curr.externalWebhook, active: !curr.externalWebhook.active } }))}
+                  />
+                  <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Kirim pesan masuk ke server eksternal</span>
+                </div>
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold inline-flex items-center gap-2">
+                    Endpoint URL
+                  </span>
+                  <input
+                    type="url"
+                    value={settings.externalWebhook.url}
+                    onChange={(e) => updateSettings(curr => ({ ...curr, externalWebhook: { ...curr.externalWebhook, url: e.target.value } }))}
+                    placeholder="https://api.domain-anda.com/webhook/receive"
+                    disabled={!settings.externalWebhook.active}
+                    className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white disabled:opacity-50' : 'border-gray-200 bg-white text-gray-900 disabled:opacity-50'}`}
                   />
                 </label>
               </div>

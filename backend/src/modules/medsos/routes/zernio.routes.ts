@@ -25,6 +25,8 @@ import {
 
 const router = Router();
 
+import prisma from '../../../utils/prisma';
+
 // POST /api/medsos/zernio/webhook
 // This must be before authMiddleware because it's called by Zernio servers
 router.post('/webhook', async (req, res, next) => {
@@ -37,6 +39,40 @@ router.post('/webhook', async (req, res, next) => {
     // Process based on payload.event
     // e.g. post.published, message.received, etc.
     io.emit('zernio_event', payload);
+
+    // Forward to External Custom AI Webhook (e.g. n8n)
+    try {
+      // Zernio payload structure usually has an account or profile ID we could use to map back to a tenant.
+      // But since we are processing a global webhook, we need to find the tenant.
+      // For this implementation, we will query the first tenant with an active external webhook, 
+      // or ideally extract tenant info from the payload (e.g., from accountId).
+      // Since this is a proxy, we will broadcast it to all active webhooks for now, 
+      // or if accountId is present, find the tenant that owns the account.
+      
+      const accountId = payload.account?.accountId || payload.account?.id;
+      if (accountId) {
+         const socialAccount = await prisma.social_accounts.findFirst({
+            where: { account_id: accountId },
+            include: { tenants: true }
+         });
+
+         if (socialAccount && socialAccount.tenants?.settings) {
+            const settings = socialAccount.tenants.settings as any;
+            const extHook = settings.myCommerSocialSettings?.externalWebhook;
+            if (extHook && extHook.active && extHook.url) {
+               console.log(`[Webhook Forwarder] Forwarding event to ${extHook.url}`);
+               fetch(extHook.url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload),
+                  signal: AbortSignal.timeout(5000)
+               }).catch(e => console.error('[Webhook Forwarder] Forward failed:', e.message));
+            }
+         }
+      }
+    } catch (fwErr) {
+      console.error('[Webhook Forwarder] Error:', fwErr);
+    }
     
     // We acknowledge the webhook quickly.
     return res.status(200).json({ success: true, message: 'Webhook received' });

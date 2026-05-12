@@ -56,6 +56,11 @@ export async function createPost(payload: CreatePostPayload): Promise<SocialPost
   return data.data as SocialPost;
 }
 
+export async function updatePost(id: number, payload: Partial<CreatePostPayload>): Promise<SocialPost> {
+  const { data } = await api.put(`/medsos/posts/${id}`, payload);
+  return data.data as SocialPost;
+}
+
 export async function deletePost(id: number): Promise<void> {
   await api.delete(`/medsos/posts/${id}`);
 }
