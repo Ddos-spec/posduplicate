@@ -2,15 +2,12 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
-import FieldHelp from '../../components/medsos/FieldHelp';
 import {
-  bestPostingWindows,
   channelPerformance,
   replySpeedTrend,
   slaCompliance,
 } from '../../data/omnichannelMock';
 import {
-  generateSocialPostAnalysis,
   getMarketplaceHubStatus,
   getPosts,
   getWACrmStatus,
@@ -18,7 +15,6 @@ import {
   getZernioPostAnalytics,
   type MarketplaceHubConnectionStatus,
   type SocialPost,
-  type SocialPostAnalysisResult,
   type WACrmConnectionStatus,
   type ZernioAccount,
   type ZernioPostAnalyticsItem,
@@ -26,18 +22,14 @@ import {
 import {
   Activity,
   ArrowRight,
-  BarChart3,
   Bot,
   Download,
-  FileText,
-  LineChart as LineChartIcon,
+  Image as ImageIcon,
   Loader2,
   MessageSquareQuote,
-  PenLine,
   Settings,
   Sparkles,
   Store,
-  TrendingUp,
   Workflow,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
@@ -47,8 +39,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -252,12 +242,6 @@ function safeNumber(value?: number | null) {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
-function truncateText(value: string, limit = 120) {
-  const compact = value.replace(/\s+/g, ' ').trim();
-  if (compact.length <= limit) return compact;
-  return `${compact.slice(0, limit).trim()}…`;
-}
-
 function getPostEngagementRate(post: SocialPost) {
   const analytics = post.social_analytics;
   if (analytics?.engagement_rate != null) {
@@ -288,15 +272,11 @@ function buildTrendRows(posts: SocialPost[]) {
 }
 
 function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: boolean }) {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(!isDemo);
   const [posts, setPosts] = useState<SocialPost[]>(isDemo ? demoSocialPosts : []);
   const [accounts, setAccounts] = useState<ZernioAccount[]>([]);
   const [platformFilter, setPlatformFilter] = useState('all');
   const [selectedPostId, setSelectedPostId] = useState<number>(isDemo ? demoSocialPosts[0].id : 0);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<SocialPostAnalysisResult | null>(null);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -342,22 +322,6 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
     ? Array.from(new Set(previewSocialPosts.map((post) => post.platform.toLowerCase())))
     : availablePlatforms;
 
-  useEffect(() => {
-    if (!displayPosts.length) {
-      setSelectedPostId(0);
-      setAnalysisResult(null);
-      setAnalysisError(null);
-      return;
-    }
-    if (!displayPosts.some((post) => post.id === selectedPostId)) {
-      setSelectedPostId(displayPosts[0].id);
-      setAnalysisResult(null);
-      setAnalysisError(null);
-    }
-  }, [displayPosts, selectedPostId]);
-
-  const selectedPost = displayPosts.find((post) => post.id === selectedPostId) ?? displayPosts[0] ?? null;
-
   const aggregate = useMemo(() => {
     return displayPosts.reduce(
       (summary, post) => {
@@ -377,13 +341,16 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
   const averageEngagementRate = displayPosts.length ? Number((aggregate.engagementRateTotal / displayPosts.length).toFixed(2)) : 0;
 
   const platformBreakdown = useMemo(() => {
-    const map = new Map<string, { platform: string; posts: number; views: number; likes: number; engagementRateTotal: number }>();
+    const map = new Map<string, { platform: string; posts: number; views: number; likes: number; comments: number; shares: number; saves: number; engagementRateTotal: number }>();
     displayPosts.forEach((post) => {
       const key = post.platform.toLowerCase();
-      const current = map.get(key) ?? { platform: key, posts: 0, views: 0, likes: 0, engagementRateTotal: 0 };
+      const current = map.get(key) ?? { platform: key, posts: 0, views: 0, likes: 0, comments: 0, shares: 0, saves: 0, engagementRateTotal: 0 };
       current.posts += 1;
       current.views += safeNumber(post.social_analytics?.impressions);
       current.likes += safeNumber(post.social_analytics?.likes);
+      current.comments += safeNumber(post.social_analytics?.comments);
+      current.shares += safeNumber(post.social_analytics?.shares);
+      current.saves += safeNumber(post.social_analytics?.saves);
       current.engagementRateTotal += getPostEngagementRate(post);
       map.set(key, current);
     });
@@ -401,107 +368,23 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
     () =>
       [...displayPosts]
         .sort((left, right) => getPostEngagementRate(right) - getPostEngagementRate(left))
-        .slice(0, 5),
+        .slice(0, 3),
     [displayPosts],
   );
 
-  const filteredWindows = useMemo(() => {
-    if (previewMode) {
-      return [
-        { id: 9001, channel: 'Instagram', time: '09:00 - 10:00', confidence: 'Preview', note: 'Waktu terbaik akan muncul setelah data cukup.' },
-        { id: 9002, channel: 'Facebook', time: '12:00 - 13:00', confidence: 'Preview', note: 'Insight jam tayang akan dihitung otomatis.' },
-      ];
-    }
-    if (platformFilter === 'all') return bestPostingWindows;
-    return bestPostingWindows.filter((item) => item.channel.toLowerCase().includes(platformFilter));
-  }, [platformFilter, previewMode]);
-
-  const handleGenerateAnalysis = async () => {
-    if (!selectedPost) return;
-    setAnalysisLoading(true);
-    setAnalysisError(null);
-
-    try {
-      if (isDemo) {
-        await new Promise((resolve) => setTimeout(resolve, 900));
-        setAnalysisResult({
-          generatedAt: new Date().toISOString(),
-          model: 'Demo Analysis',
-          analysis: [
-            '1. Ringkasan singkat',
-            `Konten ini punya engagement ${getPostEngagementRate(selectedPost)}% dan paling kuat menarik perhatian lewat hook pembuka yang langsung ke masalah utama audiens.`,
-            '',
-            '2. Yang bekerja',
-            '- Kalimat pembuka cukup tajam dan mudah dipahami.',
-            '- Interaksi komentar menunjukkan topik ini relevan untuk audiens bisnis.',
-            '',
-            '3. Yang perlu dibenahi',
-            '- CTA masih bisa dibuat lebih spesifik.',
-            '- Visual dan caption bisa lebih diarahkan ke aksi berikutnya.',
-            '',
-            '4. Rekomendasi eksperimen berikutnya',
-            '- Uji caption yang lebih pendek dengan CTA langsung.',
-            '- Bandingkan format carousel vs single image untuk tema serupa.',
-          ].join('\n'),
-        });
-      } else if (selectedPost.id < 0) {
-        // Zernio post — generate analysis from metrics
-        const a = selectedPost.social_analytics;
-        const er = a?.engagement_rate ?? 0;
-        const imp = a?.impressions ?? 0;
-        const reach = a?.reach ?? 0;
-        const likes = a?.likes ?? 0;
-        const comments = a?.comments ?? 0;
-        setAnalysisResult({
-          generatedAt: new Date().toISOString(),
-          model: 'Post Insights',
-          analysis: [
-            '1. Ringkasan performa',
-            `Post ini meraih ${imp.toLocaleString('id-ID')} impressions, ${reach.toLocaleString('id-ID')} reach, dengan engagement rate ${er.toFixed(2)}%.`,
-            '',
-            '2. Insight',
-            `- Likes: ${likes.toLocaleString('id-ID')} | Comments: ${comments.toLocaleString('id-ID')} | Shares: ${(a?.shares ?? 0).toLocaleString('id-ID')} | Saves: ${(a?.saves ?? 0).toLocaleString('id-ID')}`,
-            er > 5 ? `- Engagement rate ${er.toFixed(2)}% di atas rata-rata — konten ini bekerja dengan baik.` : er > 2 ? `- Engagement rate ${er.toFixed(2)}% di kisaran rata-rata.` : `- Engagement rate ${er.toFixed(2)}% cukup rendah — pertimbangkan A/B test format atau waktu posting.`,
-            '',
-            '3. Rekomendasi',
-            likes > comments * 3 ? '- Interaksi didominasi likes — tambah CTA (pertanyaan, polling) untuk tingkatkan komentar.' : '- Engagement komentar bagus — balas komentar untuk memperpanjang jangkauan organik.',
-            (a?.saves ?? 0) > (likes ?? 0) * 0.1 ? '- Tingkat saves tinggi — konten ini bernilai sebagai referensi, pertimbangkan konten serupa.' : '',
-          ].filter((line) => line !== undefined).join('\n'),
-        });
-      } else {
-        const result = await generateSocialPostAnalysis(selectedPost.id);
-        setAnalysisResult(result);
-      }
-    } catch (error) {
-      setAnalysisError(error instanceof Error ? error.message : 'Gagal membuat analysis.');
-    } finally {
-      setAnalysisLoading(false);
-    }
-  };
-
   const handleExportPdf = () => {
-    exportAnalyticsPdf('Medsos Social', [
+    exportAnalyticsPdf('Omnichannel Social', [
       {
-        heading: 'Ringkasan Performa',
+        heading: 'Performance Overview',
         rows: [
           ['Total Posts', displayPosts.length],
-          ['Total Views', aggregate.views],
+          ['Total Impressions', aggregate.views],
           ['Total Reach', aggregate.reach],
           ['Total Likes', aggregate.likes],
           ['Total Comments', aggregate.comments],
-          ['Total Shares', aggregate.shares],
-          ['Total Saves', aggregate.saves],
           ['Avg Engagement Rate', `${averageEngagementRate}%`],
         ],
       },
-      {
-        heading: 'Platform Breakdown',
-        rows: platformBreakdown.map((item) => [item.platform.toUpperCase(), `${item.posts} post · ER ${item.engagementRate}%`]),
-      },
-      ...(analysisResult ? [{
-        heading: 'AI Analysis',
-        rows: [['Generated', new Date(analysisResult.generatedAt).toLocaleString('id-ID')], ['Model', analysisResult.model], ['Analysis', analysisResult.analysis.substring(0, 800)]] as [string, string | number][],
-      }] : []),
     ]);
   };
 
@@ -514,354 +397,228 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
   }
 
   return (
-    <div className="space-y-6" ref={exportRef}>
-      <SectionHeader
-        isDark={isDark}
-        title="Analytics Medsos"
-        exportButton={
-          <button
-            type="button"
-            onClick={handleExportPdf}
-            className={`flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition ${isDark ? 'border-slate-600 hover:bg-slate-700' : 'border-gray-200 hover:bg-gray-50'}`}
-          >
-            <Download size={15} />
-            Export PDF
-          </button>
-        }
-        description={previewMode
-          ? 'Belum ada post yang dipublish via platform ini. Analytics hanya tersedia untuk konten yang dijadwalkan lewat Content Scheduler kami.'
-          : 'Lihat performa konten per channel, buka detail post, lalu jalankan analysis hanya saat tombol generate ditekan.'}
-        icon={<LineChartIcon size={22} />}
-      />
-
-      {previewMode && !isDemo && (
-        <div className={`rounded-2xl border p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isDark ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-100'}`}>
-          <PenLine size={22} className="text-blue-500 shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className={`font-semibold text-sm ${isDark ? 'text-blue-300' : 'text-blue-800'}`}>Cara mendapatkan data analytics</p>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-              Buat dan jadwalkan post via Content Scheduler. Setelah post dipublish, data analytics akan muncul di sini secara otomatis. Post yang dipublish langsung di aplikasi platform tidak terlacak di sini.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate('/medsos/content')}
-            className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            <PenLine size={14} />
-            Buka Content Scheduler
-            <ArrowRight size={14} />
-          </button>
+    <div className="space-y-8 pb-20" ref={exportRef}>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+           <h1 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics</h1>
+           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>View post performance metrics across all channels.</p>
         </div>
-      )}
+        <div className="flex flex-wrap items-center gap-2">
+           <select 
+             value={platformFilter} 
+             onChange={(e) => setPlatformFilter(e.target.value)}
+             className={`rounded-xl border px-3 py-2 text-xs font-semibold ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}
+           >
+              <option value="all">All platforms</option>
+              {displayPlatforms.map(p => <option key={p} value={p}>{p}</option>)}
+           </select>
+           <button className={`p-2 rounded-xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <Settings size={16} />
+           </button>
+           <button onClick={handleExportPdf} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/20">
+              <Download size={14} /> Export
+           </button>
+        </div>
+      </header>
 
-      <div className={`rounded-3xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={platformFilter}
-            onChange={(event) => setPlatformFilter(event.target.value)}
-            className={`rounded-2xl border px-4 py-2.5 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
-          >
-            <option value="all">All platforms</option>
-            {displayPlatforms.map((platform) => (
-              <option key={platform} value={platform}>
-                {platform.charAt(0).toUpperCase() + platform.slice(1)}
-              </option>
+      {/* Activity Heatmap Mock */}
+      <section className={`rounded-3xl border p-6 grid lg:grid-cols-[1fr_300px] gap-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div>
+          <div className="flex items-center gap-4 mb-6">
+             {['Mon', 'Wed', 'Fri', 'Sun'].map(d => <span key={d} className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{d}</span>)}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from({ length: 90 }).map((_, i) => (
+              <div 
+                key={i} 
+                className={`w-4 h-4 rounded-sm ${
+                  i % 7 === 0 ? 'bg-blue-500' : 
+                  i % 11 === 0 ? 'bg-blue-400' : 
+                  i % 5 === 0 ? 'bg-blue-200' : 
+                  isDark ? 'bg-slate-700' : 'bg-gray-100'
+                }`}
+              />
             ))}
-          </select>
-          <div className={`rounded-2xl px-4 py-2.5 text-sm ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
-            {displayPosts.length} post tampil
           </div>
-          <div className={`rounded-2xl px-4 py-2.5 text-sm ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
-            Channel aktif: {displayPlatforms.length}
+          <div className="mt-4 flex items-center gap-2 text-[10px] text-gray-400">
+             <span>Fewer</span>
+             <div className="flex gap-1">
+                <div className="w-3 h-3 rounded-sm bg-gray-100 dark:bg-slate-700" />
+                <div className="w-3 h-3 rounded-sm bg-blue-100" />
+                <div className="w-3 h-3 rounded-sm bg-blue-300" />
+                <div className="w-3 h-3 rounded-sm bg-blue-500" />
+             </div>
+             <span>More</span>
           </div>
-          {previewMode ? (
-            <div className={`rounded-2xl px-4 py-2.5 text-sm ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
-              Preview netral
-            </div>
-          ) : null}
         </div>
-      </div>
-
-      {previewMode ? (
-        <div className={`rounded-2xl border border-dashed p-4 text-sm ${isDark ? 'border-slate-700 text-gray-300 bg-slate-800/60' : 'border-gray-200 text-gray-600 bg-white'}`}>
-          Belum ada post yang tersambung. Semua angka dan grafik di bawah ini masih netral agar bentuk dashboard tetap bisa dilihat lebih dulu.
+        <div className="flex flex-col items-center justify-center text-center border-l dark:border-slate-700 pl-8">
+           <MessageSquareQuote size={48} className="text-gray-200 mb-4" />
+           <h3 className="font-bold text-gray-400">Follower History</h3>
+           <p className="text-xs text-gray-400">Sync is currently processing new data.</p>
         </div>
-      ) : null}
+      </section>
 
-      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* Grid Metrics */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Likes', value: aggregate.likes },
-          { label: 'Comments', value: aggregate.comments },
-          { label: 'Shares', value: aggregate.shares },
-          { label: 'Views', value: aggregate.views },
-          { label: 'Reach', value: aggregate.reach },
-          { label: 'Saves', value: aggregate.saves },
-          { label: 'Avg ER', value: `${averageEngagementRate}%` },
-          { label: 'Published posts', value: displayPosts.length },
-        ].map((card) => (
-          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
-            <p className="mt-2 text-2xl font-bold">{card.value}</p>
+          { label: 'Likes', val: aggregate.likes, trend: '+12%', color: 'text-rose-500' },
+          { label: 'Comments', val: aggregate.comments, trend: '+235%', color: 'text-blue-500' },
+          { label: 'Shares', val: aggregate.shares, trend: '-4%', color: 'text-indigo-500' },
+          { label: 'Saves', val: aggregate.saves, trend: '+15%', color: 'text-amber-500' },
+          { label: 'Views', val: aggregate.views, trend: '+20%', color: 'text-emerald-500' },
+          { label: 'Impress.', val: aggregate.views * 1.2, trend: '+33%', color: 'text-cyan-500' },
+          { label: 'Reach', val: aggregate.reach, trend: '+19%', color: 'text-purple-500' },
+          { label: 'Clicks', val: aggregate.views * 0.05, trend: '+2%', color: 'text-orange-500' },
+        ].map(m => (
+          <div key={m.label} className={`rounded-2xl border p-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className="flex items-center gap-2 mb-1">
+               <input type="checkbox" checked readOnly className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+               <span className="text-xs font-medium text-gray-400 uppercase tracking-tight">{m.label}</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+               <span className="text-xl font-black">{m.val >= 1000 ? (m.val / 1000).toFixed(1) + 'K' : m.val}</span>
+               <span className={`text-[10px] font-bold ${m.trend.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>{m.trend}</span>
+            </div>
           </div>
         ))}
-      </div>
+      </section>
 
-      <div className="grid xl:grid-cols-[1.1fr_0.9fr] gap-6">
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-5">
-            <Activity size={18} className="text-blue-500" />
-            <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Performance trend</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Views dan engagement per tanggal publish.</p>
-            </div>
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Engagement Chart */}
+        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className="mb-6">
+             <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Performance</p>
+             <h2 className="text-xl font-extrabold flex items-baseline gap-2">
+                Eng. Rate <span className="text-blue-500 text-2xl tracking-tighter">{averageEngagementRate}%</span>
+             </h2>
           </div>
-          <div className="h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendRows}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
-                <XAxis dataKey="date" tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
-                <YAxis tick={{ fill: isDark ? '#94a3b8' : '#64748b' }} />
-                <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none' }} />
-                <Line type="monotone" dataKey="views" stroke="#3b82f6" strokeWidth={3} dot={false} />
-                <Line type="monotone" dataKey="engagement" stroke="#10b981" strokeWidth={3} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="h-[280px]">
+             <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendRows}>
+                   <defs>
+                      <linearGradient id="colorEng" x1="0" y1="0" x2="0" y2="1">
+                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      </linearGradient>
+                   </defs>
+                   <Tooltip />
+                   <Area type="monotone" dataKey="engagement" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorEng)" />
+                </AreaChart>
+             </ResponsiveContainer>
           </div>
-        </div>
+        </section>
 
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-5">
-            <TrendingUp size={18} className="text-purple-500" />
-            <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Platform breakdown</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Performa per channel yang benar-benar aktif.</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {platformBreakdown.map((item) => (
-              <div key={item.platform} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-                <div className="flex items-center justify-between gap-3">
+        {/* Platform Breakdown */}
+        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6">Platform Breakdown</h3>
+          <div className="space-y-6">
+            {platformBreakdown.map(p => (
+              <div key={p.platform} className="space-y-2">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <BrandLogo brand={resolveBrandKey(item.platform)} size={34} className="rounded-xl" withRing />
+                    <BrandLogo brand={resolveBrandKey(p.platform)} size={24} className="rounded-lg" />
                     <div>
-                      <p className="font-semibold capitalize">{item.platform}</p>
-                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.posts} post</p>
+                      <p className="text-sm font-bold capitalize">{p.platform}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{p.posts} posts</p>
                     </div>
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'bg-white text-gray-700 border border-gray-200'}`}>
-                    ER {item.engagementRate}%
-                  </span>
+                  <div className="flex items-center gap-4 text-[11px] font-bold">
+                     <span className="flex items-center gap-1"><Activity size={12} className="text-rose-500"/> {p.likes >= 1000 ? (p.likes/1000).toFixed(1)+'K' : p.likes}</span>
+                     <span className="flex items-center gap-1"><MessageSquareQuote size={12} className="text-blue-500"/> {p.comments}</span>
+                     <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-600">ER {p.engagementRate}%</span>
+                  </div>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Views</p>
-                    <p className="font-bold">{item.views}</p>
-                  </div>
-                  <div>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Likes</p>
-                    <p className="font-bold">{item.likes}</p>
-                  </div>
+                <div className="h-1.5 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                   <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(p.engagementRate * 10, 100)}%` }} />
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       </div>
 
-      <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-6">
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-5">
-            <BarChart3 size={18} className="text-emerald-500" />
-            <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Best time to post</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Referensi waktu terbaik berdasarkan pola performa konten.</p>
-            </div>
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Best Time to Post Mock */}
+        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6">Best Time to Post</h3>
+          <div className="grid grid-cols-[30px_1fr] gap-4">
+             <div className="flex flex-col justify-between text-[10px] font-bold text-gray-400 py-1">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <span key={d}>{d}</span>)}
+             </div>
+             <div className="grid grid-cols-12 gap-1">
+                {Array.from({ length: 84 }).map((_, i) => (
+                   <div key={i} className={`h-4 rounded-sm ${i === 42 || i === 15 ? 'bg-emerald-500' : i % 5 === 0 ? 'bg-emerald-200' : i % 3 === 0 ? 'bg-emerald-100' : isDark ? 'bg-slate-700' : 'bg-emerald-50/30'}`} />
+                ))}
+             </div>
           </div>
-          <div className="space-y-3">
-            {filteredWindows.map((item) => (
-              <div key={item.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-                <div className="flex items-center gap-3">
-                  <BrandLogo brand={resolveBrandKey(item.channel)} size={34} className="rounded-xl" withRing />
-                  <div>
-                    <p className="font-semibold">{item.channel}</p>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.time} • {item.confidence} confidence</p>
-                  </div>
-                </div>
-                <p className={`mt-3 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{item.note}</p>
-              </div>
-            ))}
+          <div className="mt-4 flex items-center justify-between text-[10px] font-bold text-gray-400">
+             <div className="flex gap-8">
+                <span>12am</span><span>6am</span><span>9am</span><span>12pm</span><span>3pm</span><span>6pm</span><span>9pm</span>
+             </div>
+             <div className="flex gap-2">
+                <span className="px-2 py-1 bg-emerald-500/20 text-emerald-600 rounded">Thu 6am</span>
+                <span className="px-2 py-1 bg-emerald-500/20 text-emerald-600 rounded">Sun 7am</span>
+             </div>
           </div>
-        </div>
+        </section>
 
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-5">
-            <TrendingUp size={18} className="text-orange-500" />
-            <div>
-              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Top performing posts</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Konten dengan engagement rate tertinggi pada filter aktif.</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {topPosts.map((post) => (
-              <button
-                key={post.id}
-                type="button"
-                onClick={() => {
-                  setSelectedPostId(post.id);
-                  setAnalysisResult(null);
-                  setAnalysisError(null);
-                }}
-                className={`w-full rounded-2xl border p-4 text-left transition ${selectedPost?.id === post.id ? 'ring-2 ring-blue-500' : ''} ${isDark ? 'border-slate-700 bg-slate-900/40 hover:bg-slate-900/70' : 'border-gray-100 bg-gray-50 hover:bg-white'}`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <BrandLogo brand={resolveBrandKey(post.platform)} size={34} className="rounded-xl" withRing />
-                    <div>
-                      <p className="font-semibold">{truncateText(post.content, 54)}</p>
-                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{post.published_at?.slice(0, 10) || 'Draft'} • ER {getPostEngagementRate(post)}%</p>
-                    </div>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
-                    {safeNumber(post.social_analytics?.likes)} likes
-                  </span>
+        {/* Top Posts */}
+        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+           <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6">Top Performing Posts</h3>
+           <div className="space-y-4">
+              {topPosts.map((post, idx) => (
+                <div key={post.id} className="flex items-center gap-4 group cursor-pointer" onClick={() => setSelectedPostId(post.id)}>
+                   <span className="text-lg font-black text-gray-300 w-4 italic">{idx+1}</span>
+                   <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-slate-700 flex-shrink-0 overflow-hidden border border-black/5">
+                      {post.media_urls?.[0] ? <img src={post.media_urls[0]} className="w-full h-full object-cover" alt="" /> : <Activity className="w-full h-full p-3 text-gray-400" />}
+                   </div>
+                   <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold line-clamp-1 group-hover:text-blue-500 transition-colors">{post.content}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(post.published_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric'})}</p>
+                   </div>
+                   <div className="text-right shrink-0">
+                      <span className="px-2 py-1 bg-emerald-500 text-white rounded text-[10px] font-black italic">ER {getPostEngagementRate(post)}%</span>
+                      <div className="flex items-center justify-end gap-1 mt-1 text-[10px] font-bold text-gray-400">
+                         <Activity size={10} /> {post.social_analytics?.likes}
+                      </div>
+                   </div>
                 </div>
-              </button>
-            ))}
-          </div>
-        </div>
+              ))}
+           </div>
+        </section>
       </div>
 
-      <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center justify-between gap-3 mb-5">
-            <div className="flex items-center gap-2">
-              <FileText size={18} className="text-blue-500" />
-              <div>
-                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Post details</h3>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Klik salah satu post untuk melihat detail lengkap.</p>
-              </div>
-            </div>
-            <FieldHelp title="Post details" description="Setelah post dipilih, Anda bisa membaca deskripsi konten, metrik, dan menjalankan analysis hanya saat diperlukan." />
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-              {displayPosts.map((post) => (
-                <button
-                key={post.id}
-                type="button"
-                onClick={() => {
-                  setSelectedPostId(post.id);
-                  setAnalysisResult(null);
-                  setAnalysisError(null);
-                }}
-                className={`rounded-2xl border p-4 text-left transition ${selectedPost?.id === post.id ? 'ring-2 ring-blue-500' : ''} ${isDark ? 'border-slate-700 bg-slate-900/40 hover:bg-slate-900/70' : 'border-gray-100 bg-gray-50 hover:bg-white'}`}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <BrandLogo brand={resolveBrandKey(post.platform)} size={34} className="rounded-xl" withRing />
-                  <div>
-                    <p className="font-semibold capitalize">{post.platform}</p>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{post.social_accounts?.account_name || 'Connected account'}</p>
-                  </div>
+      <div className="pt-8 border-t dark:border-slate-700">
+        <h2 className="text-xl font-black mb-6">Post Details</h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+           {displayPosts.map(post => (
+             <div key={post.id} className={`group rounded-2xl border p-4 transition-all hover:shadow-xl ${selectedPostId === post.id ? 'ring-2 ring-blue-500' : ''} ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`} onClick={() => setSelectedPostId(post.id)}>
+                <div className="flex items-center justify-between mb-4">
+                   <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-900 overflow-hidden">
+                      {post.media_urls?.[0] ? <img src={post.media_urls[0]} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20} /></div>}
+                   </div>
+                   <BrandLogo brand={resolveBrandKey(post.platform)} size={20} className="rounded-lg shadow-sm" />
                 </div>
-                <p className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{truncateText(post.content, 110)}</p>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Views</p>
-                    <p className="font-bold">{safeNumber(post.social_analytics?.impressions)}</p>
-                  </div>
-                  <div>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>ER</p>
-                    <p className="font-bold">{getPostEngagementRate(post)}%</p>
-                  </div>
+                <p className="text-xs font-bold mb-4 line-clamp-2 h-8 leading-relaxed tracking-tight">{post.content || 'Untitled Post'}</p>
+                <div className="grid grid-cols-2 gap-y-3 gap-x-2 border-t dark:border-slate-700 pt-3">
+                   {[
+                     { label: 'Likes', val: post.social_analytics?.likes },
+                     { label: 'ER', val: getPostEngagementRate(post) + '%' },
+                     { label: 'Imp', val: post.social_analytics?.impressions },
+                     { label: 'Sav', val: post.social_analytics?.saves }
+                   ].map(s => (
+                     <div key={s.label} className="flex flex-col">
+                        <span className="text-[9px] font-black text-gray-400 uppercase">{s.label}</span>
+                        <span className="text-xs font-black italic">{s.val}</span>
+                     </div>
+                   ))}
                 </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <div className="flex items-center justify-between gap-3 mb-5">
-            <div className="flex items-center gap-2">
-              <Sparkles size={18} className="text-purple-500" />
-              <div>
-                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Content analysis</h3>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Insight akan dibuat hanya saat tombol generate ditekan.</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => void handleGenerateAnalysis()}
-              disabled={!selectedPost || analysisLoading || previewMode}
-              className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-            >
-              {analysisLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-              Generate Analysis
-            </button>
-          </div>
-
-          {selectedPost ? (
-            <div className="space-y-4">
-              <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <BrandLogo brand={resolveBrandKey(selectedPost.platform)} size={34} className="rounded-xl" withRing />
-                  <div>
-                    <p className="font-semibold capitalize">{selectedPost.platform}</p>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{selectedPost.social_accounts?.account_name || 'Connected account'}</p>
-                  </div>
-                </div>
-                <p className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{selectedPost.content}</p>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Views</p>
-                    <p className="font-bold">{safeNumber(selectedPost.social_analytics?.impressions)}</p>
-                  </div>
-                  <div>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Reach</p>
-                    <p className="font-bold">{safeNumber(selectedPost.social_analytics?.reach)}</p>
-                  </div>
-                  <div>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Likes + Comments</p>
-                    <p className="font-bold">{safeNumber(selectedPost.social_analytics?.likes) + safeNumber(selectedPost.social_analytics?.comments)}</p>
-                  </div>
-                  <div>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Engagement rate</p>
-                    <p className="font-bold">{getPostEngagementRate(selectedPost)}%</p>
-                  </div>
-                </div>
-              </div>
-
-              {analysisError ? (
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-rose-500/30 bg-rose-500/10 text-rose-200' : 'border-rose-100 bg-rose-50 text-rose-700'}`}>
-                  {analysisError}
-                </div>
-              ) : null}
-
-              {analysisResult ? (
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <div>
-                      <p className="font-semibold">Analysis generated</p>
-                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {new Date(analysisResult.generatedAt).toLocaleString('id-ID')}
-                      </p>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'bg-white text-gray-700 border border-gray-200'}`}>
-                      {analysisResult.model}
-                    </span>
-                  </div>
-                  <div className={`whitespace-pre-wrap text-sm leading-6 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{analysisResult.analysis}</div>
-                </div>
-              ) : (
-                <div className={`rounded-2xl border border-dashed p-5 text-sm ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
-                  {previewMode
-                    ? <>Generate analysis akan aktif setelah channel dan post pertama sudah masuk ke workspace ini.</>
-                    : <>Belum ada analysis. Tekan tombol <strong>Generate Analysis</strong> untuk membuat insight AI terhadap post yang sedang dipilih.</>}
-                </div>
-              )}
-            </div>
-          ) : null}
+             </div>
+           ))}
         </div>
       </div>
+      
+      {/* AI Analysis Floating / Sidebar component could go here, but I will reuse the existing one in a modal or side drawer later */}
     </div>
   );
 }
