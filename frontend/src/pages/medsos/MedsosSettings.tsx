@@ -55,6 +55,11 @@ type SettingsState = {
     marketplace: boolean;
   };
   aiAnalysis: AiAnalysisSettings;
+  systemMessages: {
+    postAnalysis: string;
+    contentGeneration: string;
+    inboxReply: string;
+  };
   activeSlaIds: number[];
   activeRoutingIds: number[];
   activeApprovalIds: number[];
@@ -77,6 +82,11 @@ const defaultSettings: SettingsState = {
     customModel: '',
     temperature: 0.3,
     maxTokens: 900,
+  },
+  systemMessages: {
+    postAnalysis: 'Anda adalah analis performa konten untuk dashboard bisnis. Tulis jawaban dalam Bahasa Indonesia yang ringkas, langsung, dan fokus tindakan.',
+    contentGeneration: 'Anda adalah copywriter kreatif profesional yang ahli dalam membuat caption media sosial yang menarik dan berorientasi pada konversi.',
+    inboxReply: 'Anda adalah staf layanan pelanggan yang ramah dan membantu. Balas pesan pelanggan dengan sopan dan berikan solusi yang tepat.',
   },
   activeSlaIds: slaPolicies.map((policy) => policy.id),
   activeRoutingIds: routingRules.filter((rule) => rule.active).map((rule) => rule.id),
@@ -702,6 +712,51 @@ export default function MedsosSettings() {
                 />
               </label>
             ) : null}
+
+            <div className="md:col-span-2 pt-4 border-t dark:border-slate-700">
+              <h3 className="text-sm font-bold mb-4 uppercase tracking-widest text-gray-400">AI System Instructions</h3>
+              <div className="space-y-4">
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold inline-flex items-center gap-2">
+                    Post Analysis Instruction
+                    <FieldHelp title="Post Analysis" description="Instruksi sistem untuk AI saat menganalisis performa postingan di halaman Analytics." />
+                  </span>
+                  <textarea
+                    value={settings.systemMessages.postAnalysis}
+                    onChange={(e) => updateSettings(curr => ({ ...curr, systemMessages: { ...curr.systemMessages, postAnalysis: e.target.value } }))}
+                    rows={2}
+                    className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+                    placeholder="Contoh: Jadilah analis yang kritis..."
+                  />
+                </label>
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold inline-flex items-center gap-2">
+                    Content Generation Instruction
+                    <FieldHelp title="Content Generation" description="Instruksi sistem untuk AI saat membantu membuat caption di halaman Composer." />
+                  </span>
+                  <textarea
+                    value={settings.systemMessages.contentGeneration}
+                    onChange={(e) => updateSettings(curr => ({ ...curr, systemMessages: { ...curr.systemMessages, contentGeneration: e.target.value } }))}
+                    rows={2}
+                    className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+                    placeholder="Contoh: Gunakan gaya bahasa anak muda..."
+                  />
+                </label>
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold inline-flex items-center gap-2">
+                    Inbox Reply Instruction
+                    <FieldHelp title="Inbox Reply" description="Instruksi sistem untuk AI saat menyarankan balasan pesan pelanggan di halaman Inbox." />
+                  </span>
+                  <textarea
+                    value={settings.systemMessages.inboxReply}
+                    onChange={(e) => updateSettings(curr => ({ ...curr, systemMessages: { ...curr.systemMessages, inboxReply: e.target.value } }))}
+                    rows={2}
+                    className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+                    placeholder="Contoh: Balas dengan sangat sabar..."
+                  />
+                </label>
+              </div>
+            </div>
           </div>
 
           <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>

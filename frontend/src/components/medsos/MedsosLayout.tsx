@@ -264,10 +264,11 @@ export default function MedsosLayout() {
             {!sidebarCollapsed && (
               <button 
                 onClick={handleSidebarToggle}
-                className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
+                className={`p-2.5 rounded-xl transition-colors shadow-sm border ${isDark ? 'hover:bg-slate-700 text-gray-400 hover:text-white border-slate-700 bg-slate-900/50' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900 border-gray-100 bg-gray-50'}`}
+                title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
               >
-                <X className="w-5 h-5 md:hidden" />
-                <PanelLeft className="w-5 h-5 hidden md:block" />
+                <X className="w-6 h-6 md:hidden" />
+                <PanelLeft className="w-6 h-6 hidden md:block" />
               </button>
             )}
           </div>

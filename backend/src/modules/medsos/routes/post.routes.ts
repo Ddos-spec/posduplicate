@@ -10,7 +10,9 @@ import {
   getSchedulerStatus,
   getPostAnalytics,
   generatePostAnalysis,
-  syncAllAnalytics
+  syncAllAnalytics,
+  generateAiCaption,
+  generateAiReply
 } from '../controllers/post.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
@@ -216,6 +218,10 @@ router.post('/scheduler/stop', stopScheduler);
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/scheduler/status', getSchedulerStatus);
+
+// AI Assistance
+router.post('/generate-caption', generateAiCaption);
+router.post('/generate-reply', generateAiReply);
 
 // Analytics routes
 /**

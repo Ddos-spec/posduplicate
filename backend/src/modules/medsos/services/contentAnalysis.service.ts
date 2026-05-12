@@ -10,6 +10,11 @@ type TenantAiAnalysisSettings = {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  systemMessages?: {
+    postAnalysis?: string;
+    contentGeneration?: string;
+    inboxReply?: string;
+  };
 };
 
 type PostAnalysisResult = {
@@ -63,6 +68,7 @@ function extractSettings(rawSettings: unknown): TenantAiAnalysisSettings {
     model: typeof aiAnalysis.model === 'string' ? aiAnalysis.model.trim() : undefined,
     temperature: clampNumber(aiAnalysis.temperature, 0, 2, DEFAULT_TEMPERATURE),
     maxTokens: Math.trunc(clampNumber(aiAnalysis.maxTokens, 200, 4000, DEFAULT_MAX_TOKENS)),
+    systemMessages: isPlainObject(aiAnalysis.systemMessages) ? aiAnalysis.systemMessages : undefined,
   };
 }
 
@@ -162,16 +168,26 @@ export async function generatePostPerformanceAnalysis(tenantId: number, postId: 
     throw new Error('Post tidak ditemukan.');
   }
 
+  const messages: any[] = [];
+  
+  const systemMsg = settings.systemMessages?.postAnalysis;
+  if (systemMsg) {
+    messages.push({
+      role: 'system',
+      content: systemMsg,
+    });
+  }
+
+  messages.push({
+    role: 'user',
+    content: buildPrompt(post),
+  });
+
   const requestBody = {
     model: settings.model || DEFAULT_MODEL,
     temperature: settings.temperature ?? DEFAULT_TEMPERATURE,
     max_tokens: settings.maxTokens ?? DEFAULT_MAX_TOKENS,
-    messages: [
-      {
-        role: 'user',
-        content: buildPrompt(post),
-      },
-    ],
+    messages,
   };
 
   const frontendBase = (process.env.FRONTEND_APP_URL || process.env.CORS_ORIGIN || '').split(',')[0].trim();
@@ -207,4 +223,102 @@ export async function generatePostPerformanceAnalysis(tenantId: number, postId: 
     generatedAt: new Date().toISOString(),
     model: data.model || requestBody.model,
   };
+}
+
+export async function generateCaption(tenantId: number, prompt: string): Promise<string> {
+  const tenant = await prisma.tenants.findUnique({
+    where: { id: tenantId },
+    select: {
+      settings: true,
+    },
+  });
+
+  if (!tenant) throw new Error('Tenant tidak ditemukan.');
+
+  const settings = extractSettings(tenant.settings);
+  const apiKey = settings.apiKey || process.env.OPENROUTER_API_KEY || process.env.MYCOMMERSOCIAL_ANALYSIS_API_KEY || '';
+
+  if (!apiKey) throw new Error('API key analysis belum disimpan di settings.');
+
+  const messages: any[] = [];
+  const systemMsg = settings.systemMessages?.contentGeneration;
+  if (systemMsg) {
+    messages.push({ role: 'system', content: systemMsg });
+  }
+
+  messages.push({
+    role: 'user',
+    content: `Buat caption media sosial berdasarkan instruksi ini: ${prompt}. Tuliskan hanya isi captionnya saja.`,
+  });
+
+  const requestBody = {
+    model: settings.model || DEFAULT_MODEL,
+    temperature: settings.temperature ?? DEFAULT_TEMPERATURE,
+    max_tokens: settings.maxTokens ?? DEFAULT_MAX_TOKENS,
+    messages,
+  };
+
+  const response = await fetch(OPENROUTER_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'X-Title': 'MyCommerSocial',
+    },
+    body: JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(20000),
+  });
+
+  const data = (await response.json()) as ChatCompletionResponse;
+  if (!response.ok) throw new Error('AI request failed');
+
+  return readMessageContent(data.choices?.[0]?.message?.content) || '';
+}
+
+export async function generateInboxReply(tenantId: number, conversationContext: string): Promise<string> {
+  const tenant = await prisma.tenants.findUnique({
+    where: { id: tenantId },
+    select: { settings: true },
+  });
+
+  if (!tenant) throw new Error('Tenant tidak ditemukan.');
+
+  const settings = extractSettings(tenant.settings);
+  const apiKey = settings.apiKey || process.env.OPENROUTER_API_KEY || process.env.MYCOMMERSOCIAL_ANALYSIS_API_KEY || '';
+
+  if (!apiKey) throw new Error('API key analysis belum disimpan di settings.');
+
+  const messages: any[] = [];
+  const systemMsg = settings.systemMessages?.inboxReply;
+  if (systemMsg) {
+    messages.push({ role: 'system', content: systemMsg });
+  }
+
+  messages.push({
+    role: 'user',
+    content: `Berikut adalah konteks percakapan terakhir: ${conversationContext}. Berikan saran balasan singkat dan ramah kepada pelanggan. Tuliskan hanya isi balasannya saja.`,
+  });
+
+  const requestBody = {
+    model: settings.model || DEFAULT_MODEL,
+    temperature: settings.temperature ?? DEFAULT_TEMPERATURE,
+    max_tokens: settings.maxTokens ?? 500,
+    messages,
+  };
+
+  const response = await fetch(OPENROUTER_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'X-Title': 'MyCommerSocial',
+    },
+    body: JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(20000),
+  });
+
+  const data = (await response.json()) as ChatCompletionResponse;
+  if (!response.ok) throw new Error('AI request failed');
+
+  return readMessageContent(data.choices?.[0]?.message?.content) || '';
 }

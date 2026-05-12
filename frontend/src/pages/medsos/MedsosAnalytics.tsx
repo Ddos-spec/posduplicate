@@ -13,8 +13,10 @@ import {
   getWACrmStatus,
   getZernioAccounts,
   getZernioPostAnalytics,
+  generateSocialPostAnalysis,
   type MarketplaceHubConnectionStatus,
   type SocialPost,
+  type SocialPostAnalysisResult,
   type WACrmConnectionStatus,
   type ZernioAccount,
   type ZernioPostAnalyticsItem,
@@ -277,6 +279,9 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
   const [accounts, setAccounts] = useState<ZernioAccount[]>([]);
   const [platformFilter, setPlatformFilter] = useState('all');
   const [selectedPostId, setSelectedPostId] = useState<number>(isDemo ? demoSocialPosts[0].id : 0);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<SocialPostAnalysisResult | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -321,6 +326,22 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
   const displayPlatforms = previewMode
     ? Array.from(new Set(previewSocialPosts.map((post) => post.platform.toLowerCase())))
     : availablePlatforms;
+
+  const selectedPost = useMemo(() => displayPosts.find(p => p.id === selectedPostId), [displayPosts, selectedPostId]);
+
+  const handleGenerateAnalysis = async () => {
+    if (!selectedPost || analysisLoading) return;
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+    try {
+      const res = await generateSocialPostAnalysis(selectedPost.id);
+      setAnalysisResult(res);
+    } catch (err: any) {
+      setAnalysisError(err.message || 'Gagal membuat analisis AI');
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
 
   const aggregate = useMemo(() => {
     return displayPosts.reduce(
@@ -590,31 +611,80 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
 
       <div className="pt-8 border-t dark:border-slate-700">
         <h2 className="text-xl font-black mb-6">Post Details</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-           {displayPosts.map(post => (
-             <div key={post.id} className={`group rounded-2xl border p-4 transition-all hover:shadow-xl ${selectedPostId === post.id ? 'ring-2 ring-blue-500' : ''} ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`} onClick={() => setSelectedPostId(post.id)}>
-                <div className="flex items-center justify-between mb-4">
-                   <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-900 overflow-hidden">
-                      {post.media_urls?.[0] ? <img src={post.media_urls[0]} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20} /></div>}
+        <div className="grid lg:grid-cols-[1fr_400px] gap-8">
+           <div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {displayPosts.map(post => (
+                <div key={post.id} className={`group rounded-2xl border p-4 transition-all hover:shadow-xl cursor-pointer ${selectedPostId === post.id ? 'ring-2 ring-blue-500' : ''} ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`} onClick={() => { setSelectedPostId(post.id); setAnalysisResult(null); }}>
+                   <div className="flex items-center justify-between mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-900 overflow-hidden">
+                         {post.media_urls?.[0] ? <img src={post.media_urls[0]} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20} /></div>}
+                      </div>
+                      <BrandLogo brand={resolveBrandKey(post.platform)} size={20} className="rounded-lg shadow-sm" />
                    </div>
-                   <BrandLogo brand={resolveBrandKey(post.platform)} size={20} className="rounded-lg shadow-sm" />
+                   <p className="text-xs font-bold mb-4 line-clamp-2 h-8 leading-relaxed tracking-tight">{post.content || 'Untitled Post'}</p>
+                   <div className="grid grid-cols-2 gap-y-3 gap-x-2 border-t dark:border-slate-700 pt-3">
+                      {[
+                        { label: 'Likes', val: post.social_analytics?.likes },
+                        { label: 'ER', val: getPostEngagementRate(post) + '%' },
+                        { label: 'Imp', val: post.social_analytics?.impressions },
+                        { label: 'Sav', val: post.social_analytics?.saves }
+                      ].map(s => (
+                        <div key={s.label} className="flex flex-col">
+                           <span className="text-[9px] font-black text-gray-400 uppercase">{s.label}</span>
+                           <span className="text-xs font-black italic">{s.val}</span>
+                        </div>
+                      ))}
+                   </div>
                 </div>
-                <p className="text-xs font-bold mb-4 line-clamp-2 h-8 leading-relaxed tracking-tight">{post.content || 'Untitled Post'}</p>
-                <div className="grid grid-cols-2 gap-y-3 gap-x-2 border-t dark:border-slate-700 pt-3">
-                   {[
-                     { label: 'Likes', val: post.social_analytics?.likes },
-                     { label: 'ER', val: getPostEngagementRate(post) + '%' },
-                     { label: 'Imp', val: post.social_analytics?.impressions },
-                     { label: 'Sav', val: post.social_analytics?.saves }
-                   ].map(s => (
-                     <div key={s.label} className="flex flex-col">
-                        <span className="text-[9px] font-black text-gray-400 uppercase">{s.label}</span>
-                        <span className="text-xs font-black italic">{s.val}</span>
+              ))}
+           </div>
+
+           {/* AI Analysis Panel */}
+           <aside className={`rounded-3xl border p-6 flex flex-col ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+              <div className="flex items-center justify-between mb-6">
+                 <div className="flex items-center gap-2">
+                    <Sparkles size={18} className="text-purple-500" />
+                    <h3 className="font-bold">AI Analysis</h3>
+                 </div>
+                 <button 
+                   onClick={handleGenerateAnalysis}
+                   disabled={analysisLoading || previewMode}
+                   className="p-2 rounded-xl bg-purple-600 text-white shadow-lg shadow-purple-500/20 disabled:opacity-50"
+                 >
+                    {analysisLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                 </button>
+              </div>
+
+              {selectedPost ? (
+                <div className="space-y-4 flex-1">
+                   <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900/50 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Selected Post</p>
+                      <p className="text-xs line-clamp-3 leading-relaxed">{selectedPost.content}</p>
+                   </div>
+
+                   {analysisResult ? (
+                     <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+                        <div className="flex items-center justify-between">
+                           <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 rounded text-[9px] font-bold uppercase tracking-widest">{analysisResult.model}</span>
+                           <span className="text-[9px] text-gray-400 font-bold">{new Date(analysisResult.generatedAt).toLocaleTimeString()}</span>
+                        </div>
+                        <div className={`text-sm leading-relaxed whitespace-pre-wrap ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                           {analysisResult.analysis}
+                        </div>
                      </div>
-                   ))}
+                   ) : (
+                     <div className="flex-1 flex flex-col items-center justify-center text-center py-10 opacity-30">
+                        <Bot size={48} className="mb-4" />
+                        <p className="text-xs font-bold">Pilih post dan tekan tombol sparkle untuk mulai analisis.</p>
+                     </div>
+                   )}
+                   
+                   {analysisError && (
+                     <p className="text-[10px] text-rose-500 font-bold text-center mt-2">{analysisError}</p>
+                   )}
                 </div>
-             </div>
-           ))}
+              ) : null}
+           </aside>
         </div>
       </div>
       

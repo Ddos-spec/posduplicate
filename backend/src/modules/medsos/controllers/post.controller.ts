@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
-import { generatePostPerformanceAnalysis } from '../services/contentAnalysis.service';
+import { generatePostPerformanceAnalysis, generateCaption, generateInboxReply } from '../services/contentAnalysis.service';
 
 // Scheduler state (in production, use a proper job queue like Bull/BullMQ)
 let schedulerRunning = false;
@@ -696,3 +696,49 @@ async function fetchAnalyticsFromPlatform(externalId: string, account: any): Pro
     return null;
   }
 }
+
+export const generateAiCaption = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = (req as any).tenantId;
+    const { prompt } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'PROMPT_REQUIRED', message: 'Prompt tidak boleh kosong.' }
+      });
+    }
+
+    const caption = await generateCaption(tenantId, prompt);
+
+    res.json({
+      success: true,
+      data: { caption }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateAiReply = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = (req as any).tenantId;
+    const { context } = req.body;
+
+    if (!context) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'CONTEXT_REQUIRED', message: 'Konteks percakapan tidak boleh kosong.' }
+      });
+    }
+
+    const suggestion = await generateInboxReply(tenantId, context);
+
+    res.json({
+      success: true,
+      data: { suggestion }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
