@@ -421,19 +421,19 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
     <div className="space-y-8 pb-20" ref={exportRef}>
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-           <h1 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics</h1>
+           <h1 className={`text-xl md:text-2xl font-bold tracking-tight tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics</h1>
            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>View post performance metrics across all channels.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
            <select 
              value={platformFilter} 
              onChange={(e) => setPlatformFilter(e.target.value)}
-             className={`rounded-xl border px-3 py-2 text-xs font-semibold ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}
+             className={`rounded-xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-3 py-2 text-xs font-semibold ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200 shadow-sm'}`}
            >
               <option value="all">All platforms</option>
               {displayPlatforms.map(p => <option key={p} value={p}>{p}</option>)}
            </select>
-           <button className={`p-2 rounded-xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
+           <button className={`p-2 rounded-xl border ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
               <Settings size={16} />
            </button>
            <button onClick={handleExportPdf} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/20">
@@ -443,7 +443,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
       </header>
 
       {/* Activity Heatmap Mock */}
-      <section className={`rounded-3xl border p-6 grid lg:grid-cols-[1fr_300px] gap-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <section className={`rounded-[32px] p-6 grid lg:grid-cols-[1fr_300px] gap-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div>
           <div className="flex items-center gap-4 mb-6">
              {['Mon', 'Wed', 'Fri', 'Sun'].map(d => <span key={d} className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{d}</span>)}
@@ -491,13 +491,13 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
           { label: 'Reach', val: aggregate.reach, trend: '+19%', color: 'text-purple-500' },
           { label: 'Clicks', val: aggregate.views * 0.05, trend: '+2%', color: 'text-orange-500' },
         ].map(m => (
-          <div key={m.label} className={`rounded-2xl border p-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div key={m.label} className={`rounded-[24px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
             <div className="flex items-center gap-2 mb-1">
                <input type="checkbox" checked readOnly className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                <span className="text-xs font-medium text-gray-400 uppercase tracking-tight">{m.label}</span>
             </div>
             <div className="flex items-baseline gap-2">
-               <span className="text-xl font-black">{m.val >= 1000 ? (m.val / 1000).toFixed(1) + 'K' : m.val}</span>
+               <span className="text-xl font-bold tracking-tight">{m.val >= 1000 ? (m.val / 1000).toFixed(1) + 'K' : m.val}</span>
                <span className={`text-[10px] font-bold ${m.trend.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>{m.trend}</span>
             </div>
           </div>
@@ -506,10 +506,10 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Engagement Chart */}
-        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="mb-6">
-             <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Performance</p>
-             <h2 className="text-xl font-extrabold flex items-baseline gap-2">
+             <p className="text-[10px] font-bold tracking-tight text-gray-400 uppercase tracking-[0.2em] mb-1">Performance</p>
+             <h2 className="text-xl font-bold flex items-baseline gap-2">
                 Eng. Rate <span className="text-blue-500 text-2xl tracking-tighter">{averageEngagementRate}%</span>
              </h2>
           </div>
@@ -530,8 +530,8 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
         </section>
 
         {/* Platform Breakdown */}
-        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6">Platform Breakdown</h3>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <h3 className="text-sm font-bold tracking-tight uppercase tracking-widest text-gray-400 mb-6">Platform Breakdown</h3>
           <div className="space-y-6">
             {platformBreakdown.map(p => (
               <div key={p.platform} className="space-y-2">
@@ -560,8 +560,8 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Best Time to Post Mock */}
-        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6">Best Time to Post</h3>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <h3 className="text-sm font-bold tracking-tight uppercase tracking-widest text-gray-400 mb-6">Best Time to Post</h3>
           <div className="grid grid-cols-[30px_1fr] gap-4">
              <div className="flex flex-col justify-between text-[10px] font-bold text-gray-400 py-1">
                 {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <span key={d}>{d}</span>)}
@@ -584,12 +584,12 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
         </section>
 
         {/* Top Posts */}
-        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
-           <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6">Top Performing Posts</h3>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
+           <h3 className="text-sm font-bold tracking-tight uppercase tracking-widest text-gray-400 mb-6">Top Performing Posts</h3>
            <div className="space-y-4">
               {topPosts.map((post, idx) => (
                 <div key={post.id} className="flex items-center gap-4 group cursor-pointer" onClick={() => setSelectedPostId(post.id)}>
-                   <span className="text-lg font-black text-gray-300 w-4 italic">{idx+1}</span>
+                   <span className="text-lg font-bold tracking-tight text-gray-300 w-4 italic">{idx+1}</span>
                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-slate-700 flex-shrink-0 overflow-hidden border border-black/5">
                       {post.media_urls?.[0] ? <img src={post.media_urls[0]} className="w-full h-full object-cover" alt="" /> : <Activity className="w-full h-full p-3 text-gray-400" />}
                    </div>
@@ -598,7 +598,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
                       <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(post.published_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric'})}</p>
                    </div>
                    <div className="text-right shrink-0">
-                      <span className="px-2 py-1 bg-emerald-500 text-white rounded text-[10px] font-black italic">ER {getPostEngagementRate(post)}%</span>
+                      <span className="px-2 py-1 bg-emerald-500 text-white rounded text-[10px] font-bold tracking-tight italic">ER {getPostEngagementRate(post)}%</span>
                       <div className="flex items-center justify-end gap-1 mt-1 text-[10px] font-bold text-gray-400">
                          <Activity size={10} /> {post.social_analytics?.likes}
                       </div>
@@ -610,11 +610,11 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
       </div>
 
       <div className="pt-8 border-t dark:border-slate-700">
-        <h2 className="text-xl font-black mb-6">Post Details</h2>
+        <h2 className="text-xl font-bold tracking-tight mb-6">Post Details</h2>
         <div className="grid lg:grid-cols-[1fr_400px] gap-8">
            <div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {displayPosts.map(post => (
-                <div key={post.id} className={`group rounded-2xl border p-4 transition-all hover:shadow-xl cursor-pointer ${selectedPostId === post.id ? 'ring-2 ring-blue-500' : ''} ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`} onClick={() => { setSelectedPostId(post.id); setAnalysisResult(null); }}>
+                <div key={post.id} className={`group rounded-[24px] p-4 transition-all hover:shadow-xl cursor-pointer ${selectedPostId === post.id ? 'ring-2 ring-blue-500' : ''} ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`} onClick={() => { setSelectedPostId(post.id); setAnalysisResult(null); }}>
                    <div className="flex items-center justify-between mb-4">
                       <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-900 overflow-hidden">
                          {post.media_urls?.[0] ? <img src={post.media_urls[0]} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20} /></div>}
@@ -630,8 +630,8 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
                         { label: 'Sav', val: post.social_analytics?.saves }
                       ].map(s => (
                         <div key={s.label} className="flex flex-col">
-                           <span className="text-[9px] font-black text-gray-400 uppercase">{s.label}</span>
-                           <span className="text-xs font-black italic">{s.val}</span>
+                           <span className="text-[9px] font-bold tracking-tight text-gray-400 uppercase">{s.label}</span>
+                           <span className="text-xs font-bold tracking-tight italic">{s.val}</span>
                         </div>
                       ))}
                    </div>
@@ -640,7 +640,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
            </div>
 
            {/* AI Analysis Panel */}
-           <aside className={`rounded-3xl border p-6 flex flex-col ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+           <aside className={`rounded-[32px] p-6 flex flex-col ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
               <div className="flex items-center justify-between mb-6">
                  <div className="flex items-center gap-2">
                     <Sparkles size={18} className="text-purple-500" />
@@ -772,7 +772,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
       />
 
       {previewMode && (
-        <div className={`rounded-2xl border p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-100'}`}>
+        <div className={`rounded-[24px] p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-100'}`}>
           <Settings size={22} className="text-amber-500 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className={`font-semibold text-sm ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
@@ -801,15 +801,15 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
           { label: 'Unread', value: stats?.totalUnread ?? 0 },
           { label: 'Today messages', value: stats?.todayMessages ?? 0 },
         ].map((card) => (
-          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div key={card.label} className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
             <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
-            <p className="mt-2 text-2xl font-bold">{card.value}</p>
+            <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{card.value}</p>
           </div>
         ))}
       </div>
 
       <div className="grid xl:grid-cols-2 gap-6">
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-[24px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-5">
             <Activity size={18} className="text-blue-500" />
             <div>
@@ -830,7 +830,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
           </div>
         </div>
 
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-[24px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-5">
             <Workflow size={18} className="text-emerald-500" />
             <div>
@@ -853,7 +853,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
       </div>
 
       {/* AI Analysis panel */}
-      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <div className={`rounded-[24px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <Sparkles size={18} className="text-purple-500" />
@@ -870,7 +870,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
           </button>
         </div>
         {aiResult ? (
-          <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+          <div className={`rounded-[24px] p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
             <pre className={`whitespace-pre-wrap text-sm leading-6 font-sans ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{aiResult}</pre>
           </div>
         ) : (
@@ -967,7 +967,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
       />
 
       {previewMode && (
-        <div className={`rounded-2xl border p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isDark ? 'bg-orange-500/10 border-orange-500/30' : 'bg-orange-50 border-orange-100'}`}>
+        <div className={`rounded-[24px] p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isDark ? 'bg-orange-500/10 border-orange-500/30' : 'bg-orange-50 border-orange-100'}`}>
           <Store size={22} className="text-orange-500 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className={`font-semibold text-sm ${isDark ? 'text-orange-300' : 'text-orange-800'}`}>Marketplace Hub belum terhubung</p>
@@ -993,16 +993,16 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
           { label: 'Channel aktif', value: String(channels.length), helper: previewMode ? 'akan terisi setelah connect' : 'tersambung ke inbox' },
           { label: 'Status', value: previewMode ? 'Preview' : status?.reachable ? 'Healthy' : 'Needs check', helper: previewMode ? 'belum ada channel aktif' : status?.message || 'Belum ada status' },
         ].map((card) => (
-          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div key={card.label} className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
             <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
-            <p className="mt-2 text-2xl font-bold">{card.value}</p>
+            <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{card.value}</p>
             <p className={`mt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.helper}</p>
           </div>
         ))}
       </div>
 
       <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-6">
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-[24px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-5">
             <Store size={18} className="text-orange-500" />
             <div>
@@ -1015,7 +1015,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
               <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/50 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>Channel marketplace akan muncul di sini setelah toko tersambung.</div>
             ) : (
               channels.map((channel) => (
-                <div key={channel.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div key={channel.id} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-center gap-3">
                     <BrandLogo brand={resolveBrandKey(channel.source)} size={34} className="rounded-xl" withRing />
                     <div>
@@ -1029,7 +1029,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
           </div>
         </div>
 
-        <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-[24px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-5">
             <Bot size={18} className="text-blue-500" />
             <div>
@@ -1039,7 +1039,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             {marketplaceCards.map((item) => (
-              <div key={item.channel} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+              <div key={item.channel} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                 <p className="font-semibold">{item.channel}</p>
                 <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                   <div>
@@ -1058,7 +1058,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
       </div>
 
       {/* AI Analysis panel */}
-      <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <div className={`rounded-[24px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <Sparkles size={18} className="text-purple-500" />
@@ -1075,7 +1075,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
           </button>
         </div>
         {aiResult ? (
-          <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+          <div className={`rounded-[24px] p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
             <pre className={`whitespace-pre-wrap text-sm leading-6 font-sans ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{aiResult}</pre>
           </div>
         ) : (
@@ -1102,12 +1102,12 @@ function SectionHeader({
   exportButton?: ReactNode;
 }) {
   return (
-    <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+    <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-4">
           {icon ? <div className={`rounded-2xl p-3 shrink-0 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>{icon}</div> : null}
           <div>
-            <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h1>
+            <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h1>
             <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
           </div>
         </div>

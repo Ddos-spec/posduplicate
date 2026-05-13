@@ -196,7 +196,7 @@ export default function MedsosDashboard() {
             <MyCommerSocialLogo size={48} className="shadow-2xl shadow-blue-500/30 shrink-0 rounded-2xl" />
             <div>
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className={`text-2xl md:text-3xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>MyCommerSocial</h1>
+                <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>MyCommerSocial</h1>
                 {previewMode ? (
                   <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
                     Preview Mode
@@ -224,7 +224,7 @@ export default function MedsosDashboard() {
             </button>
             <button
               onClick={() => navigate(`${base}/create`)}
-              className="flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 active:scale-95"
+              className="flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-blue-700 active:scale-95 transition-all hover:shadow-lg hover:shadow-blue-600/30 active:scale-95"
             >
               <Zap size={16} />
               Create Post
@@ -247,7 +247,7 @@ export default function MedsosDashboard() {
             </div>
             <div>
               <p className={`text-[10px] uppercase tracking-widest font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{card_.label}</p>
-              <p className="mt-1 text-3xl font-black tracking-tight">{card_.value}</p>
+              <p className="mt-1 text-2xl md:text-3xl font-bold tracking-tight tracking-tight tracking-tight">{card_.value}</p>
               <p className={`mt-2 text-xs font-medium leading-relaxed line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{card_.helper}</p>
             </div>
             <div className={`mt-auto flex items-center gap-1.5 text-xs font-bold transition-transform group-hover:translate-x-1 ${

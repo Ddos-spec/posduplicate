@@ -700,7 +700,7 @@ export default function MedsosConnections() {
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-blue-100 bg-white shadow-sm'}`}>
+      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'border-blue-100 bg-white shadow-sm'}`}>
         <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
           <div className="max-w-4xl">
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
@@ -710,7 +710,7 @@ export default function MedsosConnections() {
             <div className="flex items-center gap-3 mb-3">
               <MyCommerSocialLogo size={46} className="shadow-lg shadow-blue-500/25" />
               <div>
-                <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Connections</h1>
+                <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Connections</h1>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   Hubungkan WA Inbox, marketplace chat engine, social media, dan ads dari satu workspace operasional.
                 </p>
@@ -721,22 +721,22 @@ export default function MedsosConnections() {
           <div className="grid sm:grid-cols-2 gap-3 min-w-[280px]">
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>WA Inbox</p>
-              <p className="mt-2 text-2xl font-bold">{waState.card}</p>
+              <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{waState.card}</p>
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{waState.helper}</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Marketplace AI</p>
-              <p className="mt-2 text-2xl font-bold">{marketplaceState.card}</p>
+              <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{marketplaceState.card}</p>
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{marketplaceState.helper}</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Social connected</p>
-              <p className="mt-2 text-2xl font-bold">{zernioLoading ? '...' : socialAccounts.length}</p>
+              <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{zernioLoading ? '...' : socialAccounts.length}</p>
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Akun organik yang aktif di workspace ini</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ads connected</p>
-              <p className="mt-2 text-2xl font-bold">{zernioLoading ? '...' : adsAccounts.length}</p>
+              <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{zernioLoading ? '...' : adsAccounts.length}</p>
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Meta, Google, LinkedIn, TikTok, Pinterest, X</p>
             </div>
           </div>
@@ -745,21 +745,21 @@ export default function MedsosConnections() {
 
       <div className="grid xl:grid-cols-4 gap-4">
         {stepCards.map((step) => (
-          <div key={step.title} className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div key={step.title} className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
             <p className="font-semibold text-blue-500">{step.title}</p>
             <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{step.description}</p>
           </div>
         ))}
       </div>
 
-      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
           <div>
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>
               <PlugZap size={14} />
               Social + ads workspace
             </div>
-            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Social + Ads dipusatkan ke satu workspace</h2>
+            <h2 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Social + Ads dipusatkan ke satu workspace</h2>
             <p className={`text-sm mt-2 max-w-3xl ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Semua koneksi social media dan ads dikelola melalui satu workspace terpusat agar reporting, planner, dan aktivasi channel tidak terpecah.
             </p>
@@ -771,7 +771,7 @@ export default function MedsosConnections() {
         </div>
 
         <div className="grid xl:grid-cols-2 gap-6">
-          <section className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+          <section className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
             <div className="flex items-center justify-between gap-3 mb-5">
               <div>
                 <h3 className="font-bold text-lg">Social channels</h3>
@@ -786,7 +786,7 @@ export default function MedsosConnections() {
                 const busy = busyPlatform === `social:${platform.connectPlatform}`;
 
                 return (
-                  <div key={platform.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-white bg-white shadow-sm'}`}>
+                  <div key={platform.id} className={`rounded-[24px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'border-white bg-white shadow-sm'}`}>
                     <div className="flex items-start gap-3">
                       <PlatformBadge label={platform.label} brand={platform.brand} size={42} />
                       <div className="min-w-0 flex-1">
@@ -826,7 +826,7 @@ export default function MedsosConnections() {
                           disabled={!platform.connectPlatform || platform.soon || busy}
                           onClick={() => platform.connectPlatform && handleSocialConnect(platform.connectPlatform)}
                           title={`Hubungkan ${platform.label} ke workspace`}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busy ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
                           Connect
@@ -839,7 +839,7 @@ export default function MedsosConnections() {
             </div>
           </section>
 
-          <section className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+          <section className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
             <div className="flex items-center justify-between gap-3 mb-5">
               <div>
                 <h3 className="font-bold text-lg">Ads channels</h3>
@@ -854,7 +854,7 @@ export default function MedsosConnections() {
                 const busy = busyPlatform === `ads:${platform.connectPlatform}`;
 
                 return (
-                  <div key={platform.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-white bg-white shadow-sm'}`}>
+                  <div key={platform.id} className={`rounded-[24px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'border-white bg-white shadow-sm'}`}>
                     <div className="flex items-start gap-3">
                       <PlatformBadge label={platform.label} brand={platform.brand} size={44} tone="bg-slate-100 text-slate-700" />
                       <div className="min-w-0 flex-1">
@@ -895,7 +895,7 @@ export default function MedsosConnections() {
                           disabled={!platform.connectPlatform || busy}
                           onClick={() => platform.connectPlatform && handleAdsConnect(platform.connectPlatform)}
                           title={`Hubungkan ${platform.label} ke workspace`}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {busy ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
                           Connect ads
@@ -909,7 +909,7 @@ export default function MedsosConnections() {
           </section>
         </div>
 
-        <div className={`rounded-2xl border p-5 mt-6 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-blue-100 bg-blue-50'}`}>
+        <div className={`rounded-[24px] p-5 mt-6 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-blue-100 bg-blue-50'}`}>
           <div className="flex items-start gap-3">
             <ShieldCheck className="text-blue-500 mt-0.5" size={18} />
             <div>
@@ -923,14 +923,14 @@ export default function MedsosConnections() {
       </div>
 
       <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
-        <section className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
             <div>
               <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-emerald-500/15 text-emerald-200' : 'bg-emerald-100 text-emerald-700'}`}>
                 <MessageSquareText size={14} />
                 WA Inbox
               </div>
-              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>WA Inbox diaktifkan lewat workspace chat internal</h2>
+              <h2 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>WA Inbox diaktifkan lewat workspace chat internal</h2>
               <p className={`text-sm mt-2 max-w-3xl ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Masukkan API key workspace agar inbox WhatsApp bisa dipantau dari panel ini. Alamat workspace chat diambil otomatis dari konfigurasi sistem.
               </p>
@@ -951,7 +951,7 @@ export default function MedsosConnections() {
                 value={crmForm.workspaceName}
                 onChange={(event) => setCrmForm((current) => ({ ...current, workspaceName: event.target.value }))}
                 placeholder="Contoh: Tepat Laser Support Desk"
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
             <label className="space-y-2">
@@ -963,10 +963,10 @@ export default function MedsosConnections() {
                 value={crmForm.vendorWorkspaceEmail}
                 onChange={(event) => setCrmForm((current) => ({ ...current, vendorWorkspaceEmail: event.target.value }))}
                 placeholder="ops@brandanda.com"
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
-            <div className={`md:col-span-2 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-blue-50'}`}>
+            <div className={`md:col-span-2 rounded-[24px] p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-blue-50'}`}>
               <div className="flex items-start gap-3">
                 <PlugZap size={18} className="text-blue-500 mt-0.5" />
                 <div className="space-y-1">
@@ -990,11 +990,11 @@ export default function MedsosConnections() {
                   value={crmForm.connectionId}
                   onChange={(event) => setCrmForm((current) => ({ ...current, connectionId: event.target.value }))}
                   placeholder="API key tenant untuk workspace chat"
-                  className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                  className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
                 />
               </label>
             ) : (
-              <div className={`md:col-span-2 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-200 bg-gray-50'}`}>
+              <div className={`md:col-span-2 rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-200 bg-gray-50'}`}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold inline-flex items-center gap-2">
@@ -1008,7 +1008,7 @@ export default function MedsosConnections() {
                   <button
                     type="button"
                     onClick={() => setShowWaKeyEditor(true)}
-                    className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+                    className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white hover:bg-slate-700' : 'bg-white ring-1 ring-slate-900/5 text-gray-700 hover:bg-gray-50'}`}
                   >
                     Ganti API key
                   </button>
@@ -1025,12 +1025,12 @@ export default function MedsosConnections() {
                 onChange={(event) => setCrmForm((current) => ({ ...current, notes: event.target.value }))}
                 placeholder="Catatan internal untuk operator, misalnya nomor live, PIC, atau rule eskalasi"
                 rows={4}
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
           </div>
 
-          <div className={`rounded-2xl border p-4 mt-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+          <div className={`rounded-[24px] p-4 mt-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
             <div className="grid md:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Current workspace</p>
@@ -1057,7 +1057,7 @@ export default function MedsosConnections() {
                   href={waOpenUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-900 text-white hover:bg-slate-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+                  className={`inline-flex items-center justify-center gap-2 rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-900 text-white hover:bg-slate-700' : 'bg-white ring-1 ring-slate-900/5 text-gray-700 hover:bg-gray-50'}`}
                 >
                   <ExternalLink size={16} />
                   Buka inbox
@@ -1068,7 +1068,7 @@ export default function MedsosConnections() {
                 onClick={handleSaveWa}
                 disabled={savingWa || loading || (!showWaKeyEditor && !waConnector?.connectionRefMasked)}
                 title="Simpan konfigurasi workspace WA"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {savingWa ? <Loader2 size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
                 {showWaKeyEditor ? 'Simpan WA setup' : 'Simpan perubahan'}
@@ -1077,14 +1077,14 @@ export default function MedsosConnections() {
           </div>
         </section>
 
-        <section className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
               <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-amber-500/15 text-amber-200' : 'bg-amber-100 text-amber-700'}`}>
                 <ShoppingBag size={14} />
                 Marketplace chat + AI
               </div>
-              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace chat diaktivasi oleh tim onboarding</h2>
+              <h2 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace chat diaktivasi oleh tim onboarding</h2>
               <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Klien cukup memilih workspace dan marketplace yang ingin dipakai. Routing AI dan koneksi engine marketplace dikelola di belakang layar oleh tim aktivasi.
               </p>
@@ -1102,11 +1102,11 @@ export default function MedsosConnections() {
                 value={marketplaceForm.workspaceName}
                 onChange={(event) => setMarketplaceForm((current) => ({ ...current, workspaceName: event.target.value }))}
                 placeholder="Contoh: Tepat Laser Marketplace"
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
 
-            <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-blue-50'}`}>
+            <div className={`rounded-[24px] p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-blue-50'}`}>
               <div className="flex items-start gap-3">
                 <Bot size={18} className="text-blue-500 mt-0.5" />
                 <div className="space-y-1">
@@ -1135,7 +1135,7 @@ export default function MedsosConnections() {
                 ].map((channel) => {
                   const isDetected = marketplaceStatus?.channels?.some((item) => item.source.toLowerCase().includes(channel.key));
                   return (
-                    <div key={channel.key} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                    <div key={channel.key} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                       <div className="flex items-start gap-3">
                         <PlatformBadge
                           label={channel.label}
@@ -1168,12 +1168,12 @@ export default function MedsosConnections() {
                 onChange={(event) => setMarketplaceForm((current) => ({ ...current, notes: event.target.value }))}
                 placeholder="Contoh: prioritaskan Shopee utama dulu, AI hanya aktif di jam kerja, fallback ke human untuk komplain refund."
                 rows={4}
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
           </div>
 
-          <div className={`rounded-2xl border p-4 mt-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+          <div className={`rounded-[24px] p-4 mt-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
             <div className="grid md:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Current workspace</p>
@@ -1190,7 +1190,7 @@ export default function MedsosConnections() {
             </div>
           </div>
 
-          <div className={`rounded-2xl border p-5 mt-5 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-blue-100 bg-blue-50'}`}>
+          <div className={`rounded-[24px] p-5 mt-5 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-blue-100 bg-blue-50'}`}>
             <div className="flex items-start gap-3">
               <Workflow size={18} className="text-blue-500 mt-0.5" />
               <div>
@@ -1211,7 +1211,7 @@ export default function MedsosConnections() {
                 type="button"
                 onClick={handleSyncMarketplace}
                 disabled={syncingMarketplace}
-                className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-900 text-white hover:bg-slate-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'} disabled:cursor-not-allowed disabled:opacity-60`}
+                className={`inline-flex items-center justify-center gap-2 rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-900 text-white hover:bg-slate-700' : 'bg-white ring-1 ring-slate-900/5 text-gray-700 hover:bg-gray-50'} disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 {syncingMarketplace ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />}
                 Refresh status
@@ -1221,7 +1221,7 @@ export default function MedsosConnections() {
                   type="button"
                   onClick={handleDisconnectMarketplace}
                   disabled={syncingMarketplace}
-                  className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-900 text-rose-300 hover:bg-rose-950/40' : 'border-gray-200 bg-white text-rose-600 hover:bg-rose-50'} disabled:cursor-not-allowed disabled:opacity-60`}
+                  className={`inline-flex items-center justify-center gap-2 rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm font-semibold ${isDark ? 'border-slate-700 bg-slate-900 text-rose-300 hover:bg-rose-950/40' : 'bg-white ring-1 ring-slate-900/5 text-rose-600 hover:bg-rose-50'} disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   <Unplug size={16} />
                   Putuskan setup
@@ -1231,7 +1231,7 @@ export default function MedsosConnections() {
                 type="button"
                 onClick={handleSaveMarketplace}
                 disabled={savingMarketplace}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {savingMarketplace ? <Loader2 size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
                 {marketplaceConnector ? 'Simpan perubahan' : 'Simpan aktivasi'}

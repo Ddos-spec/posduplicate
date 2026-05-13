@@ -125,11 +125,11 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Content Planner</h1>
+              <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Content Planner</h1>
               <FieldHelp title="Content Planner live" description="Tarik (drag) post draft/scheduled ke tanggal lain untuk mengubah jadwal. Post yang sudah published tidak bisa digeser." />
             </div>
             <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{posts.length} post bulan ini</p>
@@ -137,14 +137,14 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
           <button
             onClick={() => navigate('/medsos/create')}
             title="Buka composer untuk membuat post baru"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all font-semibold"
           >
             <Plus size={18} /> New Post
           </button>
         </div>
       </div>
 
-      <div className={`rounded-3xl border overflow-hidden ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+      <div className={`rounded-3xl border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200'}`}>
         <div className="grid grid-cols-7 border-b dark:border-slate-700">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div key={day} className={`py-3 text-center text-xs font-bold uppercase tracking-widest ${isDark ? 'text-gray-400 bg-slate-900/50' : 'text-gray-500 bg-gray-50'}`}>
@@ -253,7 +253,7 @@ export default function ContentCalendar() {
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="max-w-3xl">
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-purple-500/20 text-purple-200' : 'bg-purple-100 text-purple-700'}`}>
@@ -261,7 +261,7 @@ export default function ContentCalendar() {
               Content operations workspace
             </div>
             <div className="flex items-center gap-2">
-              <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner kampanye yang terasa seperti alat kerja tim sungguhan</h1>
+              <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner kampanye yang terasa seperti alat kerja tim sungguhan</h1>
               <FieldHelp title="Planner campaign" description="Planner dipakai untuk memindahkan campaign dari ide sampai published. Semua kartu, brief, reviewer, asset, dan approval chain bisa dibaca dari satu halaman ini." />
             </div>
             <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -272,7 +272,7 @@ export default function ContentCalendar() {
             <button title="Ubah tampilan planner menjadi ringkasan mingguan" className={`px-4 py-2 rounded-xl font-semibold border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-700'}`}>
               Weekly View
             </button>
-            <button title="Buka composer untuk menyiapkan campaign baru" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
+            <button title="Buka composer untuk menyiapkan campaign baru" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all">
               <Plus size={18} /> New Campaign
             </button>
           </div>
@@ -280,30 +280,30 @@ export default function ContentCalendar() {
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div title="Jumlah item yang menunggu reviewer atau owner sebelum tayang." className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div title="Jumlah item yang menunggu reviewer atau owner sebelum tayang." className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
             <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Review queue</p>
-          <p className="mt-2 text-3xl font-bold">{summary.review}</p>
+          <p className="mt-2 text-2xl md:text-3xl font-bold tracking-tight">{summary.review}</p>
           <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>butuh reviewer atau owner approval</p>
         </div>
-          <div title="Jumlah campaign yang sudah punya jadwal publish." className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div title="Jumlah campaign yang sudah punya jadwal publish." className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
           <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Scheduled</p>
-          <p className="mt-2 text-3xl font-bold">{summary.scheduled}</p>
+          <p className="mt-2 text-2xl md:text-3xl font-bold tracking-tight">{summary.scheduled}</p>
           <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>siap publish per channel</p>
         </div>
-          <div title="Jumlah campaign yang sudah live." className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div title="Jumlah campaign yang sudah live." className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
           <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Published</p>
-          <p className="mt-2 text-3xl font-bold">{summary.published}</p>
+          <p className="mt-2 text-2xl md:text-3xl font-bold tracking-tight">{summary.published}</p>
           <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>sudah live dan siap dipantau</p>
         </div>
-          <div title="Jumlah jalur approval yang aktif untuk workflow campaign." className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div title="Jumlah jalur approval yang aktif untuk workflow campaign." className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
           <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Approval lanes</p>
-          <p className="mt-2 text-3xl font-bold">{approvalFlows.length}</p>
+          <p className="mt-2 text-2xl md:text-3xl font-bold tracking-tight">{approvalFlows.length}</p>
           <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>publish, voucher, price exception</p>
         </div>
       </div>
 
       <div className="grid xl:grid-cols-[1.3fr_0.95fr] gap-6 items-start">
-          <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className={`rounded-[24px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2">
@@ -333,9 +333,9 @@ export default function ContentCalendar() {
                         <button
                           key={card.id}
                           onClick={() => setSelectedId(card.id)}
-                          className={`w-full rounded-2xl border p-3 text-left transition ${selectedId === card.id
+                          className={`w-full rounded-[24px] p-3 text-left transition ${selectedId === card.id
                             ? 'border-blue-400 ring-2 ring-blue-200 bg-white text-gray-900'
-                            : isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700/80' : 'border-gray-200 bg-white hover:border-blue-200 hover:bg-blue-50/60'
+                            : isDark ? 'bg-[#111318] ring-1 ring-white/10 hover:bg-slate-700/80' : 'bg-white ring-1 ring-slate-900/5 hover:border-blue-200 hover:bg-blue-50/60'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2 mb-2">
@@ -368,7 +368,7 @@ export default function ContentCalendar() {
         </div>
 
         <div className="space-y-6">
-          <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div className={`rounded-[24px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2">
@@ -380,7 +380,7 @@ export default function ContentCalendar() {
               <FileStack size={18} className="text-purple-500" />
             </div>
 
-            <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+            <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
                   <span className={`text-[10px] px-2 py-1 rounded-full ${goalTone[selectedCard.goal]}`}>{selectedCard.goal}</span>
@@ -425,7 +425,7 @@ export default function ContentCalendar() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {selectedBrief.channels.map((channel) => (
-                    <div key={channel} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                    <div key={channel} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                       <div className="flex items-center gap-2 mb-3">
                         <BrandLogo brand={resolveBrandKey(channel)} size={24} className="rounded-lg px-1" withRing />
                         <p className="font-semibold text-sm">{channel}</p>
@@ -440,7 +440,7 @@ export default function ContentCalendar() {
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <CheckCheck size={16} className="text-emerald-500" />
                     <p className="font-semibold text-sm">Checklist</p>
@@ -457,7 +457,7 @@ export default function ContentCalendar() {
                   </div>
                 </div>
 
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <UserRoundCheck size={16} className="text-purple-500" />
                     <p className="font-semibold text-sm">Asset list</p>
@@ -472,7 +472,7 @@ export default function ContentCalendar() {
                 </div>
               </div>
 
-              <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <MessageSquareMore size={16} className="text-orange-500" />
                   <p className="font-semibold text-sm">Mention / comment</p>
@@ -493,7 +493,7 @@ export default function ContentCalendar() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-1">
-            <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className={`rounded-[24px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-2">
@@ -506,7 +506,7 @@ export default function ContentCalendar() {
               </div>
               <div className="space-y-3">
                 {approvalFlows.map((flow) => (
-                  <div key={flow.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                  <div key={flow.id} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold text-sm">{flow.name}</p>
@@ -526,7 +526,7 @@ export default function ContentCalendar() {
               </div>
             </div>
 
-            <div className={`rounded-2xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+            <div className={`rounded-[24px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-2">

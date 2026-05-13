@@ -239,7 +239,7 @@ export default function MedsosLayout() {
         />
       ) : null}
 
-      <aside className={`fixed top-0 left-0 z-40 h-screen w-64 ${asideWidthClass} transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 border-r ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+      <aside className={`fixed top-0 left-0 z-40 h-screen w-64 ${asideWidthClass} transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 border-r ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200'}`}>
         <div className="h-full overflow-y-auto px-3 py-4 pb-40">
           <div className={`mb-8 px-2 relative ${sidebarCollapsed ? 'flex justify-center mt-2' : ''}`}>
             {/* Sidebar toggle buttons (X for mobile, PanelLeft for PC) */}
@@ -274,7 +274,7 @@ export default function MedsosLayout() {
           </div>
 
           {!sidebarCollapsed ? (
-            <div className={`mb-6 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-blue-100 bg-blue-50'}`}>
+            <div className={`mb-6 rounded-[24px] p-4 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-blue-100 bg-blue-50'}`}>
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>War Room</p>
@@ -299,7 +299,7 @@ export default function MedsosLayout() {
             <button
               onClick={() => navigate(`${basePath}/create`)}
               title="Buka composer untuk membuat campaign atau post baru"
-              className={`${sidebarCollapsed ? 'h-11 w-11 rounded-xl' : 'w-full rounded-xl py-3'} flex items-center justify-center gap-2 bg-blue-600 font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700`}
+              className={`${sidebarCollapsed ? 'h-11 w-11 rounded-xl' : 'w-full rounded-xl py-3'} flex items-center justify-center gap-2 bg-blue-600 font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 active:scale-95 transition-all`}
             >
               <Plus size={20} />
               {!sidebarCollapsed ? 'Create Campaign' : null}
@@ -388,7 +388,7 @@ export default function MedsosLayout() {
           </ul>
         </div>
 
-        <div className={`absolute bottom-0 left-0 w-full border-t p-4 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
+        <div className={`absolute bottom-0 left-0 w-full border-t p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
           {!sidebarCollapsed ? (
             <div className={`mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
               <BellRing size={14} />
@@ -414,14 +414,14 @@ export default function MedsosLayout() {
             type="button"
             title={sidebarCollapsed || !sidebarOpen ? 'Buka navigasi MyCommerSocial' : 'Tutup navigasi MyCommerSocial'}
             onClick={handleSidebarToggle}
-            className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 transition ${isDark ? 'border-slate-700 bg-slate-800 hover:bg-slate-700' : 'border-gray-200 bg-white hover:bg-gray-100'}`}
+            className={`inline-flex items-center gap-2 rounded-xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-3 py-2 transition ${isDark ? 'bg-[#111318] ring-1 ring-white/10 hover:bg-slate-700' : 'bg-white ring-1 ring-slate-900/5 hover:bg-gray-100'}`}
           >
             {sidebarCollapsed ? <PanelLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             <span className="hidden md:inline text-sm font-semibold">{sidebarCollapsed ? 'Buka sidebar' : 'Ringkas sidebar'}</span>
           </button>
 
           <div className="ml-auto flex items-center gap-2">
-            <div className={`hidden items-center gap-3 rounded-2xl border px-4 py-2 md:flex ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white shadow-sm'}`}>
+            <div className={`hidden items-center gap-3 rounded-2xl border px-4 py-2 md:flex ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5 shadow-sm'}`}>
               <div className="mr-1 flex -space-x-2">
                 <BrandLogo brand="whatsapp" size={28} className="rounded-xl border-2 border-white" />
                 <BrandLogo brand="instagram" size={28} className="rounded-xl border-2 border-white" />
@@ -441,7 +441,7 @@ export default function MedsosLayout() {
             <button
               onClick={toggleTheme}
               title={isDark ? 'Pakai mode terang' : 'Pakai mode gelap'}
-              className={`rounded-xl p-2 transition-colors ${isDark ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' : 'border border-gray-200 bg-white text-slate-600 shadow-sm hover:bg-gray-100'}`}
+              className={`rounded-xl p-2 transition-colors ${isDark ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' : 'border bg-white ring-1 ring-slate-900/5 text-slate-600 shadow-sm hover:bg-gray-100'}`}
             >
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
@@ -453,7 +453,7 @@ export default function MedsosLayout() {
 
       {/* Mobile Bottom Navigation */}
       <nav 
-        className={`fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t pt-2 md:hidden ${isDark ? 'border-slate-700 bg-slate-900/95 backdrop-blur-md' : 'border-gray-200 bg-white/95 backdrop-blur-md'}`}
+        className={`fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t pt-2 md:hidden ${isDark ? 'border-slate-700 bg-slate-900/95 backdrop-blur-md' : 'bg-white ring-1 ring-slate-900/5/95 backdrop-blur-md'}`}
         style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 1rem))' }}
       >
         <button

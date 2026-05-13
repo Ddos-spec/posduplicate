@@ -419,10 +419,10 @@ export default function MedsosSettings() {
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="max-w-3xl">
-            <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Settings</h1>
+            <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Settings</h1>
             <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Atur channel aktif, rule operasional, notifikasi, dan team seat untuk workspace MyCommerSocial.
             </p>
@@ -437,7 +437,7 @@ export default function MedsosSettings() {
               type="button"
               onClick={() => void saveSettings()}
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
             >
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               {saving ? 'Menyimpan...' : 'Simpan perubahan'}
@@ -451,7 +451,7 @@ export default function MedsosSettings() {
 
       <div className="grid md:grid-cols-3 gap-4">
         {channelCards.map((card) => (
-          <div key={card.key} className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <div key={card.key} className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
             <div className={`inline-flex rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
               <card.icon size={18} />
             </div>
@@ -479,7 +479,7 @@ export default function MedsosSettings() {
       </div>
 
       <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
-        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-5">
             <Shield size={18} className="text-emerald-500" />
             <div>
@@ -491,7 +491,7 @@ export default function MedsosSettings() {
             {slaPolicies.map((policy) => {
               const active = settings.activeSlaIds.includes(policy.id);
               return (
-                <div key={policy.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div key={policy.id} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-sm">{policy.channel}</p>
@@ -524,7 +524,7 @@ export default function MedsosSettings() {
           </div>
         </section>
 
-        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-5">
             <Workflow size={18} className="text-purple-500" />
             <div>
@@ -536,7 +536,7 @@ export default function MedsosSettings() {
             {routingRules.map((rule) => {
               const active = settings.activeRoutingIds.includes(rule.id);
               return (
-                <div key={rule.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div key={rule.id} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-sm">{rule.name}</p>
@@ -561,7 +561,7 @@ export default function MedsosSettings() {
             {approvalFlows.map((flow) => {
               const active = settings.activeApprovalIds.includes(flow.id);
               return (
-                <div key={flow.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div key={flow.id} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-sm">{flow.name}</p>
@@ -586,7 +586,7 @@ export default function MedsosSettings() {
         </section>
       </div>
 
-      <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="flex items-center gap-2 mb-5">
           <Bot size={18} className="text-blue-500" />
           <div>
@@ -611,7 +611,7 @@ export default function MedsosSettings() {
                   setDirty(true);
                 }}
                 placeholder={settings.aiAnalysis.hasApiKey ? 'API key sudah tersimpan — isi lagi untuk mengganti' : 'Masukkan API key analysis'}
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
               />
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 {settings.aiAnalysis.hasApiKey ? (
@@ -640,7 +640,7 @@ export default function MedsosSettings() {
                     },
                   }))
                 }
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
               >
                 <option value="auto">Auto</option>
                 <option value="fast">Fast</option>
@@ -670,7 +670,7 @@ export default function MedsosSettings() {
                     },
                   }))
                 }
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
               />
             </label>
 
@@ -694,7 +694,7 @@ export default function MedsosSettings() {
                     },
                   }))
                 }
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
               />
             </label>
 
@@ -716,7 +716,7 @@ export default function MedsosSettings() {
                     }))
                   }
                   placeholder="Masukkan model ID custom"
-                  className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                  className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
                 />
               </label>
             ) : null}
@@ -733,7 +733,7 @@ export default function MedsosSettings() {
                     value={settings.systemMessages.postAnalysis}
                     onChange={(e) => updateSettings(curr => ({ ...curr, systemMessages: { ...curr.systemMessages, postAnalysis: e.target.value } }))}
                     rows={2}
-                    className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+                    className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
                     placeholder="Contoh: Jadilah analis yang kritis..."
                   />
                 </label>
@@ -746,7 +746,7 @@ export default function MedsosSettings() {
                     value={settings.systemMessages.contentGeneration}
                     onChange={(e) => updateSettings(curr => ({ ...curr, systemMessages: { ...curr.systemMessages, contentGeneration: e.target.value } }))}
                     rows={2}
-                    className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+                    className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
                     placeholder="Contoh: Gunakan gaya bahasa anak muda..."
                   />
                 </label>
@@ -759,7 +759,7 @@ export default function MedsosSettings() {
                     value={settings.systemMessages.inboxReply}
                     onChange={(e) => updateSettings(curr => ({ ...curr, systemMessages: { ...curr.systemMessages, inboxReply: e.target.value } }))}
                     rows={2}
-                    className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-gray-200 bg-white text-gray-900'}`}
+                    className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
                     placeholder="Contoh: Balas dengan sangat sabar..."
                   />
                 </label>
@@ -791,14 +791,14 @@ export default function MedsosSettings() {
                     onChange={(e) => updateSettings(curr => ({ ...curr, externalWebhook: { ...curr.externalWebhook, url: e.target.value } }))}
                     placeholder="https://api.domain-anda.com/webhook/receive"
                     disabled={!settings.externalWebhook.active}
-                    className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white disabled:opacity-50' : 'border-gray-200 bg-white text-gray-900 disabled:opacity-50'}`}
+                    className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white disabled:opacity-50' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 disabled:opacity-50'}`}
                   />
                 </label>
               </div>
             </div>
           </div>
 
-          <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+          <div className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
             <div className="flex items-center gap-2 mb-3">
               <CheckCircle2 size={18} className="text-blue-500" />
               <h3 className="font-bold">Ringkasan analysis</h3>
@@ -822,7 +822,7 @@ export default function MedsosSettings() {
       </section>
 
       <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-6">
-        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-5">
             <UsersRound size={18} className="text-orange-500" />
             <div>
@@ -841,7 +841,7 @@ export default function MedsosSettings() {
                 value={seatDraft.name}
                 onChange={(event) => setSeatDraft((current) => ({ ...current, name: event.target.value }))}
                 placeholder="Contoh: Admin CS 1"
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
 
@@ -854,7 +854,7 @@ export default function MedsosSettings() {
                 value={seatDraft.role}
                 onChange={(event) => setSeatDraft((current) => ({ ...current, role: event.target.value }))}
                 placeholder="Contoh: Customer Service"
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
 
@@ -867,7 +867,7 @@ export default function MedsosSettings() {
                 value={seatDraft.channels}
                 onChange={(event) => setSeatDraft((current) => ({ ...current, channels: event.target.value }))}
                 placeholder="Contoh: WhatsApp, Instagram"
-                className={`w-full rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400'}`}
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
           </div>
@@ -875,20 +875,20 @@ export default function MedsosSettings() {
           <button
             type="button"
             onClick={addSeat}
-            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
           >
             <Plus size={16} />
             Tambah team seat
           </button>
 
           {settings.seats.length === 0 ? (
-            <div className={`rounded-2xl border p-5 mt-5 ${isDark ? 'border-slate-700 bg-slate-900/40 text-gray-300' : 'border-gray-100 bg-gray-50 text-gray-600'}`}>
+            <div className={`rounded-[24px] p-5 mt-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10 text-gray-300' : 'border-gray-100 bg-gray-50 text-gray-600'}`}>
               Belum ada team seat. Tambahkan seat sesuai tim yang akan memakai workspace ini.
             </div>
           ) : (
             <div className="space-y-3 mt-5">
               {settings.seats.map((seat) => (
-                <div key={seat.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div key={seat.id} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-sm">{seat.name}</p>
@@ -915,9 +915,9 @@ export default function MedsosSettings() {
           )}
         </section>
 
-        <section className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="grid md:grid-cols-2 gap-4">
-            <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+            <div className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
               <div className="flex items-center gap-2 mb-3">
                 <BellRing size={18} className="text-blue-500" />
                 <h2 className="font-bold">Reply templates</h2>
@@ -947,7 +947,7 @@ export default function MedsosSettings() {
               </div>
             </div>
 
-            <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+            <div className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
               <div className="flex items-center gap-2 mb-3">
                 <Workflow size={18} className="text-emerald-500" />
                 <h2 className="font-bold">Notification targets</h2>
@@ -978,7 +978,7 @@ export default function MedsosSettings() {
             </div>
           </div>
 
-          <div className={`rounded-2xl border p-5 mt-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-blue-100 bg-blue-50'}`}>
+          <div className={`rounded-[24px] p-5 mt-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-blue-100 bg-blue-50'}`}>
             <div className="flex items-start gap-3">
               <CheckCircle2 size={18} className="text-blue-500 mt-0.5" />
               <div>

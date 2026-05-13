@@ -544,14 +544,14 @@ export default function OmnichannelAdsHub() {
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-blue-100 bg-white shadow-sm'}`}>
+      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'border-blue-100 bg-white shadow-sm'}`}>
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="max-w-3xl">
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>
               <Megaphone size={14} />
               Ads workspace
             </div>
-            <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Semua jalur ads sekarang dipusatkan ke satu workspace</h1>
+            <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Semua jalur ads sekarang dipusatkan ke satu workspace</h1>
             <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Workspace ini sekarang membaca account, ad account, campaign, dan metrik lintas network langsung dari layer ads terpusat. Jadi kalau tenant menghubungkan beberapa network sekaligus, semuanya bisa tetap muncul di satu tempat.
             </p>
@@ -590,7 +590,7 @@ export default function OmnichannelAdsHub() {
             type="button"
             onClick={handleExportCampaigns}
             disabled={!summary?.campaigns.length}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60"
             title="Export campaign lintas network ke CSV"
           >
             <Download size={15} />
@@ -598,7 +598,7 @@ export default function OmnichannelAdsHub() {
           </button>
         </div>
 
-        <div className={`mt-6 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-blue-100 bg-blue-50/60'}`}>
+        <div className={`mt-6 rounded-[24px] p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-blue-100 bg-blue-50/60'}`}>
           <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -663,7 +663,7 @@ export default function OmnichannelAdsHub() {
       </div>
 
       {alerts.length > 0 ? (
-        <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
           <div className="flex items-center gap-2 mb-4">
             <h2 className="font-bold text-xl">Attention center</h2>
             <FieldHelp title="Attention center" description="Alert ini dibentuk dari data campaign yang sudah dibaca dari workspace ads. Tujuannya supaya user tahu campaign mana yang perlu dicek duluan tanpa buka satu-satu." />
@@ -673,7 +673,7 @@ export default function OmnichannelAdsHub() {
             {alerts.map((alert) => (
               <div
                 key={alert.id}
-                className={`rounded-2xl border p-4 ${
+                className={`rounded-[24px] p-4 ${
                   alert.level === 'high'
                     ? isDark ? 'border-rose-800 bg-rose-950/20' : 'border-rose-200 bg-rose-50'
                     : isDark ? 'border-amber-800 bg-amber-950/20' : 'border-amber-200 bg-amber-50'
@@ -688,7 +688,7 @@ export default function OmnichannelAdsHub() {
       ) : null}
 
       {previewMode ? (
-        <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="text-blue-500" size={18} />
             <div>
@@ -701,7 +701,7 @@ export default function OmnichannelAdsHub() {
 
           <div className="grid md:grid-cols-3 gap-3 mb-6">
             {previewNetworkCards.map((platform) => (
-              <div key={platform.key} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+              <div key={platform.key} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold">{platform.label}</p>
@@ -709,7 +709,7 @@ export default function OmnichannelAdsHub() {
                       {platform.connectedAccounts} workspace • {platform.linkedAdAccounts} ad account • {platform.totalCampaigns} campaign
                     </p>
                   </div>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'border border-gray-200 bg-white text-gray-600'}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'border bg-white ring-1 ring-slate-900/5 text-gray-600'}`}>
                     Preview
                   </span>
                 </div>
@@ -737,7 +737,7 @@ export default function OmnichannelAdsHub() {
           </div>
 
           <div className="grid xl:grid-cols-2 gap-4 mb-6">
-            <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+            <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
               <p className="font-semibold mb-4">Preview spend timeline</p>
               <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -752,7 +752,7 @@ export default function OmnichannelAdsHub() {
               </div>
             </div>
 
-            <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+            <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
               <p className="font-semibold mb-4">Preview engagement timeline</p>
               <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -769,7 +769,7 @@ export default function OmnichannelAdsHub() {
             </div>
           </div>
 
-          <div className={`rounded-2xl border ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+          <div className={`rounded-2xl border ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
             <div className="px-4 py-3 border-b border-inherit">
               <p className="font-semibold">Preview campaign table</p>
             </div>
@@ -803,7 +803,7 @@ export default function OmnichannelAdsHub() {
       ) : null}
 
       <div className="grid xl:grid-cols-2 gap-6">
-        <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
           <div className="flex items-center justify-between gap-3 mb-5">
             <div>
               <div className="flex items-center gap-2">
@@ -822,7 +822,7 @@ export default function OmnichannelAdsHub() {
               const account = getConnectedAccount(platform.accountPlatforms);
               const busy = busyPlatform === platform.connectPlatform;
               return (
-                <div key={platform.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div key={platform.id} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-start gap-3">
                     <PlatformBadge label={platform.label} brand={platform.brand} size={44} tone="bg-slate-100 text-slate-700" />
                     <div className="min-w-0 flex-1">
@@ -859,7 +859,7 @@ export default function OmnichannelAdsHub() {
                             target="_blank"
                             rel="noreferrer"
                             title={`Buka profile ${platform.label} di tab baru`}
-                            className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'border border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+                            className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white hover:bg-slate-700' : 'border bg-white ring-1 ring-slate-900/5 text-gray-700 hover:bg-gray-50'}`}
                           >
                             <ExternalLink size={15} />
                             Buka profile
@@ -872,7 +872,7 @@ export default function OmnichannelAdsHub() {
                         disabled={!platform.connectPlatform || busy}
                         onClick={() => platform.connectPlatform && handleConnect(platform.connectPlatform)}
                         title={`Hubungkan ${platform.label} ke workspace ini`}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {busy ? <Loader2 size={15} className="animate-spin" /> : <PlugZap size={15} />}
                         Connect ads
@@ -885,7 +885,7 @@ export default function OmnichannelAdsHub() {
           </div>
         </section>
 
-        <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+        <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
           <div className="flex items-center gap-2 mb-5">
             <Sparkles className="text-blue-500" size={18} />
             <div>
@@ -900,7 +900,7 @@ export default function OmnichannelAdsHub() {
           </div>
 
           {adAccounts.length === 0 ? (
-            <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+            <div className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Belum ada ad account yang tersambung. Mulai dari Meta Ads atau Google Ads sesuai kebutuhan tenant.
               </p>
@@ -908,26 +908,26 @@ export default function OmnichannelAdsHub() {
           ) : (
             <div className="space-y-6">
               <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Networks aktif</p>
-                  <p className="mt-2 text-2xl font-bold">{summary?.totals.networks ?? adAccounts.length}</p>
+                  <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{summary?.totals.networks ?? adAccounts.length}</p>
                 </div>
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ad accounts</p>
-                  <p className="mt-2 text-2xl font-bold">{summary?.totals.linkedAdAccounts ?? 0}</p>
+                  <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{summary?.totals.linkedAdAccounts ?? 0}</p>
                 </div>
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Total campaign</p>
-                  <p className="mt-2 text-2xl font-bold">{summary?.totals.totalCampaigns ?? 0}</p>
+                  <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{summary?.totals.totalCampaigns ?? 0}</p>
                 </div>
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>CTR gabungan</p>
-                  <p className="mt-2 text-2xl font-bold">{formatMetricValue(summary?.totals.metrics.ctr ?? 0)}%</p>
+                  <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{formatMetricValue(summary?.totals.metrics.ctr ?? 0)}%</p>
                 </div>
               </div>
 
               {summary?.totals.spendByCurrency?.length ? (
-                <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <p className="font-semibold">Spend per currency</p>
                     <FieldHelp title="Spend per currency" description="Workspace ads tidak menormalisasi semua network ke satu mata uang. Karena itu total spend ditampilkan per currency supaya angka tidak menyesatkan." />
@@ -952,7 +952,7 @@ export default function OmnichannelAdsHub() {
               {platformSummaries.length ? (
                 <div className="grid md:grid-cols-2 gap-3">
                   {platformSummaries.map((platform) => (
-                    <div key={platform.key} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                    <div key={platform.key} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-semibold">{platform.label}</p>
@@ -1007,7 +1007,7 @@ export default function OmnichannelAdsHub() {
 
       {summary ? (
         <>
-          <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
             <div className="flex items-center gap-2 mb-5">
               <Sparkles className="text-blue-500" size={18} />
               <div>
@@ -1022,13 +1022,13 @@ export default function OmnichannelAdsHub() {
             </div>
 
             {workspaceAccounts.length === 0 ? (
-              <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+              <div className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada account ads yang berhasil dibaca dari workspace ini.</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {workspaceAccounts.map((workspaceAccount) => (
-                  <div key={workspaceAccount.id} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                  <div key={workspaceAccount.id} className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex items-center gap-3">
@@ -1077,12 +1077,12 @@ export default function OmnichannelAdsHub() {
 
                     <div className="mt-4 grid xl:grid-cols-2 gap-3">
                       {workspaceAccount.adAccounts.length === 0 ? (
-                        <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                        <div className={`rounded-[24px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'bg-white ring-1 ring-slate-900/5'}`}>
                           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Belum ada ad account spesifik yang dikembalikan untuk workspace ini.</p>
                         </div>
                       ) : (
                         workspaceAccount.adAccounts.map((adAccount) => (
-                          <div key={`${workspaceAccount.id}-${adAccount.id}`} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                          <div key={`${workspaceAccount.id}-${adAccount.id}`} className={`rounded-[24px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'bg-white ring-1 ring-slate-900/5'}`}>
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="font-semibold truncate">{adAccount.name}</p>
@@ -1131,7 +1131,7 @@ export default function OmnichannelAdsHub() {
             )}
           </section>
 
-          <section className={`rounded-3xl border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+          <section className={`rounded-3xl border ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
             <div className="px-6 py-5 border-b border-inherit">
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-xl">Campaign intelligence</h2>
@@ -1144,7 +1144,7 @@ export default function OmnichannelAdsHub() {
 
             {topCampaigns.length === 0 ? (
               <div className="px-6 py-8">
-                <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                <div className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                   <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     Account ads sudah tersambung, tapi belum ada campaign yang dikembalikan untuk profile tenant ini.
                   </p>
@@ -1219,7 +1219,7 @@ export default function OmnichannelAdsHub() {
           </section>
 
           {activeCampaign ? (
-            <section className={`rounded-3xl border p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+            <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-5">
                 <div>
                   <div className="flex items-center gap-2">
@@ -1232,19 +1232,19 @@ export default function OmnichannelAdsHub() {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                  <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className={`rounded-[24px] p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
                     <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Spend</p>
                     <p className="font-semibold">{activeCampaign.currency ? formatCurrencyValue(activeCampaign.currency, activeCampaign.metrics.spend) : '—'}</p>
                   </div>
-                  <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className={`rounded-[24px] p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
                     <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Clicks</p>
                     <p className="font-semibold">{formatCompactNumber(activeCampaign.metrics.clicks)}</p>
                   </div>
-                  <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className={`rounded-[24px] p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
                     <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>CTR</p>
                     <p className="font-semibold">{formatMetricValue(activeCampaign.metrics.ctr)}%</p>
                   </div>
-                  <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className={`rounded-[24px] p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
                     <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>ROAS</p>
                     <p className="font-semibold">{activeCampaign.metrics.roas == null ? '—' : `${formatMetricValue(activeCampaign.metrics.roas)}x`}</p>
                   </div>
@@ -1253,7 +1253,7 @@ export default function OmnichannelAdsHub() {
 
               <div className="grid xl:grid-cols-[1.05fr_1.25fr] gap-6">
                 <div className="space-y-4">
-                  <div className={`rounded-2xl border ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className={`rounded-2xl border ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                     <div className="px-4 py-3 border-b border-inherit">
                       <p className="font-semibold">Ads inside campaign</p>
                     </div>
@@ -1315,7 +1315,7 @@ export default function OmnichannelAdsHub() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+                  <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
                     <div className="flex items-center justify-between gap-3 mb-4">
                       <div>
                         <p className="font-semibold">Selected ad analytics</p>
@@ -1340,7 +1340,7 @@ export default function OmnichannelAdsHub() {
                           <button
                             type="button"
                             onClick={handleExportAdAnalytics}
-                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
                             title="Export timeline dan breakdown ad ini ke CSV"
                           >
                             <Download size={15} />
@@ -1360,25 +1360,25 @@ export default function OmnichannelAdsHub() {
                         </div>
 
                         <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                          <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                          <div className={`rounded-[24px] p-3 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'bg-white ring-1 ring-slate-900/5'}`}>
                             <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Impressions</p>
                             <p className="font-semibold">{formatCompactNumber(selectedAdAnalytics.summary.impressions)}</p>
                           </div>
-                          <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                          <div className={`rounded-[24px] p-3 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'bg-white ring-1 ring-slate-900/5'}`}>
                             <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Clicks</p>
                             <p className="font-semibold">{formatCompactNumber(selectedAdAnalytics.summary.clicks)}</p>
                           </div>
-                          <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                          <div className={`rounded-[24px] p-3 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'bg-white ring-1 ring-slate-900/5'}`}>
                             <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>CTR</p>
                             <p className="font-semibold">{formatMetricValue(selectedAdAnalytics.summary.ctr)}%</p>
                           </div>
-                          <div className={`rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                          <div className={`rounded-[24px] p-3 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'bg-white ring-1 ring-slate-900/5'}`}>
                             <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>ROAS</p>
                             <p className="font-semibold">{selectedAdAnalytics.summary.roas == null ? '—' : `${formatMetricValue(selectedAdAnalytics.summary.roas)}x`}</p>
                           </div>
                         </div>
 
-                        <div className={`rounded-2xl border ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                        <div className={`rounded-2xl border ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'bg-white ring-1 ring-slate-900/5'}`}>
                           <div className="px-4 py-3 border-b border-inherit">
                             <p className="font-semibold">Daily timeline</p>
                           </div>
@@ -1414,7 +1414,7 @@ export default function OmnichannelAdsHub() {
                         </div>
 
                         {dailyChartData.length > 0 ? (
-                          <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                          <div className={`rounded-[24px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'bg-white ring-1 ring-slate-900/5'}`}>
                             <div className="flex items-center gap-2 mb-4">
                               <p className="font-semibold">Performance chart</p>
                               <FieldHelp title="Performance chart" description="Visual cepat untuk melihat pola spend, clicks, dan conversions per hari tanpa harus membaca tabel satu per satu." />
@@ -1450,7 +1450,7 @@ export default function OmnichannelAdsHub() {
                         ) : null}
 
                         {availableBreakdowns.length > 0 ? (
-                          <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-gray-200 bg-white'}`}>
+                          <div className={`rounded-[24px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'bg-white ring-1 ring-slate-900/5'}`}>
                             <div className="flex items-center gap-2 mb-4">
                               <p className="font-semibold">Breakdowns</p>
                               <FieldHelp title="Breakdowns" description="Breakdown yang tersedia bergantung pada platform. Meta dan TikTok biasanya paling kaya di bagian ini." />
@@ -1458,7 +1458,7 @@ export default function OmnichannelAdsHub() {
 
                             <div className="grid xl:grid-cols-2 gap-4">
                               {availableBreakdowns.map(([dimension, rows]) => (
-                                <div key={dimension} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
+                                <div key={dimension} className={`rounded-[24px] p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
                                   <p className="font-semibold">{breakdownLabels[dimension] || dimension}</p>
                                   <div className="mt-3 space-y-2">
                                     {rows.slice(0, 5).map((row, index) => {

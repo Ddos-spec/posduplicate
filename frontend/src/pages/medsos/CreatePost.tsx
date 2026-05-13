@@ -116,7 +116,7 @@ export default function CreatePost() {
 
   return (
     <div className="min-h-[calc(100vh-100px)] grid xl:grid-cols-2 gap-6">
-      <div className={`p-6 rounded-2xl border flex flex-col ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <div className={`p-6 rounded-2xl border flex flex-col ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="mb-6">
           <div className="flex items-center gap-2">
             <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Omnichannel Post Composer</h2>
@@ -180,7 +180,7 @@ export default function CreatePost() {
         </div>
 
         <div className="mb-4">
-          <div className={`rounded-xl p-4 border ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+          <div className={`rounded-xl p-4 border ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
             <div className="flex items-center gap-2 mb-2">
               <CalendarClock size={16} className="text-blue-500" />
               <p className="font-semibold text-sm">Jadwal Publish</p>
@@ -206,7 +206,7 @@ export default function CreatePost() {
           </div>
           
           {/* AI Caption Tool */}
-          <div className={`mb-4 p-4 rounded-2xl border-2 border-dashed ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-blue-100 bg-blue-50/50'}`}>
+          <div className={`mb-4 p-4 rounded-2xl border-2 border-dashed ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-blue-100 bg-blue-50/50'}`}>
             <div className="flex items-center gap-2 mb-3">
               <Sparkles size={16} className="text-purple-500" />
               <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">AI Caption Generator</span>
@@ -216,7 +216,7 @@ export default function CreatePost() {
                 value={aiPrompt}
                 onChange={e => setAiPrompt(e.target.value)}
                 placeholder="Tulis instruksi... (misal: Bikin caption promo diskon 50%)"
-                className={`flex-1 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200'}`}
+                className={`flex-1 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`}
               />
               <button 
                 onClick={handleGenerateAi}
@@ -257,7 +257,7 @@ export default function CreatePost() {
           <button
             onClick={() => submitPost(false, true)}
             disabled={saving}
-            className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60"
+            className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-60"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Publish Now</>}
           </button>
