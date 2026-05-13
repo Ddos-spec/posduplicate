@@ -170,6 +170,12 @@ export default function MedsosDashboard() {
     { icon: Settings, label: 'Settings', helper: 'Konfigurasi workspace', path: `${base}/settings`, color: 'text-slate-500' },
   ];
 
+  const cardBase = `relative overflow-hidden rounded-[24px] transition-all duration-300 ${
+    isDark 
+      ? 'bg-[#111318] ring-1 ring-white/10 hover:ring-white/20' 
+      : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5 hover:shadow-[0_8px_16px_rgb(0,0,0,0.06)] hover:ring-slate-900/10'
+  }`;
+
   if (!isDemo && loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
@@ -178,46 +184,49 @@ export default function MedsosDashboard() {
     );
   }
 
-  const card = `rounded-2xl border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`;
-
   return (
-    <div className="space-y-5">
-      {/* Hero */}
-      <div className={`rounded-3xl border p-5 md:p-6 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-blue-50 bg-white shadow-sm'}`}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <MyCommerSocialLogo size={44} className="shadow-lg shadow-blue-500/20 shrink-0" />
+    <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Hero Section */}
+      <div className={`relative overflow-hidden rounded-[32px] p-6 md:p-8 ${
+        isDark ? 'bg-gradient-to-br from-blue-900/20 to-[#111318] ring-1 ring-white/10' : 'bg-gradient-to-br from-blue-50 to-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'
+      }`}>
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <MyCommerSocialLogo size={48} className="shadow-2xl shadow-blue-500/30 shrink-0 rounded-2xl" />
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>MyCommerSocial</h1>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className={`text-2xl md:text-3xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>MyCommerSocial</h1>
                 {previewMode ? (
-                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                    Preview
+                  <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                    Preview Mode
                   </span>
                 ) : (
-                  <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                    Active
+                  <span className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    Live Active
                   </span>
                 )}
               </div>
-              <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Omnichannel — WA · Social · Marketplace · Ads
+              <p className={`text-sm mt-1 font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Omnichannel Workspace — WA · Social · Marketplace · Ads
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => navigate(`${base}/connections`)}
-              className={`flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold transition ${isDark ? 'border-slate-600 hover:bg-slate-700' : 'border-gray-200 hover:bg-gray-50'}`}
+              className={`flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-bold transition-all active:scale-95 ${
+                isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
+              }`}
             >
-              <PlugZap size={15} />
+              <PlugZap size={16} />
               Connections
             </button>
             <button
               onClick={() => navigate(`${base}/create`)}
-              className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              className="flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 active:scale-95"
             >
-              <Zap size={15} />
+              <Zap size={16} />
               Create Post
             </button>
           </div>
@@ -225,49 +234,54 @@ export default function MedsosDashboard() {
       </div>
 
       {/* Status cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {statusCards.map((card_) => (
-          <div key={card_.label} className={`${card} p-4 flex flex-col gap-3`}>
+          <div key={card_.label} className={`${cardBase} p-5 flex flex-col gap-4 group cursor-pointer`} onClick={card_.action}>
             <div className="flex items-start justify-between gap-2">
-              <div className={`rounded-xl p-2.5 ${isDark ? 'bg-slate-700' : 'bg-gray-50'}`}>
-                <card_.icon size={17} className={card_.level === 'ok' ? 'text-emerald-500' : card_.level === 'warn' ? 'text-amber-500' : 'text-gray-400'} />
+              <div className={`rounded-2xl p-3 transition-colors ${
+                isDark ? 'bg-white/5 group-hover:bg-white/10' : 'bg-slate-50 group-hover:bg-slate-100'
+              }`}>
+                <card_.icon size={20} className={card_.level === 'ok' ? 'text-emerald-500' : card_.level === 'warn' ? 'text-amber-500' : 'text-slate-400'} />
               </div>
               <StatusDot level={card_.level} />
             </div>
             <div>
-              <p className={`text-xs uppercase tracking-wide font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card_.label}</p>
-              <p className="mt-1 text-2xl font-bold">{card_.value}</p>
-              <p className={`mt-1 text-xs leading-snug ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card_.helper}</p>
+              <p className={`text-[10px] uppercase tracking-widest font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{card_.label}</p>
+              <p className="mt-1 text-3xl font-black tracking-tight">{card_.value}</p>
+              <p className={`mt-2 text-xs font-medium leading-relaxed line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{card_.helper}</p>
             </div>
-            <button
-              onClick={card_.action}
-              className={`mt-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${isDark ? 'bg-slate-700 hover:bg-slate-600' : 'bg-gray-50 hover:bg-gray-100'}`}
-            >
+            <div className={`mt-auto flex items-center gap-1.5 text-xs font-bold transition-transform group-hover:translate-x-1 ${
+              isDark ? 'text-blue-400' : 'text-blue-600'
+            }`}>
               {card_.actionLabel}
-              <ArrowRight size={12} />
-            </button>
+              <ArrowRight size={14} />
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="grid xl:grid-cols-[1fr_320px] gap-5">
+      <div className="grid xl:grid-cols-[1fr_360px] gap-6">
         {/* Quick actions */}
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles size={16} className="text-blue-500" />
-            <h2 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Quick actions</h2>
+        <div className={`${cardBase} p-6`}>
+          <div className="flex items-center gap-2 mb-6">
+            <Sparkles size={18} className="text-blue-500" />
+            <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Quick Actions</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {quickActions.map((action) => (
               <button
                 key={action.label}
                 onClick={() => navigate(action.path)}
-                className={`flex flex-col items-start gap-2 rounded-2xl border p-3.5 text-left transition hover:scale-[1.01] ${isDark ? 'border-slate-700 bg-slate-900/50 hover:bg-slate-700' : 'border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm'}`}
+                className={`flex flex-col items-start gap-3 rounded-2xl p-4 text-left transition-all duration-200 active:scale-95 ${
+                  isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-50 hover:bg-slate-100'
+                }`}
               >
-                <action.icon size={18} className={action.color} />
+                <div className={`p-2 rounded-xl bg-white shadow-sm dark:bg-slate-800 ${action.color}`}>
+                   <action.icon size={18} />
+                </div>
                 <div>
-                  <p className="text-sm font-semibold">{action.label}</p>
-                  <p className={`text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{action.helper}</p>
+                  <p className="text-sm font-bold tracking-tight">{action.label}</p>
+                  <p className={`text-[11px] font-medium mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{action.helper}</p>
                 </div>
               </button>
             ))}
@@ -275,26 +289,28 @@ export default function MedsosDashboard() {
         </div>
 
         {/* Workspace health */}
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-4">
-            <Activity size={16} className="text-emerald-500" />
-            <h2 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Workspace health</h2>
+        <div className={`${cardBase} p-6`}>
+          <div className="flex items-center gap-2 mb-6">
+            <Activity size={18} className="text-emerald-500" />
+            <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Workspace Health</h2>
           </div>
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {[
               { label: 'WA Inbox', ok: isDemo || Boolean(waStatus?.reachable), note: isDemo ? 'Live' : waStatus?.reachable ? 'Responding' : waStatus?.configured ? 'Needs check' : 'Not configured' },
               { label: 'Social accounts', ok: isDemo || socialAccounts.length > 0, note: previewMode ? 'None yet' : `${socialAccounts.length} connected` },
               { label: 'Ads accounts', ok: isDemo || adsAccounts.length > 0, note: previewMode ? 'None yet' : `${adsAccounts.length} connected` },
               { label: 'Marketplace hub', ok: isDemo || Boolean(marketplaceStatus?.reachable), note: isDemo ? 'Active' : marketplaceStatus?.reachable ? 'Healthy' : marketplaceStatus?.configured ? 'Needs check' : 'Not configured' },
             ].map((item) => (
-              <div key={item.label} className={`flex items-center justify-between rounded-xl p-3 ${isDark ? 'bg-slate-900/50' : 'bg-gray-50'}`}>
-                <div className="flex items-center gap-2.5">
+              <div key={item.label} className={`flex items-center justify-between rounded-2xl p-3.5 transition-colors ${
+                isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-50 hover:bg-slate-100'
+              }`}>
+                <div className="flex items-center gap-3">
                   {item.ok
-                    ? <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
-                    : <XCircle size={15} className="text-gray-400 shrink-0" />}
-                  <span className="text-sm font-medium">{item.label}</span>
+                    ? <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                    : <XCircle size={16} className="text-slate-400 shrink-0" />}
+                  <span className="text-sm font-bold tracking-tight">{item.label}</span>
                 </div>
-                <span className={`text-xs ${item.ok ? 'text-emerald-500' : isDark ? 'text-gray-500' : 'text-gray-400'}`}>{item.note}</span>
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${item.ok ? 'text-emerald-500' : isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.note}</span>
               </div>
             ))}
           </div>
@@ -302,44 +318,48 @@ export default function MedsosDashboard() {
       </div>
 
       {/* Connected channels */}
-      <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <PlugZap size={16} className="text-blue-500" />
-            <h2 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Channel aktif</h2>
+      <div className={`${cardBase} p-6`}>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+               <PlugZap size={18} />
+            </div>
+            <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Active Channels</h2>
             {previewMode ? (
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${isDark ? 'bg-slate-700 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>preview</span>
+              <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>Preview</span>
             ) : (
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
-                {displayAccounts.length} channel
+              <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
+                {displayAccounts.length} Connected
               </span>
             )}
           </div>
           <button
             onClick={() => navigate(`${base}/connections`)}
-            className={`text-xs font-semibold ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
+            className={`text-xs font-bold tracking-wide flex items-center gap-1 transition-transform hover:translate-x-1 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}
           >
-            Kelola →
+            Manage <ArrowRight size={12} />
           </button>
         </div>
 
         {displayAccounts.length === 0 ? (
-          <div className={`rounded-xl border border-dashed p-5 text-sm text-center ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
-            Belum ada channel yang terhubung. Klik <strong>Connections</strong> untuk mulai.
+          <div className={`rounded-2xl border-2 border-dashed p-8 text-sm text-center font-medium ${isDark ? 'border-slate-700 text-slate-400 bg-white/5' : 'border-slate-200 text-slate-500 bg-slate-50'}`}>
+            Belum ada channel yang terhubung. Klik <strong className={isDark ? 'text-white' : 'text-slate-900'}>Connections</strong> untuk mulai sinkronisasi.
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {displayAccounts.map((account) => (
-              <div key={account.id} className={`flex items-center gap-3 rounded-xl border p-3 ${previewMode ? 'opacity-60' : ''} ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
-                <BrandLogo brand={resolveBrandKey(account.platform)} size={36} withRing />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{humanizePlatform(account.platform)}</p>
-                  <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {account.displayName || account.username || 'Connected'}
+              <div key={account.id} className={`flex items-center gap-4 rounded-2xl p-4 transition-all duration-200 hover:scale-[1.02] ${previewMode ? 'opacity-60' : ''} ${
+                isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-50 hover:bg-white hover:shadow-md hover:ring-1 hover:ring-slate-900/5'
+              }`}>
+                <BrandLogo brand={resolveBrandKey(account.platform)} size={40} className="shadow-sm" withRing />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold tracking-tight truncate">{humanizePlatform(account.platform)}</p>
+                  <p className={`text-[11px] font-medium truncate mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    @{account.username || account.displayName || 'Connected'}
                   </p>
                 </div>
                 {!previewMode && (
-                  <span className="ml-auto shrink-0 h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="shrink-0 h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                 )}
               </div>
             ))}
