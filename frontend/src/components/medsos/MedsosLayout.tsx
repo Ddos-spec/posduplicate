@@ -241,13 +241,25 @@ export default function MedsosLayout() {
 
       <aside className={`fixed top-0 left-0 z-40 h-screen w-64 ${asideWidthClass} transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 border-r ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
         <div className="h-full overflow-y-auto px-3 py-4 pb-40">
-          <div className={`mb-8 px-2 flex ${sidebarCollapsed ? 'justify-center' : 'items-center justify-between'}`}>
-            <div className={`flex ${sidebarCollapsed ? 'justify-center' : 'items-center gap-3'}`}>
-              <MyCommerSocialLogo size={40} className="shadow-lg shadow-blue-500/30" />
+          <div className={`mb-8 px-2 relative ${sidebarCollapsed ? 'flex justify-center mt-2' : ''}`}>
+            {/* Sidebar toggle buttons (X for mobile, PanelLeft for PC) */}
+            {!sidebarCollapsed && (
+              <button 
+                onClick={handleSidebarToggle}
+                className={`absolute top-0 right-2 z-50 p-2.5 rounded-xl transition-colors shadow-sm border ${isDark ? 'hover:bg-slate-700 text-gray-400 hover:text-white border-slate-700 bg-slate-900/50' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900 border-gray-100 bg-gray-50'}`}
+                title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+              >
+                <X className="w-6 h-6 md:hidden" />
+                <PanelLeft className="w-6 h-6 hidden md:block" />
+              </button>
+            )}
+
+            <div className={`flex flex-col ${sidebarCollapsed ? 'items-center' : 'items-start gap-3 mt-2'}`}>
+              <MyCommerSocialLogo size={sidebarCollapsed ? 40 : 48} className="shadow-lg shadow-blue-500/30" />
               {!sidebarCollapsed ? (
-                <div>
-                  <h2 className="text-lg font-bold leading-tight">MyCommerSocial</h2>
-                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <div className="pr-10">
+                  <h2 className="text-xl font-bold leading-tight">MyCommerSocial</h2>
+                  <p className={`text-xs mt-1 leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     {currentRole === 'medsos_manager'
                       ? 'Omnichannel Manager'
                       : currentRole === 'content_creator'
@@ -259,18 +271,6 @@ export default function MedsosLayout() {
                 </div>
               ) : null}
             </div>
-            
-            {/* Sidebar toggle buttons (X for mobile, PanelLeft for PC) */}
-            {!sidebarCollapsed && (
-              <button 
-                onClick={handleSidebarToggle}
-                className={`p-2.5 rounded-xl transition-colors shadow-sm border ${isDark ? 'hover:bg-slate-700 text-gray-400 hover:text-white border-slate-700 bg-slate-900/50' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900 border-gray-100 bg-gray-50'}`}
-                title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-              >
-                <X className="w-6 h-6 md:hidden" />
-                <PanelLeft className="w-6 h-6 hidden md:block" />
-              </button>
-            )}
           </div>
 
           {!sidebarCollapsed ? (
@@ -452,7 +452,10 @@ export default function MedsosLayout() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className={`fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t pb-safe md:hidden ${isDark ? 'border-slate-700 bg-slate-900/95 backdrop-blur-md' : 'border-gray-200 bg-white/95 backdrop-blur-md'}`}>
+      <nav 
+        className={`fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t pt-2 md:hidden ${isDark ? 'border-slate-700 bg-slate-900/95 backdrop-blur-md' : 'border-gray-200 bg-white/95 backdrop-blur-md'}`}
+        style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 1rem))' }}
+      >
         <button
           onClick={() => navigate(`${basePath}/dashboard`)}
           className={`flex flex-col items-center justify-center p-2.5 transition-colors ${location.pathname === `${basePath}/dashboard` ? 'text-blue-500' : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
