@@ -98,7 +98,7 @@ function renderInner(brand: BrandKey, size: number): ReactNode {
     // Tokopedia simple text logo
     return (
       <span
-        className="block font-extrabold tracking-tighter"
+        className="block font-bold tracking-tighter"
         style={{ color: '#FFFFFF', fontSize: size * 0.45, lineHeight: 1 }}
       >
         toko
@@ -110,7 +110,7 @@ function renderInner(brand: BrandKey, size: number): ReactNode {
     // Lazada simple text logo
     return (
       <span
-        className="block font-black italic tracking-tighter"
+        className="block font-bold tracking-tight italic tracking-tighter"
         style={{ color: '#FFFFFF', fontSize: size * 0.5, lineHeight: 1 }}
       >
         Laz
@@ -131,7 +131,7 @@ function renderInner(brand: BrandKey, size: number): ReactNode {
   if (brand === 'linkedin' || brand === 'linkedinads') {
     return (
       <span
-        className="block font-black lowercase"
+        className="block font-bold tracking-tight lowercase"
         style={{ color: '#FFFFFF', fontSize: size * 0.42, lineHeight: 1 }}
       >
         in
@@ -142,7 +142,7 @@ function renderInner(brand: BrandKey, size: number): ReactNode {
   if (brand === 'googlebusiness') {
     return (
       <span
-        className="block font-black"
+        className="block font-bold tracking-tight"
         style={{ color: '#1A73E8', fontSize: size * 0.42, lineHeight: 1 }}
       >
         G

@@ -208,11 +208,11 @@ function SectionHeader({
   icon: ReactNode;
 }) {
   return (
-    <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+    <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
       <div className="flex items-start gap-4">
         <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>{icon}</div>
         <div>
-          <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h1>
+          <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h1>
           <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
         </div>
       </div>
@@ -301,7 +301,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
     const isDegraded = statusCode === 'degraded';
 
     return (
-      <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <div className={`rounded-[32px] p-10 text-center ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className={`mx-auto mb-4 inline-flex rounded-2xl p-4 ${isDark ? 'bg-amber-500/20' : 'bg-amber-50'}`}>
           <AlertTriangle size={36} className="text-amber-500" />
         </div>
@@ -320,7 +320,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         </p>
 
         {isIncomplete && (
-          <div className={`mt-4 rounded-2xl border p-4 text-left text-xs ${isDark ? 'border-slate-700 bg-slate-900/50 text-gray-300' : 'border-amber-100 bg-amber-50/60 text-amber-800'}`}>
+          <div className={`mt-4 rounded-[24px] p-4 text-left text-xs ${isDark ? 'border-slate-700 bg-slate-900/50 text-gray-300' : 'border-amber-100 bg-amber-50/60 text-amber-800'}`}>
             <p className="font-semibold mb-1">Yang perlu dilengkapi:</p>
             <ul className="list-disc list-inside space-y-0.5">
               <li>API key workspace WA CRM (dari sistem WA yang digunakan)</li>
@@ -330,7 +330,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
         )}
 
         {isDegraded && (
-          <div className={`mt-4 rounded-2xl border p-4 text-left text-xs ${isDark ? 'border-slate-700 bg-slate-900/50 text-gray-300' : 'border-red-50 bg-red-50 text-red-800'}`}>
+          <div className={`mt-4 rounded-[24px] p-4 text-left text-xs ${isDark ? 'border-slate-700 bg-slate-900/50 text-gray-300' : 'border-red-50 bg-red-50 text-red-800'}`}>
             <p className="font-semibold mb-1">Info diagnostik:</p>
             <p>Status: <code>{statusCode ?? 'unknown'}</code></p>
             {crmStatus?.baseUrl && <p>URL: <code>{crmStatus.baseUrl}</code></p>}
@@ -354,7 +354,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
           <button
             type="button"
             onClick={onSetup}
-            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
           >
             <PlugZap size={18} />
             {hasStoredConfig ? 'Periksa Connections' : 'Lengkapi Setup'}
@@ -402,15 +402,15 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {statCards.map((card) => (
-          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div key={card.label} className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
             <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
-            <p className="mt-2 text-3xl font-bold">{card.value}</p>
+            <p className="mt-2 text-2xl md:text-3xl font-bold tracking-tight">{card.value}</p>
           </div>
         ))}
       </div>
 
       <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
-        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Workspace details</h3>
           <div className="grid sm:grid-cols-2 gap-3">
             {details.map((item) => (
@@ -422,7 +422,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
           </div>
         </div>
 
-        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Operasional workspace</h3>
           <div className="space-y-3 text-sm">
             {[
@@ -445,7 +445,7 @@ function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void 
               Connections
             </button>
             {crmUrl ? (
-              <a href={crmUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+              <a href={crmUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all">
                 <ExternalLink size={16} />
                 Buka inbox
               </a>
@@ -497,10 +497,10 @@ function SocialInboxLiveView({ isDark }: { isDark: boolean }) {
           description="Sambungkan akun social untuk melihat percakapan."
           icon={<Workflow size={22} />}
         />
-        <div className={`rounded-2xl border p-5 flex items-center gap-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-blue-50 border-blue-100'}`}>
+        <div className={`rounded-[24px] p-5 flex items-center gap-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-blue-50 border-blue-100'}`}>
           <PlugZap size={22} className="text-blue-500 shrink-0" />
           <p className={`text-sm flex-1 ${isDark ? 'text-gray-300' : 'text-blue-800'}`}>Belum ada akun social terhubung. Sambungkan dari <strong>Connections</strong>.</p>
-          <button type="button" onClick={() => navigate('/medsos/connections')} className="shrink-0 rounded-xl bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700">Buka Connections</button>
+          <button type="button" onClick={() => navigate('/medsos/connections')} className="shrink-0 rounded-xl bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all">Buka Connections</button>
         </div>
         <ZernioConversationPanel isDark={isDark} />
       </div>
@@ -517,7 +517,7 @@ function SocialInboxLiveView({ isDark }: { isDark: boolean }) {
       />
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 pb-1">
         {groupedPlatforms.map(([platform, platformAccounts]) => (
-          <div key={platform} className={`rounded-2xl border p-4 flex items-center gap-3 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div key={platform} className={`rounded-[24px] p-4 flex items-center gap-3 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
             <BrandLogo brand={resolveBrandKey(platform)} size={36} withRing />
             <div className="min-w-0">
               <p className="font-semibold capitalize text-sm">{platform}</p>
@@ -633,10 +633,10 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
   }
 
   return (
-    <div className={`flex flex-col xl:flex-row h-[750px] rounded-3xl border overflow-hidden ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200 shadow-xl'}`}>
+    <div className={`flex flex-col xl:flex-row h-[750px] rounded-3xl border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200 shadow-xl'}`}>
       
       {/* Column 1: Filter & Conversation List */}
-      <div className={`w-full xl:w-96 flex flex-col border-r ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-gray-100 bg-gray-50/30'}`}>
+      <div className={`w-full xl:w-96 flex flex-col border-r ${isDark ? 'bg-[#111318] ring-1 ring-white/10/50' : 'border-gray-100 bg-gray-50/30'}`}>
         <div className="p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold tracking-tight">Messages</h2>
@@ -652,14 +652,14 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
             <select
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
-              className={`flex-1 text-xs rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20 ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-700 shadow-sm'}`}
+              className={`flex-1 text-xs rounded-xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20 ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200 text-gray-700 shadow-sm'}`}
             >
               <option value="all">All platforms</option>
               {availablePlatforms.map((p) => (
                 <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
               ))}
             </select>
-            <select className={`flex-1 text-xs rounded-xl border px-3 py-2 outline-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-700 shadow-sm'}`}>
+            <select className={`flex-1 text-xs rounded-xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-3 py-2 outline-none ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200 text-gray-700 shadow-sm'}`}>
                <option>All accounts</option>
             </select>
           </div>
@@ -828,7 +828,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
             <div className={`p-6 border-t ${isDark ? 'border-slate-700 bg-slate-900' : 'border-gray-100 bg-white'}`}>
               <div className={`relative flex items-end gap-3 p-2 rounded-2xl border-2 transition-all focus-within:ring-4 ${
                 isDark 
-                  ? 'bg-slate-800 border-slate-700 focus-within:border-blue-500 focus-within:ring-blue-500/10' 
+                  ? 'bg-[#111318] ring-1 ring-white/10 focus-within:border-blue-500 focus-within:ring-blue-500/10' 
                   : 'bg-gray-50 border-gray-100 focus-within:border-blue-600 focus-within:ring-blue-600/5 shadow-inner'
               }`}>
                 <button type="button" title="Attach" className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-white text-gray-400 hover:text-gray-600 shadow-sm'}`}>
@@ -859,7 +859,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                     type="button"
                     onClick={() => void handleSend()}
                     disabled={!reply.trim() || sending}
-                    className={`shrink-0 h-11 w-11 flex items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale ${!reply.trim() ? 'bg-gray-300 dark:bg-slate-700' : 'shadow-blue-600/30'}`}
+                    className={`shrink-0 h-11 w-11 flex items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale ${!reply.trim() ? 'bg-gray-300 dark:bg-slate-700' : 'shadow-blue-600/30'}`}
                   >
                     {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                   </button>
@@ -881,7 +881,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
 
 function MarketplaceChannelCard({ channel, isDark }: { channel: MarketplaceChatChannel; isDark: boolean }) {
   return (
-    <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-gray-100 bg-gray-50'}`}>
+    <div className={`rounded-[24px] p-4 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
       <div className="flex items-center gap-3">
         <BrandLogo brand={resolveBrandKey(channel.source)} size={38} className="rounded-2xl" withRing />
         <div>
@@ -924,7 +924,7 @@ function MarketplaceInboxLiveView({ isDark }: { isDark: boolean }) {
           description="Buyer chat marketplace yang aktif akan muncul di sini setelah workspace siap."
           icon={<Store size={22} />}
         />
-        <div className={`rounded-3xl border p-10 text-center ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-[32px] p-10 text-center ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className={`mx-auto mb-4 inline-flex rounded-2xl p-4 ${isDark ? 'bg-slate-900 text-orange-300' : 'bg-orange-50 text-orange-600'}`}>
             <Store size={34} />
           </div>
@@ -935,7 +935,7 @@ function MarketplaceInboxLiveView({ isDark }: { isDark: boolean }) {
           <button
             type="button"
             onClick={() => navigate('/medsos/connections')}
-            className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+            className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
           >
             <PlugZap size={18} />
             Buka Connections
@@ -960,16 +960,16 @@ function MarketplaceInboxLiveView({ isDark }: { isDark: boolean }) {
           { label: 'Channel aktif', value: String(channels.length), helper: 'buyer chat siap masuk' },
           { label: 'Status', value: status.reachable ? 'Healthy' : 'Needs check', helper: status.message },
         ].map((card) => (
-          <div key={card.label} className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div key={card.label} className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
             <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
-            <p className="mt-2 text-2xl font-bold">{card.value}</p>
+            <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{card.value}</p>
             <p className={`mt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.helper}</p>
           </div>
         ))}
       </div>
 
       <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
-        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-4">
             <Store size={16} className="text-orange-500" />
             <h3 className="font-bold text-lg">Channel marketplace yang tampil</h3>
@@ -988,7 +988,7 @@ function MarketplaceInboxLiveView({ isDark }: { isDark: boolean }) {
           )}
         </div>
 
-        <div className={`rounded-2xl border p-5 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-4">
             <Bot size={16} className="text-blue-500" />
             <h3 className="font-bold text-lg">Alur operasional</h3>
@@ -1060,8 +1060,8 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
   });
 
   return (
-    <div className={`h-[calc(100vh-100px)] grid lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_320px] rounded-3xl border overflow-hidden ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200 shadow-sm'}`}>
-      <aside className={`border-r flex flex-col ${isDark ? 'border-slate-700 bg-slate-850' : 'border-gray-200 bg-white'}`}>
+    <div className={`h-[calc(100vh-100px)] grid lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_320px] rounded-3xl border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
+      <aside className={`border-r flex flex-col ${isDark ? 'border-slate-700 bg-slate-850' : 'bg-white ring-1 ring-slate-900/5'}`}>
         <div className="p-4 border-b dark:border-slate-700">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -1144,7 +1144,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
       </aside>
 
       <main className={`flex flex-col min-w-0 ${isDark ? 'bg-slate-900' : 'bg-slate-50'}`}>
-        <div className={`px-6 py-4 border-b ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
+        <div className={`px-6 py-4 border-b ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
           <div className="flex items-center gap-3">
             <BrandLogo brand={resolveBrandKey(selectedChat.channel)} size={44} className="rounded-2xl px-1" withRing />
             <div className="min-w-0">
@@ -1187,7 +1187,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
             </div>
           </div>
 
-          <div className={`mb-5 rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-800/70' : 'border-orange-100 bg-orange-50'}`}>
+          <div className={`mb-5 rounded-[24px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'border-orange-100 bg-orange-50'}`}>
             <div className="flex items-center gap-2 mb-2">
               <ShieldAlert size={16} className="text-orange-500" />
               <p className="font-semibold text-sm">Thread summary</p>
@@ -1219,7 +1219,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
           </div>
         </div>
 
-        <div className={`p-4 border-t ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
+        <div className={`p-4 border-t ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
           <div className="mb-3 flex flex-wrap gap-2">
             {selectedDetail.macros.map((macro) => (
               <button key={macro} type="button" className={`px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
@@ -1227,7 +1227,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
               </button>
             ))}
           </div>
-          <div className={`mb-3 rounded-2xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-gray-50'}`}>
+          <div className={`mb-3 rounded-[24px] p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-200 bg-gray-50'}`}>
             <div className="mb-2 flex items-center gap-2">
               <NotebookPen size={15} className="text-purple-500" />
               <p className="text-sm font-semibold">Internal note</p>
@@ -1248,7 +1248,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
             <button type="button" title="Emoji" className="p-2 text-gray-400 hover:text-gray-600">
               <Smile size={20} />
             </button>
-            <button type="button" title="Kirim" className="rounded-xl bg-blue-600 p-2 text-white hover:bg-blue-700">
+            <button type="button" title="Kirim" className="rounded-xl bg-blue-600 p-2 text-white hover:bg-blue-700 active:scale-95 transition-all">
               <Send size={18} />
             </button>
           </div>
@@ -1261,7 +1261,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
           <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ringkasan cepat untuk operator sebelum membalas.</p>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
+          <div className={`rounded-2xl p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
             <div className="flex items-center gap-3 mb-3">
               <BrandLogo brand={resolveBrandKey(selectedChat.channel)} size={42} className="rounded-2xl px-1" withRing />
               <div>
@@ -1282,7 +1282,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
           </div>
 
           {selectedDetail.orderContext ? (
-            <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
+            <div className={`rounded-2xl p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
               <p className="font-semibold">Order context</p>
               <div className="mt-3 space-y-2 text-sm">
                 <div className="flex justify-between"><span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Order</span><span className="font-semibold">{selectedDetail.orderContext.orderId}</span></div>
@@ -1292,7 +1292,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
             </div>
           ) : null}
 
-          <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
+          <div className={`rounded-2xl p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
             <div className="flex items-center gap-2 mb-3">
               <Bot size={16} className="text-blue-500" />
               <p className="font-semibold">Template reply</p>
@@ -1307,7 +1307,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
             </div>
           </div>
 
-          <div className={`rounded-2xl p-4 border ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'}`}>
+          <div className={`rounded-2xl p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
             <div className="flex items-center gap-2 mb-3">
               <UserRoundCheck size={16} className="text-emerald-500" />
               <p className="font-semibold">Assign to staff</p>
@@ -1336,7 +1336,7 @@ export default function MedsosInbox() {
 
   if (!isDemo) {
     return (
-      <div className={`rounded-3xl border p-6 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-100 shadow-sm'}`}>
+      <div className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         {normalizedChannel === 'social' ? (
           <SocialInboxLiveView isDark={isDark} />
         ) : normalizedChannel === 'marketplace' ? (

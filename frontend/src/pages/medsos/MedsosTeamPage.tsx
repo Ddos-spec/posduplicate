@@ -160,8 +160,8 @@ export default function MedsosTeamPage() {
     }
   };
 
-  const card = `rounded-2xl border p-5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white shadow-sm'}`;
-  const inputClass = `w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:ring-blue-500' : 'border-gray-300 bg-white focus:ring-blue-500'}`;
+  const card = `rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5 shadow-sm'}`;
+  const inputClass = `w-full rounded-xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${isDark ? 'border-slate-600 bg-slate-700 text-white focus:ring-blue-500' : 'border-gray-300 bg-white focus:ring-blue-500'}`;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -177,7 +177,7 @@ export default function MedsosTeamPage() {
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
         >
           <Plus size={16} />
           Tambah Anggota
@@ -269,7 +269,7 @@ export default function MedsosTeamPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : null}
                 Simpan
@@ -330,7 +330,7 @@ export default function MedsosTeamPage() {
                     <button
                       onClick={handleUpdatePermissions}
                       disabled={saving}
-                      className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50"
                     >
                       {saving ? <Loader2 size={14} className="animate-spin" /> : null}
                       Simpan

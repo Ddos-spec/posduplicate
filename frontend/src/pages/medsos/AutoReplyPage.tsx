@@ -35,9 +35,9 @@ export default function AutoReplyPage() {
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-3xl border p-6 md:p-8 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-100 bg-white shadow-sm'}`}>
+      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
         <div className="flex items-center gap-2 mb-6">
-          <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Comment Automations</h1>
+          <h1 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Comment Automations</h1>
           <FieldHelp title="Automations" description="Bikin bot Comment-to-DM. Otomatis kirim pesan DM kalau ada user yang komen kata kunci tertentu." />
         </div>
 
@@ -49,7 +49,7 @@ export default function AutoReplyPage() {
               value={name} 
               onChange={e => setName(e.target.value)} 
               placeholder="Komen 'INFO' kirim Link"
-              className={`w-full p-3 rounded-xl border ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200'}`} 
+              className={`w-full p-3 rounded-xl border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} 
             />
           </div>
 
@@ -60,7 +60,7 @@ export default function AutoReplyPage() {
               value={keywords} 
               onChange={e => setKeywords(e.target.value)} 
               placeholder="info, link, harga, mau"
-              className={`w-full p-3 rounded-xl border ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200'}`} 
+              className={`w-full p-3 rounded-xl border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} 
             />
           </div>
 
@@ -71,7 +71,7 @@ export default function AutoReplyPage() {
               onChange={e => setDmMessage(e.target.value)} 
               rows={3}
               placeholder="Halo! Ini link promo yang kamu minta: https://mypos.id"
-              className={`w-full p-3 rounded-xl border resize-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200'}`} 
+              className={`w-full p-3 rounded-xl border resize-none ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} 
             />
           </div>
 
@@ -82,7 +82,7 @@ export default function AutoReplyPage() {
               onChange={e => setCommentReply(e.target.value)} 
               rows={2}
               placeholder="Cek DM ya kak!"
-              className={`w-full p-3 rounded-xl border resize-none ${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200'}`} 
+              className={`w-full p-3 rounded-xl border resize-none ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} 
             />
           </div>
 
