@@ -115,7 +115,7 @@ export default function CreatePost() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-100px)] grid xl:grid-cols-2 gap-6">
+    <div className="min-h-[calc(100vh-100px)] grid xl:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className={`p-6 rounded-2xl border flex flex-col ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="mb-6">
           <div className="flex items-center gap-2">

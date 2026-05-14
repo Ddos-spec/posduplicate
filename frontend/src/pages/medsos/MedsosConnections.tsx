@@ -699,7 +699,7 @@ export default function MedsosConnections() {
   const badgeTone = isDark ? 'bg-slate-900 text-slate-200' : 'bg-slate-100 text-slate-700';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'border-blue-100 bg-white shadow-sm'}`}>
         <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
           <div className="max-w-4xl">
