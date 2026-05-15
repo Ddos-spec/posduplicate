@@ -123,6 +123,48 @@ const MODEL_PRESET_MAP: Record<Exclude<AnalysisModelPreset, 'custom'>, string> =
   deep: 'anthropic/claude-sonnet-4.5',
 };
 
+const MODEL_PRESET_OPTIONS: Array<{
+  id: AnalysisModelPreset;
+  label: string;
+  helper: string;
+  detail: string;
+}> = [
+  {
+    id: 'auto',
+    label: 'Auto',
+    helper: 'Paling aman untuk mulai',
+    detail: 'OpenRouter memilih model terbaik otomatis berdasarkan isi prompt.',
+  },
+  {
+    id: 'fast',
+    label: 'Fast',
+    helper: 'Cepat dan ringan',
+    detail: 'Cocok untuk analisis singkat saat butuh respons paling cepat.',
+  },
+  {
+    id: 'balanced',
+    label: 'Balanced',
+    helper: 'Seimbang',
+    detail: 'Cocok untuk kualitas stabil tanpa terlalu berat.',
+  },
+  {
+    id: 'deep',
+    label: 'Deep',
+    helper: 'Lebih mendalam',
+    detail: 'Cocok untuk insight yang lebih tajam dan lebih lengkap.',
+  },
+  {
+    id: 'custom',
+    label: 'Custom',
+    helper: 'Isi model sendiri',
+    detail: 'Pakai slug model OpenRouter Anda sendiri. Jika gagal, sistem akan fallback ke Auto.',
+  },
+];
+
+function getModelPresetSummary(preset: AnalysisModelPreset) {
+  return MODEL_PRESET_OPTIONS.find((item) => item.id === preset) ?? MODEL_PRESET_OPTIONS[0];
+}
+
 function inferModelPreset(model?: string): AnalysisModelPreset {
   if (!model) return 'auto';
   const entry = Object.entries(MODEL_PRESET_MAP).find(([, value]) => value === model);
@@ -624,31 +666,55 @@ export default function MedsosSettings() {
               </div>
             </label>
 
-            <label className="space-y-2">
+            <div className="space-y-3 md:col-span-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Mode model
-                <FieldHelp title="Mode model" description="Pilih mode model untuk analysis konten. Auto cocok untuk mulai cepat, sedangkan custom dipakai bila ingin mengisi model sendiri." />
+                <FieldHelp title="Mode model" description="Pilih mode model untuk analysis konten. Auto paling aman untuk mulai, sedangkan custom dipakai bila ingin mengisi slug model OpenRouter sendiri." />
               </span>
-              <select
-                value={settings.aiAnalysis.modelPreset}
-                onChange={(event) =>
-                  updateSettings((current) => ({
-                    ...current,
-                    aiAnalysis: {
-                      ...current.aiAnalysis,
-                      modelPreset: event.target.value as AnalysisModelPreset,
-                    },
-                  }))
-                }
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
-              >
-                <option value="auto">Auto</option>
-                <option value="fast">Fast</option>
-                <option value="balanced">Balanced</option>
-                <option value="deep">Deep</option>
-                <option value="custom">Custom</option>
-              </select>
-            </label>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {MODEL_PRESET_OPTIONS.map((option) => {
+                  const active = settings.aiAnalysis.modelPreset === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() =>
+                        updateSettings((current) => ({
+                          ...current,
+                          aiAnalysis: {
+                            ...current.aiAnalysis,
+                            modelPreset: option.id,
+                          },
+                        }))
+                      }
+                      className={`rounded-2xl p-4 text-left transition-all ${
+                        active
+                          ? isDark
+                            ? 'bg-blue-500/15 ring-2 ring-blue-400/70 text-white'
+                            : 'bg-blue-50 ring-2 ring-blue-500/70 text-gray-900'
+                          : isDark
+                            ? 'bg-slate-900 ring-1 ring-white/10 text-gray-300 hover:ring-white/20'
+                            : 'bg-white ring-1 ring-slate-200 text-gray-700 hover:ring-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-bold">{option.label}</span>
+                        {active ? <CheckCircle2 size={16} className="text-blue-500" /> : null}
+                      </div>
+                      <p className={`mt-2 text-xs font-semibold ${active ? (isDark ? 'text-blue-200' : 'text-blue-600') : 'text-gray-400'}`}>
+                        {option.helper}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 opacity-90">
+                        {option.detail}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className={`rounded-2xl p-4 text-xs leading-5 ${isDark ? 'bg-slate-900 text-gray-300 ring-1 ring-white/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
+                <strong>Catatan:</strong> preset Auto memakai <code className="font-mono">openrouter/auto</code>, jadi model aktual dipilih otomatis oleh OpenRouter dan nama model final akan tampil di hasil analisis.
+              </div>
+            </div>
 
             <label className="space-y-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
@@ -667,30 +733,6 @@ export default function MedsosSettings() {
                     aiAnalysis: {
                       ...current.aiAnalysis,
                       temperature: Number(event.target.value || 0),
-                    },
-                  }))
-                }
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
-              />
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-sm font-semibold inline-flex items-center gap-2">
-                Max tokens
-                <FieldHelp title="Max tokens" description="Batasi panjang hasil analysis supaya lebih ringkas dan hemat." />
-              </span>
-              <input
-                type="number"
-                min={200}
-                max={4000}
-                step={50}
-                value={settings.aiAnalysis.maxTokens}
-                onChange={(event) =>
-                  updateSettings((current) => ({
-                    ...current,
-                    aiAnalysis: {
-                      ...current.aiAnalysis,
-                      maxTokens: Number(event.target.value || 0),
                     },
                   }))
                 }
@@ -805,13 +847,13 @@ export default function MedsosSettings() {
             </div>
             <div className="space-y-3 text-sm">
               <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
-                Mode model aktif: <strong>{settings.aiAnalysis.modelPreset}</strong>
+                Mode model aktif: <strong>{getModelPresetSummary(settings.aiAnalysis.modelPreset).label}</strong>
               </div>
               <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
                 Temperature: <strong>{settings.aiAnalysis.temperature}</strong>
               </div>
               <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
-                Max tokens: <strong>{settings.aiAnalysis.maxTokens}</strong>
+                Model target: <strong>{settings.aiAnalysis.modelPreset === 'custom' ? (settings.aiAnalysis.customModel || 'Belum diisi') : MODEL_PRESET_MAP[settings.aiAnalysis.modelPreset as Exclude<AnalysisModelPreset, 'custom'>]}</strong>
               </div>
               <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
                 Generate analysis hanya berjalan saat tombol di halaman Analytics ditekan.
