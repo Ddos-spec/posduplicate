@@ -56,10 +56,19 @@ type AnalysisRequestInput =
 
 type ChatCompletionResponse = {
   model?: string;
+  output_text?: string;
+  output?: Array<{
+    content?: Array<{
+      text?: string;
+      type?: string;
+    }>;
+  }>;
   error?: { message?: string } | string;
   choices?: Array<{
+    text?: string;
     message?: {
       content?: string | Array<{ type?: string; text?: string }>;
+      reasoning?: string;
     };
   }>;
 };
@@ -113,14 +122,77 @@ function firstParagraph(text: string) {
   return text.split(/\n+/).map((item) => item.trim()).filter(Boolean)[0] || text;
 }
 
-function readMessageContent(content: ChatMessageContent) {
+function readMessageContent(content: ChatMessageContent | { text?: string } | null) {
   if (typeof content === 'string') {
     return content.trim();
   }
   if (Array.isArray(content)) {
     return content.map((part) => part?.text || '').join('\n').trim();
   }
+  if (content && typeof content === 'object' && typeof content.text === 'string') {
+    return content.text.trim();
+  }
   return '';
+}
+
+function extractAnalysisText(data: ChatCompletionResponse) {
+  const choice = data.choices?.[0];
+
+  const directMessage = readMessageContent(choice?.message?.content);
+  if (directMessage) return directMessage;
+
+  const directText = typeof choice?.text === 'string' ? choice.text.trim() : '';
+  if (directText) return directText;
+
+  const reasoningText = typeof choice?.message?.reasoning === 'string' ? choice.message.reasoning.trim() : '';
+  if (reasoningText) return reasoningText;
+
+  const outputText = typeof data.output_text === 'string' ? data.output_text.trim() : '';
+  if (outputText) return outputText;
+
+  if (Array.isArray(data.output)) {
+    const joined = data.output
+      .flatMap((item) => item?.content ?? [])
+      .map((part) => part?.text || '')
+      .join('\n')
+      .trim();
+
+    if (joined) return joined;
+  }
+
+  return '';
+}
+
+async function requestAnalysisCompletion(
+  apiKey: string,
+  requestBody: Record<string, unknown>,
+  frontendBase: string,
+) {
+  const response = await fetch(OPENROUTER_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      ...(frontendBase ? { 'HTTP-Referer': frontendBase } : {}),
+      'X-Title': 'MyCommerSocial',
+    },
+    body: JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(20000),
+  });
+
+  const data = (await response.json()) as ChatCompletionResponse;
+
+  if (!response.ok) {
+    const message = typeof data.error === 'string'
+      ? data.error
+      : data.error?.message || `Analysis request gagal (${response.status})`;
+    throw new Error(message);
+  }
+
+  return {
+    data,
+    analysis: extractAnalysisText(data),
+  };
 }
 
 function buildPrompt(post: PromptPostShape) {
@@ -265,37 +337,27 @@ export async function generatePostPerformanceAnalysis(tenantId: number, input: A
   };
 
   const frontendBase = (process.env.FRONTEND_APP_URL || process.env.CORS_ORIGIN || '').split(',')[0].trim();
+  let completion = await requestAnalysisCompletion(apiKey, requestBody, frontendBase);
+  let analysis = completion.analysis;
+  let resolvedModel = completion.data.model || String(requestBody.model);
 
-  const response = await fetch(OPENROUTER_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      ...(frontendBase ? { 'HTTP-Referer': frontendBase } : {}),
-      'X-Title': 'MyCommerSocial',
-    },
-    body: JSON.stringify(requestBody),
-    signal: AbortSignal.timeout(20000),
-  });
-
-  const data = (await response.json()) as ChatCompletionResponse;
-
-  if (!response.ok) {
-    const message = typeof data.error === 'string'
-      ? data.error
-      : data.error?.message || `Analysis request gagal (${response.status})`;
-    throw new Error(message);
+  if (!analysis && requestBody.model !== DEFAULT_MODEL) {
+    completion = await requestAnalysisCompletion(apiKey, {
+      ...requestBody,
+      model: DEFAULT_MODEL,
+    }, frontendBase);
+    analysis = completion.analysis;
+    resolvedModel = completion.data.model || DEFAULT_MODEL;
   }
 
-  const analysis = readMessageContent(data.choices?.[0]?.message?.content);
   if (!analysis) {
-    throw new Error('Jawaban analysis tidak tersedia.');
+    throw new Error(`Model analysis mengembalikan respons kosong. Coba preset Auto atau model chat OpenRouter lain.`);
   }
 
   return {
     analysis,
     generatedAt: new Date().toISOString(),
-    model: data.model || requestBody.model,
+    model: resolvedModel,
   };
 }
 
