@@ -283,6 +283,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
   const [analysisResult, setAnalysisResult] = useState<SocialPostAnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+  const analysisPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isDemo) return;
@@ -329,18 +330,28 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
 
   const selectedPost = useMemo(() => displayPosts.find(p => p.id === selectedPostId), [displayPosts, selectedPostId]);
 
-  const handleGenerateAnalysis = async () => {
-    if (!selectedPost || analysisLoading) return;
+  const runAnalysis = async (post: SocialPost, options?: { scrollToPanel?: boolean }) => {
+    if (analysisLoading) return;
+    if (options?.scrollToPanel) {
+      requestAnimationFrame(() => {
+        analysisPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
     setAnalysisLoading(true);
     setAnalysisError(null);
     try {
-      const res = await generateSocialPostAnalysis(selectedPost);
+      const res = await generateSocialPostAnalysis(post);
       setAnalysisResult(res);
     } catch (err: any) {
       setAnalysisError(err?.response?.data?.error?.message || err.message || 'Gagal membuat analisis AI');
     } finally {
       setAnalysisLoading(false);
     }
+  };
+
+  const handleGenerateAnalysis = async () => {
+    if (!selectedPost) return;
+    await runAnalysis(selectedPost);
   };
 
   const aggregate = useMemo(() => {
@@ -635,12 +646,26 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
                         </div>
                       ))}
                    </div>
+                   <button
+                     type="button"
+                     onClick={(event) => {
+                       event.stopPropagation();
+                       setSelectedPostId(post.id);
+                       setAnalysisResult(null);
+                       void runAnalysis(post, { scrollToPanel: true });
+                     }}
+                     disabled={analysisLoading || previewMode}
+                     className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 lg:hidden"
+                   >
+                     {analysisLoading && selectedPostId === post.id ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                     <span>Analisis AI</span>
+                   </button>
                 </div>
               ))}
            </div>
 
            {/* AI Analysis Panel */}
-           <aside className={`rounded-[32px] p-6 flex flex-col ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
+           <aside ref={analysisPanelRef} className={`rounded-[32px] p-6 flex flex-col ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
               <div className="flex items-center justify-between mb-6">
                  <div className="flex items-center gap-2">
                     <Sparkles size={18} className="text-purple-500" />
