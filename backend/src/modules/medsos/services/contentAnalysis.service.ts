@@ -346,7 +346,6 @@ export async function generatePostPerformanceAnalysis(tenantId: number, input: A
   const requestBody = {
     model: settings.model || DEFAULT_MODEL,
     temperature: settings.temperature ?? DEFAULT_TEMPERATURE,
-    max_tokens: settings.maxTokens ?? DEFAULT_MAX_TOKENS,
     messages,
   };
 
