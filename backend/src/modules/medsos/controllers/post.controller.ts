@@ -538,13 +538,29 @@ export const generatePostAnalysis = async (req: Request, res: Response, next: Ne
       });
     }
 
-    const analysis = await generatePostPerformanceAnalysis(tenantId, postId);
+    const analysis = await generatePostPerformanceAnalysis(tenantId, {
+      postId,
+      postSnapshot: req.body?.postSnapshot,
+    });
 
     return res.json({
       success: true,
       data: analysis,
     });
-  } catch (error) {
+  } catch (error: any) {
+    const message = error?.message || 'Gagal membuat analisis.';
+    if (message === 'Post tidak ditemukan.') {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'POST_NOT_FOUND', message },
+      });
+    }
+    if (message === 'API key analysis belum disimpan di settings.') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'ANALYSIS_API_KEY_MISSING', message },
+      });
+    }
     return next(error);
   }
 };

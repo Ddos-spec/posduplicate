@@ -23,6 +23,37 @@ type PostAnalysisResult = {
   model: string;
 };
 
+type PromptAnalyticsShape = {
+  impressions?: number | null;
+  reach?: number | null;
+  likes?: number | null;
+  comments?: number | null;
+  shares?: number | null;
+  saves?: number | null;
+  engagement_rate?: number | null;
+};
+
+type PromptPostShape = {
+  content?: string | null;
+  platform?: string | null;
+  status?: string | null;
+  scheduled_at?: string | Date | null;
+  published_at?: string | Date | null;
+  external_id?: string | null;
+  social_accounts?: {
+    account_name?: string | null;
+    platform?: string | null;
+  } | null;
+  social_analytics?: PromptAnalyticsShape | null;
+};
+
+type AnalysisRequestInput =
+  | number
+  | {
+      postId?: number | null;
+      postSnapshot?: unknown;
+    };
+
 type ChatCompletionResponse = {
   model?: string;
   error?: { message?: string } | string;
@@ -92,7 +123,7 @@ function readMessageContent(content: ChatMessageContent) {
   return '';
 }
 
-function buildPrompt(post: any) {
+function buildPrompt(post: PromptPostShape) {
   const analytics = post.social_analytics || {};
   const channelName = post.social_accounts?.account_name || post.platform || 'social';
   const caption = normalizeContent(post.content || '');
@@ -129,7 +160,39 @@ function buildPrompt(post: any) {
   ].join('\n');
 }
 
-export async function generatePostPerformanceAnalysis(tenantId: number, postId: number): Promise<PostAnalysisResult> {
+function toPromptPostSnapshot(raw: unknown): PromptPostShape | null {
+  if (!isPlainObject(raw)) {
+    return null;
+  }
+
+  return {
+    content: typeof raw.content === 'string' ? raw.content : '',
+    platform: typeof raw.platform === 'string' ? raw.platform : 'instagram',
+    status: typeof raw.status === 'string' ? raw.status : 'published',
+    scheduled_at: typeof raw.scheduled_at === 'string' || raw.scheduled_at instanceof Date ? raw.scheduled_at : null,
+    published_at: typeof raw.published_at === 'string' || raw.published_at instanceof Date ? raw.published_at : null,
+    external_id: typeof raw.external_id === 'string' ? raw.external_id : null,
+    social_accounts: isPlainObject(raw.social_accounts)
+      ? {
+          account_name: typeof raw.social_accounts.account_name === 'string' ? raw.social_accounts.account_name : null,
+          platform: typeof raw.social_accounts.platform === 'string' ? raw.social_accounts.platform : null,
+        }
+      : null,
+    social_analytics: isPlainObject(raw.social_analytics)
+      ? {
+          impressions: Number(raw.social_analytics.impressions ?? 0) || 0,
+          reach: Number(raw.social_analytics.reach ?? 0) || 0,
+          likes: Number(raw.social_analytics.likes ?? 0) || 0,
+          comments: Number(raw.social_analytics.comments ?? 0) || 0,
+          shares: Number(raw.social_analytics.shares ?? 0) || 0,
+          saves: Number(raw.social_analytics.saves ?? 0) || 0,
+          engagement_rate: Number(raw.social_analytics.engagement_rate ?? 0) || 0,
+        }
+      : null,
+  };
+}
+
+export async function generatePostPerformanceAnalysis(tenantId: number, input: AnalysisRequestInput): Promise<PostAnalysisResult> {
   const tenant = await prisma.tenants.findUnique({
     where: { id: tenantId },
     select: {
@@ -148,21 +211,32 @@ export async function generatePostPerformanceAnalysis(tenantId: number, postId: 
     throw new Error('API key analysis belum disimpan di settings.');
   }
 
-  const post = await prisma.social_posts.findFirst({
-    where: {
-      id: postId,
-      tenant_id: tenantId,
-    },
-    include: {
-      social_accounts: {
-        select: {
-          account_name: true,
-          platform: true,
-        },
+  const parsedInput = typeof input === 'number' ? { postId: input, postSnapshot: undefined } : input;
+  const postId = typeof parsedInput.postId === 'number' ? parsedInput.postId : Number(parsedInput.postId);
+
+  let post: PromptPostShape | null = null;
+
+  if (Number.isFinite(postId) && postId > 0) {
+    post = (await prisma.social_posts.findFirst({
+      where: {
+        id: postId,
+        tenant_id: tenantId,
       },
-      social_analytics: true,
-    },
-  });
+      include: {
+        social_accounts: {
+          select: {
+            account_name: true,
+            platform: true,
+          },
+        },
+        social_analytics: true,
+      },
+    })) as PromptPostShape | null;
+  }
+
+  if (!post && parsedInput.postSnapshot) {
+    post = toPromptPostSnapshot(parsedInput.postSnapshot);
+  }
 
   if (!post) {
     throw new Error('Post tidak ditemukan.');

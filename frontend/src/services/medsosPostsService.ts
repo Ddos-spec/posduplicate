@@ -138,8 +138,26 @@ export interface SocialPostAnalysisResult {
   model: string;
 }
 
-export async function generateSocialPostAnalysis(postId: number): Promise<SocialPostAnalysisResult> {
-  const { data } = await api.post(`/medsos/posts/${postId}/analysis`);
+export async function generateSocialPostAnalysis(post: number | SocialPost): Promise<SocialPostAnalysisResult> {
+  const postId = typeof post === 'number' ? post : post.id;
+  const payload =
+    typeof post === 'number'
+      ? undefined
+      : {
+          postSnapshot: {
+            content: post.content,
+            media_urls: post.media_urls,
+            platform: post.platform,
+            scheduled_at: post.scheduled_at,
+            published_at: post.published_at,
+            status: post.status,
+            external_id: post.external_id,
+            social_accounts: post.social_accounts ?? null,
+            social_analytics: post.social_analytics ?? null,
+          },
+        };
+
+  const { data } = await api.post(`/medsos/posts/${postId}/analysis`, payload);
   return data.data as SocialPostAnalysisResult;
 }
 

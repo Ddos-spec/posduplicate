@@ -334,10 +334,10 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
     setAnalysisLoading(true);
     setAnalysisError(null);
     try {
-      const res = await generateSocialPostAnalysis(selectedPost.id);
+      const res = await generateSocialPostAnalysis(selectedPost);
       setAnalysisResult(res);
     } catch (err: any) {
-      setAnalysisError(err.message || 'Gagal membuat analisis AI');
+      setAnalysisError(err?.response?.data?.error?.message || err.message || 'Gagal membuat analisis AI');
     } finally {
       setAnalysisLoading(false);
     }
