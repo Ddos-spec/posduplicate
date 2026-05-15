@@ -3,7 +3,7 @@ import prisma from '../../../utils/prisma';
 const OPENROUTER_ENDPOINT = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_MODEL = 'openrouter/auto';
 const DEFAULT_TEMPERATURE = 0.3;
-const DEFAULT_MAX_TOKENS = 900;
+const DEFAULT_MAX_TOKENS = 1200;
 
 type TenantAiAnalysisSettings = {
   apiKey?: string;
@@ -135,20 +135,30 @@ function readMessageContent(content: ChatMessageContent | { text?: string } | nu
   return '';
 }
 
+function sanitizeAnalysisText(text: string) {
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .split('\n')
+    .map((line) => line.replace(/^\s*[•\-*]+\s+/g, '').replace(/^#{1,6}\s*/g, '').trimEnd())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function extractAnalysisText(data: ChatCompletionResponse) {
   const choice = data.choices?.[0];
 
   const directMessage = readMessageContent(choice?.message?.content);
-  if (directMessage) return directMessage;
+  if (directMessage) return sanitizeAnalysisText(directMessage);
 
   const directText = typeof choice?.text === 'string' ? choice.text.trim() : '';
-  if (directText) return directText;
-
-  const reasoningText = typeof choice?.message?.reasoning === 'string' ? choice.message.reasoning.trim() : '';
-  if (reasoningText) return reasoningText;
+  if (directText) return sanitizeAnalysisText(directText);
 
   const outputText = typeof data.output_text === 'string' ? data.output_text.trim() : '';
-  if (outputText) return outputText;
+  if (outputText) return sanitizeAnalysisText(outputText);
 
   if (Array.isArray(data.output)) {
     const joined = data.output
@@ -157,7 +167,7 @@ function extractAnalysisText(data: ChatCompletionResponse) {
       .join('\n')
       .trim();
 
-    if (joined) return joined;
+    if (joined) return sanitizeAnalysisText(joined);
   }
 
   return '';
@@ -203,14 +213,18 @@ function buildPrompt(post: PromptPostShape) {
 
   return [
     'Anda adalah analis performa konten untuk dashboard bisnis.',
-    'Tulis jawaban dalam Bahasa Indonesia yang ringkas, langsung, dan fokus tindakan.',
+    'Tulis jawaban final dalam Bahasa Indonesia yang ringkas, langsung, fokus tindakan, dan mudah dibaca.',
+    'Jangan tampilkan proses berpikir, draft, langkah analisis, atau reasoning internal.',
+    'Jangan gunakan markdown atau simbol dekoratif seperti **, *, #, bullet, atau backtick.',
+    'Tulis tepat 4 bagian bernomor: 1. Ringkasan singkat, 2. Yang bekerja, 3. Yang perlu dibenahi, 4. Rekomendasi eksperimen berikutnya.',
+    'Setiap bagian harus 1-3 kalimat pendek dan jangan terpotong di tengah kalimat.',
     'Hindari pembukaan panjang dan hindari istilah teknis yang tidak perlu.',
     '',
     'Gunakan format ini:',
-    '1. Ringkasan singkat',
-    '2. Yang bekerja',
-    '3. Yang perlu dibenahi',
-    '4. Rekomendasi eksperimen berikutnya',
+    '1. Ringkasan singkat: ...',
+    '2. Yang bekerja: ...',
+    '3. Yang perlu dibenahi: ...',
+    '4. Rekomendasi eksperimen berikutnya: ...',
     '',
     `Platform: ${post.platform}`,
     `Akun/channel: ${channelName}`,
