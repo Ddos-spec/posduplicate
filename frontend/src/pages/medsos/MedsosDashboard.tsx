@@ -4,6 +4,17 @@ import { useThemeStore } from '../../store/themeStore';
 import MyCommerSocialLogo from '../../components/medsos/MyCommerSocialLogo';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import {
+  McsAdsIcon,
+  McsAnalyticsIcon,
+  McsConnectionsIcon,
+  McsInboxIcon,
+  McsMarketplaceIcon,
+  McsPlannerIcon,
+  McsSettingsIcon,
+  McsSocialIcon,
+  McsTeamIcon,
+} from '../../components/medsos/MyCommerSocialIcons';
+import {
   getMyCommerSocialIntegrationHub,
   type ManagedIntegrationConnector,
 } from '../../services/myCommerSocialIntegrations';
@@ -19,21 +30,11 @@ import { isZernioAdsAccount } from '../../data/zernioCatalog';
 import {
   Activity,
   ArrowRight,
-  BarChart3,
-  Bot,
-  Calendar,
   CheckCircle2,
-  CircleDot,
   Loader2,
-  MessageSquareText,
-  Megaphone,
-  PlugZap,
-  Settings,
-  ShoppingBag,
+  Plus,
   Sparkles,
-  Users,
   XCircle,
-  Zap,
 } from 'lucide-react';
 
 const demoAccounts: ZernioAccount[] = [
@@ -124,7 +125,7 @@ export default function MedsosDashboard() {
     {
       level: waLevel,
       label: 'WA Inbox',
-      icon: MessageSquareText,
+      icon: McsInboxIcon,
       value: isDemo ? 'Active' : waStatus?.reachable ? 'Active' : waStatus?.configured ? 'Check' : 'Setup',
       helper: isDemo ? 'Social inbox workspace demo aktif' : waStatus?.message || (waStatus?.configured ? 'Konfigurasi ada, koneksi perlu dicek' : 'Belum dikonfigurasi'),
       action: () => navigate(`${base}/inbox/wa`),
@@ -133,7 +134,7 @@ export default function MedsosDashboard() {
     {
       level: socialLevel,
       label: 'Social',
-      icon: PlugZap,
+      icon: McsSocialIcon,
       value: previewMode ? '—' : String(socialAccounts.length),
       helper: previewMode ? 'Preview — belum ada channel' : `${socialAccounts.length} channel social aktif`,
       action: () => navigate(`${base}/connections`),
@@ -142,7 +143,7 @@ export default function MedsosDashboard() {
     {
       level: adsLevel,
       label: 'Ads',
-      icon: Megaphone,
+      icon: McsAdsIcon,
       value: previewMode ? '—' : String(adsAccounts.length),
       helper: previewMode ? 'Preview — belum ada ad account' : `${adsAccounts.length} ad account aktif`,
       action: () => navigate(`${base}/ads`),
@@ -151,7 +152,7 @@ export default function MedsosDashboard() {
     {
       level: mktLevel,
       label: 'Marketplace',
-      icon: ShoppingBag,
+      icon: McsMarketplaceIcon,
       value: isDemo ? 'Active' : marketplaceStatus?.reachable ? String(marketplaceStatus.channels.length || 'Active') : marketplaceStatus?.configured ? 'Check' : 'Setup',
       helper: isDemo ? 'Marketplace preview aktif' : marketplaceStatus?.message || 'Marketplace chat belum aktif',
       action: () => navigate(`${base}/marketplace`),
@@ -160,14 +161,14 @@ export default function MedsosDashboard() {
   ];
 
   const quickActions = [
-    { icon: MessageSquareText, label: 'WA Inbox', helper: 'Buka chat WA', path: `${base}/inbox/wa`, color: 'text-emerald-500' },
-    { icon: CircleDot, label: 'Medsos Inbox', helper: 'DM & komentar', path: `${base}/inbox/social`, color: 'text-blue-500' },
-    { icon: ShoppingBag, label: 'Marketplace', helper: 'Buyer chat', path: `${base}/inbox/marketplace`, color: 'text-orange-500' },
-    { icon: Calendar, label: 'Planner', helper: 'Jadwal konten', path: `${base}/calendar`, color: 'text-purple-500' },
-    { icon: BarChart3, label: 'Analytics', helper: 'Lihat performa', path: `${base}/analytics/social`, color: 'text-cyan-500' },
-    { icon: Bot, label: 'Ads', helper: 'Kelola iklan', path: `${base}/ads`, color: 'text-pink-500' },
-    { icon: Users, label: 'Tim MCS', helper: 'Kelola akses tim', path: `${base}/team`, color: 'text-indigo-500' },
-    { icon: Settings, label: 'Settings', helper: 'Konfigurasi workspace', path: `${base}/settings`, color: 'text-slate-500' },
+    { icon: McsInboxIcon, label: 'WA Inbox', helper: 'Buka chat WA', path: `${base}/inbox/wa`, color: 'text-emerald-500' },
+    { icon: McsSocialIcon, label: 'Medsos Inbox', helper: 'DM & komentar', path: `${base}/inbox/social`, color: 'text-blue-500' },
+    { icon: McsMarketplaceIcon, label: 'Marketplace', helper: 'Buyer chat', path: `${base}/inbox/marketplace`, color: 'text-orange-500' },
+    { icon: McsPlannerIcon, label: 'Planner', helper: 'Jadwal konten', path: `${base}/calendar`, color: 'text-purple-500' },
+    { icon: McsAnalyticsIcon, label: 'Analytics', helper: 'Lihat performa', path: `${base}/analytics/social`, color: 'text-cyan-500' },
+    { icon: McsAdsIcon, label: 'Ads', helper: 'Kelola iklan', path: `${base}/ads`, color: 'text-pink-500' },
+    { icon: McsTeamIcon, label: 'Tim MCS', helper: 'Kelola akses tim', path: `${base}/team`, color: 'text-indigo-500' },
+    { icon: McsSettingsIcon, label: 'Settings', helper: 'Konfigurasi workspace', path: `${base}/settings`, color: 'text-slate-500' },
   ];
 
   const cardBase = `relative overflow-hidden rounded-[24px] transition-all duration-300 ${
@@ -219,14 +220,14 @@ export default function MedsosDashboard() {
                 isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
               }`}
             >
-              <PlugZap size={16} />
+              <McsConnectionsIcon size={16} />
               Connections
             </button>
             <button
               onClick={() => navigate(`${base}/create`)}
               className="flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-blue-700 active:scale-95 transition-all hover:shadow-lg hover:shadow-blue-600/30 active:scale-95"
             >
-              <Zap size={16} />
+              <Plus size={16} />
               Create Post
             </button>
           </div>
@@ -322,7 +323,7 @@ export default function MedsosDashboard() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
-               <PlugZap size={18} />
+               <McsConnectionsIcon size={18} />
             </div>
             <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Active Channels</h2>
             {previewMode ? (
