@@ -55,6 +55,8 @@ type GroupMenu = BaseMenu & {
 
 type MenuItem = LinkMenu | GroupMenu;
 
+const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth < 768;
+
 export default function MedsosLayout() {
   useZernioPushNotifications();
   const { isDark, toggleTheme } = useThemeStore();
@@ -68,9 +70,13 @@ export default function MedsosLayout() {
   const mcsPerms = user?.dashboard_preferences?.mcs;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    inbox: true,
-    analytics: true,
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    const expandedByDefault = !isMobileViewport();
+    return {
+      inbox: expandedByDefault,
+      analytics: expandedByDefault,
+      crm: expandedByDefault,
+    };
   });
 
   const isDemo = location.pathname.startsWith('/demo');
@@ -90,14 +96,13 @@ export default function MedsosLayout() {
   }, [isDemo]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (isMobileViewport()) {
       setSidebarOpen(false);
     }
   }, [location.pathname]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (window.innerWidth >= 768) return;
+    if (!isMobileViewport()) return;
 
     const originalOverflow = document.body.style.overflow;
     const originalTouchAction = document.body.style.touchAction;
@@ -228,10 +233,17 @@ export default function MedsosLayout() {
     }));
   };
 
+  const navigateFromSidebar = (path: string) => {
+    navigate(path);
+    if (isMobileViewport()) {
+      setSidebarOpen(false);
+    }
+  };
+
   const isActiveLink = (path: string) => location.pathname === path;
 
   const handleSidebarToggle = () => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+    if (!isMobileViewport()) {
       setSidebarCollapsed((current) => !current);
       return;
     }
@@ -260,9 +272,9 @@ export default function MedsosLayout() {
         />
       ) : null}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 h-[100dvh] w-[84vw] max-w-[320px] ${asideWidthClass} transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:max-w-none md:translate-x-0 border-r shadow-[0_28px_80px_rgba(2,8,23,0.35)] md:shadow-none ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 h-[100dvh] w-[84vw] max-w-[320px] ${asideWidthClass} transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} rounded-r-[28px] md:rounded-none md:max-w-none md:translate-x-0 border-r shadow-[0_28px_80px_rgba(2,8,23,0.35)] md:shadow-none ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200'}`}>
         <div className="h-full overflow-y-auto px-3 py-4 pb-32 md:pb-40">
-          <div className={`mb-8 px-2 relative ${sidebarCollapsed ? 'flex justify-center mt-2' : ''}`}>
+          <div className={`sticky top-0 z-10 -mx-3 mb-6 border-b px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top,1rem))] backdrop-blur-xl ${isDark ? 'border-white/5 bg-[#111318]/95' : 'border-gray-100 bg-white/95'} ${sidebarCollapsed ? 'flex justify-center mt-2' : ''}`}>
             {/* Sidebar toggle buttons (X for mobile, PanelLeft for PC) */}
             {!sidebarCollapsed && (
               <button 
@@ -279,6 +291,7 @@ export default function MedsosLayout() {
               <MyCommerSocialLogo size={sidebarCollapsed ? 40 : 48} className="shadow-lg shadow-blue-500/30" />
               {!sidebarCollapsed ? (
                 <div className="pr-10">
+                  <p className={`mb-1 text-[10px] font-semibold uppercase tracking-[0.24em] ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>Command Center</p>
                   <h2 className="text-xl font-bold leading-tight">MyCommerSocial</h2>
                   <p className={`text-xs mt-1 leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     {currentRole === 'medsos_manager'
@@ -318,7 +331,7 @@ export default function MedsosLayout() {
 
           <div className={`mb-4 px-2 ${sidebarCollapsed ? 'flex justify-center' : ''}`}>
             <button
-              onClick={() => navigate(`${basePath}/create`)}
+              onClick={() => navigateFromSidebar(`${basePath}/create`)}
               title="Buka composer untuk membuat campaign atau post baru"
               className={`${sidebarCollapsed ? 'h-11 w-11 rounded-xl' : 'w-full rounded-xl py-3'} flex items-center justify-center gap-2 bg-blue-600 font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 active:scale-95 transition-all`}
             >
@@ -327,6 +340,12 @@ export default function MedsosLayout() {
             </button>
           </div>
 
+          {!sidebarCollapsed ? (
+            <div className={`mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.22em] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              Navigation
+            </div>
+          ) : null}
+
           <ul className="space-y-2 font-medium">
             {menuItems.map((item, idx) => {
               if (item.type === 'link') {
@@ -334,7 +353,7 @@ export default function MedsosLayout() {
                 return (
                   <li key={`${item.label}-${idx}`}>
                     <button
-                      onClick={() => navigate(item.path)}
+                      onClick={() => navigateFromSidebar(item.path)}
                       title={`Buka halaman ${item.label}`}
                       className={`flex w-full items-center rounded-xl transition-all duration-200 ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'p-3'} ${
                         isActive
@@ -382,7 +401,7 @@ export default function MedsosLayout() {
                         return (
                           <button
                             key={child.path}
-                            onClick={() => navigate(child.path)}
+                            onClick={() => navigateFromSidebar(child.path)}
                             title={child.helper}
                             className={`w-full rounded-xl px-3 py-2.5 text-left transition ${
                               active
@@ -409,7 +428,7 @@ export default function MedsosLayout() {
           </ul>
         </div>
 
-        <div className={`absolute bottom-0 left-0 w-full border-t p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
+        <div className={`absolute bottom-0 left-0 w-full border-t p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0.5rem))] ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
           {!sidebarCollapsed ? (
             <div className={`mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
               <BellRing size={14} />
@@ -417,7 +436,7 @@ export default function MedsosLayout() {
             </div>
           ) : null}
           <button
-            onClick={() => navigate(isDemo ? '/demo' : '/module-selector')}
+            onClick={() => navigateFromSidebar(isDemo ? '/demo' : '/module-selector')}
             title={isDemo ? 'Kembali ke pemilihan demo' : 'Kembali ke pemilihan modul'}
             className={`flex items-center rounded-xl py-3 text-sm font-medium transition-colors ${sidebarCollapsed ? 'justify-center px-2' : 'w-full px-4'} ${
               isDark ? 'text-white hover:bg-slate-700' : 'text-gray-600 hover:bg-gray-100'
