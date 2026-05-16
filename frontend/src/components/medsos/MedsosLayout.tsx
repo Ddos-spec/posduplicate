@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type ComponentType, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
@@ -9,31 +9,35 @@ import { getZernioAccounts } from '../../services/medsosPostsService';
 import { BrandLogo } from './BrandLogo';
 import MyCommerSocialLogo from './MyCommerSocialLogo';
 import {
+  McsAdsIcon,
+  McsAnalyticsIcon,
+  McsConnectionsIcon,
+  McsCrmIcon,
+  McsInboxIcon,
+  McsMarketplaceIcon,
+  McsOverviewIcon,
+  McsPlannerIcon,
+  McsSettingsIcon,
+  McsSocialIcon,
+  McsTeamIcon,
+  type McsIconProps,
+} from './MyCommerSocialIcons';
+import {
   ArrowLeft,
   BellRing,
-  Calendar,
   ChevronDown,
   CreditCard,
-  LayoutDashboard,
-  LineChart,
-  Megaphone,
   Menu,
-  MessageSquareText,
   Moon,
   PanelLeft,
-  PlugZap,
   Plus,
-  Settings,
-  Share2,
-  Store,
   Sun,
-  Users,
   X,
 } from 'lucide-react';
 import { useZernioPushNotifications } from '../../hooks/useZernioPushNotifications';
 
 type BaseMenu = {
-  icon: typeof LayoutDashboard;
+  icon: ComponentType<McsIconProps>;
   label: string;
   roles: string[];
 };
@@ -123,13 +127,13 @@ export default function MedsosLayout() {
 
   const allMenus = useMemo<MenuItem[]>(
     () => [
-      { type: 'link', icon: LayoutDashboard, label: 'Overview', path: `${basePath}/dashboard`, roles: ['all'] },
-      { type: 'link', icon: PlugZap, label: 'Connections', path: `${basePath}/connections`, roles: ['medsos_manager', 'all'] },
-      { type: 'link', icon: Calendar, label: 'Planner', path: `${basePath}/calendar`, roles: ['medsos_manager', 'content_creator', 'all'] },
+      { type: 'link', icon: McsOverviewIcon, label: 'Overview', path: `${basePath}/dashboard`, roles: ['all'] },
+      { type: 'link', icon: McsConnectionsIcon, label: 'Connections', path: `${basePath}/connections`, roles: ['medsos_manager', 'all'] },
+      { type: 'link', icon: McsPlannerIcon, label: 'Planner', path: `${basePath}/calendar`, roles: ['medsos_manager', 'content_creator', 'all'] },
       {
         type: 'group',
         key: 'inbox',
-        icon: MessageSquareText,
+        icon: McsInboxIcon,
         label: 'Inbox',
         roles: ['medsos_manager', 'medsos_cs', 'all'],
         children: [
@@ -138,12 +142,12 @@ export default function MedsosLayout() {
           { label: 'Marketplace', path: `${basePath}/inbox/marketplace`, helper: 'Buyer chat marketplace' },
         ],
       },
-      { type: 'link', icon: Store, label: 'Marketplace', path: `${basePath}/marketplace`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
-      { type: 'link', icon: Megaphone, label: 'Ads Workspace', path: `${basePath}/ads`, roles: ['medsos_manager', 'all'] },
+      { type: 'link', icon: McsMarketplaceIcon, label: 'Marketplace', path: `${basePath}/marketplace`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
+      { type: 'link', icon: McsAdsIcon, label: 'Ads Workspace', path: `${basePath}/ads`, roles: ['medsos_manager', 'all'] },
       {
         type: 'group',
         key: 'crm',
-        icon: Users,
+        icon: McsCrmIcon,
         label: 'CRM & Automation',
         roles: ['medsos_manager', 'all'],
         children: [
@@ -155,7 +159,7 @@ export default function MedsosLayout() {
       {
         type: 'group',
         key: 'analytics',
-        icon: LineChart,
+        icon: McsAnalyticsIcon,
         label: 'Analytics',
         roles: ['medsos_manager', 'all'],
         children: [
@@ -165,8 +169,8 @@ export default function MedsosLayout() {
         ],
       },
       { type: 'link', icon: CreditCard, label: 'Plans & Pricing', path: `${basePath}/pricing`, roles: ['medsos_manager', 'all'] },
-      { type: 'link', icon: Users, label: 'Tim MCS', path: `${basePath}/team`, roles: ['medsos_manager', 'all'] },
-      { type: 'link', icon: Settings, label: 'Settings', path: `${basePath}/settings`, roles: ['medsos_manager', 'all'] },
+      { type: 'link', icon: McsTeamIcon, label: 'Tim MCS', path: `${basePath}/team`, roles: ['medsos_manager', 'all'] },
+      { type: 'link', icon: McsSettingsIcon, label: 'Settings', path: `${basePath}/settings`, roles: ['medsos_manager', 'all'] },
     ],
     [basePath],
   );
@@ -314,7 +318,7 @@ export default function MedsosLayout() {
                   <p className={`text-xs uppercase tracking-[0.2em] ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>War Room</p>
                   <h3 className="font-semibold">Omnichannel Control</h3>
                 </div>
-                <Share2 className={`${isDark ? 'text-blue-300' : 'text-blue-500'}`} size={18} />
+                <McsSocialIcon className={`${isDark ? 'text-blue-300' : 'text-blue-500'}`} size={18} />
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
@@ -500,7 +504,7 @@ export default function MedsosLayout() {
           onClick={() => navigate(`${basePath}/dashboard`)}
           className={`flex flex-col items-center justify-center p-2.5 transition-colors ${location.pathname === `${basePath}/dashboard` ? 'text-blue-500' : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
         >
-          <LayoutDashboard size={20} />
+            <McsOverviewIcon size={20} />
           <span className="mt-1 text-[10px] font-semibold">Home</span>
         </button>
         <button
@@ -508,7 +512,7 @@ export default function MedsosLayout() {
           className={`flex flex-col items-center justify-center p-2.5 transition-colors ${location.pathname.includes('/inbox') ? 'text-blue-500' : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
         >
           <div className="relative">
-            <MessageSquareText size={20} />
+            <McsSocialIcon size={20} />
             {inboxCount > 0 && <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">{inboxCount > 9 ? '9+' : inboxCount}</span>}
           </div>
           <span className="mt-1 text-[10px] font-semibold">Inbox</span>
@@ -526,7 +530,7 @@ export default function MedsosLayout() {
           onClick={() => navigate(`${basePath}/analytics/social`)}
           className={`flex flex-col items-center justify-center p-2.5 transition-colors ${location.pathname.includes('/analytics') ? 'text-blue-500' : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
         >
-          <LineChart size={20} />
+          <McsAnalyticsIcon size={20} />
           <span className="mt-1 text-[10px] font-semibold">Analytics</span>
         </button>
         <button
