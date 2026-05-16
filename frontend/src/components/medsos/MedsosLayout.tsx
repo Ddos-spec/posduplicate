@@ -95,6 +95,27 @@ export default function MedsosLayout() {
     }
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.innerWidth >= 768) return;
+
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+    };
+  }, [sidebarOpen]);
+
   const allMenus = useMemo<MenuItem[]>(
     () => [
       { type: 'link', icon: LayoutDashboard, label: 'Overview', path: `${basePath}/dashboard`, roles: ['all'] },
@@ -235,12 +256,12 @@ export default function MedsosLayout() {
           type="button"
           aria-label="Tutup menu"
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-30 bg-slate-950/35 backdrop-blur-[1px] md:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] md:hidden"
         />
       ) : null}
 
-      <aside className={`fixed top-0 left-0 z-40 h-screen w-64 ${asideWidthClass} transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 border-r ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200'}`}>
-        <div className="h-full overflow-y-auto px-3 py-4 pb-40">
+      <aside className={`fixed inset-y-0 left-0 z-50 h-[100dvh] w-[84vw] max-w-[320px] ${asideWidthClass} transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:max-w-none md:translate-x-0 border-r shadow-[0_28px_80px_rgba(2,8,23,0.35)] md:shadow-none ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200'}`}>
+        <div className="h-full overflow-y-auto px-3 py-4 pb-32 md:pb-40">
           <div className={`mb-8 px-2 relative ${sidebarCollapsed ? 'flex justify-center mt-2' : ''}`}>
             {/* Sidebar toggle buttons (X for mobile, PanelLeft for PC) */}
             {!sidebarCollapsed && (
@@ -453,7 +474,7 @@ export default function MedsosLayout() {
 
       {/* Mobile Bottom Navigation */}
       <nav 
-        className={`fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t pt-2 md:hidden ${isDark ? 'border-slate-700 bg-slate-900/95 backdrop-blur-md' : 'bg-white ring-1 ring-slate-900/5/95 backdrop-blur-md'}`}
+        className={`fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t pt-2 transition-all duration-200 md:hidden ${sidebarOpen ? 'pointer-events-none translate-y-full opacity-0' : 'opacity-100'} ${isDark ? 'border-slate-700 bg-slate-900/95 backdrop-blur-md' : 'bg-white ring-1 ring-slate-900/5/95 backdrop-blur-md'}`}
         style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 1rem))' }}
       >
         <button
