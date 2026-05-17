@@ -13,6 +13,7 @@ import {
   McsAnalyticsIcon,
   McsConnectionsIcon,
   McsCrmIcon,
+  McsIconBadge,
   McsInboxIcon,
   McsMarketplaceIcon,
   McsOverviewIcon,
@@ -20,6 +21,7 @@ import {
   McsSettingsIcon,
   McsSocialIcon,
   McsTeamIcon,
+  type McsIconBadgeTone,
   type McsIconProps,
 } from './MyCommerSocialIcons';
 import {
@@ -60,6 +62,19 @@ type GroupMenu = BaseMenu & {
 type MenuItem = LinkMenu | GroupMenu;
 
 const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth < 768;
+
+function getMenuTone(label: string): McsIconBadgeTone {
+  if (label.includes('Inbox')) return 'emerald';
+  if (label.includes('Ads')) return 'amber';
+  if (label.includes('Marketplace')) return 'violet';
+  if (label.includes('Analytics')) return 'cyan';
+  if (label.includes('CRM')) return 'slate';
+  if (label.includes('Planner')) return 'violet';
+  if (label.includes('Connections')) return 'blue';
+  if (label.includes('Settings')) return 'slate';
+  if (label.includes('Tim')) return 'cyan';
+  return 'blue';
+}
 
 export default function MedsosLayout() {
   useZernioPushNotifications();
@@ -367,7 +382,13 @@ export default function MedsosLayout() {
                             : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
                       }`}
                     >
-                      <item.icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
+                      <McsIconBadge
+                        icon={item.icon}
+                        size={sidebarCollapsed ? 34 : 38}
+                        iconSize={18}
+                        tone={getMenuTone(item.label)}
+                        className={`shrink-0 transition-transform duration-200 ${isActive ? 'scale-105' : 'opacity-95'}`}
+                      />
                       {!sidebarCollapsed ? <span className="ml-3">{item.label}</span> : null}
                     </button>
                   </li>
@@ -390,7 +411,13 @@ export default function MedsosLayout() {
                           : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
                     }`}
                   >
-                    <item.icon className={`h-5 w-5 transition-transform duration-200 ${isGroupActive ? 'scale-110' : ''}`} />
+                    <McsIconBadge
+                      icon={item.icon}
+                      size={sidebarCollapsed ? 34 : 38}
+                      iconSize={18}
+                      tone={getMenuTone(item.label)}
+                      className={`shrink-0 transition-transform duration-200 ${isGroupActive ? 'scale-105' : 'opacity-95'}`}
+                    />
                     {!sidebarCollapsed ? (
                       <>
                         <span className="ml-3 flex-1 text-left">{item.label}</span>

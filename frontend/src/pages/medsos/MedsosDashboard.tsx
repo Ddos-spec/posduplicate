@@ -7,6 +7,7 @@ import {
   McsAdsIcon,
   McsAnalyticsIcon,
   McsConnectionsIcon,
+  McsIconBadge,
   McsInboxIcon,
   McsMarketplaceIcon,
   McsPlannerIcon,
@@ -50,6 +51,18 @@ const previewAccounts: ZernioAccount[] = [
 ];
 
 type StatusLevel = 'ok' | 'warn' | 'idle' | 'preview';
+
+function getDashboardTone(label: string) {
+  if (label.includes('WA')) return 'emerald';
+  if (label.includes('Social')) return 'blue';
+  if (label.includes('Ads')) return 'amber';
+  if (label.includes('Marketplace')) return 'violet';
+  if (label.includes('Analytics')) return 'cyan';
+  if (label.includes('Settings')) return 'slate';
+  if (label.includes('Tim')) return 'cyan';
+  if (label.includes('Planner')) return 'violet';
+  return 'blue';
+}
 
 function StatusDot({ level }: { level: StatusLevel }) {
   const colors: Record<StatusLevel, string> = {
@@ -161,14 +174,14 @@ export default function MedsosDashboard() {
   ];
 
   const quickActions = [
-    { icon: McsInboxIcon, label: 'WA Inbox', helper: 'Buka chat WA', path: `${base}/inbox/wa`, color: 'text-emerald-500' },
-    { icon: McsSocialIcon, label: 'Medsos Inbox', helper: 'DM & komentar', path: `${base}/inbox/social`, color: 'text-blue-500' },
-    { icon: McsMarketplaceIcon, label: 'Marketplace', helper: 'Buyer chat', path: `${base}/inbox/marketplace`, color: 'text-orange-500' },
-    { icon: McsPlannerIcon, label: 'Planner', helper: 'Jadwal konten', path: `${base}/calendar`, color: 'text-purple-500' },
-    { icon: McsAnalyticsIcon, label: 'Analytics', helper: 'Lihat performa', path: `${base}/analytics/social`, color: 'text-cyan-500' },
-    { icon: McsAdsIcon, label: 'Ads', helper: 'Kelola iklan', path: `${base}/ads`, color: 'text-pink-500' },
-    { icon: McsTeamIcon, label: 'Tim MCS', helper: 'Kelola akses tim', path: `${base}/team`, color: 'text-indigo-500' },
-    { icon: McsSettingsIcon, label: 'Settings', helper: 'Konfigurasi workspace', path: `${base}/settings`, color: 'text-slate-500' },
+    { icon: McsInboxIcon, label: 'WA Inbox', helper: 'Buka chat WA', path: `${base}/inbox/wa` },
+    { icon: McsSocialIcon, label: 'Medsos Inbox', helper: 'DM & komentar', path: `${base}/inbox/social` },
+    { icon: McsMarketplaceIcon, label: 'Marketplace', helper: 'Buyer chat', path: `${base}/inbox/marketplace` },
+    { icon: McsPlannerIcon, label: 'Planner', helper: 'Jadwal konten', path: `${base}/calendar` },
+    { icon: McsAnalyticsIcon, label: 'Analytics', helper: 'Lihat performa', path: `${base}/analytics/social` },
+    { icon: McsAdsIcon, label: 'Ads', helper: 'Kelola iklan', path: `${base}/ads` },
+    { icon: McsTeamIcon, label: 'Tim MCS', helper: 'Kelola akses tim', path: `${base}/team` },
+    { icon: McsSettingsIcon, label: 'Settings', helper: 'Konfigurasi workspace', path: `${base}/settings` },
   ];
 
   const cardBase = `relative overflow-hidden rounded-[24px] transition-all duration-300 ${
@@ -242,7 +255,7 @@ export default function MedsosDashboard() {
               <div className={`rounded-2xl p-3 transition-colors ${
                 isDark ? 'bg-white/5 group-hover:bg-white/10' : 'bg-slate-50 group-hover:bg-slate-100'
               }`}>
-                <card_.icon size={20} className={card_.level === 'ok' ? 'text-emerald-500' : card_.level === 'warn' ? 'text-amber-500' : 'text-slate-400'} />
+                <McsIconBadge icon={card_.icon} size={42} iconSize={18} tone={getDashboardTone(card_.label)} />
               </div>
               <StatusDot level={card_.level} />
             </div>
@@ -277,9 +290,7 @@ export default function MedsosDashboard() {
                   isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-50 hover:bg-slate-100'
                 }`}
               >
-                <div className={`p-2 rounded-xl bg-white shadow-sm dark:bg-slate-800 ${action.color}`}>
-                   <action.icon size={18} />
-                </div>
+                <McsIconBadge icon={action.icon} size={42} iconSize={18} tone={getDashboardTone(action.label)} />
                 <div>
                   <p className="text-sm font-bold tracking-tight">{action.label}</p>
                   <p className={`text-[11px] font-medium mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{action.helper}</p>

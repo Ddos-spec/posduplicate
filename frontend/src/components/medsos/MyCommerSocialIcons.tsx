@@ -1,9 +1,17 @@
-import type { ReactNode, SVGProps } from 'react';
+import type { ComponentType, ReactNode, SVGProps } from 'react';
 
 export type McsIconProps = {
   size?: number;
   className?: string;
 };
+
+export type McsIconBadgeTone =
+  | 'blue'
+  | 'emerald'
+  | 'violet'
+  | 'amber'
+  | 'cyan'
+  | 'slate';
 
 type BaseIconProps = McsIconProps & {
   viewBox?: string;
@@ -45,6 +53,75 @@ function SoftFill(props: SVGProps<SVGPathElement>) {
 
 function SoftRect(props: SVGProps<SVGRectElement>) {
   return <rect fill="currentColor" fillOpacity={0.12} {...props} />;
+}
+
+const toneClassMap: Record<
+  McsIconBadgeTone,
+  {
+    wrapper: string;
+    inner: string;
+    icon: string;
+  }
+> = {
+  blue: {
+    wrapper: 'from-sky-500 via-blue-500 to-indigo-600',
+    inner: 'bg-white/10',
+    icon: 'text-white',
+  },
+  emerald: {
+    wrapper: 'from-emerald-500 via-teal-500 to-cyan-600',
+    inner: 'bg-white/10',
+    icon: 'text-white',
+  },
+  violet: {
+    wrapper: 'from-violet-500 via-indigo-500 to-blue-600',
+    inner: 'bg-white/10',
+    icon: 'text-white',
+  },
+  amber: {
+    wrapper: 'from-amber-400 via-orange-500 to-rose-500',
+    inner: 'bg-white/12',
+    icon: 'text-white',
+  },
+  cyan: {
+    wrapper: 'from-cyan-400 via-sky-500 to-blue-600',
+    inner: 'bg-white/10',
+    icon: 'text-white',
+  },
+  slate: {
+    wrapper: 'from-slate-500 via-slate-600 to-slate-700',
+    inner: 'bg-white/10',
+    icon: 'text-white',
+  },
+};
+
+export function McsIconBadge({
+  icon: Icon,
+  size = 44,
+  iconSize = 20,
+  tone = 'blue',
+  className = '',
+}: {
+  icon: ComponentType<McsIconProps>;
+  size?: number;
+  iconSize?: number;
+  tone?: McsIconBadgeTone;
+  className?: string;
+}) {
+  const toneClass = toneClassMap[tone];
+
+  return (
+    <div
+      className={`relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${toneClass.wrapper} shadow-[0_18px_35px_rgba(37,99,235,0.22)] ring-1 ring-white/15 ${className}`.trim()}
+      style={{ width: size, height: size }}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.36),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.14),transparent_34%)]" />
+      <div className={`absolute inset-[1px] rounded-[15px] ${toneClass.inner}`} />
+      <div className={`relative ${toneClass.icon}`}>
+        <Icon size={iconSize} />
+      </div>
+    </div>
+  );
 }
 
 export function McsOverviewIcon({ size = 20, className = '' }: McsIconProps) {

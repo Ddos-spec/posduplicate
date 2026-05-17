@@ -11,16 +11,20 @@ import {
 } from '../../data/omnichannelMock';
 import FieldHelp from '../../components/medsos/FieldHelp';
 import {
+  McsAdsIcon,
+  McsIconBadge,
+  McsInboxIcon,
+  McsMarketplaceIcon,
+  McsSettingsIcon,
+} from '../../components/medsos/MyCommerSocialIcons';
+import {
   BellRing,
   Bot,
   CheckCircle2,
   Loader2,
-  MessageSquareText,
-  PlugZap,
   Plus,
   Save,
   Shield,
-  Store,
   Trash2,
   UsersRound,
   Workflow,
@@ -435,19 +439,19 @@ export default function MedsosSettings() {
       key: 'waInbox' as const,
       title: 'WA Inbox',
       description: 'Aktifkan akses WhatsApp melalui workspace inbox internal.',
-      icon: MessageSquareText,
+      icon: McsInboxIcon,
     },
     {
       key: 'socialAds' as const,
       title: 'Social + Ads',
       description: 'Aktifkan koneksi social media dan ads melalui workspace sosial.',
-      icon: PlugZap,
+      icon: McsAdsIcon,
     },
     {
       key: 'marketplace' as const,
       title: 'Marketplace',
       description: 'Simpan status modul marketplace agar tim tahu kapan fitur ini dibuka.',
-      icon: Store,
+      icon: McsMarketplaceIcon,
     },
   ];
 
@@ -464,6 +468,12 @@ export default function MedsosSettings() {
       <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="max-w-3xl">
+            <div className="mb-4 flex items-center gap-3">
+              <McsIconBadge icon={McsSettingsIcon} size={44} iconSize={19} tone="slate" />
+              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
+                Workspace control
+              </div>
+            </div>
             <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Settings</h1>
             <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Atur channel aktif, rule operasional, notifikasi, dan team seat untuk workspace MyCommerSocial.
@@ -494,9 +504,12 @@ export default function MedsosSettings() {
       <div className="grid md:grid-cols-3 gap-4">
         {channelCards.map((card) => (
           <div key={card.key} className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
-            <div className={`inline-flex rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
-              <card.icon size={18} />
-            </div>
+            <McsIconBadge
+              icon={card.icon}
+              size={42}
+              iconSize={18}
+              tone={card.key === 'waInbox' ? 'emerald' : card.key === 'socialAds' ? 'blue' : 'violet'}
+            />
             <div className="flex items-start justify-between gap-3 mt-4">
               <div>
                 <h2 className="font-bold text-lg">{card.title}</h2>
