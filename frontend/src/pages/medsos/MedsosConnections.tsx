@@ -2,6 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useThemeStore } from '../../store/themeStore';
+import {
+  McsAdsIcon,
+  McsConnectionsIcon,
+  McsIconBadge,
+  McsInboxIcon,
+  McsMarketplaceIcon,
+  McsSocialIcon,
+} from '../../components/medsos/MyCommerSocialIcons';
 import MyCommerSocialLogo from '../../components/medsos/MyCommerSocialLogo';
 import { PlatformBadge } from '../../components/medsos/PlatformBadge';
 import FieldHelp from '../../components/medsos/FieldHelp';
@@ -33,7 +41,6 @@ import {
   PlugZap,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
   Bot,
   RefreshCcw,
   Unplug,
@@ -704,7 +711,7 @@ export default function MedsosConnections() {
         <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
           <div className="max-w-4xl">
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
-              <Sparkles size={14} />
+              <McsConnectionsIcon size={14} />
               Channel activation
             </div>
             <div className="flex items-center gap-3 mb-3">
@@ -720,21 +727,25 @@ export default function MedsosConnections() {
 
           <div className="grid sm:grid-cols-2 gap-3 min-w-[280px]">
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
+              <McsIconBadge icon={McsInboxIcon} size={38} iconSize={16} tone="emerald" className="mb-3" />
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>WA Inbox</p>
               <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{waState.card}</p>
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{waState.helper}</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
+              <McsIconBadge icon={McsMarketplaceIcon} size={38} iconSize={16} tone="violet" className="mb-3" />
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Marketplace AI</p>
               <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{marketplaceState.card}</p>
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{marketplaceState.helper}</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
+              <McsIconBadge icon={McsSocialIcon} size={38} iconSize={16} tone="blue" className="mb-3" />
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Social connected</p>
               <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{zernioLoading ? '...' : socialAccounts.length}</p>
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Akun organik yang aktif di workspace ini</p>
             </div>
             <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
+              <McsIconBadge icon={McsAdsIcon} size={38} iconSize={16} tone="amber" className="mb-3" />
               <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ads connected</p>
               <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{zernioLoading ? '...' : adsAccounts.length}</p>
               <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Meta, Google, LinkedIn, TikTok, Pinterest, X</p>
@@ -756,7 +767,7 @@ export default function MedsosConnections() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
           <div>
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>
-              <PlugZap size={14} />
+              <McsConnectionsIcon size={14} />
               Social + ads workspace
             </div>
             <h2 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Social + Ads dipusatkan ke satu workspace</h2>
