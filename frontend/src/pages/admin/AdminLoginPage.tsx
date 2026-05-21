@@ -46,9 +46,12 @@ export default function AdminLoginPage() {
       
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <img src="/logo.webp" alt="POS E2NK Logo" className="w-12 h-12 object-contain" />
-            <h1 className="text-3xl font-bold text-gray-900">MyPOS</h1>
+          <div className="mb-4 flex justify-center">
+            <img
+              src="/branding/omnipilot-ai-logo.svg"
+              alt="OmniPilot AI"
+              className="h-16 w-auto sm:h-20"
+            />
           </div>
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-slate-900 to-blue-900 rounded-full mb-2">
             <Shield className="w-8 h-8 text-white" />
@@ -67,7 +70,7 @@ export default function AdminLoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900"
-              placeholder="admin@mypos.com"
+              placeholder="admin@omnipilot.ai"
               required
             />
           </div>

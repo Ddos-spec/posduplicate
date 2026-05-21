@@ -70,7 +70,7 @@ export default function AutoReplyPage() {
               value={dmMessage} 
               onChange={e => setDmMessage(e.target.value)} 
               rows={3}
-              placeholder="Halo! Ini link promo yang kamu minta: https://mypos.id"
+              placeholder="Halo! Ini link promo yang kamu minta: https://omnipilot.ai"
               className={`w-full p-3 rounded-xl border resize-none ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} 
             />
           </div>

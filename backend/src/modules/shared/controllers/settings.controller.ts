@@ -400,14 +400,14 @@ export const sendTestNotificationEmail = async (req: AuthRequest, res: Response,
     await sendEmail({
       to: recipient,
       subject: `[${tenantNotification.businessName}] Test Email Notification`,
-      text: `Halo,\n\nIni test email notifikasi dari ${tenantNotification.businessName}.\nKalau email ini masuk, berarti pengiriman email dari MyPOS sudah aktif.\n\nSalam,\nMyPOS`,
+      text: `Halo,\n\nIni test email notifikasi dari ${tenantNotification.businessName}.\nKalau email ini masuk, berarti pengiriman email dari OmniPilot AI sudah aktif.\n\nSalam,\nOmniPilot AI`,
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
           <h2 style="margin-bottom: 8px;">Test Email Notification</h2>
           <p>Halo,</p>
           <p>Ini test email notifikasi dari <strong>${tenantNotification.businessName}</strong>.</p>
-          <p>Kalau email ini masuk, berarti pengiriman email dari MyPOS sudah aktif.</p>
-          <p style="margin-top: 24px;">Salam,<br />MyPOS</p>
+          <p>Kalau email ini masuk, berarti pengiriman email dari OmniPilot AI sudah aktif.</p>
+          <p style="margin-top: 24px;">Salam,<br />OmniPilot AI</p>
         </div>
       `
     });

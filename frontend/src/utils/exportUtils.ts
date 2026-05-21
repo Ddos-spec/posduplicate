@@ -341,7 +341,7 @@ export const printReceipt = async (
     <body>
       <div class="header">
         ${settings?.showLogoOnReceipt && settings?.logo ? `<img src="${settings.logo}" alt="Logo" />` : ''}
-        <h2>${settings?.businessName || transactionData.outletName || 'MyPOS'}</h2>
+        <h2>${settings?.businessName || transactionData.outletName || 'OmniPilot AI'}</h2>
         ${settings?.address ? `<p>${settings.address}</p>` : ''}
         ${settings?.phone ? `<p>Telp: ${settings.phone}</p>` : ''}
         ${settings?.receiptHeader ? `<p>${settings.receiptHeader}</p>` : ''}

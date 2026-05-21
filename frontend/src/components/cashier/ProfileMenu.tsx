@@ -332,7 +332,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ isOpen, onClose }) => {
       await NativeBluetoothPrinter.printFormattedText({
         address: selectedPrinter.address,
         text:
-          `[C]<b>MyPOS Test Print</b>\n` +
+          `[C]<b>OmniPilot AI Test Print</b>\n` +
           `[C]${new Date().toLocaleString('id-ID')}\n` +
           `[C]==============================\n` +
           `[L]Slot:[R]${slot === 'cashier' ? 'Kasir' : 'Dapur'}\n` +

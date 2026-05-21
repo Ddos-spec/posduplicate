@@ -103,7 +103,7 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.get('/', (_req: Request, res: Response) => {
   res.json({
     success: true,
-    message: 'MyPOS API Server',
+    message: 'OmniPilot AI API Server',
     version: '1.0.0',
     documentation: '/api-docs',
     modules: {
@@ -133,7 +133,7 @@ app.get('/', (_req: Request, res: Response) => {
 app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'OK',
-    message: 'MyPOS API is running',
+    message: 'OmniPilot AI API is running',
     timestamp: new Date().toISOString()
   });
 });
@@ -141,7 +141,7 @@ app.get('/health', (_req: Request, res: Response) => {
 // API Documentation (Swagger)
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'MyPOS API Documentation'
+  customSiteTitle: 'OmniPilot AI API Documentation'
 }));
 
 // Swagger JSON endpoint
@@ -202,7 +202,7 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
 // Start server using httpServer to support websockets
 httpServer.listen(PORT, () => {
   scheduler.start();
-  console.log(`🚀 MyPOS API Server running on port ${PORT}`);
+  console.log(`🚀 OmniPilot AI API Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Internal health check: http://localhost:${PORT}/health`);
 });

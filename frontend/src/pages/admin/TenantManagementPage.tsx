@@ -77,7 +77,7 @@ const moduleCatalog: Array<{
 }> = [
   {
     key: 'pos',
-    name: 'MyPOS',
+    name: 'OmniPilot AI',
     description: 'Kasir, outlet, transaksi, promosi, dan operasional harian.',
     accent: 'from-emerald-500 to-emerald-600',
     icon: Monitor,
@@ -353,7 +353,7 @@ export default function TenantManagementPage() {
             <span className="text-xs text-gray-400 uppercase">Tenants</span>
           </div>
           <p className="text-2xl font-bold text-gray-900">{tenants.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Tenant aktif di ekosistem MyPOS</p>
+          <p className="text-sm text-gray-500 mt-1">Tenant aktif di ekosistem OmniPilot AI</p>
         </div>
         <div className="bg-white rounded-2xl shadow p-5">
           <div className="flex items-center justify-between mb-2">

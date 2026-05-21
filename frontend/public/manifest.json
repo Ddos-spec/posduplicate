@@ -1,7 +1,7 @@
 {
-  "name": "MyPOS - Point of Sale System",
-  "short_name": "MyPOS",
-  "description": "Modern Point of Sale System for Cashiers - Optimized for Tablet",
+  "name": "OmniPilot AI - Point of Sale System",
+  "short_name": "OmniPilot AI",
+  "description": "AI-powered retail, commerce, and operations suite",
   "start_url": "/cashier",
   "display": "standalone",
   "orientation": "any",
@@ -10,10 +10,10 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon",
-      "purpose": "any"
+      "src": "/branding/omnipilot-mark.svg",
+      "sizes": "256x256",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-192.svg",

@@ -578,7 +578,7 @@ export default function TransactionHistory({ onClose, settings }: TransactionHis
           <div class="header">
             <h1>LAPORAN TRANSAKSI HARIAN</h1>
             <p>${formattedDate}</p>
-            <p>MyPOS - Point of Sale System</p>
+            <p>OmniPilot AI - Point of Sale System</p>
           </div>
 
           <div class="info-section">
@@ -672,7 +672,7 @@ export default function TransactionHistory({ onClose, settings }: TransactionHis
           ` : ''}
 
           <div class="footer">
-            <p>Laporan ini dibuat secara otomatis oleh MyPOS</p>
+            <p>Laporan ini dibuat secara otomatis oleh OmniPilot AI</p>
             <p>Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
           </div>
 
@@ -860,7 +860,7 @@ export default function TransactionHistory({ onClose, settings }: TransactionHis
           <div class="header">
             <h1>LAPORAN TRANSAKSI</h1>
             <p>${formatDate(dateFrom)} - ${formatDate(dateTo)}</p>
-            <p>MyPOS - Point of Sale System</p>
+            <p>OmniPilot AI - Point of Sale System</p>
           </div>
 
           <div class="info-section">
@@ -934,7 +934,7 @@ export default function TransactionHistory({ onClose, settings }: TransactionHis
           ` : '<p style="text-align: center; padding: 40px; color: #666;">Tidak ada transaksi ditemukan dalam periode ini.</p>'}
 
           <div class="footer">
-            <p>Laporan ini dibuat secara otomatis oleh MyPOS</p>
+            <p>Laporan ini dibuat secara otomatis oleh OmniPilot AI</p>
             <p>Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
           </div>
 

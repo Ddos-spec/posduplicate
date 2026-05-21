@@ -22,6 +22,7 @@ import toast from 'react-hot-toast';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useAuthStore } from '../../store/authStore';
 import NotificationPanel from './NotificationPanel';
+import OmnipilotBrand, { OmnipilotMark } from '../branding/OmnipilotBrand';
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -60,7 +61,7 @@ export default function AdminLayout() {
 
   const businessModuleItems = isSuperAdmin
     ? [
-        { icon: Monitor, label: 'MyPOS', path: '/owner/dashboard' },
+        { icon: Monitor, label: 'OmniPilot AI', path: '/owner/dashboard' },
         { icon: Calculator, label: 'MyAkuntan', path: '/accounting/dashboard' },
         { icon: Package, label: 'MyInventory', path: '/inventory/dashboard' },
         { icon: Share2, label: 'MyCommerSocial', path: '/medsos/dashboard' },
@@ -102,12 +103,16 @@ export default function AdminLayout() {
         <div className="p-4 flex items-center justify-between border-b border-gray-800 shrink-0">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
-              <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain" />
-              <h1 className="text-xl font-bold">MyPOS Admin</h1>
+              <OmnipilotBrand
+                markSize={34}
+                titleClassName="text-white text-xl"
+                subtitleClassName="text-cyan-300/80"
+                subtitle="Admin Command"
+              />
             </div>
           )}
           {!sidebarOpen && (
-            <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain mx-auto" />
+            <OmnipilotMark size={34} className="mx-auto" />
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -161,8 +166,12 @@ export default function AdminLayout() {
           <aside className="bg-gray-900 text-white w-64 h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 flex items-center justify-between border-b border-gray-800 shrink-0">
               <div className="flex items-center gap-2">
-                <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain" />
-                <h1 className="text-xl font-bold">MyPOS Admin</h1>
+                <OmnipilotBrand
+                  markSize={34}
+                  titleClassName="text-white text-xl"
+                  subtitleClassName="text-cyan-300/80"
+                  subtitle="Admin Command"
+                />
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
@@ -245,7 +254,7 @@ export default function AdminLayout() {
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-medium text-gray-700">{user?.name || 'Admin'}</p>
                   <p className="text-xs text-gray-500">
-                    {isSuperAdmin ? 'Super Admin • Full Access' : (user?.email || 'admin@mypos.com')}
+                    {isSuperAdmin ? 'Super Admin • Full Access' : (user?.email || 'admin@omnipilot.ai')}
                   </p>
                 </div>
                 <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center">

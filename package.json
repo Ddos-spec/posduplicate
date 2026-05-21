@@ -1,7 +1,7 @@
 {
   "name": "mypos-fullstack",
   "version": "1.0.0",
-  "description": "MyPOS - Full Stack POS System",
+  "description": "OmniPilot AI - Full Stack POS System",
   "private": true,
   "engines": {
     "node": ">=18.0.0",

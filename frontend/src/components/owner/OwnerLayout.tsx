@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useAuthStore } from '../../store/authStore';
 import NotificationPanel from '../admin/NotificationPanel';
+import OmnipilotBrand, { OmnipilotMark } from '../branding/OmnipilotBrand';
 
 export default function OwnerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -64,12 +65,16 @@ export default function OwnerLayout() {
         <div className="p-4 flex items-center justify-between border-b border-gray-800 shrink-0">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
-              <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain" />
-              <h1 className="text-xl font-bold">MyPOS</h1>
+              <OmnipilotBrand
+                markSize={34}
+                titleClassName="text-white text-xl"
+                subtitleClassName="text-cyan-300/80"
+                subtitle="Owner Command"
+              />
             </div>
           )}
           {!sidebarOpen && (
-            <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain mx-auto" />
+            <OmnipilotMark size={34} className="mx-auto" />
           )}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded hover:bg-gray-800">
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -114,8 +119,12 @@ export default function OwnerLayout() {
           <aside className="bg-gray-900 text-white w-64 h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 flex items-center justify-between border-b border-gray-800 shrink-0">
               <div className="flex items-center gap-2">
-                <img src="/logo.webp" alt="POS E2NK Logo" className="w-8 h-8 object-contain" />
-                <h1 className="text-xl font-bold">MyPOS</h1>
+                <OmnipilotBrand
+                  markSize={34}
+                  titleClassName="text-white text-xl"
+                  subtitleClassName="text-cyan-300/80"
+                  subtitle="Owner Command"
+                />
               </div>
               <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded hover:bg-gray-800">
                 <X className="w-5 h-5" />

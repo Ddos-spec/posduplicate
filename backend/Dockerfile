@@ -1,5 +1,5 @@
 # ==============================================
-# MyPOS Backend - Production Dockerfile
+# OmniPilot AI Backend - Production Dockerfile
 # ==============================================
 # Optimized for EasyPanel deployment
 

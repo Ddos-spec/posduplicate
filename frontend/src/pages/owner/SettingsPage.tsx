@@ -890,7 +890,7 @@ export default function SettingsPage() {
                   <h3 className="text-lg font-semibold text-gray-900">Notifikasi Owner</h3>
                   <p className="mt-1 text-sm text-gray-600">
                     Masukkan email asli owner supaya approval penting benar-benar masuk ke inbox mereka.
-                    MyPOS hanya mengirim email ke alamat ini, bukan meminta password Gmail siapa pun.
+                    OmniPilot AI hanya mengirim email ke alamat ini, bukan meminta password Gmail siapa pun.
                   </p>
                 </div>
               </div>
@@ -922,7 +922,7 @@ export default function SettingsPage() {
                         <div>
                           <h4 className="font-semibold text-gray-900">Aktifkan email notifikasi</h4>
                           <p className="mt-1 text-sm leading-6 text-gray-600">
-                            Saat aktif, MyPOS boleh mengirim email ke owner untuk event yang sudah didukung sistem.
+                            Saat aktif, OmniPilot AI boleh mengirim email ke owner untuk event yang sudah didukung sistem.
                           </p>
                         </div>
                       </div>

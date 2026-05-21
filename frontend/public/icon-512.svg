@@ -1,4 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#2563eb"/>
-  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="160" font-weight="bold" fill="white" text-anchor="middle" dy=".3em">POS</text>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ringGradient" x1="48" y1="40" x2="208" y2="216" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1FE4CF"/>
+      <stop offset="0.48" stop-color="#2A8BFF"/>
+      <stop offset="1" stop-color="#4A43FF"/>
+    </linearGradient>
+    <linearGradient id="coreGradient" x1="105" y1="78" x2="168" y2="178" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#26D9E8"/>
+      <stop offset="0.52" stop-color="#2C88FF"/>
+      <stop offset="1" stop-color="#4337FF"/>
+    </linearGradient>
+    <linearGradient id="nodeGradient" x1="67" y1="58" x2="188" y2="198" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#21DEC7"/>
+      <stop offset="0.55" stop-color="#3395FF"/>
+      <stop offset="1" stop-color="#4A44FF"/>
+    </linearGradient>
+    <filter id="softGlow" x="0" y="0" width="256" height="256" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0.05  0 0 1 0 0.2  0 0 0 0.18 0"/>
+    </filter>
+  </defs>
+
+  <circle cx="128" cy="128" r="80" stroke="#EEF6FF" stroke-width="12"/>
+  <circle cx="128" cy="128" r="96" stroke="url(#ringGradient)" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="128" cy="128" r="61" stroke="#E7F3FF" stroke-width="6"/>
+  <circle cx="128" cy="128" r="44" fill="#FFFFFF" filter="url(#softGlow)"/>
+
+  <path d="M128 74L171 145L137.5 128.5L128 186L118.5 128.5L85 145L128 74Z" fill="url(#coreGradient)"/>
+  <path d="M128 99L146.6 130.2L128 120.8V99Z" fill="#70EDFF" opacity="0.8"/>
+  <path d="M128 186L137.5 128.5L128 120.8V186Z" fill="#3158FF" opacity="0.9"/>
+  <path d="M128 186L118.5 128.5L128 120.8V186Z" fill="#1F7CFF" opacity="0.95"/>
+  <path d="M120 195.5L128 182L136 195.5L128 210L120 195.5Z" fill="#386EFF"/>
+
+  <path d="M128 24V49" stroke="url(#nodeGradient)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M128 207V232" stroke="url(#nodeGradient)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M24 128H49" stroke="url(#nodeGradient)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M207 128H232" stroke="url(#nodeGradient)" stroke-width="8" stroke-linecap="round"/>
+
+  <circle cx="128" cy="28" r="24" fill="url(#nodeGradient)"/>
+  <circle cx="128" cy="228" r="24" fill="url(#nodeGradient)"/>
+  <circle cx="28" cy="128" r="24" fill="url(#nodeGradient)"/>
+  <circle cx="228" cy="128" r="24" fill="url(#nodeGradient)"/>
+
+  <path d="M117 18.5H139C142.866 18.5 146 21.634 146 25.5V34C146 37.866 142.866 41 139 41H130L124 46V41H117C113.134 41 110 37.866 110 34V25.5C110 21.634 113.134 18.5 117 18.5Z" fill="white"/>
+  <circle cx="121.5" cy="29.75" r="1.9" fill="#2D8FFF"/>
+  <circle cx="128" cy="29.75" r="1.9" fill="#2D8FFF"/>
+  <circle cx="134.5" cy="29.75" r="1.9" fill="#2D8FFF"/>
+
+  <path d="M216 120H240V141.5C240 145.09 237.09 148 233.5 148H222.5C218.91 148 216 145.09 216 141.5V120Z" fill="white"/>
+  <path d="M221 120C221 114.477 225.477 110 231 110C236.523 110 241 114.477 241 120" stroke="white" stroke-width="7" stroke-linecap="round"/>
+  <rect x="222" y="123" width="18" height="17" rx="4" fill="#5263FF"/>
+  <path d="M228 126.5C228 124.567 229.567 123 231.5 123C233.433 123 235 124.567 235 126.5V128H228V126.5Z" fill="white" opacity="0.95"/>
+
+  <path d="M122 216L139 223L122 230V216Z" fill="white"/>
+  <path d="M144 220.5C144 223.261 141.761 225.5 139 225.5V215.5C141.761 215.5 144 217.739 144 220.5Z" fill="white"/>
+  <path d="M117.5 216.5H122V229.5H117.5C114.462 229.5 112 227.038 112 224V222C112 218.962 114.462 216.5 117.5 216.5Z" fill="white"/>
+
+  <path d="M29 113.5C20.992 113.5 14.5 119.992 14.5 128C14.5 136.008 20.992 142.5 29 142.5C31.562 142.5 33.969 141.835 36.058 140.668L42.5 142.5L40.509 136.42C41.771 134.258 42.5 131.75 42.5 129.071C42.5 120.837 36.163 114 28.5 114L29 113.5Z" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24.7 122.8C25.2 121.7 26.1 121.7 26.7 121.7C27.1 121.7 27.6 121.7 28 122.8C28.5 124 29.2 126 29.2 126.5C29.2 127 28.9 127.6 28.3 128.2C27.8 128.8 27.2 129.2 27.7 130C28.2 130.8 30.1 133.9 33.7 135.6C36.6 136.9 37 136.6 37.8 135.7C38.6 134.8 39.6 133.3 40.2 132.3C40.8 131.3 41.4 131.5 42.2 131.8C43 132.1 47.1 134.1 48 134.6C48.9 135.1 49.5 135.3 49.7 135.8" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
 </svg>

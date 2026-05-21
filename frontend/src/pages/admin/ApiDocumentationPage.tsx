@@ -48,7 +48,7 @@ export default function ApiDocumentationPage() {
     const url = `${documentation?.baseUrl}${endpoint.path}${params ? '?' + params : ''}`;
 
     return `curl -X ${endpoint.method} "${url}" \\
-  -H "X-API-Key: mypos_live_your_api_key_here"`;
+  -H "X-API-Key: omnipilot_live_your_api_key_here"`;
   };
 
   const generateJsExample = (endpoint: any) => {
@@ -65,7 +65,7 @@ export default function ApiDocumentationPage() {
 
     return `const response = await fetch('${documentation?.baseUrl}${endpoint.path}?${params}', {
   headers: {
-    'X-API-Key': 'mypos_live_your_api_key_here'
+    'X-API-Key': 'omnipilot_live_your_api_key_here'
   }
 });
 const data = await response.json();
@@ -104,7 +104,7 @@ console.log(data);`;
             <div>
               <h1 className="text-3xl font-bold">Owner API Documentation</h1>
               <p className="text-blue-100 mt-2">
-                Panduan lengkap untuk menggunakan MyPOS Owner API
+                Panduan lengkap untuk menggunakan OmniPilot AI Owner API
               </p>
             </div>
           </div>
@@ -137,7 +137,7 @@ console.log(data);`;
             <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm relative">
               <div>{documentation.authentication.headerName}: {documentation.authentication.format}</div>
               <button
-                onClick={() => copyToClipboard(`${documentation.authentication.headerName}: mypos_live_abc123...`, 'auth')}
+                onClick={() => copyToClipboard(`${documentation.authentication.headerName}: omnipilot_live_abc123...`, 'auth')}
                 className="absolute top-2 right-2 p-2 hover:bg-gray-800 rounded transition-colors"
               >
                 {copiedCode === 'auth' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}

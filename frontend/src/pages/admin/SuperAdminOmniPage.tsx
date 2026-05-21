@@ -98,7 +98,7 @@ export default function SuperAdminOmniPage() {
 
   const moduleCards = [
     {
-      title: 'MyPOS',
+      title: 'OmniPilot AI',
       description: 'Operasional kasir, outlet, transaksi, dan laporan owner.',
       to: '/owner/dashboard',
       icon: Building2,
@@ -172,7 +172,7 @@ export default function SuperAdminOmniPage() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Tenant switcher</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Pilih tenant yang ingin dikelola. Pilihan ini berlaku ke MyPOS, MyAkuntan, MyInventory, dan MyCommerSocial.
+                Pilih tenant yang ingin dikelola. Pilihan ini berlaku ke OmniPilot AI, MyAkuntan, MyInventory, dan MyCommerSocial.
               </p>
             </div>
             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">

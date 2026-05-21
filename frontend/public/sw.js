@@ -1,9 +1,9 @@
-const CACHE_NAME = 'mypos-v2';
+const CACHE_NAME = 'omnipilot-ai-v3';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.ico',
+  '/branding/omnipilot-mark.svg',
   '/icon-192.svg',
   '/icon-512.svg'
 ];

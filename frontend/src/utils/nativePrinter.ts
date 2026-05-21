@@ -106,7 +106,7 @@ export const printNativeReceipt = async (
   const dashedDivider = '-'.repeat(lineWidth);
 
   const lines: string[] = [];
-  const storeName = sanitizeLine(settings?.businessName || transactionData.outletName || 'MyPOS');
+  const storeName = sanitizeLine(settings?.businessName || transactionData.outletName || 'OmniPilot AI');
 
   lines.push(`[C]<b>${storeName}</b>\n`);
 
@@ -246,7 +246,7 @@ export const printNativeKitchenTicket = async (
   const dashedDivider = '-'.repeat(lineWidth);
   const lines: string[] = [];
 
-  lines.push(`[C]<b>${sanitizeLine(ticketData.outletName || settings?.businessName || 'MyPOS')}</b>\n`);
+  lines.push(`[C]<b>${sanitizeLine(ticketData.outletName || settings?.businessName || 'OmniPilot AI')}</b>\n`);
   lines.push('[C]<b>TIKET DAPUR</b>\n');
   lines.push(`[C]${divider}\n`);
   lines.push(`[L]No: ${sanitizeLine(ticketData.transactionNumber || `TRX-${Date.now()}`)}\n`);

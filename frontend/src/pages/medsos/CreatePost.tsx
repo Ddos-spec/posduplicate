@@ -64,7 +64,7 @@ export default function CreatePost() {
   const handleGenerateUploadLink = async () => {
     try {
       const data = await generateZernioUploadLink();
-      setUploadLink(data.uploadUrl || 'https://upload.mypos.id/dummy'); // fallback if missing
+      setUploadLink(data.uploadUrl || 'https://upload.omnipilot.ai/dummy'); // fallback if missing
       toast.success('Upload link generated!');
     } catch {
       toast.error('Gagal membuat upload link');

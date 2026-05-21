@@ -47,7 +47,7 @@ export default function SuperAdminTenantBar() {
 
   const moduleLinks = [
     { to: '/admin/dashboard', label: 'Console', icon: LayoutDashboard },
-    { to: '/owner/dashboard', label: 'MyPOS', icon: Building2 },
+    { to: '/owner/dashboard', label: 'OmniPilot AI', icon: Building2 },
     { to: '/accounting/dashboard', label: 'MyAkuntan', icon: Calculator },
     { to: '/inventory/dashboard', label: 'MyInventory', icon: Package },
     { to: '/medsos/dashboard', label: 'MyCommerSocial', icon: Share2 },
