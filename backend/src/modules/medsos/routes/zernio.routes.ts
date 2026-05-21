@@ -22,6 +22,10 @@ import {
   createZernioSequence,
   createZernioAutomation,
 } from '../services/zernio.service';
+import {
+  buildAutomationToolDescriptor,
+  normalizeLogisticsAssistantSettings,
+} from '../services/logisticsAssistant.service';
 
 const router = Router();
 
@@ -60,11 +64,22 @@ router.post('/webhook', async (req, res, next) => {
             const settings = socialAccount.tenants.settings as any;
             const extHook = settings.myCommerSocialSettings?.externalWebhook;
             if (extHook && extHook.active && extHook.url) {
+               const logisticsSettings = normalizeLogisticsAssistantSettings(settings.myCommerSocialSettings?.logisticsAssistant);
+               const forwardedPayload = {
+                  ...payload,
+                  _myCommerSocial: {
+                    tenantId: socialAccount.tenants.id,
+                    businessName: socialAccount.tenants.business_name,
+                    tools: {
+                      logisticsAssistant: buildAutomationToolDescriptor(socialAccount.tenants.id, logisticsSettings)
+                    }
+                  }
+               };
                console.log(`[Webhook Forwarder] Forwarding event to ${extHook.url}`);
                fetch(extHook.url, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(payload),
+                  body: JSON.stringify(forwardedPayload),
                   signal: AbortSignal.timeout(5000)
                }).catch(e => console.error('[Webhook Forwarder] Forward failed:', e.message));
             }

@@ -12,6 +12,7 @@ import {
 import FieldHelp from '../../components/medsos/FieldHelp';
 import {
   McsAdsIcon,
+  McsConnectionsIcon,
   McsIconBadge,
   McsInboxIcon,
   McsMarketplaceIcon,
@@ -29,7 +30,7 @@ import {
   UsersRound,
   Workflow,
 } from 'lucide-react';
-import { settingsService } from '../../services/settingsService';
+import { settingsService, type ManagedLogisticsStatus } from '../../services/settingsService';
 
 const STORAGE_KEY = 'mycommersocial_settings_v2';
 
@@ -58,6 +59,17 @@ type SettingsState = {
     socialAds: boolean;
     marketplace: boolean;
   };
+  logisticsAssistant: {
+    active: boolean;
+    provider: 'rajaongkir';
+    shippingCostEnabled: boolean;
+    trackingEnabled: boolean;
+    originId: string;
+    originLabel: string;
+    defaultCouriers: string;
+    defaultWeightGrams: number;
+    automationTokenMasked: string | null;
+  };
   aiAnalysis: AiAnalysisSettings;
   systemMessages: {
     postAnalysis: string;
@@ -81,6 +93,17 @@ const defaultSettings: SettingsState = {
     waInbox: true,
     socialAds: true,
     marketplace: false,
+  },
+  logisticsAssistant: {
+    active: false,
+    provider: 'rajaongkir',
+    shippingCostEnabled: true,
+    trackingEnabled: true,
+    originId: '',
+    originLabel: '',
+    defaultCouriers: 'jne, sicepat, anteraja',
+    defaultWeightGrams: 1000,
+    automationTokenMasked: null,
   },
   aiAnalysis: {
     hasApiKey: false,
@@ -203,6 +226,24 @@ function formatSavedAt(value: string | null) {
   return date.toLocaleString('id-ID');
 }
 
+function buildLogisticsAssistantSettings(value?: Partial<SettingsState['logisticsAssistant']>) {
+  const rawCouriers = (value as any)?.defaultCouriers;
+  return {
+    ...defaultSettings.logisticsAssistant,
+    ...value,
+    provider: 'rajaongkir' as const,
+    originId: value?.originId !== undefined && value?.originId !== null ? String(value.originId) : '',
+    originLabel: typeof value?.originLabel === 'string' ? value.originLabel : '',
+    defaultCouriers: Array.isArray(rawCouriers)
+      ? rawCouriers.join(', ')
+      : typeof rawCouriers === 'string'
+        ? rawCouriers
+        : defaultSettings.logisticsAssistant.defaultCouriers,
+    defaultWeightGrams: Math.max(100, Number(value?.defaultWeightGrams) || defaultSettings.logisticsAssistant.defaultWeightGrams),
+    automationTokenMasked: typeof value?.automationTokenMasked === 'string' ? value.automationTokenMasked : null,
+  };
+}
+
 function toggleSelection(list: number[], value: number) {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }
@@ -240,6 +281,7 @@ export default function MedsosSettings() {
   const [dirty, setDirty] = useState(false);
   const [seatDraft, setSeatDraft] = useState<SeatDraft>(emptySeatDraft);
   const [analysisApiKeyInput, setAnalysisApiKeyInput] = useState('');
+  const [managedLogisticsStatus, setManagedLogisticsStatus] = useState<ManagedLogisticsStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -248,8 +290,13 @@ export default function MedsosSettings() {
       try {
         if (!isDemo) {
           const backendResponse = await settingsService.getSettings();
-          const backendSettings = (backendResponse.data as { myCommerSocialSettings?: Partial<SettingsState>; myCommerSocialSettingsSavedAt?: string }) || {};
+          const backendSettings = (backendResponse.data as {
+            myCommerSocialSettings?: Partial<SettingsState>;
+            myCommerSocialSettingsSavedAt?: string;
+            managedLogisticsStatus?: ManagedLogisticsStatus;
+          }) || {};
           const workspaceSettings = backendSettings.myCommerSocialSettings;
+          setManagedLogisticsStatus(backendSettings.managedLogisticsStatus || null);
 
           if (workspaceSettings) {
             setSettings({
@@ -259,6 +306,7 @@ export default function MedsosSettings() {
                 ...defaultSettings.channelAccess,
                 ...(workspaceSettings.channelAccess ?? {}),
               },
+              logisticsAssistant: buildLogisticsAssistantSettings(workspaceSettings.logisticsAssistant),
               aiAnalysis: buildAiAnalysisSettings(workspaceSettings.aiAnalysis),
               seats: workspaceSettings.seats ?? [],
             });
@@ -279,6 +327,7 @@ export default function MedsosSettings() {
                 ...defaultSettings.channelAccess,
                 ...(parsed.settings.channelAccess ?? {}),
               },
+              logisticsAssistant: buildLogisticsAssistantSettings(parsed.settings.logisticsAssistant),
               aiAnalysis: buildAiAnalysisSettings(parsed.settings.aiAnalysis),
               seats: parsed.settings.seats ?? [],
             });
@@ -321,6 +370,13 @@ export default function MedsosSettings() {
 
       const settingsPayload: Omit<SettingsState, 'aiAnalysis'> & { aiAnalysis: Record<string, unknown> } = {
         ...settings,
+        logisticsAssistant: {
+          ...settings.logisticsAssistant,
+          originId: settings.logisticsAssistant.originId.trim(),
+          originLabel: settings.logisticsAssistant.originLabel.trim(),
+          defaultCouriers: settings.logisticsAssistant.defaultCouriers,
+          defaultWeightGrams: settings.logisticsAssistant.defaultWeightGrams,
+        },
         aiAnalysis: {
           hasApiKey: settings.aiAnalysis.hasApiKey,
           apiKeyMasked: settings.aiAnalysis.apiKeyMasked,
@@ -355,6 +411,7 @@ export default function MedsosSettings() {
           myCommerSocialSettings: settingsPayload,
           myCommerSocialSettingsSavedAt: savedAt,
         });
+        setManagedLogisticsStatus(response.data.managedLogisticsStatus || null);
 
         const returnedSettings = (response.data as { myCommerSocialSettings?: Partial<SettingsState> }).myCommerSocialSettings;
         nextSettings = returnedSettings
@@ -365,6 +422,7 @@ export default function MedsosSettings() {
                 ...defaultSettings.channelAccess,
                 ...(returnedSettings.channelAccess ?? {}),
               },
+              logisticsAssistant: buildLogisticsAssistantSettings(returnedSettings.logisticsAssistant),
               aiAnalysis: buildAiAnalysisSettings({
                 ...returnedSettings.aiAnalysis,
                 hasApiKey: analysisApiKeyInput.trim() ? true : returnedSettings.aiAnalysis?.hasApiKey ?? settings.aiAnalysis.hasApiKey,
@@ -376,6 +434,7 @@ export default function MedsosSettings() {
             }
           : {
               ...settings,
+              logisticsAssistant: buildLogisticsAssistantSettings(settings.logisticsAssistant),
               aiAnalysis: buildAiAnalysisSettings({
                 ...settings.aiAnalysis,
                 hasApiKey: analysisApiKeyInput.trim() ? true : settings.aiAnalysis.hasApiKey,
@@ -532,6 +591,212 @@ export default function MedsosSettings() {
           </div>
         ))}
       </div>
+
+      <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 mb-6">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-3 mb-3">
+              <McsIconBadge icon={McsConnectionsIcon} size={44} iconSize={19} tone="blue" />
+              <div>
+                <h2 className="font-bold text-lg">Logistics assistant</h2>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Managed integration RajaOngkir untuk AI cek ongkir dan cek resi tanpa customer login ke provider.
+                </p>
+              </div>
+            </div>
+            <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              Saat webhook AI aktif, sistem akan menyisipkan tool logistics otomatis ke payload webhook. Jadi workflow AI bisa pakai cek ongkir dan cek resi tanpa mengekspos RajaOngkir ke customer.
+            </p>
+          </div>
+
+          <div className={`rounded-[24px] p-4 min-w-[280px] ${isDark ? 'bg-slate-900/70 ring-1 ring-white/10' : 'bg-blue-50 ring-1 ring-blue-100'}`}>
+            <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>Server status</p>
+            <p className="mt-2 text-lg font-bold tracking-tight">
+              {managedLogisticsStatus?.configured ? 'Ready to use' : 'Need API key'}
+            </p>
+            <p className={`mt-2 text-xs leading-5 ${isDark ? 'text-gray-400' : 'text-blue-900/80'}`}>
+              {managedLogisticsStatus?.helper || 'Status logistics assistant akan muncul setelah settings backend dimuat.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid xl:grid-cols-[1.1fr_0.9fr] gap-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'bg-gray-50 border border-gray-100'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">Aktifkan logistics assistant</p>
+                  <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Jika aktif, AI workflow dapat memanggil tool cek ongkir dan cek resi.</p>
+                </div>
+                <ToggleButton
+                  active={settings.logisticsAssistant.active}
+                  label={settings.logisticsAssistant.active ? 'Aktif' : 'Off'}
+                  onClick={() =>
+                    updateSettings((current) => ({
+                      ...current,
+                      logisticsAssistant: {
+                        ...current.logisticsAssistant,
+                        active: !current.logisticsAssistant.active,
+                      },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Cek ongkir</p>
+                  <ToggleButton
+                    active={settings.logisticsAssistant.shippingCostEnabled}
+                    label={settings.logisticsAssistant.shippingCostEnabled ? 'Aktif' : 'Off'}
+                    onClick={() =>
+                      updateSettings((current) => ({
+                        ...current,
+                        logisticsAssistant: {
+                          ...current.logisticsAssistant,
+                          shippingCostEnabled: !current.logisticsAssistant.shippingCostEnabled,
+                        },
+                      }))
+                    }
+                  />
+                </div>
+                <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900' : 'bg-white'}`}>
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Cek resi</p>
+                  <ToggleButton
+                    active={settings.logisticsAssistant.trackingEnabled}
+                    label={settings.logisticsAssistant.trackingEnabled ? 'Aktif' : 'Off'}
+                    onClick={() =>
+                      updateSettings((current) => ({
+                        ...current,
+                        logisticsAssistant: {
+                          ...current.logisticsAssistant,
+                          trackingEnabled: !current.logisticsAssistant.trackingEnabled,
+                        },
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            <label className="space-y-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Origin ID RajaOngkir
+                <FieldHelp title="Origin ID RajaOngkir" description="Isi ID lokasi asal dari RajaOngkir. Ini dipakai sebagai origin default saat AI menghitung ongkir." />
+              </span>
+              <input
+                value={settings.logisticsAssistant.originId}
+                onChange={(event) =>
+                  updateSettings((current) => ({
+                    ...current,
+                    logisticsAssistant: {
+                      ...current.logisticsAssistant,
+                      originId: event.target.value,
+                    },
+                  }))
+                }
+                placeholder="Contoh: 501"
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Label origin
+                <FieldHelp title="Label origin" description="Nama gudang atau lokasi asal agar lebih mudah dibaca owner dan AI workflow." />
+              </span>
+              <input
+                value={settings.logisticsAssistant.originLabel}
+                onChange={(event) =>
+                  updateSettings((current) => ({
+                    ...current,
+                    logisticsAssistant: {
+                      ...current.logisticsAssistant,
+                      originLabel: event.target.value,
+                    },
+                  }))
+                }
+                placeholder="Contoh: Gudang Jakarta Barat"
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+              />
+            </label>
+
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Kurir default
+                <FieldHelp title="Kurir default" description="Pisahkan dengan koma. Contoh: jne, sicepat, anteraja. Jika customer tidak menyebut kurir, AI akan memakai daftar ini." />
+              </span>
+              <input
+                value={settings.logisticsAssistant.defaultCouriers}
+                onChange={(event) =>
+                  updateSettings((current) => ({
+                    ...current,
+                    logisticsAssistant: {
+                      ...current.logisticsAssistant,
+                      defaultCouriers: event.target.value,
+                    },
+                  }))
+                }
+                placeholder="jne, sicepat, anteraja"
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-sm font-semibold inline-flex items-center gap-2">
+                Berat default
+                <FieldHelp title="Berat default" description="Dipakai jika AI belum mendapat berat paket dari katalog atau customer. Satuan gram." />
+              </span>
+              <input
+                type="number"
+                min={100}
+                step={100}
+                value={settings.logisticsAssistant.defaultWeightGrams}
+                onChange={(event) =>
+                  updateSettings((current) => ({
+                    ...current,
+                    logisticsAssistant: {
+                      ...current.logisticsAssistant,
+                      defaultWeightGrams: Math.max(100, Number(event.target.value) || 100),
+                    },
+                  }))
+                }
+                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
+              />
+            </label>
+          </div>
+
+          <div className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'bg-gray-50 border border-gray-100'}`}>
+            <div className="flex items-center gap-2 mb-4">
+              <CheckCircle2 size={18} className="text-blue-500" />
+              <h3 className="font-bold">Cara kerja nanti</h3>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
+                Customer tanya ongkir / resi ke AI customer service.
+              </div>
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
+                Webhook AI menerima payload yang sudah berisi descriptor tool logistics assistant.
+              </div>
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
+                Workflow AI memanggil endpoint internal kita, lalu backend kita yang bicara ke RajaOngkir.
+              </div>
+              <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-950 text-gray-300' : 'bg-white text-gray-700 border border-gray-100'}`}>
+                Customer tidak perlu login RajaOngkir dan tidak tahu ada n8n di belakang layar.
+              </div>
+            </div>
+
+            <div className={`mt-4 rounded-2xl p-4 ${isDark ? 'bg-blue-500/10 text-blue-100' : 'bg-blue-50 text-blue-900'}`}>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]">Automation token</p>
+              <p className="mt-2 text-sm">
+                {settings.logisticsAssistant.automationTokenMasked
+                  ? `Sudah dibuat (${settings.logisticsAssistant.automationTokenMasked}) dan akan dikirim otomatis ke payload webhook.`
+                  : 'Token automation akan dibuat otomatis saat settings pertama kali disimpan.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
         <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>

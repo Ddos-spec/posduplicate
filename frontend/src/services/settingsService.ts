@@ -28,6 +28,7 @@ export interface TenantSettings {
   dailySalesReport: boolean | null;
   whatsappNotifications: boolean | null;
   notificationDeliveryStatus?: NotificationDeliveryStatus;
+  managedLogisticsStatus?: ManagedLogisticsStatus;
   approvalSettings: ApprovalSettings;
   cashierSecurity: CashierSecuritySettings;
   printerRouting: PrinterRoutingSettings;
@@ -37,6 +38,14 @@ export interface TenantSettings {
 export interface NotificationDeliveryStatus {
   emailConfigured: boolean;
   whatsappConfigured: boolean;
+}
+
+export interface ManagedLogisticsStatus {
+  provider: 'rajaongkir';
+  configured: boolean;
+  shippingCostReady: boolean;
+  trackingReady: boolean;
+  helper: string;
 }
 
 export interface ApprovalSettings {
