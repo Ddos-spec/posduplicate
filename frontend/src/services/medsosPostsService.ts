@@ -102,6 +102,65 @@ export interface WACrmConnectionStatus {
   stats: WACrmStats | null;
 }
 
+export interface WACrmConversation {
+  id: string;
+  contact_id: string;
+  chat_id: string | null;
+  name: string;
+  phone: string;
+  jid: string | null;
+  status: 'active' | 'pending' | 'escalation' | 'inactive' | 'unknown';
+  unread_count: number;
+  last_message: string;
+  last_message_at: string | null;
+  profile_pic_url: string | null;
+  assigned_agent: string | null;
+  is_group: boolean;
+  is_contact_only: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface WACrmConversationList {
+  conversations: WACrmConversation[];
+  meta: {
+    limit: number;
+    offset: number;
+    total: number;
+  };
+}
+
+export interface WACrmMessage {
+  id: string;
+  chat_id: string;
+  sender_type: string;
+  sender_id: string | null;
+  sender_name: string | null;
+  message_type: string;
+  body: string;
+  media_url: string | null;
+  wa_message_id: string | null;
+  is_from_me: boolean;
+  status: string | null;
+  created_at: string | null;
+}
+
+export interface WACrmMessageList {
+  chatId: string;
+  messages: WACrmMessage[];
+  meta: {
+    limit: number;
+    before: string | null;
+  };
+}
+
+export interface WACrmSendMessageResult {
+  messageId: string | null;
+  chatId: string | null;
+  gatewayMessageId: string | null;
+  sentAt: string | null;
+}
+
 export interface MarketplaceChatChannel {
   id: string;
   name: string;
@@ -164,6 +223,45 @@ export async function generateSocialPostAnalysis(post: number | SocialPost): Pro
 export async function getWACrmStatus(): Promise<WACrmConnectionStatus> {
   const { data } = await api.get('/medsos/integrations/proxy/social-hub/status');
   return data.data as WACrmConnectionStatus;
+}
+
+export async function getWACrmConversations(params?: {
+  limit?: number;
+  offset?: number;
+  status?: 'active' | 'pending' | 'escalation' | 'inactive';
+  search?: string;
+}): Promise<WACrmConversationList> {
+  const { data } = await api.get('/medsos/integrations/proxy/social-hub/conversations', {
+    params: {
+      limit: params?.limit,
+      offset: params?.offset,
+      status: params?.status,
+      search: params?.search,
+    },
+  });
+  return data.data as WACrmConversationList;
+}
+
+export async function getWACrmMessages(chatId: string, params?: {
+  limit?: number;
+  before?: string;
+}): Promise<WACrmMessageList> {
+  const { data } = await api.get(`/medsos/integrations/proxy/social-hub/chats/${encodeURIComponent(chatId)}/messages`, {
+    params: {
+      limit: params?.limit,
+      before: params?.before,
+    },
+  });
+  return data.data as WACrmMessageList;
+}
+
+export async function sendWACrmMessage(payload: {
+  receiver?: string;
+  phone?: string;
+  message: string;
+}): Promise<WACrmSendMessageResult> {
+  const { data } = await api.post('/medsos/integrations/proxy/social-hub/send-message', payload);
+  return data.data as WACrmSendMessageResult;
 }
 
 export async function getMarketplaceHubStatus(): Promise<MarketplaceHubConnectionStatus> {

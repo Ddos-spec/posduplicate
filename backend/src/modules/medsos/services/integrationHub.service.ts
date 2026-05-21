@@ -75,6 +75,79 @@ export interface SocialHubConnectionStatus {
   stats: Record<string, unknown> | null;
 }
 
+export interface SocialHubConversation {
+  id: string;
+  contact_id: string;
+  chat_id: string | null;
+  name: string;
+  phone: string;
+  jid: string | null;
+  status: 'active' | 'pending' | 'escalation' | 'inactive' | 'unknown';
+  unread_count: number;
+  last_message: string;
+  last_message_at: string | null;
+  profile_pic_url: string | null;
+  assigned_agent: string | null;
+  is_group: boolean;
+  is_contact_only: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface SocialHubConversationList {
+  conversations: SocialHubConversation[];
+  meta: {
+    limit: number;
+    offset: number;
+    total: number;
+  };
+}
+
+export interface SocialHubMessage {
+  id: string;
+  chat_id: string;
+  sender_type: string;
+  sender_id: string | null;
+  sender_name: string | null;
+  message_type: string;
+  body: string;
+  media_url: string | null;
+  wa_message_id: string | null;
+  is_from_me: boolean;
+  status: string | null;
+  created_at: string | null;
+}
+
+export interface SocialHubMessageList {
+  chatId: string;
+  messages: SocialHubMessage[];
+  meta: {
+    limit: number;
+    before: string | null;
+  };
+}
+
+export interface SocialHubSendMessageInput {
+  receiver?: string;
+  phone?: string;
+  message: string;
+  mtype?: 'text';
+}
+
+export interface SocialHubSendMessageResult {
+  messageId: string | null;
+  chatId: string | null;
+  gatewayMessageId: string | null;
+  sentAt: string | null;
+}
+
+interface SocialHubProxyContext {
+  apiKey: string;
+  baseUrl: string;
+  active: boolean;
+  connectionRefMasked: string | null;
+}
+
 const defaultHealthScore: Record<ManagedIntegrationSlug, number> = {
   'social-hub': 91,
   'marketplace-hub': 88,
@@ -207,6 +280,13 @@ function sanitizeManagedBaseUrl(value?: string | null): string {
   } catch {
     return '';
   }
+}
+
+function createIntegrationError(message: string, status = 400, code = 'INTEGRATION_ERROR') {
+  const error = new Error(message) as Error & { status?: number; code?: string };
+  error.status = status;
+  error.code = code;
+  return error;
 }
 
 function buildStateToken(payload: JsonRecord): string {
@@ -876,6 +956,92 @@ export async function proxySocialHubStats(tenantId: number) {
   return status.stats;
 }
 
+async function resolveSocialHubProxyContext(tenantId: number): Promise<SocialHubProxyContext> {
+  const definition = getManagedIntegrationDefinition('social-hub')!;
+  const row = await prisma.integrations.findUnique({
+    where: {
+      tenant_id_integration_type: {
+        tenant_id: tenantId,
+        integration_type: definition.integrationType,
+      },
+    },
+    select: { is_active: true, credentials: true, metadata: true },
+  });
+
+  const credentials = decryptCredentials(row?.credentials);
+  const metadata = asRecord(row?.metadata);
+  const apiKey = String(credentials.connectionId || '').trim();
+  const envBaseUrl = sanitizeManagedBaseUrl(getSocialHubApiBaseUrl());
+  const tenantBaseUrl = sanitizeManagedBaseUrl(metadata.vendorWorkspaceUrl as string | undefined);
+  const baseUrl = envBaseUrl || tenantBaseUrl;
+
+  if (!row || (!row.is_active && !apiKey && !baseUrl)) {
+    throw createIntegrationError('WA Inbox belum dikonfigurasi untuk tenant ini.', 400, 'SOCIAL_HUB_NOT_CONFIGURED');
+  }
+
+  if (!apiKey) {
+    throw createIntegrationError('API key workspace inbox belum tersimpan.', 400, 'SOCIAL_HUB_API_KEY_MISSING');
+  }
+
+  if (!baseUrl) {
+    throw createIntegrationError('Alamat backend WA CRM belum tersedia di konfigurasi sistem.', 500, 'SOCIAL_HUB_BASE_URL_MISSING');
+  }
+
+  return {
+    apiKey,
+    baseUrl,
+    active: Boolean(row.is_active),
+    connectionRefMasked: maskReference(apiKey),
+  };
+}
+
+async function fetchSocialHubProxyJson<T>(
+  tenantId: number,
+  endpoint: string,
+  options?: {
+    method?: 'GET' | 'POST';
+    body?: Record<string, unknown>;
+    timeoutMs?: number;
+  },
+): Promise<T> {
+  const context = await resolveSocialHubProxyContext(tenantId);
+  const method = options?.method || 'GET';
+  const timeoutMs = options?.timeoutMs || 10000;
+  const response = await fetch(`${context.baseUrl}/api/v1/external/dashboard${endpoint}`, {
+    method,
+    headers: {
+      'X-Tenant-Key': context.apiKey,
+      Accept: 'application/json',
+      ...(method !== 'GET' ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: method === 'GET' ? undefined : JSON.stringify(options?.body || {}),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+  if (contentType.includes('text/html')) {
+    throw createIntegrationError(
+      'URL WA CRM mengarah ke halaman HTML, bukan backend API inbox. Cek MCS_SOCIAL_API_BASE_URL di server.',
+      502,
+      'SOCIAL_HUB_HTML_RESPONSE',
+    );
+  }
+
+  let json: any = null;
+  try {
+    json = await response.json();
+  } catch {
+    throw createIntegrationError('WA CRM mengembalikan respons yang tidak valid.', 502, 'SOCIAL_HUB_INVALID_RESPONSE');
+  }
+
+  if (!response.ok || (json?.status && json.status !== 'success')) {
+    const message = String(json?.error || json?.message || `WA CRM returned ${response.status}`).trim();
+    throw createIntegrationError(message, response.status >= 500 ? 502 : response.status, 'SOCIAL_HUB_REQUEST_FAILED');
+  }
+
+  return json as T;
+}
+
 export async function getSocialHubConnectionStatus(tenantId: number): Promise<SocialHubConnectionStatus> {
   const definition = getManagedIntegrationDefinition('social-hub')!;
 
@@ -1037,6 +1203,126 @@ export async function getSocialHubConnectionStatus(tenantId: number): Promise<So
       stats: null,
     };
   }
+}
+
+export async function listSocialHubConversations(
+  tenantId: number,
+  params?: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    search?: string;
+  },
+): Promise<SocialHubConversationList> {
+  const searchParams = new URLSearchParams();
+  if (typeof params?.limit === 'number' && Number.isFinite(params.limit)) {
+    searchParams.set('limit', String(Math.max(1, Math.min(200, Math.trunc(params.limit)))));
+  }
+  if (typeof params?.offset === 'number' && Number.isFinite(params.offset)) {
+    searchParams.set('offset', String(Math.max(0, Math.trunc(params.offset))));
+  }
+  if (params?.status) {
+    searchParams.set('status', params.status);
+  }
+  if (params?.search) {
+    searchParams.set('search', params.search);
+  }
+
+  const suffix = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  const json = await fetchSocialHubProxyJson<{
+    status: string;
+    data?: SocialHubConversation[];
+    meta?: { limit?: number; offset?: number; total?: number };
+  }>(tenantId, `/customers${suffix}`);
+
+  return {
+    conversations: Array.isArray(json.data) ? json.data : [],
+    meta: {
+      limit: Number(json.meta?.limit || params?.limit || 0),
+      offset: Number(json.meta?.offset || params?.offset || 0),
+      total: Number(json.meta?.total || 0),
+    },
+  };
+}
+
+export async function getSocialHubMessages(
+  tenantId: number,
+  chatId: string,
+  params?: {
+    limit?: number;
+    before?: string;
+  },
+): Promise<SocialHubMessageList> {
+  const normalizedChatId = String(chatId || '').trim();
+  if (!normalizedChatId) {
+    throw createIntegrationError('chatId wajib diisi.', 400, 'SOCIAL_HUB_CHAT_ID_REQUIRED');
+  }
+
+  const searchParams = new URLSearchParams();
+  if (typeof params?.limit === 'number' && Number.isFinite(params.limit)) {
+    searchParams.set('limit', String(Math.max(1, Math.min(200, Math.trunc(params.limit)))));
+  }
+  if (params?.before) {
+    searchParams.set('before', params.before);
+  }
+  const suffix = searchParams.toString() ? `?${searchParams.toString()}` : '';
+
+  const json = await fetchSocialHubProxyJson<{
+    status: string;
+    data?: SocialHubMessage[];
+    meta?: { limit?: number; before?: string | null };
+  }>(tenantId, `/chats/${encodeURIComponent(normalizedChatId)}/messages${suffix}`);
+
+  return {
+    chatId: normalizedChatId,
+    messages: Array.isArray(json.data) ? json.data : [],
+    meta: {
+      limit: Number(json.meta?.limit || params?.limit || 0),
+      before: typeof json.meta?.before === 'string' ? json.meta.before : params?.before || null,
+    },
+  };
+}
+
+export async function sendSocialHubMessage(
+  tenantId: number,
+  payload: SocialHubSendMessageInput,
+): Promise<SocialHubSendMessageResult> {
+  const message = String(payload.message || '').trim();
+  const receiver = String(payload.receiver || payload.phone || '').trim();
+
+  if (!receiver) {
+    throw createIntegrationError('Nomor atau JID tujuan wajib diisi.', 400, 'SOCIAL_HUB_RECEIVER_REQUIRED');
+  }
+
+  if (!message) {
+    throw createIntegrationError('Isi pesan tidak boleh kosong.', 400, 'SOCIAL_HUB_MESSAGE_REQUIRED');
+  }
+
+  const json = await fetchSocialHubProxyJson<{
+    status: string;
+    data?: {
+      messageId?: string | null;
+      chatId?: string | null;
+      gatewayMessageId?: string | null;
+      sentAt?: string | null;
+    };
+  }>(tenantId, '/send-message', {
+    method: 'POST',
+    body: {
+      receiver,
+      phone: receiver,
+      message,
+      text: message,
+      mtype: payload.mtype || 'text',
+    },
+  });
+
+  return {
+    messageId: json.data?.messageId ?? null,
+    chatId: json.data?.chatId ?? null,
+    gatewayMessageId: json.data?.gatewayMessageId ?? null,
+    sentAt: json.data?.sentAt ?? null,
+  };
 }
 
 export async function handleManagedIntegrationWebhook(slug: string, headers: Record<string, string | string[] | undefined>, body: unknown) {

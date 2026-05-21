@@ -4,11 +4,14 @@ import {
   completeManagedIntegrationConnect,
   disconnectManagedIntegration,
   getSocialHubConnectionStatus,
+  getSocialHubMessages,
   getManagedIntegrationDetail,
   getManagedIntegrationHub,
   handleManagedIntegrationCallback,
   handleManagedIntegrationWebhook,
+  listSocialHubConversations,
   proxySocialHubStats,
+  sendSocialHubMessage,
   syncManagedIntegration,
   type ManagedAssetInput,
 } from '../services/integrationHub.service';
@@ -264,6 +267,64 @@ export const proxyStatus = async (req: Request, res: Response, next: NextFunctio
     }
 
     const data = await getSocialHubConnectionStatus(req.tenantId);
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const proxySocialHubConversations = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.tenantId) {
+      res.status(400).json({ success: false, error: { code: 'NO_TENANT', message: 'Tenant context is required' } });
+      return;
+    }
+
+    const data = await listSocialHubConversations(req.tenantId, {
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined,
+      offset: typeof req.query.offset === 'string' ? Number(req.query.offset) : undefined,
+      status: typeof req.query.status === 'string' ? req.query.status : undefined,
+      search: typeof req.query.search === 'string' ? req.query.search : undefined,
+    });
+
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const proxySocialHubMessages = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.tenantId) {
+      res.status(400).json({ success: false, error: { code: 'NO_TENANT', message: 'Tenant context is required' } });
+      return;
+    }
+
+    const data = await getSocialHubMessages(req.tenantId, req.params.chatId, {
+      limit: typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined,
+      before: typeof req.query.before === 'string' ? req.query.before : undefined,
+    });
+
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const proxySocialHubSendMessage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.tenantId) {
+      res.status(400).json({ success: false, error: { code: 'NO_TENANT', message: 'Tenant context is required' } });
+      return;
+    }
+
+    const data = await sendSocialHubMessage(req.tenantId, {
+      receiver: typeof req.body?.receiver === 'string' ? req.body.receiver : undefined,
+      phone: typeof req.body?.phone === 'string' ? req.body.phone : undefined,
+      message: typeof req.body?.message === 'string' ? req.body.message : '',
+      mtype: req.body?.mtype === 'text' ? 'text' : undefined,
+    });
+
     res.json({ success: true, data });
   } catch (error) {
     next(error);
