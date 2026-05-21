@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
+import { OMNIPILOT_APK_FILENAME, OMNIPILOT_APK_PATH } from '../components/branding/OmnipilotBrand';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import toast from 'react-hot-toast';
@@ -32,7 +33,7 @@ export default function LoginPage() {
   const { isDark, toggleTheme } = useThemeStore();
   const isNativeApp = Capacitor.isNativePlatform();
   const androidAppDownloadUrl =
-    import.meta.env.VITE_ANDROID_APP_DOWNLOAD_URL || '/downloads/mypos-latest.apk';
+    import.meta.env.VITE_ANDROID_APP_DOWNLOAD_URL || OMNIPILOT_APK_PATH;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,11 +94,12 @@ export default function LoginPage() {
         <div className={`rounded-2xl shadow-2xl p-8 w-full max-w-md relative z-10 transition-colors duration-300 ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white'}`}>
           {/* Logo & Branding */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
-                <Lock className="w-6 h-6 text-white" />
-              </div>
-              <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>MyPOS</h1>
+            <div className="mb-4 flex justify-center">
+              <img
+                src="/branding/omnipilot-ai-logo.svg"
+                alt="OmniPilot AI"
+                className="h-16 w-auto sm:h-20"
+              />
             </div>
 
             {/* Business Platform Badge */}
@@ -218,7 +220,7 @@ export default function LoginPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      Download MyPOS App
+                      Download OmniPilot AI App
                     </h3>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
@@ -235,11 +237,11 @@ export default function LoginPage() {
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <a
                       href={androidAppDownloadUrl}
-                      download="mypos-latest.apk"
+                      download={OMNIPILOT_APK_FILENAME}
                       className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
                     >
                       <Download className="h-4 w-4" />
-                      Download MyPOS App
+                      Download OmniPilot AI App
                     </a>
                     <span className={`text-xs self-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                       Buka dari HP Android untuk install langsung.
@@ -303,7 +305,7 @@ export default function LoginPage() {
           <HelpCircle className="w-4 h-4" />
           Need help?
         </button>
-        <p className={isDark ? 'text-gray-500' : 'text-gray-400'}>© 2025 MyPOS Platform. All rights reserved.</p>
+        <p className={isDark ? 'text-gray-500' : 'text-gray-400'}>© 2025 OmniPilot AI Platform. All rights reserved.</p>
         <div className={`px-3 py-1 rounded-lg text-xs font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
           v2.0.0
         </div>

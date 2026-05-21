@@ -10,7 +10,7 @@ import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = 'admin@mypos.com';
+const ADMIN_EMAIL = 'admin@omnipilot.ai';
 const ADMIN_PASSWORD = 'admin123';
 const ADMIN_NAME = 'Super Admin';
 const SALT_ROUNDS = 10;

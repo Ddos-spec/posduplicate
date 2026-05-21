@@ -29,17 +29,22 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'MyPOS',
-        short_name: 'MyPOS',
-        description: 'Multi-tenant POS System',
+        name: 'OmniPilot AI',
+        short_name: 'OmniPilot AI',
+        description: 'AI-powered retail, commerce, and operations suite',
         theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
           {
-            src: '/logo.webp',
+            src: '/icon-192.svg',
             sizes: '192x192',
-            type: 'image/webp',
+            type: 'image/svg+xml',
+          },
+          {
+            src: '/icon-512.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
           },
         ],
       },

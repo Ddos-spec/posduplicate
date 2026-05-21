@@ -153,7 +153,7 @@ describe('🔥 Smoke Tests - All Modules', () => {
       const res = await request(app).get('/');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.message).toContain('MyPOS');
+      expect(res.body.message).toContain('OmniPilot AI');
     });
 
     test('GET /health - Health check should return OK', async () => {

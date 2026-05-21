@@ -12,7 +12,7 @@ export const ALL_MODULES_ENABLED: TenantModulesState = {
 };
 
 export const MODULE_LABELS: Record<TenantModuleKey, string> = {
-  pos: 'MyPOS',
+  pos: 'OmniPilot AI',
   accounting: 'MyAkuntan',
   inventory: 'MyInventory',
   commerSocial: 'MyCommerSocial',

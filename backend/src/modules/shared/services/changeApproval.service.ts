@@ -236,7 +236,7 @@ const sendApprovalLifecycleEmail = async (
       detail,
       '',
       'Salam,',
-      'MyPOS'
+      'OmniPilot AI'
     ].filter(Boolean).join('\n'),
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #1f2937;">
@@ -271,7 +271,7 @@ const sendApprovalLifecycleEmail = async (
           </tbody>
         </table>
         <p style="margin: 16px 0 0;">${escapeHtml(detail)}</p>
-        <p style="margin: 24px 0 0;">Salam,<br />MyPOS</p>
+        <p style="margin: 24px 0 0;">Salam,<br />OmniPilot AI</p>
       </div>
     `
   });

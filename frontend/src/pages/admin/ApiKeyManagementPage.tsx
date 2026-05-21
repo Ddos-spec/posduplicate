@@ -170,7 +170,7 @@ export default function ApiKeyManagementPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 font-mono text-sm bg-gray-100 px-2 py-1 rounded w-fit">
                       <Key size={14} className="text-gray-400" />
-                      {showKey === key.id ? key.api_key : 'mypos_live_••••••••'}
+                      {showKey === key.id ? key.api_key : 'omnipilot_live_••••••••'}
                       <button onClick={() => setShowKey(showKey === key.id ? null : key.id)} className="text-gray-500 hover:text-blue-600">
                         {showKey === key.id ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>

@@ -167,8 +167,8 @@ export default function TransactionDetailModal({
       </head>
       <body>
         <div class="header">
-          <img src="${window.location.origin}/logo.webp" alt="POS E2NK" />
-          <h2>MyPOS</h2>
+          <img src="${window.location.origin}/branding/omnipilot-mark.svg" alt="OmniPilot AI" />
+          <h2>OmniPilot AI</h2>
           <p>Receipt</p>
         </div>
 
@@ -210,7 +210,7 @@ export default function TransactionDetailModal({
 
         <div class="footer">
           <p>Thank you for your purchase!</p>
-          <p>Powered by MyPOS</p>
+          <p>Powered by OmniPilot AI</p>
         </div>
 
         <script>

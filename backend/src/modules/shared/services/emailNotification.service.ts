@@ -116,7 +116,7 @@ const getSenderAddress = () => {
     throw new Error('Alamat pengirim email belum dikonfigurasi.');
   }
 
-  const senderName = process.env.SMTP_FROM_NAME || 'MyPOS Notifications';
+  const senderName = process.env.SMTP_FROM_NAME || 'OmniPilot AI Notifications';
   return `"${senderName}" <${address}>`;
 };
 

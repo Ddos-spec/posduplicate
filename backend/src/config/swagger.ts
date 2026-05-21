@@ -4,10 +4,10 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'MyPOS API Documentation',
+      title: 'OmniPilot AI API Documentation',
       version: '1.0.0',
       description: `
-        MyPOS - Multi-Tenant POS & Accounting System API
+        OmniPilot AI - Multi-Tenant POS & Accounting System API
 
         ## Authentication
         Most endpoints require JWT authentication. Include the token in the Authorization header:
@@ -27,8 +27,8 @@ const options: swaggerJsdoc.Options = {
         - **Shared**: Auth, users, tenants, outlets
       `,
       contact: {
-        name: 'MyPOS API Support',
-        email: 'support@mypos.com'
+        name: 'OmniPilot AI API Support',
+        email: 'support@omnipilot.ai'
       },
       license: {
         name: 'MIT',
@@ -41,7 +41,7 @@ const options: swaggerJsdoc.Options = {
         description: 'Development server'
       },
       {
-        url: 'https://api.mypos.com',
+        url: 'https://api.omnipilot.ai',
         description: 'Production server'
       }
     ],

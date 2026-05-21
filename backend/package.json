@@ -1,7 +1,7 @@
 {
   "name": "mypos-backend",
   "version": "1.0.0",
-  "description": "MyPOS Backend API - Express + TypeScript + Prisma",
+  "description": "OmniPilot AI Backend API - Express + TypeScript + Prisma",
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",

@@ -236,7 +236,7 @@ export const getApiDocumentation = async (_req: Request, res: Response, next: Ne
       authentication: {
         type: 'API Key',
         headerName: 'X-API-Key',
-        format: 'mypos_live_[64_hex_characters]',
+        format: 'omnipilot_live_[64_hex_characters]',
       },
       endpoints: [
         {

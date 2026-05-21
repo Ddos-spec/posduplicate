@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.mypos.app',
-  appName: 'MyPOS',
+  appName: 'OmniPilot AI',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

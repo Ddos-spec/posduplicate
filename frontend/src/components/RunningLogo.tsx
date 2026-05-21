@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 export default function RunningLogo() {
   const [position, setPosition] = useState(0);
-  const logoText = "myposE2NK";
+  const logoText = "OmniPilotAI";
 
   useEffect(() => {
     const interval = setInterval(() => {

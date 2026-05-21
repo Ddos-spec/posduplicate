@@ -3,42 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { useTenantProfileStore } from '../store/tenantProfileStore';
+import OmnipilotBrand, { OmnipilotMark } from '../components/branding/OmnipilotBrand';
 import MyCommerSocialLogo from '../components/medsos/MyCommerSocialLogo';
 import { normalizeTenantModules } from '../utils/tenantModules';
 import {
   Calculator, Package,
   ArrowRight, LogOut, Clock, Sun, Moon, Star,
-  Share2, Loader2, Store, ReceiptText
+  Share2, Loader2, Store
 } from 'lucide-react';
-
-function MyPosBrandMark({
-  size = 44,
-  className = '',
-}: {
-  size?: number;
-  className?: string;
-}) {
-  const storeSize = Math.max(18, Math.round(size * 0.46));
-  const receiptSize = Math.max(10, Math.round(size * 0.22));
-
-  return (
-    <div
-      className={`relative inline-flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 text-white shadow-[0_18px_38px_rgba(16,185,129,0.28)] ring-1 ring-white/20 ${className}`.trim()}
-      style={{ width: size, height: size }}
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.4),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.18),transparent_36%)]" />
-      <div className="absolute inset-[1px] rounded-[15px] border border-white/12" />
-      <Store
-        size={storeSize}
-        strokeWidth={2.15}
-        className="drop-shadow-[0_4px_10px_rgba(15,23,42,0.22)]"
-      />
-      <div className="absolute bottom-[12%] right-[10%] rounded-full bg-slate-950/22 p-1 ring-2 ring-white/30 backdrop-blur-sm">
-        <ReceiptText size={receiptSize} strokeWidth={2.3} />
-      </div>
-    </div>
-  );
-}
 
 export default function ModuleSelectorPage() {
   const navigate = useNavigate();
@@ -71,7 +43,7 @@ export default function ModuleSelectorPage() {
   const modules = [
     {
       id: 'pos',
-      name: 'MyPOS',
+      name: 'OmniPilot AI',
       description: 'Comprehensive point of sale solution for your retail outlets.',
       icon: Store,
       color: 'from-emerald-500 to-emerald-600',
@@ -141,13 +113,12 @@ export default function ModuleSelectorPage() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <MyPosBrandMark size={46} />
-            <div>
-              <span className={`block text-xl font-bold leading-none ${isDark ? 'text-white' : 'text-gray-900'}`}>MyPOS</span>
-              <span className={`mt-1 block text-[11px] font-semibold uppercase tracking-[0.22em] ${isDark ? 'text-emerald-300/85' : 'text-emerald-600'}`}>
-                Retail Command
-              </span>
-            </div>
+            <OmnipilotBrand
+              markSize={46}
+              titleClassName={isDark ? 'text-white text-xl' : 'text-gray-900 text-xl'}
+              subtitleClassName={isDark ? 'text-cyan-300/85' : 'text-cyan-600'}
+              subtitle="Retail Command"
+            />
           </div>
 
           {/* Right side */}
@@ -217,7 +188,7 @@ export default function ModuleSelectorPage() {
                   {module.id === 'medsos'
                     ? <MyCommerSocialLogo size={56} />
                     : module.id === 'pos'
-                      ? <MyPosBrandMark size={56} />
+                      ? <OmnipilotMark size={56} className="drop-shadow-[0_10px_18px_rgba(37,99,235,0.18)]" />
                       : <module.icon className="w-7 h-7 text-white" />}
                 </div>
                 <span className={`text-xs font-semibold px-3 py-1 rounded-full ${

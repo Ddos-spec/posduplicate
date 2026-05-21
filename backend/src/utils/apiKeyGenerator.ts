@@ -2,12 +2,12 @@ import crypto from 'crypto';
 
 /**
  * Generate a secure random API key
- * Format: mypos_live_[64 random hex characters]
+ * Format: omnipilot_live_[64 random hex characters]
  */
 export const generateApiKey = (): string => {
   const randomBytes = crypto.randomBytes(32);
   const keyHash = randomBytes.toString('hex');
-  return `mypos_live_${keyHash}`;
+  return `omnipilot_live_${keyHash}`;
 };
 
 /**
