@@ -26,22 +26,33 @@ const getBaseUrl = () => {
     return 'http://localhost:3000/api';
   }
 
-  // If running on a LAN IP or VPS, match the current protocol (HTTP or HTTPS)
-  // This prevents "Mixed Content" errors if the PWA is served over HTTPS
-  const protocol = window.location.protocol; // 'http:' or 'https:'
-  return `${protocol}//${window.location.hostname}:3000/api`;
+  // On web production, prefer same-origin proxy/rewrite so clients don't need
+  // to resolve the backend host directly.
+  return '/api';
 };
 
 const API_URL = getBaseUrl();
 
+const getAssetBaseUrl = () => {
+  if (/^https?:\/\//i.test(API_URL)) {
+    return API_URL.replace(/\/api\/?$/, '');
+  }
+
+  if (API_URL.startsWith('/')) {
+    return typeof window !== 'undefined' ? window.location.origin : '';
+  }
+
+  return API_URL.replace(/\/api\/?$/, '');
+};
+
 // Extract base URL (without /api) for full URL construction
-export const BASE_URL = API_URL.replace(/\/api\/?$/, '');
+export const BASE_URL = getAssetBaseUrl();
 
 // Helper function to get full URL from relative path
 export const getFullUrl = (relativePath: string): string => {
   if (!relativePath) return '';
   if (relativePath.startsWith('http')) return relativePath;
-  return `${BASE_URL}${relativePath}`;
+  return BASE_URL ? `${BASE_URL}${relativePath}` : relativePath;
 };
 
 const api = axios.create({
