@@ -5,9 +5,9 @@ import toast from 'react-hot-toast';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import FieldHelp from '../../components/medsos/FieldHelp';
+import WaInboxWorkspace from '../../components/medsos/WaInboxWorkspace';
 import {
   getMarketplaceHubStatus,
-  getWACrmStatus,
   getZernioAccounts,
   getZernioConversations,
   getZernioMessages,
@@ -15,13 +15,10 @@ import {
   generateAiReply,
   type MarketplaceChatChannel,
   type MarketplaceHubConnectionStatus,
-  type WACrmConnectionStatus,
-  type WACrmStats,
   type ZernioAccount,
   type ZernioConversation,
   type ZernioMessage,
 } from '../../services/medsosPostsService';
-import { getMyCommerSocialIntegrationHub, type ManagedIntegrationConnector } from '../../services/myCommerSocialIntegrations';
 import {
   conversationMessages,
   inboxFilters,
@@ -34,7 +31,6 @@ import {
   type ThreadDetail,
 } from '../../data/omnichannelMock';
 import {
-  AlertTriangle,
   Bot,
   CheckCircle2,
   ExternalLink,
@@ -46,7 +42,6 @@ import {
   RefreshCw,
   Search,
   Send,
-  Settings,
   ShieldAlert,
   Smile,
   Sparkles,
@@ -221,240 +216,7 @@ function SectionHeader({
 }
 
 function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void }) {
-  const [stats, setStats] = useState<WACrmStats | null>(null);
-  const [crmStatus, setCrmStatus] = useState<WACrmConnectionStatus | null>(null);
-  const [crmUrl, setCrmUrl] = useState<string | null>(null);
-  const [connector, setConnector] = useState<ManagedIntegrationConnector | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadTick, setReloadTick] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      setError(null);
-      try {
-        const [statusResult, hubResult] = await Promise.allSettled([
-          getWACrmStatus(),
-          getMyCommerSocialIntegrationHub(),
-        ]);
-
-        if (cancelled) return;
-
-        const hub = hubResult.status === 'fulfilled' ? hubResult.value : null;
-        const socialHub = hub?.connectors?.find((item: { slug: string }) => item.slug === 'social-hub');
-        setConnector(socialHub ?? null);
-        setCrmUrl(socialHub?.vendorPortalUrl ?? socialHub?.vendorWorkspaceUrl ?? null);
-
-        if (statusResult.status === 'fulfilled') {
-          setCrmStatus(statusResult.value);
-          setStats(statusResult.value.stats);
-          if (statusResult.value.configured && !statusResult.value.reachable) {
-            setError(statusResult.value.message || 'Workspace inbox belum merespons.');
-          }
-        } else {
-          setError('Gagal memuat status inbox.');
-          setStats(null);
-          setCrmStatus(null);
-        }
-      } catch {
-        if (!cancelled) {
-          setError('Gagal memuat status inbox.');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadTick]);
-
-  if (loading) {
-    return (
-      <div className="min-h-[40vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
-  const hasStoredConfig = Boolean(
-    crmStatus?.configured ||
-      (connector &&
-        (connector.status === 'connected' ||
-          connector.status === 'syncing' ||
-          connector.connectionRefMasked ||
-          connector.vendorWorkspaceUrl ||
-          connector.vendorPortalUrl ||
-          connector.workspaceName)),
-  );
-
-  if (error || !stats) {
-    const statusCode = crmStatus?.status;
-    const statusMsg = crmStatus?.message;
-    const isNotConfigured = statusCode === 'not_configured' || !hasStoredConfig;
-    const isIncomplete = statusCode === 'configuration_incomplete';
-    const isDegraded = statusCode === 'degraded';
-
-    return (
-      <div className={`rounded-[32px] p-10 text-center ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className={`mx-auto mb-4 inline-flex rounded-2xl p-4 ${isDark ? 'bg-amber-500/20' : 'bg-amber-50'}`}>
-          <AlertTriangle size={36} className="text-amber-500" />
-        </div>
-        <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          {isNotConfigured ? 'Inbox WA belum dikonfigurasi'
-            : isIncomplete ? 'Konfigurasi WA Inbox tidak lengkap'
-            : isDegraded ? 'Layanan inbox belum merespons'
-            : 'Inbox WA belum tersedia'}
-        </h2>
-        <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-          {statusMsg
-            ? statusMsg
-            : isNotConfigured
-            ? 'Simpan API key workspace dari halaman Connections untuk mengaktifkan statistik inbox.'
-            : 'Konfigurasi sudah ada, namun sistem belum berhasil memuat data live saat ini.'}
-        </p>
-
-        {isIncomplete && (
-          <div className={`mt-4 rounded-[24px] p-4 text-left text-xs ${isDark ? 'border-slate-700 bg-slate-900/50 text-gray-300' : 'border-amber-100 bg-amber-50/60 text-amber-800'}`}>
-            <p className="font-semibold mb-1">Yang perlu dilengkapi:</p>
-            <ul className="list-disc list-inside space-y-0.5">
-              <li>API key workspace WA CRM (dari sistem WA yang digunakan)</li>
-              <li>Masuk ke <strong>Connections → WA Inbox</strong> → isi field API key / Connection ref</li>
-            </ul>
-          </div>
-        )}
-
-        {isDegraded && (
-          <div className={`mt-4 rounded-[24px] p-4 text-left text-xs ${isDark ? 'border-slate-700 bg-slate-900/50 text-gray-300' : 'border-red-50 bg-red-50 text-red-800'}`}>
-            <p className="font-semibold mb-1">Info diagnostik:</p>
-            <p>Status: <code>{statusCode ?? 'unknown'}</code></p>
-            {crmStatus?.baseUrl && <p>URL: <code>{crmStatus.baseUrl}</code></p>}
-            <p className="mt-1">Pastikan layanan WA CRM aktif dan API key masih valid.</p>
-          </div>
-        )}
-
-        <p className={`mt-4 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-          Catatan: Inbox WA menampilkan statistik dan tombol buka workspace — bukan riwayat chat langsung. Chat tetap diakses melalui portal WA CRM.
-        </p>
-
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => setReloadTick((value) => value + 1)}
-            className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-          >
-            <Loader2 size={18} />
-            Coba lagi
-          </button>
-          <button
-            type="button"
-            onClick={onSetup}
-            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
-          >
-            <PlugZap size={18} />
-            {hasStoredConfig ? 'Periksa Connections' : 'Lengkapi Setup'}
-          </button>
-          {crmUrl ? (
-            <a
-              href={crmUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 font-semibold text-white hover:bg-emerald-700"
-            >
-              <ExternalLink size={18} />
-              Buka inbox
-            </a>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
-  const statCards = [
-    { label: 'Chat aktif', value: stats.openChats },
-    { label: 'Pending reply', value: stats.pendingChats },
-    { label: 'Pesan belum dibaca', value: stats.totalUnread },
-    { label: 'Eskalasi terbuka', value: stats.openEscalations },
-    { label: 'Chat masuk hari ini', value: stats.todayChats },
-    { label: 'Total kontak', value: stats.totalCustomers },
-  ];
-
-  const details = [
-    { label: 'Workspace', value: connector?.workspaceName || stats.tenant?.company_name || 'Belum diatur' },
-    { label: 'Email', value: connector?.vendorWorkspaceEmail || 'Belum diisi' },
-    { label: 'Connection ref', value: connector?.connectionRefMasked || 'Belum diisi' },
-    { label: 'Workspace URL', value: connector?.vendorPortalUrl || connector?.vendorWorkspaceUrl || 'Otomatis dari konfigurasi sistem' },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <SectionHeader
-        isDark={isDark}
-        title="Inbox WA"
-        description="Status, volume percakapan, dan akses cepat ke workspace inbox yang aktif."
-        icon={<MessageSquareQuote size={22} />}
-      />
-
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {statCards.map((card) => (
-          <div key={card.label} className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
-            <p className="mt-2 text-2xl md:text-3xl font-bold tracking-tight">{card.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid xl:grid-cols-[1.05fr_0.95fr] gap-6">
-        <div className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Workspace details</h3>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {details.map((item) => (
-              <div key={item.label} className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
-                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.label}</p>
-                <p className="mt-1 text-sm font-semibold break-all">{item.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <h3 className={`text-base font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Operasional workspace</h3>
-          <div className="space-y-3 text-sm">
-            {[
-              `Agent aktif: ${stats.agentCount ?? stats.totalUsers}`,
-              `Pesan hari ini: ${stats.todayMessages}`,
-              `Session: ${stats.tenant?.session_id || 'belum aktif'}`,
-            ].map((line) => (
-              <div key={line} className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
-                {line}
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={onSetup}
-              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              <Settings size={16} />
-              Connections
-            </button>
-            {crmUrl ? (
-              <a href={crmUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all">
-                <ExternalLink size={16} />
-                Buka inbox
-              </a>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <WaInboxWorkspace isDark={isDark} onSetup={onSetup} />;
 }
 
 function SocialInboxLiveView({ isDark }: { isDark: boolean }) {

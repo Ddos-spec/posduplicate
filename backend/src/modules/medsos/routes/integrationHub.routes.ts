@@ -8,6 +8,9 @@ import {
   disconnect,
   getIntegrationDetail,
   getIntegrationHub,
+  proxySocialHubConversations,
+  proxySocialHubMessages,
+  proxySocialHubSendMessage,
   proxyMarketplaceStatus,
   proxyStatus,
   proxyStats,
@@ -26,6 +29,9 @@ router.use(tenantMiddleware);
 router.get('/hub', getIntegrationHub);
 router.get('/proxy/social-hub/status', proxyStatus);
 router.get('/proxy/social-hub/stats', proxyStats);
+router.get('/proxy/social-hub/conversations', proxySocialHubConversations);
+router.get('/proxy/social-hub/chats/:chatId/messages', proxySocialHubMessages);
+router.post('/proxy/social-hub/send-message', proxySocialHubSendMessage);
 router.get('/proxy/marketplace-hub/status', proxyMarketplaceStatus);
 router.get('/:slug', getIntegrationDetail);
 router.post('/:slug/connect', beginConnect);
