@@ -195,6 +195,20 @@ function getSocialHubApiBaseUrl(): string {
   return configured.replace(/\/$/, '');
 }
 
+function sanitizeManagedBaseUrl(value?: string | null): string {
+  const text = String(value || '').trim().replace(/\/$/, '');
+  if (!text || isPlaceholderCrmUrl(text)) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(text);
+    return `${parsed.protocol}//${parsed.host}${parsed.pathname === '/' ? '' : parsed.pathname}`.replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+}
+
 function buildStateToken(payload: JsonRecord): string {
   return Buffer.from(JSON.stringify(payload)).toString('base64url');
 }
@@ -630,7 +644,9 @@ export async function completeManagedIntegrationConnect(
         ...item,
         status: 'connected',
       }));
-  const resolvedVendorWorkspaceUrl = input.vendorWorkspaceUrl || metadata.vendorWorkspaceUrl || null;
+  const resolvedVendorWorkspaceUrl = definition.slug === 'social-hub'
+    ? null
+    : (input.vendorWorkspaceUrl || metadata.vendorWorkspaceUrl || null);
   const normalizedVendorWorkspaceUrl = isPlaceholderCrmUrl(resolvedVendorWorkspaceUrl)
     ? null
     : resolvedVendorWorkspaceUrl;
@@ -877,13 +893,9 @@ export async function getSocialHubConnectionStatus(tenantId: number): Promise<So
   const metadata = asRecord(row?.metadata);
   const configuration = asRecord(row?.configuration);
   const apiKey = credentials.connectionId as string | undefined;
-  const rawBaseUrl = String(
-    (metadata.vendorWorkspaceUrl as string | undefined)
-      || getSocialHubApiBaseUrl()
-      || definition.vendorPortalUrl
-      || ''
-  ).replace(/\/$/, '');
-  const baseUrl = isPlaceholderCrmUrl(rawBaseUrl) ? '' : rawBaseUrl;
+  const envBaseUrl = sanitizeManagedBaseUrl(getSocialHubApiBaseUrl());
+  const tenantBaseUrl = sanitizeManagedBaseUrl(metadata.vendorWorkspaceUrl as string | undefined);
+  const baseUrl = envBaseUrl || tenantBaseUrl;
   const configured = Boolean(
     row && (
       row.is_active
@@ -955,6 +967,24 @@ export async function getSocialHubConnectionStatus(tenantId: number): Promise<So
         checkedAt,
         status: 'degraded',
         message: `Inbox stats returned ${response.status}`,
+        stats: null,
+      };
+    }
+
+    const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+    if (contentType.includes('text/html')) {
+      return {
+        configured: true,
+        active,
+        hasApiKey,
+        hasWorkspaceUrl,
+        reachable: false,
+        statsAvailable: false,
+        baseUrl,
+        connectionRefMasked,
+        checkedAt,
+        status: 'degraded',
+        message: 'URL WA CRM mengarah ke halaman HTML, bukan backend API inbox. Cek MCS_SOCIAL_API_BASE_URL di server.',
         stats: null,
       };
     }
