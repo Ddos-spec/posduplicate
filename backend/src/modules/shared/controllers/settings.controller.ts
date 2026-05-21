@@ -14,6 +14,11 @@ import {
   requiresSupervisorPinForRole,
   verifyCashierSupervisorPin
 } from '../services/cashierSecurity.service';
+import {
+  getManagedLogisticsStatus,
+  mergeLogisticsAssistantSettings,
+  sanitizeLogisticsAssistantSettings,
+} from '../../medsos/services/logisticsAssistant.service';
 import { normalizePrinterRoutingSettings } from '../services/printerRouting.service';
 import { createActivityLog } from './activity-log.controller';
 
@@ -69,6 +74,10 @@ const sanitizeMyCommerSocialSettings = (value: unknown) => {
     delete cloned.aiAnalysis.apiKey;
   }
 
+  if (Object.prototype.hasOwnProperty.call(cloned, 'logisticsAssistant')) {
+    cloned.logisticsAssistant = sanitizeLogisticsAssistantSettings(cloned.logisticsAssistant);
+  }
+
   return cloned;
 };
 
@@ -110,6 +119,13 @@ const mergeMyCommerSocialSettings = (currentValue: unknown, incomingValue: unkno
     delete mergedAi.apiKeyMasked;
 
     merged.aiAnalysis = mergedAi;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(current, 'logisticsAssistant') || Object.prototype.hasOwnProperty.call(incoming, 'logisticsAssistant')) {
+    merged.logisticsAssistant = mergeLogisticsAssistantSettings(
+      current.logisticsAssistant,
+      incoming.logisticsAssistant
+    );
   }
 
   return merged;
@@ -202,6 +218,7 @@ export const getSettings = async (req: AuthRequest, res: Response, next: NextFun
         approvalSettings,
         cashierSecurity,
         printerRouting,
+        managedLogisticsStatus: getManagedLogisticsStatus(),
         notificationDeliveryStatus: getNotificationDeliveryStatus()
       }
     });
@@ -318,6 +335,7 @@ export const updateSettings = async (req: AuthRequest, res: Response, next: Next
         approvalSettings: normalizeApprovalSettings(responseSettingsData.approvalSettings || DEFAULT_APPROVAL_SETTINGS),
         cashierSecurity: normalizeCashierSecuritySettings(responseSettingsData.cashierSecurity),
         printerRouting: normalizePrinterRoutingSettings(responseSettingsData.printerRouting),
+        managedLogisticsStatus: getManagedLogisticsStatus(),
         notificationDeliveryStatus: getNotificationDeliveryStatus()
       }
     });
