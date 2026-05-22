@@ -98,6 +98,34 @@ function messagePreview(message: WACrmMessage) {
   return message.body || 'Pesan';
 }
 
+function mergeMessagesChronologically(current: WACrmMessage[], incoming: WACrmMessage[]) {
+  const order = new Map<string, number>();
+  const merged = new Map<string, WACrmMessage>();
+
+  current.forEach((item, index) => {
+    order.set(item.id, index);
+    merged.set(item.id, item);
+  });
+
+  incoming.forEach((item, index) => {
+    if (!order.has(item.id)) {
+      order.set(item.id, current.length + index);
+    }
+    merged.set(item.id, item);
+  });
+
+  return Array.from(merged.values()).sort((a, b) => {
+    const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+    if (timeA !== timeB) {
+      return timeA - timeB;
+    }
+
+    return (order.get(a.id) || 0) - (order.get(b.id) || 0);
+  });
+}
+
 function SetupState({
   isDark,
   title,
@@ -195,6 +223,8 @@ export default function WaInboxWorkspace({
   const [reloadTick, setReloadTick] = useState(0);
   const [messageCursor, setMessageCursor] = useState<string | null>(null);
   const activeChatIdRef = useRef<string>('');
+  const chatViewportRef = useRef<HTMLDivElement | null>(null);
+  const shouldStickToBottomRef = useRef(true);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSearchTerm(searchInput.trim()), 250);
@@ -304,6 +334,15 @@ export default function WaInboxWorkspace({
     return conversations.find((item) => item.id === selectedConversationId) || visibleConversations[0] || null;
   }, [conversations, selectedConversationId, visibleConversations]);
 
+  const scrollChatToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    const viewport = chatViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTo({
+      top: viewport.scrollHeight,
+      behavior,
+    });
+  };
+
   useEffect(() => {
     if (!selectedConversation?.chat_id) {
       setMessages([]);
@@ -318,6 +357,7 @@ export default function WaInboxWorkspace({
     let cancelled = false;
     const isSameChat = activeChatIdRef.current === selectedConversation.chat_id;
     const shouldShowMessageLoader = !isSameChat || messages.length === 0;
+    shouldStickToBottomRef.current = !isSameChat;
 
     if (shouldShowMessageLoader) {
       setMessageLoading(true);
@@ -325,27 +365,62 @@ export default function WaInboxWorkspace({
       setMessageRefreshing(true);
     }
 
-    getWACrmMessages(selectedConversation.chat_id, { limit: 80 })
-      .then((result) => {
-        if (!cancelled) {
-          setMessages(result.messages);
-          setMessageCursor(result.meta.before);
-          activeChatIdRef.current = selectedConversation.chat_id || '';
+    (async () => {
+      try {
+        if (shouldShowMessageLoader) {
+          let cursor: string | null = null;
+          let allMessages: WACrmMessage[] = [];
+          let pages = 0;
+
+          while (pages < 12) {
+            const result = await getWACrmMessages(selectedConversation.chat_id!, {
+              limit: 200,
+              before: cursor || undefined,
+            });
+
+            allMessages = allMessages.length === 0
+              ? result.messages
+              : result.messages.concat(allMessages);
+
+            cursor = result.meta.before;
+            pages += 1;
+
+            if (!cursor) {
+              break;
+            }
+          }
+
+          if (!cancelled) {
+            setMessages(allMessages);
+            setMessageCursor(cursor);
+            activeChatIdRef.current = selectedConversation.chat_id || '';
+            window.requestAnimationFrame(() => scrollChatToBottom('auto'));
+          }
+          return;
         }
-      })
-      .catch((error: any) => {
+
+        const result = await getWACrmMessages(selectedConversation.chat_id!, { limit: 200 });
+        if (!cancelled) {
+          setMessages((current) => mergeMessagesChronologically(current, result.messages));
+          setMessageCursor((current) => current || result.meta.before);
+          activeChatIdRef.current = selectedConversation.chat_id || '';
+          if (shouldStickToBottomRef.current) {
+            window.requestAnimationFrame(() => scrollChatToBottom('smooth'));
+          }
+        }
+      } catch (error: any) {
         if (!cancelled) {
           setMessages([]);
           setMessageCursor(null);
           setWarning(error?.response?.data?.error?.message || error?.message || 'Gagal memuat isi percakapan WA.');
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) {
           setMessageLoading(false);
           setMessageRefreshing(false);
         }
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -358,9 +433,13 @@ export default function WaInboxWorkspace({
     if (!selectedConversation?.chat_id || !messageCursor || loadingOlderMessages) return;
 
     setLoadingOlderMessages(true);
+    shouldStickToBottomRef.current = false;
+    const viewport = chatViewportRef.current;
+    const previousHeight = viewport?.scrollHeight || 0;
+    const previousTop = viewport?.scrollTop || 0;
     try {
       const result = await getWACrmMessages(selectedConversation.chat_id, {
-        limit: 80,
+        limit: 200,
         before: messageCursor,
       });
 
@@ -370,6 +449,11 @@ export default function WaInboxWorkspace({
         return older.concat(current);
       });
       setMessageCursor(result.meta.before);
+      window.requestAnimationFrame(() => {
+        if (!viewport) return;
+        const newHeight = viewport.scrollHeight;
+        viewport.scrollTop = previousTop + (newHeight - previousHeight);
+      });
     } catch (error: any) {
       toast.error(error?.response?.data?.error?.message || error?.message || 'Gagal memuat pesan lama.');
     } finally {
@@ -447,6 +531,7 @@ export default function WaInboxWorkspace({
   }, []);
 
   const handleSelectConversation = (conversation: WACrmConversation) => {
+    shouldStickToBottomRef.current = true;
     setSelectedConversationId(conversation.id);
     setMobilePane('chat');
   };
@@ -502,8 +587,8 @@ export default function WaInboxWorkspace({
       )));
 
       if (chatId) {
-        const fresh = await getWACrmMessages(chatId, { limit: 80 });
-        setMessages(fresh.messages);
+        const fresh = await getWACrmMessages(chatId, { limit: 200 });
+        setMessages((current) => mergeMessagesChronologically(current, fresh.messages));
         setMessageCursor(fresh.meta.before);
         activeChatIdRef.current = chatId;
       } else {
@@ -524,6 +609,8 @@ export default function WaInboxWorkspace({
       }
 
       toast.success('Pesan WA terkirim dari dashboard ini.');
+      shouldStickToBottomRef.current = true;
+      window.requestAnimationFrame(() => scrollChatToBottom('smooth'));
       setReloadTick((value) => value + 1);
     } catch (error: any) {
       toast.error(error?.response?.data?.error?.message || error?.message || 'Gagal mengirim pesan WA.');
@@ -888,7 +975,15 @@ export default function WaInboxWorkspace({
                 </div>
               </div>
 
-              <div className="relative z-[1] flex-1 overflow-y-auto px-4 md:px-6 py-5 pb-24">
+              <div
+                ref={chatViewportRef}
+                onScroll={(event) => {
+                  const viewport = event.currentTarget;
+                  const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+                  shouldStickToBottomRef.current = distanceFromBottom < 120;
+                }}
+                className="relative z-[1] flex-1 overflow-y-auto px-4 md:px-6 py-5 pb-32 md:pb-36"
+              >
                 <div className="grid md:grid-cols-3 gap-3 mb-5">
                   {selectedHighlights.map((item) => (
                     <div key={item.label} className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-800/90 border border-slate-700' : 'bg-white/90 border border-white shadow-sm'}`}>
@@ -1004,14 +1099,14 @@ export default function WaInboxWorkspace({
                 )}
               </div>
 
-              <div className={`sticky bottom-0 z-[2] p-4 border-t backdrop-blur-sm ${isDark ? 'bg-[#111318]/96 border-slate-700' : 'bg-white/95 border-gray-100'}`}>
-                <div className="mb-3 flex flex-wrap gap-2">
+              <div className={`sticky bottom-0 z-[2] p-4 border-t backdrop-blur-sm shadow-[0_-10px_30px_rgba(15,23,42,0.06)] ${isDark ? 'bg-[#111318]/96 border-slate-700' : 'bg-white/95 border-gray-100'}`}>
+                <div className="mb-2 flex gap-2 overflow-x-auto whitespace-nowrap pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {templateMatches.slice(0, 3).map((template) => (
                     <button
                       key={template.id}
                       type="button"
                       onClick={() => setReply(template.preview)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
+                      className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
                     >
                       {template.title}
                     </button>
