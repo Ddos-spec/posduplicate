@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   AlertTriangle,
@@ -186,10 +186,15 @@ export default function WaInboxWorkspace({
   const [mobilePane, setMobilePane] = useState<'list' | 'chat'>('list');
   const [metaLoading, setMetaLoading] = useState(true);
   const [conversationLoading, setConversationLoading] = useState(true);
+  const [conversationRefreshing, setConversationRefreshing] = useState(false);
   const [messageLoading, setMessageLoading] = useState(false);
+  const [messageRefreshing, setMessageRefreshing] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
+  const [messageCursor, setMessageCursor] = useState<string | null>(null);
+  const activeChatIdRef = useRef<string>('');
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSearchTerm(searchInput.trim()), 250);
@@ -246,7 +251,12 @@ export default function WaInboxWorkspace({
 
   useEffect(() => {
     let cancelled = false;
-    setConversationLoading(true);
+    const shouldShowConversationLoader = conversations.length === 0;
+    if (shouldShowConversationLoader) {
+      setConversationLoading(true);
+    } else {
+      setConversationRefreshing(true);
+    }
 
     getWACrmConversations({
       limit: 150,
@@ -272,6 +282,7 @@ export default function WaInboxWorkspace({
       .finally(() => {
         if (!cancelled) {
           setConversationLoading(false);
+          setConversationRefreshing(false);
         }
       });
 
@@ -296,28 +307,43 @@ export default function WaInboxWorkspace({
   useEffect(() => {
     if (!selectedConversation?.chat_id) {
       setMessages([]);
+      setMessageCursor(null);
       setMessageLoading(false);
+      setMessageRefreshing(false);
+      setLoadingOlderMessages(false);
+      activeChatIdRef.current = '';
       return;
     }
 
     let cancelled = false;
-    setMessageLoading(true);
+    const isSameChat = activeChatIdRef.current === selectedConversation.chat_id;
+    const shouldShowMessageLoader = !isSameChat || messages.length === 0;
+
+    if (shouldShowMessageLoader) {
+      setMessageLoading(true);
+    } else {
+      setMessageRefreshing(true);
+    }
 
     getWACrmMessages(selectedConversation.chat_id, { limit: 80 })
       .then((result) => {
         if (!cancelled) {
           setMessages(result.messages);
+          setMessageCursor(result.meta.before);
+          activeChatIdRef.current = selectedConversation.chat_id || '';
         }
       })
       .catch((error: any) => {
         if (!cancelled) {
           setMessages([]);
+          setMessageCursor(null);
           setWarning(error?.response?.data?.error?.message || error?.message || 'Gagal memuat isi percakapan WA.');
         }
       })
       .finally(() => {
         if (!cancelled) {
           setMessageLoading(false);
+          setMessageRefreshing(false);
         }
       });
 
@@ -325,6 +351,31 @@ export default function WaInboxWorkspace({
       cancelled = true;
     };
   }, [selectedConversation?.chat_id, reloadTick]);
+
+  const hasOlderMessages = Boolean(messageCursor);
+
+  const handleLoadOlderMessages = async () => {
+    if (!selectedConversation?.chat_id || !messageCursor || loadingOlderMessages) return;
+
+    setLoadingOlderMessages(true);
+    try {
+      const result = await getWACrmMessages(selectedConversation.chat_id, {
+        limit: 80,
+        before: messageCursor,
+      });
+
+      setMessages((current) => {
+        const seen = new Set(current.map((item) => item.id));
+        const older = result.messages.filter((item) => !seen.has(item.id));
+        return older.concat(current);
+      });
+      setMessageCursor(result.meta.before);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error?.message || error?.message || 'Gagal memuat pesan lama.');
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  };
 
   const filterTabs = useMemo(() => ([
     { id: 'all' as const, label: 'Semua', count: conversations.length },
@@ -453,6 +504,8 @@ export default function WaInboxWorkspace({
       if (chatId) {
         const fresh = await getWACrmMessages(chatId, { limit: 80 });
         setMessages(fresh.messages);
+        setMessageCursor(fresh.meta.before);
+        activeChatIdRef.current = chatId;
       } else {
         setMessages((current) => current.concat({
           id: `local-${Date.now()}`,
@@ -542,93 +595,69 @@ export default function WaInboxWorkspace({
   }
 
   return (
-    <div className="space-y-6">
-      <div className={`relative overflow-hidden rounded-[36px] p-5 md:p-7 ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_30px_90px_rgba(15,23,42,0.34)]' : 'bg-gradient-to-br from-white via-white to-slate-50 border border-gray-100 shadow-[0_28px_90px_rgba(15,23,42,0.10)]'}`}>
-        <div className={`pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full blur-3xl ${isDark ? 'bg-emerald-500/10' : 'bg-blue-200/70'}`} />
-        <div className={`pointer-events-none absolute bottom-0 left-1/3 h-32 w-32 rounded-full blur-3xl ${isDark ? 'bg-blue-500/10' : 'bg-cyan-100/80'}`} />
-        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-          <div className="flex items-start gap-4">
-            <div className={`rounded-[22px] p-3.5 shadow-sm ${isDark ? 'bg-slate-900 text-emerald-300 ring-1 ring-white/10' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'}`}>
-              <MessageSquareQuote size={22} />
+    <div className="space-y-4">
+      <div className={`rounded-[30px] px-4 py-4 md:px-5 md:py-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_20px_50px_rgba(15,23,42,0.26)]' : 'bg-white border border-gray-100 shadow-[0_18px_50px_rgba(15,23,42,0.08)]'}`}>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0 flex items-start gap-3">
+            <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-emerald-300 ring-1 ring-white/10' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'}`}>
+              <MessageSquareQuote size={18} />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Inbox WA</h1>
-                <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold ${crmStatus?.reachable ? (isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700') : (isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700')}`}>
-                  <Wifi size={12} />
+                <h1 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Inbox WA</h1>
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold ${crmStatus?.reachable ? (isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700') : (isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700')}`}>
+                  <Wifi size={11} />
                   {crmStatus?.reachable ? 'Tersambung' : 'Perlu cek'}
                 </span>
-              </div>
-              <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Semua percakapan WhatsApp aktif sekarang ditangani langsung dari dashboard OmniPilot AI, tanpa pindah portal.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-slate-600 border border-slate-200'}`}>
-                  Workspace {connector?.workspaceName || stats?.tenant?.company_name || 'WA Inbox'}
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
+                  {connector?.workspaceName || stats?.tenant?.company_name || 'WA Inbox'}
                 </span>
-                <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-slate-600 border border-slate-200'}`}>
+              </div>
+              <p className={`mt-1.5 text-xs md:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Fokuskan kerja ke antrean, metrik, dan balasan chat — tanpa pindah portal.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-gray-50 text-slate-600 border border-slate-200'}`}>
                   Session {stats?.tenant?.session_id || 'belum aktif'}
+                </span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-gray-50 text-slate-600 border border-slate-200'}`}>
+                  Queue {conversations.length}
+                </span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-gray-50 text-slate-600 border border-slate-200'}`}>
+                  AI Ready
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 xl:items-end">
-            <div className={`rounded-[28px] p-4 md:p-5 min-w-[280px] ${isDark ? 'bg-slate-950/60 ring-1 ring-white/10' : 'bg-white/90 border border-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur'}`}>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className={`text-[11px] uppercase tracking-[0.2em] ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Operational pulse</p>
-                  <p className={`mt-2 text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Semua chat WA hidup di satu cockpit.</p>
-                </div>
-                <div className={`rounded-2xl p-3 ${isDark ? 'bg-emerald-500/10 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
-                  <BrandLogo brand="whatsapp" size={18} />
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <div className={`rounded-2xl px-3 py-2 ${isDark ? 'bg-slate-900/80' : 'bg-slate-50'}`}>
-                  <p className={`text-[10px] uppercase tracking-[0.16em] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Queue</p>
-                  <p className="mt-1 text-lg font-bold">{conversations.length}</p>
-                </div>
-                <div className={`rounded-2xl px-3 py-2 ${isDark ? 'bg-slate-900/80' : 'bg-slate-50'}`}>
-                  <p className={`text-[10px] uppercase tracking-[0.16em] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Live</p>
-                  <p className="mt-1 text-lg font-bold">{crmStatus?.reachable ? 1 : 0}</p>
-                </div>
-                <div className={`rounded-2xl px-3 py-2 ${isDark ? 'bg-slate-900/80' : 'bg-slate-50'}`}>
-                  <p className={`text-[10px] uppercase tracking-[0.16em] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>AI</p>
-                  <p className="mt-1 text-lg font-bold">Ready</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3 xl:justify-end">
-              <button
-                type="button"
-                onClick={() => setReloadTick((value) => value + 1)}
-                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          <div className="flex flex-wrap gap-2 xl:justify-end">
+            <button
+              type="button"
+              onClick={() => setReloadTick((value) => value + 1)}
+              className={`inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              <RefreshCw size={15} className={conversationLoading || conversationRefreshing || messageRefreshing ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={onSetup}
+              className={`inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              <Settings size={15} />
+              Connections
+            </button>
+            {crmUrl ? (
+              <a
+                href={crmUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={`inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold ${isDark ? 'bg-slate-800 text-slate-100 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}
               >
-                <RefreshCw size={16} className={conversationLoading ? 'animate-spin' : ''} />
-                Refresh
-              </button>
-              <button
-                type="button"
-                onClick={onSetup}
-                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              >
-                <Settings size={16} />
-                Connections
-              </button>
-              {crmUrl ? (
-                <a
-                  href={crmUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-800 text-slate-100 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}
-                >
-                  <ExternalLink size={16} />
-                  Portal lama
-                </a>
-              ) : null}
-            </div>
+                <ExternalLink size={15} />
+                Portal lama
+              </a>
+            ) : null}
           </div>
         </div>
       </div>
@@ -642,16 +671,16 @@ export default function WaInboxWorkspace({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {topStats.map((card) => (
-          <div key={card.label} className={`rounded-[26px] p-4 md:p-5 bg-gradient-to-br ${card.tone} ${isDark ? 'ring-1 ring-white/10 shadow-[0_18px_40px_rgba(15,23,42,0.22)]' : 'border border-gray-100 shadow-[0_18px_50px_rgba(15,23,42,0.06)]'}`}>
+          <div key={card.label} className={`rounded-[22px] p-3.5 md:p-4 bg-gradient-to-br ${card.tone} ${isDark ? 'ring-1 ring-white/10 shadow-[0_16px_30px_rgba(15,23,42,0.18)]' : 'border border-gray-100 shadow-[0_12px_32px_rgba(15,23,42,0.05)]'}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
-                <p className="mt-3 text-2xl md:text-3xl font-bold tracking-tight">{card.value}</p>
+                <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{card.value}</p>
               </div>
-              <div className={`rounded-2xl p-2.5 ${isDark ? 'bg-white/5' : 'bg-white shadow-sm'}`}>
-                <card.icon size={18} />
+              <div className={`rounded-2xl p-2 ${isDark ? 'bg-white/5' : 'bg-white shadow-sm'}`}>
+                <card.icon size={16} />
               </div>
             </div>
             <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.helper}</p>
@@ -686,9 +715,16 @@ export default function WaInboxWorkspace({
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>WA Inbox</p>
                 <h2 className="text-lg font-bold">Queue & Response Desk</h2>
               </div>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'bg-blue-50 text-blue-600'}`}>
-                {visibleConversations.length} aktif
-              </span>
+              <div className="flex items-center gap-2">
+                {conversationRefreshing ? (
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-500'}`}>
+                    Syncing
+                  </span>
+                ) : null}
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isDark ? 'bg-slate-800 text-gray-200' : 'bg-blue-50 text-blue-600'}`}>
+                  {visibleConversations.length} aktif
+                </span>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-3">
@@ -880,6 +916,20 @@ export default function WaInboxWorkspace({
                   </p>
                 </div>
 
+                {hasOlderMessages ? (
+                  <div className="mb-4 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => void handleLoadOlderMessages()}
+                      disabled={loadingOlderMessages}
+                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold ${isDark ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-sm'} disabled:opacity-60`}
+                    >
+                      {loadingOlderMessages ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                      Muat pesan lama
+                    </button>
+                  </div>
+                ) : null}
+
                 {messageLoading ? (
                   <div className="py-14 flex items-center justify-center">
                     <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
@@ -892,6 +942,14 @@ export default function WaInboxWorkspace({
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    {messageRefreshing ? (
+                      <div className="sticky top-0 z-[1] flex justify-center">
+                        <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-semibold backdrop-blur ${isDark ? 'bg-slate-800/90 text-slate-300 ring-1 ring-white/10' : 'bg-white/90 text-slate-500 border border-slate-200 shadow-sm'}`}>
+                          <Loader2 size={12} className="animate-spin" />
+                          Sinkron chat terbaru
+                        </div>
+                      </div>
+                    ) : null}
                     {messages.map((message) => {
                       const mine = message.is_from_me;
                       const body = message.body || '';
