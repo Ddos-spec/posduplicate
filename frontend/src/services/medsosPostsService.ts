@@ -76,10 +76,12 @@ export async function getSocialAccounts(): Promise<SocialAccount[]> {
 
 export interface WACrmStats {
   totalCustomers: number;
+  totalChats?: number;
   openChats: number;
   pendingChats: number;
   totalUnread: number;
   openEscalations: number;
+  totalMessages?: number;
   todayChats: number;
   todayMessages: number;
   totalUsers: number;
