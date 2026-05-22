@@ -334,11 +334,59 @@ export default function WaInboxWorkspace({
   ]), [conversations]);
 
   const topStats = useMemo(() => ([
-    { label: 'Chat aktif', value: stats?.openChats ?? conversations.filter((item) => item.status === 'active').length },
-    { label: 'Pending reply', value: stats?.pendingChats ?? conversations.filter((item) => item.status === 'pending').length },
-    { label: 'Belum dibaca', value: stats?.totalUnread ?? conversations.reduce((total, item) => total + item.unread_count, 0) },
-    { label: 'Eskalasi', value: stats?.openEscalations ?? conversations.filter((item) => item.status === 'escalation').length },
-  ]), [stats, conversations]);
+    {
+      label: 'Chat aktif',
+      value: stats?.openChats ?? conversations.filter((item) => item.status === 'active').length,
+      helper: 'Percakapan yang masih hidup',
+      tone: isDark ? 'from-emerald-500/15 to-transparent text-emerald-300' : 'from-emerald-50 to-white text-emerald-700',
+      icon: MessageSquareQuote,
+    },
+    {
+      label: 'Pending reply',
+      value: stats?.pendingChats ?? conversations.filter((item) => item.status === 'pending').length,
+      helper: 'Butuh balasan cepat',
+      tone: isDark ? 'from-amber-500/15 to-transparent text-amber-300' : 'from-amber-50 to-white text-amber-700',
+      icon: Bot,
+    },
+    {
+      label: 'Belum dibaca',
+      value: stats?.totalUnread ?? conversations.reduce((total, item) => total + item.unread_count, 0),
+      helper: 'Beban inbox saat ini',
+      tone: isDark ? 'from-blue-500/15 to-transparent text-blue-300' : 'from-blue-50 to-white text-blue-700',
+      icon: Sparkles,
+    },
+    {
+      label: 'Eskalasi',
+      value: stats?.openEscalations ?? conversations.filter((item) => item.status === 'escalation').length,
+      helper: 'Kasus yang perlu perhatian',
+      tone: isDark ? 'from-rose-500/15 to-transparent text-rose-300' : 'from-rose-50 to-white text-rose-700',
+      icon: ShieldAlert,
+    },
+  ]), [stats, conversations, isDark]);
+
+  const selectedHighlights = useMemo(() => {
+    if (!selectedConversation) return [];
+    return [
+      {
+        label: 'Status',
+        value: statusLabel(selectedConversation.status),
+        helper: selectedConversation.is_group ? 'Thread group WA' : 'Thread direct WA',
+        icon: ShieldAlert,
+      },
+      {
+        label: 'Unread',
+        value: selectedConversation.unread_count,
+        helper: 'Belum dijawab penuh',
+        icon: Sparkles,
+      },
+      {
+        label: 'Update terakhir',
+        value: formatRelativeTime(selectedConversation.last_message_at),
+        helper: 'Aktivitas terakhir customer',
+        icon: RefreshCw,
+      },
+    ];
+  }, [selectedConversation]);
 
   const templateMatches = useMemo(() => {
     return replyTemplates.filter((template) => {
@@ -495,10 +543,12 @@ export default function WaInboxWorkspace({
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+      <div className={`relative overflow-hidden rounded-[36px] p-5 md:p-7 ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_30px_90px_rgba(15,23,42,0.34)]' : 'bg-gradient-to-br from-white via-white to-slate-50 border border-gray-100 shadow-[0_28px_90px_rgba(15,23,42,0.10)]'}`}>
+        <div className={`pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full blur-3xl ${isDark ? 'bg-emerald-500/10' : 'bg-blue-200/70'}`} />
+        <div className={`pointer-events-none absolute bottom-0 left-1/3 h-32 w-32 rounded-full blur-3xl ${isDark ? 'bg-blue-500/10' : 'bg-cyan-100/80'}`} />
+        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex items-start gap-4">
-            <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+            <div className={`rounded-[22px] p-3.5 shadow-sm ${isDark ? 'bg-slate-900 text-emerald-300 ring-1 ring-white/10' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'}`}>
               <MessageSquareQuote size={22} />
             </div>
             <div>
@@ -512,37 +562,73 @@ export default function WaInboxWorkspace({
               <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Semua percakapan WhatsApp aktif sekarang ditangani langsung dari dashboard OmniPilot AI, tanpa pindah portal.
               </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-slate-600 border border-slate-200'}`}>
+                  Workspace {connector?.workspaceName || stats?.tenant?.company_name || 'WA Inbox'}
+                </span>
+                <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-slate-600 border border-slate-200'}`}>
+                  Session {stats?.tenant?.session_id || 'belum aktif'}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setReloadTick((value) => value + 1)}
-              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              <RefreshCw size={16} className={conversationLoading ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-            <button
-              type="button"
-              onClick={onSetup}
-              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              <Settings size={16} />
-              Connections
-            </button>
-            {crmUrl ? (
-              <a
-                href={crmUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+          <div className="flex flex-col gap-3 xl:items-end">
+            <div className={`rounded-[28px] p-4 md:p-5 min-w-[280px] ${isDark ? 'bg-slate-950/60 ring-1 ring-white/10' : 'bg-white/90 border border-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className={`text-[11px] uppercase tracking-[0.2em] ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Operational pulse</p>
+                  <p className={`mt-2 text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Semua chat WA hidup di satu cockpit.</p>
+                </div>
+                <div className={`rounded-2xl p-3 ${isDark ? 'bg-emerald-500/10 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+                  <BrandLogo brand="whatsapp" size={18} />
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className={`rounded-2xl px-3 py-2 ${isDark ? 'bg-slate-900/80' : 'bg-slate-50'}`}>
+                  <p className={`text-[10px] uppercase tracking-[0.16em] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Queue</p>
+                  <p className="mt-1 text-lg font-bold">{conversations.length}</p>
+                </div>
+                <div className={`rounded-2xl px-3 py-2 ${isDark ? 'bg-slate-900/80' : 'bg-slate-50'}`}>
+                  <p className={`text-[10px] uppercase tracking-[0.16em] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Live</p>
+                  <p className="mt-1 text-lg font-bold">{crmStatus?.reachable ? 1 : 0}</p>
+                </div>
+                <div className={`rounded-2xl px-3 py-2 ${isDark ? 'bg-slate-900/80' : 'bg-slate-50'}`}>
+                  <p className={`text-[10px] uppercase tracking-[0.16em] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>AI</p>
+                  <p className="mt-1 text-lg font-bold">Ready</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 xl:justify-end">
+              <button
+                type="button"
+                onClick={() => setReloadTick((value) => value + 1)}
+                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
               >
-                <ExternalLink size={16} />
-                Workspace lama
-              </a>
-            ) : null}
+                <RefreshCw size={16} className={conversationLoading ? 'animate-spin' : ''} />
+                Refresh
+              </button>
+              <button
+                type="button"
+                onClick={onSetup}
+                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                <Settings size={16} />
+                Connections
+              </button>
+              {crmUrl ? (
+                <a
+                  href={crmUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-slate-800 text-slate-100 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}
+                >
+                  <ExternalLink size={16} />
+                  Portal lama
+                </a>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -558,9 +644,17 @@ export default function WaInboxWorkspace({
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {topStats.map((card) => (
-          <div key={card.label} className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
-            <p className="mt-2 text-2xl md:text-3xl font-bold tracking-tight">{card.value}</p>
+          <div key={card.label} className={`rounded-[26px] p-4 md:p-5 bg-gradient-to-br ${card.tone} ${isDark ? 'ring-1 ring-white/10 shadow-[0_18px_40px_rgba(15,23,42,0.22)]' : 'border border-gray-100 shadow-[0_18px_50px_rgba(15,23,42,0.06)]'}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
+                <p className="mt-3 text-2xl md:text-3xl font-bold tracking-tight">{card.value}</p>
+              </div>
+              <div className={`rounded-2xl p-2.5 ${isDark ? 'bg-white/5' : 'bg-white shadow-sm'}`}>
+                <card.icon size={18} />
+              </div>
+            </div>
+            <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.helper}</p>
           </div>
         ))}
       </div>
@@ -583,8 +677,9 @@ export default function WaInboxWorkspace({
         </button>
       </div>
 
-      <div className={`h-[calc(100dvh-220px)] min-h-[720px] grid lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_300px] rounded-3xl border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
-        <aside className={`${mobilePane === 'chat' ? 'hidden lg:flex' : 'flex'} flex-col border-r ${isDark ? 'border-slate-700 bg-slate-950/40' : 'bg-white border-gray-100'}`}>
+      <div className={`h-[calc(100dvh-220px)] min-h-[720px] grid lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)_320px] rounded-[36px] border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_32px_100px_rgba(15,23,42,0.32)]' : 'bg-white border-gray-200 shadow-[0_26px_90px_rgba(15,23,42,0.10)]'}`}>
+        <aside className={`${mobilePane === 'chat' ? 'hidden lg:flex' : 'flex'} relative flex-col border-r ${isDark ? 'border-slate-700 bg-slate-950/55' : 'bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] border-gray-100'}`}>
+          {!isDark ? <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_70%)]" /> : null}
           <div className={`p-4 border-b ${isDark ? 'border-slate-700' : 'border-gray-100'}`}>
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -627,7 +722,7 @@ export default function WaInboxWorkspace({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {conversationLoading ? (
               <div className="py-14 flex items-center justify-center">
                 <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
@@ -645,16 +740,17 @@ export default function WaInboxWorkspace({
                     key={conversation.id}
                     type="button"
                     onClick={() => handleSelectConversation(conversation)}
-                    className={`w-full text-left p-4 border-b transition ${
+                    className={`group relative w-full text-left p-4 rounded-[24px] border transition ${
                       active
                         ? isDark
-                          ? 'bg-slate-800 border-slate-700'
-                          : 'bg-blue-50 border-blue-100'
+                          ? 'bg-slate-800 border-blue-500/30 shadow-[0_18px_50px_rgba(37,99,235,0.15)]'
+                          : 'bg-blue-50/80 border-blue-200 shadow-[0_18px_40px_rgba(37,99,235,0.10)]'
                         : isDark
                           ? 'border-slate-800 hover:bg-slate-800/70'
                           : 'border-gray-100 hover:bg-gray-50'
                     }`}
                   >
+                    {active ? <div className="absolute inset-y-4 left-0 w-1 rounded-r-full bg-blue-500" /> : null}
                     <div className="flex items-start gap-3">
                       {conversation.profile_pic_url ? (
                         <img src={conversation.profile_pic_url} alt={conversation.name} className="w-11 h-11 rounded-2xl object-cover" />
@@ -666,7 +762,14 @@ export default function WaInboxWorkspace({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{conversation.name}</p>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <p className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{conversation.name}</p>
+                              {conversation.is_group ? (
+                                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${isDark ? 'bg-slate-700 text-slate-200' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                                  Group
+                                </span>
+                              ) : null}
+                            </div>
                             <p className={`text-[11px] truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{compactPhone(conversation.phone)}{conversation.is_group ? ' • Group' : ''}</p>
                           </div>
                           <span className={`text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{formatRelativeTime(conversation.last_message_at)}</span>
@@ -694,7 +797,8 @@ export default function WaInboxWorkspace({
           </div>
         </aside>
 
-        <main className={`${mobilePane === 'list' ? 'hidden lg:flex' : 'flex'} flex-col min-w-0 ${isDark ? 'bg-slate-900' : 'bg-slate-50'}`}>
+        <main className={`${mobilePane === 'list' ? 'hidden lg:flex' : 'flex'} relative flex-col min-w-0 ${isDark ? 'bg-slate-900' : 'bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_42%),linear-gradient(180deg,#f8fafc_0%,#f3f6fb_100%)]'}`}>
+          {!isDark ? <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_58%)]" /> : null}
           {!selectedConversation ? (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
               <div className={`mb-6 rounded-full p-6 ${isDark ? 'bg-slate-800' : 'bg-gray-50'}`}>
@@ -705,7 +809,7 @@ export default function WaInboxWorkspace({
             </div>
           ) : (
             <>
-              <div className={`px-4 md:px-6 py-4 border-b ${isDark ? 'border-slate-700 bg-[#111318]' : 'bg-white border-gray-100'}`}>
+              <div className={`relative z-[1] px-4 md:px-6 py-4 border-b backdrop-blur-sm ${isDark ? 'border-slate-700 bg-[#111318]/95' : 'bg-white/90 border-gray-100'}`}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <button
@@ -726,6 +830,11 @@ export default function WaInboxWorkspace({
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{selectedConversation.name}</h3>
                         <span className={`text-[10px] px-2 py-1 rounded-full ${statusTone(selectedConversation.status, isDark)}`}>{statusLabel(selectedConversation.status)}</span>
+                        {selectedConversation.unread_count > 0 ? (
+                          <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>
+                            {selectedConversation.unread_count} unread
+                          </span>
+                        ) : null}
                       </div>
                       <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                         {compactPhone(selectedConversation.phone)} • {selectedConversation.assigned_agent || 'Belum di-assign'}
@@ -743,23 +852,25 @@ export default function WaInboxWorkspace({
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 md:px-6 py-5">
-                <div className="grid md:grid-cols-3 gap-4 mb-5">
-                  <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-100 shadow-sm'}`}>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Status thread</p>
-                    <p className="mt-2 text-xl font-bold">{statusLabel(selectedConversation.status)}</p>
-                  </div>
-                  <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-100 shadow-sm'}`}>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Unread</p>
-                    <p className="mt-2 text-xl font-bold">{selectedConversation.unread_count}</p>
-                  </div>
-                  <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-100 shadow-sm'}`}>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Last update</p>
-                    <p className="mt-2 text-lg font-bold">{formatRelativeTime(selectedConversation.last_message_at)}</p>
-                  </div>
+              <div className="relative z-[1] flex-1 overflow-y-auto px-4 md:px-6 py-5 pb-24">
+                <div className="grid md:grid-cols-3 gap-3 mb-5">
+                  {selectedHighlights.map((item) => (
+                    <div key={item.label} className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-800/90 border border-slate-700' : 'bg-white/90 border border-white shadow-sm'}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.label}</p>
+                          <p className="mt-2 text-lg font-bold">{item.value}</p>
+                        </div>
+                        <div className={`rounded-2xl p-2 ${isDark ? 'bg-slate-900/80 text-slate-200' : 'bg-slate-50 text-slate-600'}`}>
+                          <item.icon size={16} />
+                        </div>
+                      </div>
+                      <p className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{item.helper}</p>
+                    </div>
+                  ))}
                 </div>
 
-                <div className={`mb-5 rounded-[24px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70' : 'border-blue-100 bg-blue-50'}`}>
+                <div className={`mb-5 rounded-[28px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10/70 shadow-[0_16px_40px_rgba(15,23,42,0.24)]' : 'border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50/80 shadow-sm'}`}>
                   <div className="flex items-center gap-2 mb-2">
                     <ShieldAlert size={16} className="text-blue-500" />
                     <p className="font-semibold text-sm">Ringkasan thread</p>
@@ -788,12 +899,12 @@ export default function WaInboxWorkspace({
 
                       return (
                         <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[88%] md:max-w-[76%] rounded-2xl px-4 py-3 text-sm ${
+                          <div className={`max-w-[90%] md:max-w-[74%] rounded-3xl px-4 py-3 text-sm shadow-sm ${
                             mine
-                              ? 'bg-blue-600 text-white rounded-tr-sm'
+                              ? 'bg-blue-600 text-white rounded-tr-sm shadow-[0_16px_36px_rgba(37,99,235,0.26)]'
                               : isDark
                                 ? 'bg-slate-800 text-white rounded-tl-sm border border-slate-700'
-                                : 'bg-white text-gray-800 rounded-tl-sm shadow-sm border border-gray-100'
+                                : 'bg-white/95 text-gray-800 rounded-tl-sm border border-gray-100'
                           }`}>
                             {message.media_url ? (
                               <div className="space-y-3">
@@ -817,9 +928,16 @@ export default function WaInboxWorkspace({
                             ) : (
                               <p>{body}</p>
                             )}
-                            <p className={`mt-2 text-[10px] text-right ${mine ? 'text-blue-100' : isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-                              {formatRelativeTime(message.created_at)}
-                            </p>
+                            <div className={`mt-2 flex items-center ${mine ? 'justify-end' : 'justify-between'} gap-2`}>
+                              {!mine ? (
+                                <span className={`text-[10px] font-semibold ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  {message.message_type !== 'text' ? messagePreview(message) : 'Pesan'}
+                                </span>
+                              ) : null}
+                              <p className={`text-[10px] text-right ${mine ? 'text-blue-100' : isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                                {formatRelativeTime(message.created_at)}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       );
@@ -828,7 +946,7 @@ export default function WaInboxWorkspace({
                 )}
               </div>
 
-              <div className={`p-4 border-t ${isDark ? 'bg-[#111318] border-slate-700' : 'bg-white border-gray-100'}`}>
+              <div className={`sticky bottom-0 z-[2] p-4 border-t backdrop-blur-sm ${isDark ? 'bg-[#111318]/96 border-slate-700' : 'bg-white/95 border-gray-100'}`}>
                 <div className="mb-3 flex flex-wrap gap-2">
                   {templateMatches.slice(0, 3).map((template) => (
                     <button
@@ -841,7 +959,7 @@ export default function WaInboxWorkspace({
                     </button>
                   ))}
                 </div>
-                <div className={`flex items-center gap-2 rounded-2xl border px-2 py-2 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200'}`}>
+                <div className={`flex items-center gap-2 rounded-[22px] border px-2 py-2 shadow-sm ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50/90 border-gray-200'}`}>
                   <button type="button" title="Lampirkan file (coming soon)" className="p-2 text-gray-400 hover:text-gray-600" disabled>
                     <Paperclip size={20} />
                   </button>
@@ -866,17 +984,19 @@ export default function WaInboxWorkspace({
                     title="Draft AI"
                     onClick={() => void handleAiReply()}
                     disabled={sending || messages.length === 0}
-                    className={`rounded-xl p-2 ${isDark ? 'bg-slate-700 text-purple-300 hover:bg-slate-600' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'} disabled:opacity-50`}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'bg-slate-700 text-purple-300 hover:bg-slate-600' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'} disabled:opacity-50`}
                   >
                     <Sparkles size={18} />
+                    <span className="hidden md:inline">AI Draft</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleSend()}
                     disabled={!reply.trim() || sending}
-                    className="rounded-xl bg-blue-600 p-2 text-white hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50"
                   >
                     {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                    <span className="hidden md:inline">Kirim</span>
                   </button>
                 </div>
               </div>
@@ -884,7 +1004,7 @@ export default function WaInboxWorkspace({
           )}
         </main>
 
-        <aside className={`hidden xl:flex flex-col ${isDark ? 'bg-slate-950/30 border-l border-slate-800' : 'bg-gray-50/70 border-l border-gray-100'}`}>
+        <aside className={`hidden xl:flex flex-col ${isDark ? 'bg-slate-950/30 border-l border-slate-800' : 'bg-[linear-gradient(180deg,#fbfdff_0%,#f7faff_100%)] border-l border-gray-100'}`}>
           <div className={`p-5 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
             <h3 className="font-bold text-lg">Customer Context</h3>
             <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ringkasan cepat sebelum membalas chat WhatsApp.</p>
@@ -892,7 +1012,7 @@ export default function WaInboxWorkspace({
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
             {selectedConversation ? (
               <>
-                <div className={`rounded-2xl p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
+                <div className={`rounded-[28px] p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_16px_40px_rgba(15,23,42,0.20)]' : 'bg-white shadow-sm border-gray-100'}`}>
                   <div className="flex items-center gap-3 mb-3">
                     {selectedConversation.profile_pic_url ? (
                       <img src={selectedConversation.profile_pic_url} alt={selectedConversation.name} className="w-11 h-11 rounded-2xl object-cover" />
@@ -922,7 +1042,7 @@ export default function WaInboxWorkspace({
                   </div>
                 </div>
 
-                <div className={`rounded-2xl p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
+                <div className={`rounded-[28px] p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_16px_40px_rgba(15,23,42,0.20)]' : 'bg-white shadow-sm border-gray-100'}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <Phone size={16} className="text-emerald-500" />
                     <p className="font-semibold">Workspace details</p>
@@ -943,16 +1063,16 @@ export default function WaInboxWorkspace({
                   </div>
                 </div>
 
-                <div className={`rounded-2xl p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5'}`}>
+                <div className={`rounded-[28px] p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_16px_40px_rgba(15,23,42,0.20)]' : 'bg-white shadow-sm border-gray-100'}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <UserRoundCheck size={16} className="text-blue-500" />
                     <p className="font-semibold">Saran aksi</p>
                   </div>
                   <div className="space-y-2 text-sm">
-                    <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-900/60 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
+                    <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900/60 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
                       Balas dari dashboard ini untuk menjaga semua WA tetap di satu workspace operasional.
                     </div>
-                    <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-900/60 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
+                    <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900/60 text-gray-300' : 'bg-gray-50 text-gray-700'}`}>
                       Gunakan draft AI untuk jawaban awal, lalu revisi seperlunya sebelum kirim.
                     </div>
                   </div>

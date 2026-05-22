@@ -1097,15 +1097,14 @@ export default function MedsosInbox() {
   const isDemo = location.pathname.startsWith('/demo');
 
   if (!isDemo) {
+    if (normalizedChannel === 'wa') {
+      return <WACrmPanel isDark={isDark} onSetup={() => navigate('/medsos/connections')} />;
+    }
+
     return (
       <div className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-        {normalizedChannel === 'social' ? (
-          <SocialInboxLiveView isDark={isDark} />
-        ) : normalizedChannel === 'marketplace' ? (
-          <MarketplaceInboxLiveView isDark={isDark} />
-        ) : (
-          <WACrmPanel isDark={isDark} onSetup={() => navigate('/medsos/connections')} />
-        )}
+        {normalizedChannel === 'social' ? <SocialInboxLiveView isDark={isDark} /> : null}
+        {normalizedChannel === 'marketplace' ? <MarketplaceInboxLiveView isDark={isDark} /> : null}
       </div>
     );
   }
