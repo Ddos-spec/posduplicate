@@ -793,8 +793,8 @@ export default function WaInboxWorkspace({
         </button>
       </div>
 
-      <div className={`h-[calc(100dvh-220px)] min-h-[720px] grid lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)_320px] rounded-[36px] border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_32px_100px_rgba(15,23,42,0.32)]' : 'bg-white border-gray-200 shadow-[0_26px_90px_rgba(15,23,42,0.10)]'}`}>
-        <aside className={`${mobilePane === 'chat' ? 'hidden lg:flex' : 'flex'} relative flex-col border-r ${isDark ? 'border-slate-700 bg-slate-950/55' : 'bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] border-gray-100'}`}>
+      <div className={`h-[calc(100dvh-220px)] min-h-[720px] min-h-0 grid lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)_320px] rounded-[36px] border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_32px_100px_rgba(15,23,42,0.32)]' : 'bg-white border-gray-200 shadow-[0_26px_90px_rgba(15,23,42,0.10)]'}`}>
+        <aside className={`${mobilePane === 'chat' ? 'hidden lg:flex' : 'flex'} relative min-h-0 flex-col overflow-hidden border-r ${isDark ? 'border-slate-700 bg-slate-950/55' : 'bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] border-gray-100'}`}>
           {!isDark ? <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_70%)]" /> : null}
           <div className={`p-4 border-b ${isDark ? 'border-slate-700' : 'border-gray-100'}`}>
             <div className="flex items-center justify-between mb-3">
@@ -845,7 +845,7 @@ export default function WaInboxWorkspace({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 space-y-2">
             {conversationLoading ? (
               <div className="py-14 flex items-center justify-center">
                 <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
@@ -920,7 +920,7 @@ export default function WaInboxWorkspace({
           </div>
         </aside>
 
-        <main className={`${mobilePane === 'list' ? 'hidden lg:flex' : 'flex'} relative flex-col min-w-0 ${isDark ? 'bg-slate-900' : 'bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_42%),linear-gradient(180deg,#f8fafc_0%,#f3f6fb_100%)]'}`}>
+        <main className={`${mobilePane === 'list' ? 'hidden lg:flex' : 'flex'} relative min-h-0 min-w-0 flex-col overflow-hidden ${isDark ? 'bg-slate-900' : 'bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),_transparent_42%),linear-gradient(180deg,#f8fafc_0%,#f3f6fb_100%)]'}`}>
           {!isDark ? <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_58%)]" /> : null}
           {!selectedConversation ? (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
@@ -982,7 +982,7 @@ export default function WaInboxWorkspace({
                   const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
                   shouldStickToBottomRef.current = distanceFromBottom < 120;
                 }}
-                className="relative z-[1] flex-1 overflow-y-auto px-4 md:px-6 py-5 pb-32 md:pb-36"
+                className="relative z-[1] min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 md:px-6 py-5 pb-32 md:pb-36"
               >
                 <div className="grid md:grid-cols-3 gap-3 mb-5">
                   {selectedHighlights.map((item) => (
@@ -1157,12 +1157,12 @@ export default function WaInboxWorkspace({
           )}
         </main>
 
-        <aside className={`hidden xl:flex flex-col ${isDark ? 'bg-slate-950/30 border-l border-slate-800' : 'bg-[linear-gradient(180deg,#fbfdff_0%,#f7faff_100%)] border-l border-gray-100'}`}>
+        <aside className={`hidden xl:flex min-h-0 flex-col overflow-hidden ${isDark ? 'bg-slate-950/30 border-l border-slate-800' : 'bg-[linear-gradient(180deg,#fbfdff_0%,#f7faff_100%)] border-l border-gray-100'}`}>
           <div className={`p-5 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
             <h3 className="font-bold text-lg">Customer Context</h3>
             <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ringkasan cepat sebelum membalas chat WhatsApp.</p>
           </div>
-          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 space-y-5">
             {selectedConversation ? (
               <>
                 <div className={`rounded-[28px] p-4 border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_16px_40px_rgba(15,23,42,0.20)]' : 'bg-white shadow-sm border-gray-100'}`}>
