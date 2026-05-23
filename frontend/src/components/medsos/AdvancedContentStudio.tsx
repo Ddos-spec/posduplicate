@@ -497,7 +497,7 @@ export default function AdvancedContentStudio({
               Halaman ini sengaja dibuat advanced. Sistem membantu bikin brief, storyboard, dan blueprint — tapi hasil bagus tetap murni bergantung prompt, taste, dan konfigurasi pilot.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:w-[360px]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:w-full 2xl:w-[360px]">
             {studioStats.map((stat) => (
               <div key={stat.label} className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-100'}`}>
                 <p className={`text-[10px] uppercase tracking-[0.2em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{stat.label}</p>
@@ -509,7 +509,7 @@ export default function AdvancedContentStudio({
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[270px_minmax(0,1fr)]">
+      <div className="grid gap-5 2xl:grid-cols-[220px_minmax(0,1fr)]">
         <aside className={`rounded-[28px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
           <p className={`mb-3 text-[11px] uppercase tracking-[0.2em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Studio tools</p>
           <div className="space-y-2">
@@ -600,7 +600,7 @@ export default function AdvancedContentStudio({
                 </button>
               </div>
 
-              <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+              <div className="grid gap-5 2xl:grid-cols-[1.05fr_0.95fr]">
                 <div className="space-y-4">
                   <textarea value={imagePrompt} onChange={(e) => setImagePrompt(e.target.value)} rows={5} placeholder="Contoh: sedan hitam premium di jalan basah malam hari, city glow, cocok untuk hero rental mobil..." className={`${fieldClass} min-h-[132px] resize-y leading-6`} />
                   <textarea value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} rows={3} placeholder="Negative prompt" className={`${fieldClass} min-h-[92px] resize-y leading-6`} />
@@ -645,7 +645,7 @@ export default function AdvancedContentStudio({
                 </button>
               </div>
 
-              <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+              <div className="grid gap-5 2xl:grid-cols-[1.05fr_0.95fr]">
                 <div className="space-y-4">
                   <textarea value={videoIdea} onChange={(e) => setVideoIdea(e.target.value)} rows={5} placeholder="Contoh: video hook calon driver rental, buka dengan mobil premium + syarat daftar paling penting..." className={`${fieldClass} min-h-[132px] resize-y leading-6`} />
                   <div className="flex flex-wrap gap-2">

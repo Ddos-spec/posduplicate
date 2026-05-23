@@ -217,7 +217,7 @@ export default function CreatePost() {
               ))}
             </div>
           </div>
-          <div className="grid gap-3 xl:w-[360px]">
+          <div className="grid gap-3 xl:w-[320px]">
             <div className={`rounded-[24px] p-4 text-sm ${isDark ? 'bg-slate-900/70 text-slate-300 ring-1 ring-white/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
               <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Single cockpit</p>
               <p className="mt-2 leading-6">Studio di kiri dipakai buat ngeracik brief, prompt, storyboard, dan blueprint. Panel kanan dipakai untuk publish, schedule, dan lempar ke workflow tim.</p>
@@ -254,81 +254,81 @@ export default function CreatePost() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.18fr)_minmax(380px,0.82fr)]">
         <AdvancedContentStudio
           isDark={isDark}
           onApplyToComposer={handleApplyStudioText}
           preferredTab={preferredStudioTab}
         />
 
-        <div className={`p-6 rounded-[32px] border flex flex-col ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="mb-6">
-          <div className="flex items-center gap-2">
-            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner &amp; Publish Bridge</h2>
-            <FieldHelp title="Quick publish bridge" description="Gunakan panel ini untuk mengirim caption final, upload media, lalu publish atau schedule ke channel tujuan." />
-          </div>
-          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Setelah output dari studio dirasa pas, tempel ke composer ini lalu kirim ke akun tujuan atau jadwalkan masuk planner CRM &amp; Automation.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 mb-3">
-          <p className="text-sm font-semibold">Pilih Akun Tujuan</p>
-        </div>
-        
-        {loadingAccounts ? (
-          <div className="flex items-center justify-center p-4"><Loader2 className="animate-spin text-blue-500" /></div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-            {accounts.filter(a => !a.platform.includes('ads')).map(account => {
-              const isSelected = selectedAccounts.has(account.id);
-              return (
-                <button 
-                  key={account.id}
-                  onClick={() => toggleAccount(account.id)}
-                  className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                    isSelected 
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300' 
-                      : isDark ? 'border-slate-600 text-gray-400' : 'border-gray-200 text-gray-500'
-                  }`}
-                >
-                  <BrandLogo brand={resolveBrandKey(account.platform)} size={24} className="rounded-md" />
-                  <span className="text-xs font-semibold truncate w-full text-center">{account.displayName}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        <div className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors mb-6 relative overflow-hidden ${
-          isDark ? 'border-slate-600 bg-slate-700/30' : 'border-gray-300 bg-gray-50'
-        }`}>
-          {mediaPreview ? (
-            <img src={mediaPreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover opacity-50" />
-          ) : null}
-          <div className="z-10 flex flex-col items-center">
-            <ImageIcon className={`w-10 h-10 mb-2 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
-            <p className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Media Upload</p>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button onClick={handleGenerateUploadLink} className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-lg text-sm font-semibold hover:bg-blue-200 transition">
-                <UploadCloud size={16} /> Get Upload Link
-              </button>
-              {Capacitor.isNativePlatform() && (
-                <button onClick={handleTakePicture} className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 rounded-lg text-sm font-semibold hover:bg-indigo-200 transition">
-                  <Camera size={16} /> Buka Kamera
-                </button>
-              )}
+        <div className={`self-start 2xl:sticky 2xl:top-24 rounded-[32px] border p-6 flex flex-col gap-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner &amp; Publish Bridge</h2>
+              <FieldHelp title="Quick publish bridge" description="Gunakan panel ini untuk mengirim caption final, upload media, lalu publish atau schedule ke channel tujuan." />
             </div>
-            {uploadLink && (
-               <a href={uploadLink} target="_blank" rel="noreferrer" className="mt-3 text-xs text-blue-500 underline break-all text-center">
-                 {uploadLink}
-               </a>
+            <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Panel kanan ini sengaja jadi execution lane. Studio di kiri fokus untuk racik prompt dan output; panel ini fokus buat publish, schedule, dan preview final.
+            </p>
+          </div>
+
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <p className="text-sm font-semibold">Pilih Akun Tujuan</p>
+            </div>
+            {loadingAccounts ? (
+              <div className="flex items-center justify-center rounded-2xl border border-dashed p-6"><Loader2 className="animate-spin text-blue-500" /></div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {accounts.filter(a => !a.platform.includes('ads')).map(account => {
+                  const isSelected = selectedAccounts.has(account.id);
+                  return (
+                    <button
+                      key={account.id}
+                      onClick={() => toggleAccount(account.id)}
+                      className={`flex flex-col items-center justify-center gap-2 rounded-2xl border p-3 transition-all ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 shadow-sm'
+                          : isDark ? 'border-slate-700 text-gray-400 hover:border-slate-500' : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                      }`}
+                    >
+                      <BrandLogo brand={resolveBrandKey(account.platform)} size={24} className="rounded-md" />
+                      <span className="text-xs font-semibold truncate w-full text-center">{account.displayName}</span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
-        </div>
 
-        <div className="mb-4">
-          <div className={`rounded-xl p-4 border ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
+          <div className={`rounded-[24px] border-2 border-dashed p-5 transition-colors relative overflow-hidden ${
+            isDark ? 'border-slate-600 bg-slate-700/30' : 'border-gray-300 bg-gray-50'
+          }`}>
+            {mediaPreview ? (
+              <img src={mediaPreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+            ) : null}
+            <div className="relative z-10 flex flex-col items-center text-center">
+              <ImageIcon className="w-10 h-10 mb-2 text-gray-400" />
+              <p className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Media Upload</p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button onClick={handleGenerateUploadLink} className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-xl text-sm font-semibold hover:bg-blue-200 transition">
+                  <UploadCloud size={16} /> Get Upload Link
+                </button>
+                {Capacitor.isNativePlatform() && (
+                  <button onClick={handleTakePicture} className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 rounded-xl text-sm font-semibold hover:bg-indigo-200 transition">
+                    <Camera size={16} /> Buka Kamera
+                  </button>
+                )}
+              </div>
+              {uploadLink && (
+                 <a href={uploadLink} target="_blank" rel="noreferrer" className="mt-3 text-xs text-blue-500 underline break-all text-center">
+                   {uploadLink}
+                 </a>
+              )}
+            </div>
+          </div>
+
+          <div className={`rounded-[24px] p-4 border ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
             <div className="flex items-center gap-2 mb-2">
               <CalendarClock size={16} className="text-blue-500" />
               <p className="font-semibold text-sm">Jadwal Publish</p>
@@ -337,113 +337,117 @@ export default function CreatePost() {
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
-              className={`w-full rounded-lg px-3 py-2 border text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+              className={`w-full rounded-xl px-3 py-2 border text-sm ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
             />
           </div>
-        </div>
 
-        <div className="flex-1 min-h-[150px] relative">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-sm font-semibold">Caption / message</p>
-            <button 
-              onClick={() => setAiPrompt('')}
-              className="text-[10px] font-bold text-blue-500 uppercase hover:underline"
-            >
-              Clear
-            </button>
-          </div>
-          
-          {/* AI Caption Tool */}
-          <div className={`mb-4 p-4 rounded-2xl border-2 border-dashed ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-blue-100 bg-blue-50/50'}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={16} className="text-purple-500" />
-              <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">Quick AI Caption</span>
-            </div>
-            <div className="flex gap-2">
-              <input 
-                value={aiPrompt}
-                onChange={e => setAiPrompt(e.target.value)}
-                placeholder="Tulis instruksi... (misal: Bikin caption promo diskon 50%)"
-                className={`flex-1 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`}
-              />
-              <button 
-                onClick={handleGenerateAi}
-                disabled={generatingAi || !aiPrompt.trim()}
-                className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 disabled:opacity-50 transition-all flex items-center gap-2"
+          <div className="min-h-[150px]">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className="text-sm font-semibold">Caption / message</p>
+              <button
+                onClick={() => setAiPrompt('')}
+                className="text-[10px] font-bold text-blue-500 uppercase hover:underline"
               >
-                {generatingAi ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                Generate
+                Clear
               </button>
             </div>
-          </div>
 
-          <textarea
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            placeholder="Tulis caption..."
-            className={`w-full h-full p-4 rounded-xl border resize-none outline-none focus:ring-2 focus:ring-blue-500 ${
-              isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900'
-            }`}
-          />
-        </div>
-
-        <div className="flex flex-wrap justify-end gap-3 mt-6">
-          <button
-            onClick={() => submitPost(true, false)}
-            disabled={saving}
-            className={`px-5 py-2.5 rounded-xl font-bold border disabled:opacity-60 ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}
-          >
-            {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save Draft'}
-          </button>
-          <button
-            onClick={() => submitPost(false, false)}
-            disabled={saving || !scheduledAt}
-            className="px-5 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
-          >
-            {saving ? <Loader2 size={18} className="animate-spin" /> : 'Schedule'}
-          </button>
-          <button
-            onClick={() => submitPost(false, true)}
-            disabled={saving}
-            className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-60"
-          >
-            {saving ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Publish Now</>}
-          </button>
-        </div>
-      </div>
-      </div>
-
-      <div className="flex items-center justify-center bg-gray-100 dark:bg-slate-900 rounded-2xl border dark:border-slate-800 p-8 h-full">
-        <div className="w-[320px] h-[640px] bg-black rounded-[40px] p-3 shadow-2xl border-4 border-gray-800 relative overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-b-xl z-20"></div>
-          
-          <div className="w-full h-full bg-white rounded-[32px] overflow-hidden relative flex flex-col">
-            <div className="h-14 border-b flex items-center px-4 justify-between bg-white z-10">
-              <div className="flex items-center gap-2">
-                <BrandLogo
-                  brand="instagram"
-                  size={24}
-                  className="rounded-lg px-1"
-                  withRing
+            <div className={`mb-4 p-4 rounded-2xl border-2 border-dashed ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-blue-100 bg-blue-50/50'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={16} className="text-purple-500" />
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">Quick AI Caption</span>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={aiPrompt}
+                  onChange={e => setAiPrompt(e.target.value)}
+                  placeholder="Tulis instruksi... (misal: Bikin caption promo diskon 50%)"
+                  className={`flex-1 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`}
                 />
-                <span className="font-bold text-sm">Preview</span>
+                <button
+                  onClick={handleGenerateAi}
+                  disabled={generatingAi || !aiPrompt.trim()}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                >
+                  {generatingAi ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  Generate
+                </button>
               </div>
             </div>
 
-            <div className={`w-full aspect-square bg-gray-200 flex items-center justify-center text-gray-400 relative overflow-hidden`}>
-              {mediaPreview ? (
-                <img src={mediaPreview} alt="Preview" className="w-full h-full object-cover" />
-              ) : (
-                <ImageIcon size={48} />
-              )}
-            </div>
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Tulis caption..."
+              className={`w-full min-h-[220px] p-4 rounded-2xl border resize-y outline-none focus:ring-2 focus:ring-blue-500 ${
+                isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900'
+              }`}
+            />
+          </div>
 
-            <div className="p-3 bg-white flex-1 overflow-y-auto">
-              <p className="text-xs text-gray-800 whitespace-pre-wrap">
-                <span className="font-bold mr-1">my_brand</span>
-                {caption || 'Caption preview...'}
-              </p>
+          <div className={`rounded-[28px] p-5 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-100'}`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold">Preview mobile</p>
+                <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Preview kecil ini cukup buat cek rasa final tanpa makan ruang terlalu banyak.</p>
+              </div>
+              <div className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
+                {activeMode === 'video' ? 'Video lane' : 'Photo lane'}
+              </div>
             </div>
+            <div className="flex items-center justify-center">
+              <div className="w-[240px] h-[470px] bg-black rounded-[34px] p-2.5 shadow-2xl border-4 border-gray-800 relative overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-b-xl z-20"></div>
+                <div className="w-full h-full bg-white rounded-[26px] overflow-hidden relative flex flex-col">
+                  <div className="h-12 border-b flex items-center px-3 justify-between bg-white z-10">
+                    <div className="flex items-center gap-2">
+                      <BrandLogo brand="instagram" size={20} className="rounded-lg px-1" withRing />
+                      <span className="font-bold text-xs">Preview</span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-slate-400">{activeModeCard.title}</span>
+                  </div>
+
+                  <div className="w-full aspect-square bg-gray-200 flex items-center justify-center text-gray-400 relative overflow-hidden">
+                    {mediaPreview ? (
+                      <img src={mediaPreview} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon size={42} />
+                    )}
+                  </div>
+
+                  <div className="p-3 bg-white flex-1 overflow-y-auto">
+                    <p className="text-[11px] text-gray-800 whitespace-pre-wrap leading-5">
+                      <span className="font-bold mr-1">my_brand</span>
+                      {caption || 'Caption preview...'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap justify-end gap-3">
+            <button
+              onClick={() => submitPost(true, false)}
+              disabled={saving}
+              className={`px-5 py-2.5 rounded-xl font-bold border disabled:opacity-60 ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}
+            >
+              {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save Draft'}
+            </button>
+            <button
+              onClick={() => submitPost(false, false)}
+              disabled={saving || !scheduledAt}
+              className="px-5 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
+            >
+              {saving ? <Loader2 size={18} className="animate-spin" /> : 'Schedule'}
+            </button>
+            <button
+              onClick={() => submitPost(false, true)}
+              disabled={saving}
+              className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-60"
+            >
+              {saving ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Publish Now</>}
+            </button>
           </div>
         </div>
       </div>
