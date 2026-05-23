@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import MyCommerSocialLogo from '../../components/medsos/MyCommerSocialLogo';
+import FieldHelp from '../../components/medsos/FieldHelp';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import {
   McsAdsIcon,
@@ -211,6 +212,11 @@ export default function MedsosDashboard() {
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>MyCommerSocial</h1>
+                <FieldHelp
+                  title="MyCommerSocial dashboard"
+                  description="Ini command center utama untuk membaca status channel, membuka inbox, mengelola planner, ads, analytics, dan workspace tim dari satu tempat."
+                  howToUse="Mulai dari kartu status untuk cek kesehatan channel, pakai Quick Actions untuk lompat ke fitur inti, lalu buka bagian Active Channels kalau mau audit koneksi akun yang aktif."
+                />
                 {previewMode ? (
                   <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
                     Preview Mode
@@ -280,6 +286,11 @@ export default function MedsosDashboard() {
           <div className="flex items-center gap-2 mb-6">
             <Sparkles size={18} className="text-blue-500" />
             <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Quick Actions</h2>
+            <FieldHelp
+              title="Quick Actions"
+              description="Kumpulan pintasan menuju fitur inti seperti inbox, planner, analytics, ads, team, dan settings."
+              howToUse="Klik kartu sesuai pekerjaan yang mau dilakukan. Pakai Quick Actions saat ingin pindah cepat antar fitur tanpa membuka menu sidebar satu per satu."
+            />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {quickActions.map((action) => (
@@ -305,6 +316,11 @@ export default function MedsosDashboard() {
           <div className="flex items-center gap-2 mb-6">
             <Activity size={18} className="text-emerald-500" />
             <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Workspace Health</h2>
+            <FieldHelp
+              title="Workspace Health"
+              description="Bagian ini dipakai untuk membaca kondisi koneksi tiap channel dan integrasi penting apakah sehat, perlu dicek, atau belum diatur."
+              howToUse="Lihat mana yang berstatus sehat dan mana yang masih warning. Kalau ada yang bermasalah, lanjut ke Connections atau Settings untuk memperbaikinya."
+            />
           </div>
           <div className="space-y-3">
             {[
@@ -337,6 +353,11 @@ export default function MedsosDashboard() {
                <McsConnectionsIcon size={18} />
             </div>
             <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Active Channels</h2>
+            <FieldHelp
+              title="Active Channels"
+              description="Daftar ini menampilkan akun sosial, ads, atau channel lain yang benar-benar sudah tersambung ke workspace."
+              howToUse="Gunakan daftar ini untuk audit cepat apakah akun yang dibutuhkan tim sudah aktif. Kalau belum ada atau salah akun, buka tombol Manage untuk mengubah koneksi."
+            />
             {previewMode ? (
               <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>Preview</span>
             ) : (

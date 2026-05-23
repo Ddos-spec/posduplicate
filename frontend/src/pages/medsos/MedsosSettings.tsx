@@ -575,7 +575,14 @@ export default function MedsosSettings() {
             />
             <div className="flex items-start justify-between gap-3 mt-4">
               <div>
-                <h2 className="font-bold text-lg">{card.title}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-lg">{card.title}</h2>
+                  <FieldHelp
+                    title={card.title}
+                    description={card.description}
+                    howToUse="Aktifkan toggle kalau workspace ini memang dipakai tim. Matikan hanya kalau channel tersebut belum ingin digunakan atau sedang tidak masuk scope operasional."
+                  />
+                </div>
                 <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.description}</p>
               </div>
               <ToggleButton
@@ -602,7 +609,14 @@ export default function MedsosSettings() {
             <div className="flex items-center gap-3 mb-3">
               <McsIconBadge icon={McsConnectionsIcon} size={44} iconSize={19} tone="blue" />
               <div>
-                <h2 className="font-bold text-lg">Logistics assistant</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-lg">Logistics assistant</h2>
+                  <FieldHelp
+                    title="Logistics assistant"
+                    description="Managed integration RajaOngkir untuk kebutuhan cek ongkir dan cek resi tanpa customer harus login ke provider."
+                    howToUse="Aktifkan dulu assistant-nya, isi origin dan kurir default, lalu simpan. Setelah itu workflow AI bisa memanggil cek ongkir atau cek resi secara otomatis."
+                  />
+                </div>
                 <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   Managed integration RajaOngkir untuk AI cek ongkir dan cek resi tanpa customer login ke provider.
                 </p>
@@ -686,7 +700,7 @@ export default function MedsosSettings() {
             <label className="space-y-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Origin ID RajaOngkir
-                <FieldHelp title="Origin ID RajaOngkir" description="Isi ID lokasi asal dari RajaOngkir. Ini dipakai sebagai origin default saat AI menghitung ongkir." />
+                <FieldHelp title="Origin ID RajaOngkir" description="Isi ID lokasi asal dari RajaOngkir. Ini dipakai sebagai origin default saat AI menghitung ongkir." howToUse="Cari dulu origin ID dari akun RajaOngkir Anda, lalu tempelkan di sini. Pakai ID asal gudang atau lokasi kirim utama." />
               </span>
               <input
                 value={settings.logisticsAssistant.originId}
@@ -707,7 +721,7 @@ export default function MedsosSettings() {
             <label className="space-y-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Label origin
-                <FieldHelp title="Label origin" description="Nama gudang atau lokasi asal agar lebih mudah dibaca owner dan AI workflow." />
+                <FieldHelp title="Label origin" description="Nama gudang atau lokasi asal agar lebih mudah dibaca owner dan AI workflow." howToUse="Isi nama manusiawi seperti Gudang Jakarta Barat atau Warehouse Surabaya agar tim mudah mengenali origin yang sedang dipakai." />
               </span>
               <input
                 value={settings.logisticsAssistant.originLabel}
@@ -728,7 +742,7 @@ export default function MedsosSettings() {
             <label className="space-y-2 md:col-span-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Kurir default
-                <FieldHelp title="Kurir default" description="Pisahkan dengan koma. Contoh: jne, sicepat, anteraja. Jika customer tidak menyebut kurir, AI akan memakai daftar ini." />
+                <FieldHelp title="Kurir default" description="Pisahkan dengan koma. Contoh: jne, sicepat, anteraja. Jika customer tidak menyebut kurir, AI akan memakai daftar ini." howToUse="Masukkan kode kurir dengan format koma. Urutan depan bisa dianggap prioritas awal kalau customer tidak menyebut kurir tertentu." />
               </span>
               <input
                 value={settings.logisticsAssistant.defaultCouriers}
@@ -749,7 +763,7 @@ export default function MedsosSettings() {
             <label className="space-y-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Berat default
-                <FieldHelp title="Berat default" description="Dipakai jika AI belum mendapat berat paket dari katalog atau customer. Satuan gram." />
+                <FieldHelp title="Berat default" description="Dipakai jika AI belum mendapat berat paket dari katalog atau customer. Satuan gram." howToUse="Isi angka gram sebagai fallback, misalnya 1000 untuk 1 kg. Gunakan nilai aman agar estimasi ongkir tidak terlalu meleset." />
               </span>
               <input
                 type="number"
@@ -807,7 +821,14 @@ export default function MedsosSettings() {
           <div className="flex items-center gap-2 mb-5">
             <Shield size={18} className="text-emerald-500" />
             <div>
-              <h2 className="font-bold text-lg">SLA policies</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold text-lg">SLA policies</h2>
+            <FieldHelp
+              title="SLA policies"
+              description="Bagian ini menjelaskan target first response dan resolution per channel atau jenis interaksi."
+              howToUse="Pakai daftar ini sebagai acuan kerja tim. Bila target bisnis berubah, update nilai SLA agar operator dan reviewer punya patokan yang sama."
+            />
+          </div>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Pilih SLA yang aktif untuk tim operasional.</p>
             </div>
           </div>
@@ -852,7 +873,14 @@ export default function MedsosSettings() {
           <div className="flex items-center gap-2 mb-5">
             <Workflow size={18} className="text-purple-500" />
             <div>
-              <h2 className="font-bold text-lg">Routing & approval</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold text-lg">Routing & approval</h2>
+            <FieldHelp
+              title="Routing & approval"
+              description="Bagian ini mengatur rule kapan kasus diarahkan ke orang tertentu atau butuh approval tambahan."
+              howToUse="Aktifkan rule yang relevan dengan operasi tim. Gunakan untuk kasus refund, sentiment negatif, atau campaign yang butuh approval sebelum dijalankan."
+            />
+          </div>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Atur rule routing dan approval yang aktif di workspace.</p>
             </div>
           </div>
@@ -914,7 +942,14 @@ export default function MedsosSettings() {
         <div className="flex items-center gap-2 mb-5">
           <Bot size={18} className="text-blue-500" />
           <div>
+          <div className="flex items-center gap-2">
             <h2 className="font-bold text-lg">Content analysis</h2>
+            <FieldHelp
+              title="Content analysis"
+              description="Panel ini dipakai untuk mengatur API key, model, temperature, dan instruksi AI yang dipakai saat menganalisis konten."
+              howToUse="Isi API key dulu, pilih mode model yang cocok, atur temperature seperlunya, lalu simpan. Setelah itu fitur analysis di halaman analytics akan memakai konfigurasi ini."
+            />
+          </div>
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Simpan akses analysis agar halaman Analytics bisa menghasilkan insight per konten saat tombol generate ditekan.
             </p>
@@ -926,7 +961,7 @@ export default function MedsosSettings() {
             <label className="space-y-2 md:col-span-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 API key analysis
-                <FieldHelp title="API key analysis" description="Kunci ini dipakai untuk menjalankan generate analysis di halaman Analytics. Jika sudah tersimpan, Anda hanya perlu mengisi lagi saat ingin mengganti key." />
+                <FieldHelp title="API key analysis" description="Kunci ini dipakai untuk menjalankan generate analysis di halaman Analytics. Jika sudah tersimpan, Anda hanya perlu mengisi lagi saat ingin mengganti key." howToUse="Tempel API key provider yang valid, lalu simpan perubahan. Kalau key lama masih aktif dan tidak ingin diganti, field ini boleh dibiarkan seperti status tersimpan." />
               </span>
               <input
                 value={analysisApiKeyInput}
@@ -951,7 +986,7 @@ export default function MedsosSettings() {
             <div className="space-y-3 md:col-span-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Mode model
-                <FieldHelp title="Mode model" description="Pilih mode model untuk analysis konten. Auto paling aman untuk mulai, sedangkan custom dipakai bila ingin mengisi slug model OpenRouter sendiri." />
+                <FieldHelp title="Mode model" description="Pilih mode model untuk analysis konten. Auto paling aman untuk mulai, sedangkan custom dipakai bila ingin mengisi slug model OpenRouter sendiri." howToUse="Mulai dari Auto kalau belum yakin. Pindah ke Fast, Balanced, Deep, atau Custom bila Anda sudah tahu trade-off kualitas, kecepatan, dan biaya model." />
               </span>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {MODEL_PRESET_OPTIONS.map((option) => {
@@ -1001,7 +1036,7 @@ export default function MedsosSettings() {
             <label className="space-y-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Temperature
-                <FieldHelp title="Temperature" description="Nilai rendah membuat analisis lebih stabil. Nilai lebih tinggi membuat gaya jawaban lebih variatif." />
+                <FieldHelp title="Temperature" description="Nilai rendah membuat analisis lebih stabil. Nilai lebih tinggi membuat gaya jawaban lebih variatif." howToUse="Untuk analisis bisnis biasanya cukup rendah seperti 0.2–0.4. Naikkan hanya kalau memang ingin gaya jawaban lebih kreatif atau eksploratif." />
               </span>
               <input
                 type="number"
@@ -1026,7 +1061,7 @@ export default function MedsosSettings() {
               <label className="space-y-2 md:col-span-2">
                 <span className="text-sm font-semibold inline-flex items-center gap-2">
                   Custom model ID
-                  <FieldHelp title="Custom model ID" description="Isi model ID khusus jika ingin memakai model analysis tertentu di luar preset yang tersedia." />
+                  <FieldHelp title="Custom model ID" description="Isi model ID khusus jika ingin memakai model analysis tertentu di luar preset yang tersedia." howToUse="Gunakan hanya saat mode Custom dipilih. Tempel slug model persis seperti yang disyaratkan provider atau OpenRouter." />
                 </span>
                 <input
                   value={settings.aiAnalysis.customModel}
@@ -1051,7 +1086,7 @@ export default function MedsosSettings() {
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold inline-flex items-center gap-2">
                     Post Analysis Instruction
-                    <FieldHelp title="Post Analysis" description="Instruksi sistem untuk AI saat menganalisis performa postingan di halaman Analytics." />
+                  <FieldHelp title="Post Analysis" description="Instruksi sistem untuk AI saat menganalisis performa postingan di halaman Analytics." howToUse="Tuliskan gaya output yang diinginkan, misalnya ringkas, aksi nyata, dan fokus pada insight yang relevan untuk tim marketing." />
                   </span>
                   <textarea
                     value={settings.systemMessages.postAnalysis}
@@ -1064,7 +1099,7 @@ export default function MedsosSettings() {
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold inline-flex items-center gap-2">
                     Content Generation Instruction
-                    <FieldHelp title="Content Generation" description="Instruksi sistem untuk AI saat membantu membuat caption di halaman Composer." />
+                  <FieldHelp title="Content Generation" description="Instruksi sistem untuk AI saat membantu membuat caption di halaman Composer." howToUse="Masukkan aturan tone, gaya brand, CTA, atau batasan copywriting agar caption yang dihasilkan sesuai karakter bisnis Anda." />
                   </span>
                   <textarea
                     value={settings.systemMessages.contentGeneration}
@@ -1077,7 +1112,7 @@ export default function MedsosSettings() {
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold inline-flex items-center gap-2">
                     Inbox Reply Instruction
-                    <FieldHelp title="Inbox Reply" description="Instruksi sistem untuk AI saat menyarankan balasan pesan pelanggan di halaman Inbox." />
+                  <FieldHelp title="Inbox Reply" description="Instruksi sistem untuk AI saat menyarankan balasan pesan pelanggan di halaman Inbox." howToUse="Isi panduan bahasa balasan, level sopan santun, batas janji ke customer, atau rule eskalasi supaya saran reply AI tetap aman." />
                   </span>
                   <textarea
                     value={settings.systemMessages.inboxReply}
@@ -1094,7 +1129,7 @@ export default function MedsosSettings() {
               <div className="flex items-center gap-2 mb-4">
                 <Workflow size={16} className="text-emerald-500" />
                 <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Custom AI Webhook</h3>
-                <FieldHelp title="Custom AI Webhook" description="Gunakan fitur ini jika Anda memiliki sistem AI atau bot eksternal (seperti n8n atau custom server). Jika diaktifkan, semua pesan masuk akan diteruskan ke URL Webhook ini." />
+            <FieldHelp title="Custom AI Webhook" description="Gunakan fitur ini jika Anda memiliki sistem AI atau bot eksternal (seperti n8n atau custom server). Jika diaktifkan, semua pesan masuk akan diteruskan ke URL Webhook ini." howToUse="Aktifkan hanya kalau Anda memang punya endpoint AI eksternal yang siap menerima payload. Isi URL webhook, simpan, lalu uji dengan pesan masuk dari channel yang aktif." />
               </div>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -1150,7 +1185,14 @@ export default function MedsosSettings() {
           <div className="flex items-center gap-2 mb-5">
             <UsersRound size={18} className="text-orange-500" />
             <div>
-              <h2 className="font-bold text-lg">Team seats</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold text-lg">Team seats</h2>
+            <FieldHelp
+              title="Team seats"
+              description="Bagian ini dipakai untuk mendaftarkan kursi kerja atau anggota tim yang akan memakai workspace ini."
+              howToUse="Tambahkan satu seat per peran penting, isi nama, role, dan channel yang ditangani, lalu simpan agar pembagian kerja tim lebih rapi."
+            />
+          </div>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Tambahkan seat tim yang akan memakai workspace ini.</p>
             </div>
           </div>
@@ -1244,7 +1286,14 @@ export default function MedsosSettings() {
             <div className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
               <div className="flex items-center gap-2 mb-3">
                 <BellRing size={18} className="text-blue-500" />
-                <h2 className="font-bold">Reply templates</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold">Reply templates</h2>
+            <FieldHelp
+              title="Reply templates"
+              description="Template balasan cepat untuk skenario yang sering berulang agar operator tidak menulis dari nol setiap saat."
+              howToUse="Aktifkan template yang relevan dengan bisnis Anda, lalu gunakan sebagai dasar respons operator atau draft dari AI di halaman inbox."
+            />
+          </div>
               </div>
               <div className="space-y-3">
                 {replyTemplates.map((template) => {
@@ -1274,7 +1323,14 @@ export default function MedsosSettings() {
             <div className={`rounded-[24px] p-5 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
               <div className="flex items-center gap-2 mb-3">
                 <Workflow size={18} className="text-emerald-500" />
-                <h2 className="font-bold">Notification targets</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold">Notification targets</h2>
+            <FieldHelp
+              title="Notification targets"
+              description="Bagian ini menentukan ke mana alert penting dikirim, seperti email, Slack, atau supervisor WhatsApp."
+              howToUse="Aktifkan hanya kanal notifikasi yang benar-benar dipakai operasional. Pastikan targetnya aktif agar alert SLA, refund, atau approval tidak terlambat dibaca."
+            />
+          </div>
               </div>
               <div className="space-y-3">
                 {notificationDestinations.map((destination) => {

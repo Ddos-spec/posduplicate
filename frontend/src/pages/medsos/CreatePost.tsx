@@ -168,9 +168,16 @@ export default function CreatePost() {
               <Wand2 size={14} />
               CRM &amp; Automation · Create Content
             </div>
-            <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {activeModeCard.title} untuk pilot yang mau ngulik foto dan video dari satu dashboard
-            </h1>
+            <div className="flex items-start gap-2">
+              <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {activeModeCard.title} untuk pilot yang mau ngulik foto dan video dari satu dashboard
+              </h1>
+              <FieldHelp
+                title="Create Content cockpit"
+                description="Ini adalah workspace untuk meracik brief konten, prompt, storyboard, dan output final sebelum dipublish."
+                howToUse="Pilih dulu lane Photo atau Video, racik output di studio kiri, lalu pakai panel kanan untuk upload media, isi caption, dan publish atau schedule."
+              />
+            </div>
             <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Biar konfigurasi banyak tetap waras, halaman ini dijadikan satu cockpit: pilih engine foto/video, racik prompt, atur provider, lalu lempar ke publish bridge atau planner tanpa pindah tool.
             </p>
@@ -202,6 +209,11 @@ export default function CreatePost() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-bold">{item.title}</p>
+                          <FieldHelp
+                            title={item.title}
+                            description={item.id === 'photo' ? 'Lane ini fokus ke visual statis seperti hero image, katalog, key visual, dan image prompt.' : 'Lane ini fokus ke video pendek seperti reels, hook 3 detik, storyboard, motion board, dan CTA visual.'}
+                            howToUse={item.id === 'photo' ? 'Pakai kalau targetmu butuh gambar/foto. Isi visual brief, style, dan negative prompt, lalu hasilnya lempar ke tim desain atau image generator.' : 'Pakai kalau targetmu butuh video. Isi ide video, motion, platform, dan durasi, lalu hasilnya pakai sebagai storyboard untuk editor atau generator video.'}
+                          />
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${item.accent === 'violet' ? 'bg-violet-500/10 text-violet-600 dark:text-violet-300' : 'bg-blue-500/10 text-blue-600 dark:text-blue-300'}`}>
                             {item.badge}
                           </span>
@@ -235,13 +247,25 @@ export default function CreatePost() {
           </div>
           <div className="grid gap-3 xl:w-[320px]">
             <div className={`rounded-[24px] p-4 text-sm ${isDark ? 'bg-slate-900/70 text-slate-300 ring-1 ring-white/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Single cockpit</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Single cockpit</p>
+                <FieldHelp
+                  title="Single cockpit"
+                  description="Panel ini menjelaskan bahwa semua konfigurasi besar sengaja ditaruh di satu halaman supaya pilot tidak pindah-pindah tool."
+                  howToUse="Pakai studio kiri untuk generate output. Pakai lane kanan untuk eksekusi publish. Kalau butuh revisi, bolak-baliknya tetap di halaman yang sama."
+                />
+              </div>
               <p className="mt-2 leading-6">Studio di kiri dipakai buat ngeracik brief, prompt, storyboard, dan blueprint. Panel kanan dipakai untuk publish, schedule, dan lempar ke workflow tim.</p>
             </div>
             <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-100'}`}>
               <div className="flex items-center gap-2">
                 <Bot size={16} className="text-purple-500" />
                 <p className="text-sm font-bold">Pilot workflow</p>
+                <FieldHelp
+                  title="Pilot workflow"
+                  description="Ini urutan kerja paling aman supaya user tidak asal generate tanpa arah."
+                  howToUse="Mulai dari brief, refine prompt dan style, baru kirim ke planner atau publish. Kalau output jelek, balik ke step 1 atau 2, bukan langsung publish."
+                />
               </div>
               <div className="mt-3 space-y-2 text-sm">
                 <div className="flex items-center justify-between rounded-2xl px-3 py-2.5 bg-white/70 dark:bg-white/5">
@@ -281,7 +305,11 @@ export default function CreatePost() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner &amp; Publish Bridge</h2>
-              <FieldHelp title="Quick publish bridge" description="Gunakan panel ini untuk mengirim caption final, upload media, lalu publish atau schedule ke channel tujuan." />
+              <FieldHelp
+                title="Quick publish bridge"
+                description="Gunakan panel ini untuk mengirim caption final, upload media, lalu publish atau schedule ke channel tujuan."
+                howToUse="Setelah studio kiri menghasilkan output, pilih akun tujuan, siapkan media, isi jadwal bila perlu, lalu gunakan save draft, schedule, atau publish now sesuai kebutuhan."
+              />
             </div>
             <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               Panel kanan ini sengaja jadi execution lane. Studio di kiri fokus untuk racik prompt dan output; panel ini fokus buat publish, schedule, dan preview final.
@@ -291,6 +319,11 @@ export default function CreatePost() {
           <div>
             <div className="mb-3 flex items-center gap-2">
               <p className="text-sm font-semibold">Pilih Akun Tujuan</p>
+              <FieldHelp
+                title="Pilih Akun Tujuan"
+                description="Bagian ini dipakai untuk menentukan akun sosial mana yang akan menerima caption, media, atau jadwal publish dari panel ini."
+                howToUse="Centang satu atau beberapa akun tujuan lebih dulu. Setelah itu upload media, isi caption, lalu pilih save draft, schedule, atau publish sekarang."
+              />
             </div>
             {loadingAccounts ? (
               <div className="flex items-center justify-center rounded-2xl border border-dashed p-6"><Loader2 className="animate-spin text-blue-500" /></div>
@@ -325,7 +358,14 @@ export default function CreatePost() {
             ) : null}
             <div className="relative z-10 flex flex-col items-center text-center">
               <ImageIcon className="w-10 h-10 mb-2 text-gray-400" />
-              <p className={`text-sm font-medium mb-3 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Media Upload</p>
+              <div className="mb-3 flex items-center gap-2">
+                <p className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Media Upload</p>
+                <FieldHelp
+                  title="Media Upload"
+                  description="Bagian ini dipakai untuk menyiapkan file gambar atau video yang akan dipasangkan dengan caption sebelum publish."
+                  howToUse="Klik Get Upload Link kalau file berasal dari luar, atau buka kamera kalau lewat aplikasi mobile. Setelah media siap, cek preview kecil di bawah sebelum publish."
+                />
+              </div>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <button onClick={handleGenerateUploadLink} className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-xl text-sm font-semibold hover:bg-blue-200 transition">
                   <UploadCloud size={16} /> Get Upload Link
@@ -348,6 +388,11 @@ export default function CreatePost() {
             <div className="flex items-center gap-2 mb-2">
               <CalendarClock size={16} className="text-blue-500" />
               <p className="font-semibold text-sm">Jadwal Publish</p>
+              <FieldHelp
+                title="Jadwal Publish"
+                description="Field ini dipakai kalau konten tidak mau diposting sekarang, tapi dimasukkan ke jadwal planner."
+                howToUse="Isi tanggal dan jam target. Lalu klik Schedule. Kalau mau live sekarang, kosongkan jadwal lalu pakai Publish Now."
+              />
             </div>
             <input
               type="datetime-local"
@@ -360,6 +405,11 @@ export default function CreatePost() {
           <div className="min-h-[150px]">
             <div className="flex items-center justify-between gap-2 mb-2">
               <p className="text-sm font-semibold">Caption / message</p>
+              <FieldHelp
+                title="Caption / message"
+                description="Area ini adalah composer final yang akan dikirim ke channel tujuan."
+                howToUse="Kalau output dari studio sudah cocok, klik tombol pakai ke composer. Setelah itu cek lagi secara manual sebelum save draft, schedule, atau publish."
+              />
               <button
                 onClick={() => setAiPrompt('')}
                 className="text-[10px] font-bold text-blue-500 uppercase hover:underline"
@@ -372,6 +422,11 @@ export default function CreatePost() {
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles size={16} className="text-purple-500" />
                 <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">Quick AI Caption</span>
+                <FieldHelp
+                  title="Quick AI Caption"
+                  description="Generator cepat ini dipakai saat user butuh draft caption singkat tanpa masuk ke studio penuh."
+                  howToUse="Isi instruksi sederhana, klik Generate, lalu pakai hasilnya sebagai draft awal. Kalau butuh hasil lebih dalam, balik ke Copy Lab di studio kiri."
+                />
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <input
@@ -402,11 +457,18 @@ export default function CreatePost() {
           </div>
 
           <div className={`rounded-[28px] p-5 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-100'}`}>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold">Preview mobile</p>
-                <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Preview kecil ini cukup buat cek rasa final tanpa makan ruang terlalu banyak.</p>
-              </div>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-bold">Preview mobile</p>
+                  <FieldHelp
+                    title="Preview mobile"
+                    description="Preview ini dipakai untuk mengecek rasa akhir konten di layar ponsel tanpa buka tool lain."
+                    howToUse="Cek apakah caption terlalu panjang, gambar terasa pas, dan flow konten enak dibaca. Ini preview cepat, bukan simulasi semua platform 100% akurat."
+                  />
+                </div>
+                  <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Preview kecil ini cukup buat cek rasa final tanpa makan ruang terlalu banyak.</p>
+                </div>
               <div className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
                 {activeMode === 'video' ? 'Video lane' : 'Photo lane'}
               </div>
