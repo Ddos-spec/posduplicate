@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import AdvancedContentStudio from '../../components/medsos/AdvancedContentStudio';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera, Sparkles, Wand2 } from 'lucide-react';
+import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera, Sparkles, Wand2, PlaySquare, Bot, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createZernioPost, getZernioAccounts, generateZernioUploadLink, generateAiCaption, type ZernioAccount } from '../../services/medsosPostsService';
 import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera';
@@ -14,7 +14,14 @@ export default function CreatePost() {
   const { isDark } = useThemeStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const { mode } = useParams<{ mode?: string }>();
   const isDemo = location.pathname.startsWith('/demo');
+  const basePath = isDemo ? '/demo/medsos' : '/medsos';
+  const plannerPath = `${basePath}/crm/planner`;
+  const photoPath = `${basePath}/crm/content/photo`;
+  const videoPath = `${basePath}/crm/content/video`;
+  const activeMode = mode === 'video' ? 'video' : 'photo';
+  const preferredStudioTab = activeMode === 'video' ? 'video' : 'image';
   const [caption, setCaption] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
   const [saving, setSaving] = useState(false);
@@ -25,6 +32,30 @@ export default function CreatePost() {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [aiPrompt, setAiPrompt] = useState('');
   const [generatingAi, setGeneratingAi] = useState(false);
+  const modeCards = useMemo(() => ([
+    {
+      id: 'photo',
+      title: 'Photo Engine',
+      description: 'Atur visual brief, style, angle, negative prompt, dan output foto iklan dari satu cockpit.',
+      helper: 'Hero image, key visual, thumbnail, katalog, creative test.',
+      path: photoPath,
+      icon: ImageIcon,
+    },
+    {
+      id: 'video',
+      title: 'Video Engine',
+      description: 'Bangun storyboard, beat sheet, camera motion, dan CTA visual untuk short-form video.',
+      helper: 'Reels, TikTok, hook 3 detik, UGC brief, motion ads.',
+      path: videoPath,
+      icon: PlaySquare,
+    },
+  ] as const), [photoPath, videoPath]);
+  const workflowChips = useMemo(() => ([
+    { label: 'Copy Lab', note: 'Hook, angle, CTA' },
+    { label: 'Campaign Blueprint', note: 'Offer + audience + funnel' },
+    { label: 'Copilot', note: 'Brainstorm cepat' },
+    { label: 'Pilot Config', note: 'Provider, model, endpoint' },
+  ]), []);
 
   const handleGenerateAi = async () => {
     if (!aiPrompt.trim()) { toast.error('Isi instruksi caption dulu'); return; }
@@ -107,7 +138,7 @@ export default function CreatePost() {
         mediaUrls: mediaPreview ? ['data-url-placeholder'] : [], // In reality, you'd upload this blob first using the Zernio upload flow
       });
       toast.success(publishNow ? 'Post dipublish' : isDraft ? 'Draft disimpan' : 'Post dijadwalkan');
-      navigate('/medsos/calendar');
+      navigate(plannerPath);
     } catch {
       toast.error('Gagal memproses post');
     } finally {
@@ -120,37 +151,124 @@ export default function CreatePost() {
     toast.success('Output studio dipindahkan ke composer.');
   };
 
+  const activeModeCard = modeCards.find((item) => item.id === activeMode) ?? modeCards[0];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl">
+      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-gray-100 shadow-sm'}`}>
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-4xl">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
               <Wand2 size={14} />
-              Content Studio
+              CRM &amp; Automation · Create Content
             </div>
-            <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Buat caption, visual brief, dan storyboard dari satu cockpit</h1>
+            <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {activeModeCard.title} untuk pilot yang mau ngulik foto dan video dari satu dashboard
+            </h1>
             <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Mode ini dibuat advanced. Pilot bebas atur provider, model, prompt, dan workflow sendiri — hasil akhir memang ditentukan oleh skill dan konfigurasi mereka.
+              Biar konfigurasi banyak tetap waras, halaman ini dijadikan satu cockpit: pilih engine foto/video, racik prompt, atur provider, lalu lempar ke publish bridge atau planner tanpa pindah tool.
             </p>
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              {modeCards.map((item) => {
+                const isActive = item.id === activeMode;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigate(item.path)}
+                    className={`rounded-[24px] border p-4 text-left transition-all ${
+                      isActive
+                        ? isDark
+                          ? 'border-blue-400/40 bg-blue-500/10 shadow-lg shadow-blue-500/10'
+                          : 'border-blue-200 bg-blue-50 shadow-sm'
+                        : isDark
+                          ? 'border-white/10 bg-slate-900/70 hover:border-white/20 hover:bg-slate-900'
+                          : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`rounded-2xl p-3 ${isActive ? 'bg-blue-600 text-white' : isDark ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-600 shadow-sm'}`}>
+                        <Icon size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold">{item.title}</p>
+                          {isActive ? (
+                            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                              Active lane
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.description}</p>
+                        <p className={`mt-2 text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.helper}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {workflowChips.map((chip) => (
+                <div key={chip.label} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'}`}>
+                  {chip.label}
+                  <span className={`ml-2 font-normal ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{chip.note}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className={`rounded-[24px] px-4 py-3 text-sm ${isDark ? 'bg-slate-900/70 text-slate-300 ring-1 ring-white/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
-            Composer di kanan adalah bridge untuk publish. Studio di kiri dipakai untuk ngeracik ide, brief, dan output advanced sebelum dilempar ke channel tujuan.
+          <div className="grid gap-3 xl:w-[360px]">
+            <div className={`rounded-[24px] p-4 text-sm ${isDark ? 'bg-slate-900/70 text-slate-300 ring-1 ring-white/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Single cockpit</p>
+              <p className="mt-2 leading-6">Studio di kiri dipakai buat ngeracik brief, prompt, storyboard, dan blueprint. Panel kanan dipakai untuk publish, schedule, dan lempar ke workflow tim.</p>
+            </div>
+            <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-100'}`}>
+              <div className="flex items-center gap-2">
+                <Bot size={16} className="text-purple-500" />
+                <p className="text-sm font-bold">Pilot workflow</p>
+              </div>
+              <div className="mt-3 space-y-2 text-sm">
+                <div className="flex items-center justify-between rounded-2xl px-3 py-2.5 bg-white/70 dark:bg-white/5">
+                  <span>1. Generate brief</span>
+                  <ArrowRight size={14} className="opacity-60" />
+                </div>
+                <div className="flex items-center justify-between rounded-2xl px-3 py-2.5 bg-white/70 dark:bg-white/5">
+                  <span>2. Refine prompt & style</span>
+                  <ArrowRight size={14} className="opacity-60" />
+                </div>
+                <div className="flex items-center justify-between rounded-2xl px-3 py-2.5 bg-white/70 dark:bg-white/5">
+                  <span>3. Kirim ke planner / publish</span>
+                  <ArrowRight size={14} className="opacity-60" />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(plannerPath)}
+                className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'}`}
+              >
+                Buka planner
+                <ArrowRight size={15} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <AdvancedContentStudio isDark={isDark} onApplyToComposer={handleApplyStudioText} />
+        <AdvancedContentStudio
+          isDark={isDark}
+          onApplyToComposer={handleApplyStudioText}
+          preferredTab={preferredStudioTab}
+        />
 
         <div className={`p-6 rounded-[32px] border flex flex-col ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="mb-6">
           <div className="flex items-center gap-2">
-            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Quick Publish Bridge</h2>
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner &amp; Publish Bridge</h2>
             <FieldHelp title="Quick publish bridge" description="Gunakan panel ini untuk mengirim caption final, upload media, lalu publish atau schedule ke channel tujuan." />
           </div>
           <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Setelah output dari studio dirasa pas, tempel ke composer ini lalu kirim ke akun tujuan.
+            Setelah output dari studio dirasa pas, tempel ke composer ini lalu kirim ke akun tujuan atau jadwalkan masuk planner CRM &amp; Automation.
           </p>
         </div>
 

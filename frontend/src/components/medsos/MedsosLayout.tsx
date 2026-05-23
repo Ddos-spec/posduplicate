@@ -17,7 +17,6 @@ import {
   McsInboxIcon,
   McsMarketplaceIcon,
   McsOverviewIcon,
-  McsPlannerIcon,
   McsSettingsIcon,
   McsSocialIcon,
   McsTeamIcon,
@@ -49,14 +48,18 @@ type LinkMenu = BaseMenu & {
   path: string;
 };
 
+type MenuChild = {
+  key: string;
+  label: string;
+  helper: string;
+  path?: string;
+  children?: MenuChild[];
+};
+
 type GroupMenu = BaseMenu & {
   type: 'group';
   key: string;
-  children: Array<{
-    label: string;
-    path: string;
-    helper: string;
-  }>;
+  children: MenuChild[];
 };
 
 type MenuItem = LinkMenu | GroupMenu;
@@ -74,6 +77,28 @@ function getMenuTone(label: string): McsIconBadgeTone {
   if (label.includes('Settings')) return 'slate';
   if (label.includes('Tim')) return 'cyan';
   return 'blue';
+}
+
+function menuTreeHasPath(children: MenuChild[], pathname: string): boolean {
+  return children.some((child) => {
+    if (child.path && child.path === pathname) return true;
+    if (child.children?.length) return menuTreeHasPath(child.children, pathname);
+    return false;
+  });
+}
+
+function collectExpandedKeys(children: MenuChild[], pathname: string, trail: string[] = []): string[] {
+  for (const child of children) {
+    const nextTrail = [...trail, child.key];
+    if (child.path === pathname) {
+      return nextTrail;
+    }
+    if (child.children?.length) {
+      const nested = collectExpandedKeys(child.children, pathname, nextTrail);
+      if (nested.length) return nested;
+    }
+  }
+  return [];
 }
 
 export default function MedsosLayout() {
@@ -95,6 +120,7 @@ export default function MedsosLayout() {
       inbox: expandedByDefault,
       analytics: expandedByDefault,
       crm: expandedByDefault,
+      'crm-content': expandedByDefault,
     };
   });
 
@@ -144,7 +170,6 @@ export default function MedsosLayout() {
     () => [
       { type: 'link', icon: McsOverviewIcon, label: 'Overview', path: `${basePath}/dashboard`, roles: ['all'] },
       { type: 'link', icon: McsConnectionsIcon, label: 'Connections', path: `${basePath}/connections`, roles: ['medsos_manager', 'all'] },
-      { type: 'link', icon: McsPlannerIcon, label: 'Planner', path: `${basePath}/calendar`, roles: ['medsos_manager', 'content_creator', 'all'] },
       {
         type: 'group',
         key: 'inbox',
@@ -152,9 +177,9 @@ export default function MedsosLayout() {
         label: 'Inbox',
         roles: ['medsos_manager', 'medsos_cs', 'all'],
         children: [
-          { label: 'WA', path: `${basePath}/inbox/wa`, helper: 'WhatsApp workspace' },
-          { label: 'Medsos', path: `${basePath}/inbox/social`, helper: 'DM & komentar social' },
-          { label: 'Marketplace', path: `${basePath}/inbox/marketplace`, helper: 'Buyer chat marketplace' },
+          { key: 'inbox-wa', label: 'WA', path: `${basePath}/inbox/wa`, helper: 'WhatsApp workspace' },
+          { key: 'inbox-social', label: 'Medsos', path: `${basePath}/inbox/social`, helper: 'DM & komentar social' },
+          { key: 'inbox-marketplace', label: 'Marketplace', path: `${basePath}/inbox/marketplace`, helper: 'Buyer chat marketplace' },
         ],
       },
       { type: 'link', icon: McsMarketplaceIcon, label: 'Marketplace', path: `${basePath}/marketplace`, roles: ['medsos_manager', 'medsos_cs', 'all'] },
@@ -166,9 +191,19 @@ export default function MedsosLayout() {
         label: 'CRM & Automation',
         roles: ['medsos_manager', 'all'],
         children: [
-          { label: 'Contacts', path: `${basePath}/crm`, helper: 'Database kontak terpadu' },
-          { label: 'Broadcasts', path: `${basePath}/broadcasts`, helper: 'Kirim pesan massal' },
-          { label: 'Automations', path: `${basePath}/automations`, helper: 'Bot Comment-to-DM' },
+          { key: 'crm-contacts', label: 'Contacts', path: `${basePath}/crm`, helper: 'Database kontak terpadu' },
+          { key: 'crm-broadcasts', label: 'Broadcasts', path: `${basePath}/broadcasts`, helper: 'Kirim pesan massal' },
+          { key: 'crm-automations', label: 'Automations', path: `${basePath}/automations`, helper: 'Bot Comment-to-DM' },
+          { key: 'crm-planner', label: 'Planner', path: `${basePath}/crm/planner`, helper: 'Planner campaign, schedule, dan approval lane' },
+          {
+            key: 'crm-content',
+            label: 'Create Content',
+            helper: 'Cockpit foto & video seperti studio kerja tim',
+            children: [
+              { key: 'crm-content-photo', label: 'Photo Studio', path: `${basePath}/crm/content/photo`, helper: 'Visual brief, image direction, key visual' },
+              { key: 'crm-content-video', label: 'Video Studio', path: `${basePath}/crm/content/video`, helper: 'Storyboard, motion board, dan CTA visual' },
+            ],
+          },
         ],
       },
       {
@@ -178,9 +213,9 @@ export default function MedsosLayout() {
         label: 'Analytics',
         roles: ['medsos_manager', 'all'],
         children: [
-          { label: 'WA', path: `${basePath}/analytics/wa`, helper: 'Kinerja inbox WA' },
-          { label: 'Medsos', path: `${basePath}/analytics/social`, helper: 'Konten & engagement' },
-          { label: 'Marketplace', path: `${basePath}/analytics/marketplace`, helper: 'Kinerja buyer chat' },
+          { key: 'analytics-wa', label: 'WA', path: `${basePath}/analytics/wa`, helper: 'Kinerja inbox WA' },
+          { key: 'analytics-social', label: 'Medsos', path: `${basePath}/analytics/social`, helper: 'Konten & engagement' },
+          { key: 'analytics-marketplace', label: 'Marketplace', path: `${basePath}/analytics/marketplace`, helper: 'Kinerja buyer chat' },
         ],
       },
       { type: 'link', icon: CreditCard, label: 'Plans & Pricing', path: `${basePath}/pricing`, roles: ['medsos_manager', 'all'] },
@@ -191,8 +226,41 @@ export default function MedsosLayout() {
   );
 
   const menuItems = useMemo(
-    () =>
-      allMenus.filter((item) => {
+    () => {
+      const canAccessPath = (path?: string) => {
+        if (!path) return true;
+        if (path.endsWith('/team')) return false;
+        if (path.endsWith('/settings')) return Boolean(mcsPerms?.settings);
+        if (path.endsWith('/ads')) return Boolean(mcsPerms?.ads);
+        if (path.endsWith('/marketplace')) return Boolean(mcsPerms?.marketplace);
+        if (
+          path.endsWith('/calendar')
+          || path.endsWith('/create')
+          || path.endsWith('/crm/planner')
+          || path.includes('/crm/content/')
+        ) return Boolean(mcsPerms?.content);
+        if (
+          path.endsWith('/crm')
+          || path.endsWith('/broadcasts')
+          || path.endsWith('/automations')
+        ) return Boolean(mcsPerms?.inbox);
+        if (path.includes('/analytics/')) return Boolean(mcsPerms?.analytics);
+        if (path.endsWith('/pricing') || path.endsWith('/connections')) return false;
+        return true;
+      };
+
+      const filterChildren = (children: MenuChild[]): MenuChild[] =>
+        children.flatMap((child) => {
+          const nextChildren = child.children?.length ? filterChildren(child.children) : undefined;
+          const allowedSelf = canAccessPath(child.path);
+          if (!allowedSelf && !nextChildren?.length) return [];
+          return [{
+            ...child,
+            children: nextChildren,
+          }];
+        });
+
+      return allMenus.filter((item) => {
         if (currentRole === 'super_admin') return true;
         // Demo mode: use currentRole
         if (isDemo) {
@@ -203,21 +271,17 @@ export default function MedsosLayout() {
         if (isOwnerOrManager) return true;
         if (isMcsMember && mcsPerms) {
           const isLink = item.type === 'link';
-          const isGroup = item.type === 'group';
-          if (isLink && item.path?.endsWith('/team')) return false;
-          if (isLink && item.path?.endsWith('/settings')) return Boolean(mcsPerms.settings);
-          if (isLink && item.path?.endsWith('/ads')) return Boolean(mcsPerms.ads);
-          if (isLink && item.path?.endsWith('/marketplace')) return Boolean(mcsPerms.marketplace);
-          if (isLink && (item.path?.endsWith('/calendar') || item.path?.endsWith('/create'))) return Boolean(mcsPerms.content);
-          if (isGroup && item.key === 'inbox') return Boolean(mcsPerms.inbox);
-          if (isGroup && item.key === 'analytics') return Boolean(mcsPerms.analytics);
-          if (isGroup && item.key === 'crm') return Boolean(mcsPerms.inbox);
-          if (isLink && (item.path?.endsWith('/pricing') || item.path?.endsWith('/connections'))) return false;
+          if (isLink) return canAccessPath(item.path);
+          const visibleChildren = filterChildren(item.children);
+          if (!visibleChildren.length) return false;
           return item.roles.includes('all');
         }
         if (item.roles.includes('all')) return true;
         return item.roles.includes(currentRole);
-      }),
+      }).map((item) => item.type === 'group' && isMcsMember && mcsPerms
+        ? { ...item, children: filterChildren(item.children) }
+        : item);
+    },
     [allMenus, currentRole, isDemo, isOwnerOrManager, isMcsMember, mcsPerms],
   );
 
@@ -226,9 +290,17 @@ export default function MedsosLayout() {
       let changed = false;
       const next = { ...current };
       for (const item of menuItems) {
-        if (item.type === 'group' && item.children.some((child) => location.pathname.startsWith(child.path)) && !current[item.key]) {
-          next[item.key] = true;
-          changed = true;
+        if (item.type === 'group') {
+          const keysToExpand = collectExpandedKeys(item.children, location.pathname);
+          if (keysToExpand.length) {
+            const allKeys = [item.key, ...keysToExpand];
+            for (const key of allKeys) {
+              if (!current[key]) {
+                next[key] = true;
+                changed = true;
+              }
+            }
+          }
         }
       }
       return changed ? next : current;
@@ -276,6 +348,66 @@ export default function MedsosLayout() {
     }
     toggleGroup(key);
   };
+
+  const renderMenuChildren = (children: MenuChild[], depth = 0) => (
+    <div className={`${depth === 0 ? 'mt-2 ml-3' : 'mt-2 ml-4'} space-y-1 border-l border-blue-200/40 pl-3`}>
+      {children.map((child) => {
+        const active = child.path ? location.pathname === child.path : child.children?.length ? menuTreeHasPath(child.children, location.pathname) : false;
+        const isExpanded = child.children?.length ? expandedGroups[child.key] ?? false : false;
+
+        if (child.children?.length) {
+          return (
+            <div key={child.key}>
+              <button
+                type="button"
+                onClick={() => toggleGroup(child.key)}
+                title={child.helper}
+                className={`w-full rounded-xl px-3 py-2.5 text-left transition ${
+                  active
+                    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-slate-700 dark:text-white dark:ring-slate-600'
+                    : isDark
+                      ? 'text-gray-300 hover:bg-slate-700/60'
+                      : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold">{child.label}</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                </div>
+                <p className={`mt-1 text-[11px] ${active ? (isDark ? 'text-gray-200' : 'text-blue-600') : (isDark ? 'text-gray-500' : 'text-gray-500')}`}>
+                  {child.helper}
+                </p>
+              </button>
+              {isExpanded ? renderMenuChildren(child.children, depth + 1) : null}
+            </div>
+          );
+        }
+
+        return (
+          <button
+            key={child.key}
+            type="button"
+            onClick={() => child.path && navigateFromSidebar(child.path)}
+            title={child.helper}
+            className={`w-full rounded-xl px-3 py-2.5 text-left transition ${
+              active
+                ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-slate-700 dark:text-white dark:ring-slate-600'
+                : isDark
+                  ? 'text-gray-300 hover:bg-slate-700/60'
+                  : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold">{child.label}</span>
+            </div>
+            <p className={`mt-1 text-[11px] ${active ? (isDark ? 'text-gray-200' : 'text-blue-600') : (isDark ? 'text-gray-500' : 'text-gray-500')}`}>
+              {child.helper}
+            </p>
+          </button>
+        );
+      })}
+    </div>
+  );
 
   const asideWidthClass = sidebarCollapsed ? 'md:w-24' : 'md:w-64';
   const contentOffsetClass = sidebarCollapsed ? 'md:ml-24' : 'md:ml-64';
@@ -350,12 +482,12 @@ export default function MedsosLayout() {
 
           <div className={`mb-4 px-2 ${sidebarCollapsed ? 'flex justify-center' : ''}`}>
             <button
-              onClick={() => navigateFromSidebar(`${basePath}/create`)}
-              title="Buka Content Studio untuk meracik caption, visual brief, dan publish"
+              onClick={() => navigateFromSidebar(`${basePath}/crm/content/photo`)}
+              title="Buka Create Content cockpit untuk racik foto, video, dan publish"
               className={`${sidebarCollapsed ? 'h-11 w-11 rounded-xl' : 'w-full rounded-xl py-3'} flex items-center justify-center gap-2 bg-blue-600 font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 active:scale-95 transition-all`}
             >
               <Plus size={20} />
-              {!sidebarCollapsed ? 'Content Studio' : null}
+              {!sidebarCollapsed ? 'Create Content' : null}
             </button>
           </div>
 
@@ -395,7 +527,7 @@ export default function MedsosLayout() {
                 );
               }
 
-              const isGroupActive = item.children.some((child) => location.pathname.startsWith(child.path));
+              const isGroupActive = menuTreeHasPath(item.children, location.pathname);
               const isExpanded = expandedGroups[item.key] ?? false;
 
               return (
@@ -426,32 +558,7 @@ export default function MedsosLayout() {
                     ) : null}
                   </button>
                   {isExpanded && !sidebarCollapsed ? (
-                    <div className="mt-2 ml-3 space-y-1 border-l border-blue-200/40 pl-3">
-                      {item.children.map((child) => {
-                        const active = location.pathname === child.path;
-                        return (
-                          <button
-                            key={child.path}
-                            onClick={() => navigateFromSidebar(child.path)}
-                            title={child.helper}
-                            className={`w-full rounded-xl px-3 py-2.5 text-left transition ${
-                              active
-                                ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-slate-700 dark:text-white dark:ring-slate-600'
-                                : isDark
-                                  ? 'text-gray-300 hover:bg-slate-700/60'
-                                  : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-sm font-semibold">{child.label}</span>
-                            </div>
-                            <p className={`mt-1 text-[11px] ${active ? (isDark ? 'text-gray-200' : 'text-blue-600') : (isDark ? 'text-gray-500' : 'text-gray-500')}`}>
-                              {child.helper}
-                            </p>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    renderMenuChildren(item.children)
                   ) : null}
                 </li>
               );
@@ -545,13 +652,13 @@ export default function MedsosLayout() {
           <span className="mt-1 text-[10px] font-semibold">Inbox</span>
         </button>
         <button
-          onClick={() => navigate(`${basePath}/create`)}
+          onClick={() => navigate(`${basePath}/crm/content/photo`)}
           className="group relative -top-5 flex flex-col items-center justify-center p-2"
         >
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-transform group-hover:scale-105">
             <Plus size={24} />
           </div>
-          <span className={`mt-1 text-[10px] font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Studio</span>
+          <span className={`mt-1 text-[10px] font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Create</span>
         </button>
         <button
           onClick={() => navigate(`${basePath}/analytics/social`)}
