@@ -168,9 +168,11 @@ function OutputCard({
 export default function AdvancedContentStudio({
   isDark,
   onApplyToComposer,
+  preferredTab,
 }: {
   isDark: boolean;
   onApplyToComposer: (text: string) => void;
+  preferredTab?: StudioTab;
 }) {
   const [activeTab, setActiveTab] = useState<StudioTab>('copy');
   const [providerId, setProviderId] = useState<ProviderId>('demo');
@@ -279,6 +281,11 @@ export default function AdvancedContentStudio({
     campaignProduct, campaignOffer, campaignAudience, campaignGoal, campaignOutput,
     copilotInput, copilotOutput,
   ]);
+
+  useEffect(() => {
+    if (!preferredTab) return;
+    setActiveTab(preferredTab);
+  }, [preferredTab]);
 
   const providerMeta = PROVIDER_META[providerId];
   const providerConfig = providerConfigs[providerId];

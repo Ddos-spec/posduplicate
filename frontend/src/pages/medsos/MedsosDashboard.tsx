@@ -177,7 +177,7 @@ export default function MedsosDashboard() {
     { icon: McsInboxIcon, label: 'WA Inbox', helper: 'Buka chat WA', path: `${base}/inbox/wa` },
     { icon: McsSocialIcon, label: 'Medsos Inbox', helper: 'DM & komentar', path: `${base}/inbox/social` },
     { icon: McsMarketplaceIcon, label: 'Marketplace', helper: 'Buyer chat', path: `${base}/inbox/marketplace` },
-    { icon: McsPlannerIcon, label: 'Planner', helper: 'Jadwal konten', path: `${base}/calendar` },
+    { icon: McsPlannerIcon, label: 'Planner', helper: 'Lane campaign & approval', path: `${base}/crm/planner` },
     { icon: McsAnalyticsIcon, label: 'Analytics', helper: 'Lihat performa', path: `${base}/analytics/social` },
     { icon: McsAdsIcon, label: 'Ads', helper: 'Kelola iklan', path: `${base}/ads` },
     { icon: McsTeamIcon, label: 'Tim MCS', helper: 'Kelola akses tim', path: `${base}/team` },
@@ -237,11 +237,11 @@ export default function MedsosDashboard() {
               Connections
             </button>
             <button
-              onClick={() => navigate(`${base}/create`)}
+              onClick={() => navigate(`${base}/crm/content/photo`)}
               className="flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-blue-700 active:scale-95 transition-all hover:shadow-lg hover:shadow-blue-600/30 active:scale-95"
             >
               <Plus size={16} />
-              Content Studio
+              Create Content
             </button>
           </div>
         </div>

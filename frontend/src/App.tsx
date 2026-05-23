@@ -306,8 +306,11 @@ function App() {
         <Route path="/demo/medsos" element={<MedsosLayout />}>
           <Route path="dashboard" element={<MedsosDashboard />} />
           <Route path="connections" element={<MedsosConnections />} />
-          <Route path="create" element={<CreatePost />} />
-          <Route path="calendar" element={<ContentCalendar />} />
+          <Route path="create" element={<Navigate to="/demo/medsos/crm/content/photo" replace />} />
+          <Route path="calendar" element={<Navigate to="/demo/medsos/crm/planner" replace />} />
+          <Route path="crm/planner" element={<ContentCalendar />} />
+          <Route path="crm/content" element={<Navigate to="/demo/medsos/crm/content/photo" replace />} />
+          <Route path="crm/content/:mode" element={<CreatePost />} />
           <Route path="inbox" element={<Navigate to="/demo/medsos/inbox/wa" replace />} />
           <Route path="inbox/:channel" element={<MedsosInbox />} />
           <Route path="marketplace" element={<MarketplaceControl />} />
@@ -434,8 +437,11 @@ function App() {
         >
           <Route path="dashboard" element={<MedsosDashboard />} />
           <Route path="connections" element={<MedsosConnections />} />
-          <Route path="create" element={<CreatePost />} />
-          <Route path="calendar" element={<ContentCalendar />} />
+          <Route path="create" element={<Navigate to="/medsos/crm/content/photo" replace />} />
+          <Route path="calendar" element={<Navigate to="/medsos/crm/planner" replace />} />
+          <Route path="crm/planner" element={<ContentCalendar />} />
+          <Route path="crm/content" element={<Navigate to="/medsos/crm/content/photo" replace />} />
+          <Route path="crm/content/:mode" element={<CreatePost />} />
           <Route path="inbox" element={<Navigate to="/medsos/inbox/wa" replace />} />
           <Route path="inbox/:channel" element={<MedsosInbox />} />
           <Route path="marketplace" element={<MarketplaceControl />} />

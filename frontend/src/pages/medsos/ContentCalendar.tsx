@@ -68,12 +68,14 @@ function createFallbackBrief(card: typeof plannerCards[number]): CampaignBrief {
 
 import { updatePost } from '../../services/medsosPostsService';
 
-function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
+function LiveCalendar({ posts, isDark, navigate, onRefresh, isDemo }: {
   posts: SocialPost[];
   isDark: boolean;
   navigate: ReturnType<typeof useNavigate>;
   onRefresh: () => void;
+  isDemo: boolean;
 }) {
+  const createContentPath = isDemo ? '/demo/medsos/crm/content/photo' : '/medsos/crm/content/photo';
   const [busy, setBusy] = useState<number | null>(null);
 
   // Generate current month days
@@ -132,14 +134,14 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh }: {
               <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Content Planner</h1>
               <FieldHelp title="Content Planner live" description="Tarik (drag) post draft/scheduled ke tanggal lain untuk mengubah jadwal. Post yang sudah published tidak bisa digeser." />
             </div>
-            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{posts.length} post bulan ini</p>
+            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{posts.length} post bulan ini · planner ini sekarang jadi lane kerja di CRM &amp; Automation.</p>
           </div>
           <button
-            onClick={() => navigate('/medsos/create')}
-            title="Buka composer untuk membuat post baru"
+            onClick={() => navigate(createContentPath)}
+            title="Buka create content cockpit"
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all font-semibold"
           >
-            <Plus size={18} /> New Post
+            <Plus size={18} /> Create Content
           </button>
         </div>
       </div>
@@ -248,7 +250,7 @@ export default function ContentCalendar() {
         </div>
       );
     }
-    return <LiveCalendar posts={posts} isDark={isDark} navigate={navigate} onRefresh={loadPosts} />;
+    return <LiveCalendar posts={posts} isDark={isDark} navigate={navigate} onRefresh={loadPosts} isDemo={isDemo} />;
   }
 
   return (
