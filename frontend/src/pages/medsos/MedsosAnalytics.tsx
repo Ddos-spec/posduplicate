@@ -11,6 +11,7 @@ import {
   getMarketplaceHubStatus,
   getPosts,
   getWACrmStatus,
+  getZernioAudienceDemographics,
   getZernioAccounts,
   getZernioPostAnalytics,
   generateSocialPostAnalysis,
@@ -19,6 +20,7 @@ import {
   type SocialPostAnalysisResult,
   type WACrmConnectionStatus,
   type ZernioAccount,
+  type ZernioAudienceDemographics,
   type ZernioPostAnalyticsItem,
 } from '../../services/medsosPostsService';
 import {
@@ -136,6 +138,44 @@ const demoSocialPosts: SocialPost[] = [
     social_analytics: { impressions: 233, reach: 156, likes: 20, comments: 10, shares: 5, saves: 8, engagement_rate: 10.2 },
   },
 ];
+
+const demoAudienceDemographics: ZernioAudienceDemographics = {
+  accountId: 'demo-instagram-account',
+  platform: 'instagram',
+  metric: 'engaged_audience_demographics',
+  timeframe: 'this_month',
+  demographics: {
+    age: [
+      { dimension: '25-34', value: 4200 },
+      { dimension: '18-24', value: 2800 },
+      { dimension: '35-44', value: 1600 },
+    ],
+    gender: [
+      { dimension: 'F', value: 4700 },
+      { dimension: 'M', value: 3300 },
+    ],
+    city: [
+      { dimension: 'Jakarta', value: 1180 },
+      { dimension: 'Bandung', value: 840 },
+      { dimension: 'Surabaya', value: 615 },
+      { dimension: 'Tangerang', value: 402 },
+    ],
+    country: [
+      { dimension: 'ID', value: 7600 },
+      { dimension: 'MY', value: 320 },
+      { dimension: 'SG', value: 118 },
+    ],
+  },
+  note: 'Demo engaged audience snapshot.',
+};
+
+function normalizeHandle(value?: string | null) {
+  return String(value || '').trim().replace(/^@/, '').toLowerCase();
+}
+
+function formatAudienceValue(value: number) {
+  return new Intl.NumberFormat('id-ID').format(Math.round(value));
+}
 
 const previewSocialPosts: SocialPost[] = [
   {
@@ -317,6 +357,9 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<SocialPostAnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [audienceLoading, setAudienceLoading] = useState(false);
+  const [audienceData, setAudienceData] = useState<ZernioAudienceDemographics | null>(isDemo ? demoAudienceDemographics : null);
+  const [audienceError, setAudienceError] = useState<string | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const analysisPanelRef = useRef<HTMLDivElement>(null);
 
@@ -364,6 +407,71 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
     : availablePlatforms;
 
   const selectedPost = useMemo(() => displayPosts.find(p => p.id === selectedPostId), [displayPosts, selectedPostId]);
+
+  const selectedAudienceAccount = useMemo(() => {
+    if (isDemo) {
+      return { id: 'demo-instagram-account', platform: 'instagram', displayName: 'Demo Instagram' };
+    }
+
+    const supportedAccounts = accounts.filter((account) => ['instagram', 'youtube'].includes(account.platform.toLowerCase()));
+    if (!supportedAccounts.length) return null;
+
+    const selectedPlatform = selectedPost?.platform?.toLowerCase() || '';
+    const selectedHandle = normalizeHandle(selectedPost?.social_accounts?.account_name);
+
+    const directMatch = supportedAccounts.find((account) => {
+      if (selectedPlatform && account.platform.toLowerCase() !== selectedPlatform) return false;
+      if (!selectedHandle) return true;
+      return (
+        normalizeHandle(account.username) === selectedHandle ||
+        normalizeHandle(account.displayName) === selectedHandle
+      );
+    });
+
+    if (directMatch) return directMatch;
+
+    if (selectedPlatform) {
+      const samePlatform = supportedAccounts.find((account) => account.platform.toLowerCase() === selectedPlatform);
+      if (samePlatform) return samePlatform;
+    }
+
+    if (platformFilter !== 'all') {
+      const filteredPlatform = supportedAccounts.find((account) => account.platform.toLowerCase() === platformFilter);
+      if (filteredPlatform) return filteredPlatform;
+    }
+
+    return supportedAccounts[0] ?? null;
+  }, [accounts, isDemo, platformFilter, selectedPost]);
+
+  useEffect(() => {
+    if (isDemo) {
+      setAudienceData(demoAudienceDemographics);
+      setAudienceError(null);
+      return;
+    }
+
+    if (!selectedAudienceAccount) {
+      setAudienceData(null);
+      setAudienceError('Belum ada akun Instagram/YouTube yang mendukung data demografi audience.');
+      return;
+    }
+
+    setAudienceLoading(true);
+    setAudienceError(null);
+    getZernioAudienceDemographics({
+      accountId: selectedAudienceAccount.id,
+      platform: selectedAudienceAccount.platform.toLowerCase(),
+      metric: selectedAudienceAccount.platform.toLowerCase() === 'instagram' ? 'engaged_audience_demographics' : undefined,
+      timeframe: selectedAudienceAccount.platform.toLowerCase() === 'instagram' ? 'this_month' : undefined,
+      breakdown: ['age', 'gender', 'city', 'country'],
+    })
+      .then((result) => setAudienceData(result))
+      .catch((err: any) => {
+        setAudienceData(null);
+        setAudienceError(err?.response?.data?.error?.message || err?.message || 'Gagal memuat data demografi audience.');
+      })
+      .finally(() => setAudienceLoading(false));
+  }, [isDemo, selectedAudienceAccount]);
 
   const runAnalysis = async (post: SocialPost, options?: { scrollToPanel?: boolean }) => {
     if (analysisLoading) return;
@@ -438,6 +546,19 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
         .slice(0, 3),
     [displayPosts],
   );
+
+  const audienceSections = useMemo(() => {
+    const demographics = audienceData?.demographics;
+    return [
+      { key: 'age', label: 'Usia', items: demographics?.age ?? [] },
+      { key: 'gender', label: 'Gender', items: demographics?.gender ?? [] },
+      { key: 'city', label: 'Kota', items: demographics?.city ?? [] },
+      { key: 'country', label: 'Negara', items: demographics?.country ?? [] },
+    ].map((section) => ({
+      ...section,
+      items: [...section.items].sort((a, b) => b.value - a.value).slice(0, 4),
+    }));
+  }, [audienceData]);
 
   const handleExportPdf = () => {
     exportAnalyticsPdf('Omnichannel Social', [
@@ -605,28 +726,58 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        {/* Best Time to Post Mock */}
         <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-          <h3 className="text-sm font-bold tracking-tight uppercase tracking-widest text-gray-400 mb-6">Best Time to Post</h3>
-          <div className="grid grid-cols-[30px_1fr] gap-4">
-             <div className="flex flex-col justify-between text-[10px] font-bold text-gray-400 py-1">
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <span key={d}>{d}</span>)}
-             </div>
-             <div className="grid grid-cols-12 gap-1">
-                {Array.from({ length: 84 }).map((_, i) => (
-                   <div key={i} className={`h-4 rounded-sm ${i === 42 || i === 15 ? 'bg-emerald-500' : i % 5 === 0 ? 'bg-emerald-200' : i % 3 === 0 ? 'bg-emerald-100' : isDark ? 'bg-slate-700' : 'bg-emerald-50/30'}`} />
-                ))}
-             </div>
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <div>
+              <h3 className="text-sm font-bold tracking-tight uppercase tracking-widest text-gray-400">Audience Demographics</h3>
+              <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {selectedAudienceAccount
+                  ? `Data audience dari ${selectedAudienceAccount.platform} · ${selectedAudienceAccount.displayName || ('username' in selectedAudienceAccount ? selectedAudienceAccount.username : '') || selectedAudienceAccount.id}`
+                  : 'Belum ada account audience yang bisa dibaca.'}
+              </p>
+            </div>
+            {audienceData?.metric ? (
+              <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-500'}`}>
+                {audienceData.metric.replaceAll('_', ' ')}
+              </span>
+            ) : null}
           </div>
-          <div className="mt-4 flex items-center justify-between text-[10px] font-bold text-gray-400">
-             <div className="flex gap-8">
-                <span>12am</span><span>6am</span><span>9am</span><span>12pm</span><span>3pm</span><span>6pm</span><span>9pm</span>
-             </div>
-             <div className="flex gap-2">
-                <span className="px-2 py-1 bg-emerald-500/20 text-emerald-600 rounded">Thu 6am</span>
-                <span className="px-2 py-1 bg-emerald-500/20 text-emerald-600 rounded">Sun 7am</span>
-             </div>
-          </div>
+
+          {audienceLoading ? (
+            <div className="min-h-[220px] flex items-center justify-center">
+              <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
+            </div>
+          ) : audienceError ? (
+            <div className={`rounded-2xl border border-dashed p-5 text-sm leading-6 ${isDark ? 'border-slate-700 text-slate-300 bg-slate-900/40' : 'border-slate-200 text-slate-600 bg-slate-50'}`}>
+              {audienceError}
+            </div>
+          ) : !audienceSections.some((section) => section.items.length > 0) ? (
+            <div className={`rounded-2xl border border-dashed p-5 text-sm leading-6 ${isDark ? 'border-slate-700 text-slate-300 bg-slate-900/40' : 'border-slate-200 text-slate-600 bg-slate-50'}`}>
+              Data audience belum tersedia untuk akun ini. Beberapa provider memang butuh follower minimum atau add-on analytics aktif.
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {audienceSections.map((section) => (
+                <div key={section.key} className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-900/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-100'}`}>
+                  <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{section.label}</p>
+                  <div className="mt-3 space-y-2">
+                    {section.items.length ? section.items.map((item) => (
+                      <div key={`${section.key}-${item.dimension}`} className="flex items-center justify-between gap-3 rounded-2xl px-3 py-2 bg-white/70 dark:bg-white/5">
+                        <span className="text-sm font-medium">{item.dimension}</span>
+                        <span className={`text-xs font-bold ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>{formatAudienceValue(item.value)}</span>
+                      </div>
+                    )) : (
+                      <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Belum ada data.</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {audienceData?.note ? (
+            <p className={`mt-4 text-xs leading-5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{audienceData.note}</p>
+          ) : null}
         </section>
 
         {/* Top Posts */}
