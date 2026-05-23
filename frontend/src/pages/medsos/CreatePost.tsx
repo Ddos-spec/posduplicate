@@ -40,6 +40,9 @@ export default function CreatePost() {
       helper: 'Hero image, key visual, thumbnail, katalog, creative test.',
       path: photoPath,
       icon: ImageIcon,
+      badge: 'Visual lane',
+      accent: 'blue',
+      detail: 'Still, product, key visual',
     },
     {
       id: 'video',
@@ -48,6 +51,9 @@ export default function CreatePost() {
       helper: 'Reels, TikTok, hook 3 detik, UGC brief, motion ads.',
       path: videoPath,
       icon: PlaySquare,
+      badge: 'Motion lane',
+      accent: 'violet',
+      detail: 'Storyboard, hook, CTA',
     },
   ] as const), [photoPath, videoPath]);
   const workflowChips = useMemo(() => ([
@@ -172,28 +178,33 @@ export default function CreatePost() {
               {modeCards.map((item) => {
                 const isActive = item.id === activeMode;
                 const Icon = item.icon;
+                const toneClass = item.accent === 'violet'
+                  ? isActive
+                    ? isDark ? 'border-violet-400/40 bg-violet-500/10 shadow-lg shadow-violet-500/10' : 'border-violet-200 bg-violet-50 shadow-sm'
+                    : isDark ? 'border-white/10 bg-slate-900/70 hover:border-violet-400/20 hover:bg-slate-900' : 'border-slate-200 bg-slate-50 hover:border-violet-200 hover:bg-white'
+                  : isActive
+                    ? isDark ? 'border-blue-400/40 bg-blue-500/10 shadow-lg shadow-blue-500/10' : 'border-blue-200 bg-blue-50 shadow-sm'
+                    : isDark ? 'border-white/10 bg-slate-900/70 hover:border-blue-400/20 hover:bg-slate-900' : 'border-slate-200 bg-slate-50 hover:border-blue-200 hover:bg-white';
+                const iconTone = item.accent === 'violet'
+                  ? (isActive ? 'bg-violet-600 text-white' : isDark ? 'bg-slate-800 text-violet-300' : 'bg-white text-violet-600 shadow-sm')
+                  : (isActive ? 'bg-blue-600 text-white' : isDark ? 'bg-slate-800 text-blue-300' : 'bg-white text-blue-600 shadow-sm');
                 return (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => navigate(item.path)}
-                    className={`rounded-[24px] border p-4 text-left transition-all ${
-                      isActive
-                        ? isDark
-                          ? 'border-blue-400/40 bg-blue-500/10 shadow-lg shadow-blue-500/10'
-                          : 'border-blue-200 bg-blue-50 shadow-sm'
-                        : isDark
-                          ? 'border-white/10 bg-slate-900/70 hover:border-white/20 hover:bg-slate-900'
-                          : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white'
-                    }`}
+                    className={`rounded-[24px] border p-4 text-left transition-all ${toneClass}`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`rounded-2xl p-3 ${isActive ? 'bg-blue-600 text-white' : isDark ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-600 shadow-sm'}`}>
+                      <div className={`rounded-2xl p-3 ${iconTone}`}>
                         <Icon size={18} />
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-bold">{item.title}</p>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${item.accent === 'violet' ? 'bg-violet-500/10 text-violet-600 dark:text-violet-300' : 'bg-blue-500/10 text-blue-600 dark:text-blue-300'}`}>
+                            {item.badge}
+                          </span>
                           {isActive ? (
                             <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
                               Active lane
@@ -201,7 +212,12 @@ export default function CreatePost() {
                           ) : null}
                         </div>
                         <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.description}</p>
-                        <p className={`mt-2 text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.helper}</p>
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <p className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.helper}</p>
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
+                            {item.detail}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </button>
