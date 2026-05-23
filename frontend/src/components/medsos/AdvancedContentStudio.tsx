@@ -42,6 +42,7 @@ import {
   type ProviderConfigMap,
   type ProviderId,
 } from '../../lib/contentStudio';
+import FieldHelp from './FieldHelp';
 
 type StudioTab = 'copy' | 'image' | 'video' | 'campaign' | 'copilot' | 'provider';
 
@@ -502,7 +503,14 @@ export default function AdvancedContentStudio({
               <Sparkles size={14} />
               Content Studio Advanced
             </div>
-            <h2 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Cockpit untuk pilot konten yang mau ngulik sendiri</h2>
+            <div className="flex items-start gap-2">
+              <h2 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Cockpit untuk pilot konten yang mau ngulik sendiri</h2>
+              <FieldHelp
+                title="Content Studio Advanced"
+                description="Ini cockpit utama untuk meracik copy, visual brief, storyboard video, blueprint campaign, sampai konfigurasi provider AI."
+                howToUse="Pilih tool dari sidebar kiri, isi brief atau prompt sesuai tujuan, generate output, lalu copy atau lempar ke composer publish di panel kanan halaman create content."
+              />
+            </div>
             <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Halaman ini sengaja dibuat advanced. Sistem membantu bikin brief, storyboard, dan blueprint — tapi hasil bagus tetap murni bergantung prompt, taste, dan konfigurasi pilot.
             </p>
@@ -521,7 +529,14 @@ export default function AdvancedContentStudio({
 
       <div className="grid gap-5 2xl:grid-cols-[220px_minmax(0,1fr)]">
         <aside className={`rounded-[28px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
-          <p className={`mb-3 text-[11px] uppercase tracking-[0.2em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Studio tools</p>
+          <div className="mb-3 flex items-center gap-2">
+            <p className={`text-[11px] uppercase tracking-[0.2em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Studio tools</p>
+            <FieldHelp
+              title="Studio tools"
+              description="Ini daftar mode kerja di dalam cockpit, mulai dari copy, visual, video, campaign, copilot, sampai provider config."
+              howToUse="Klik salah satu tool sesuai kebutuhan. Kalau butuh caption pilih Copy Lab, kalau butuh gambar pilih Visual Brief, kalau butuh video pilih Motion Board, dan seterusnya."
+            />
+          </div>
           <div className="space-y-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -564,7 +579,14 @@ export default function AdvancedContentStudio({
             <div className="space-y-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <h3 className="text-xl font-bold">Copy Lab</h3>
+                  <div className="flex items-start gap-2">
+                    <h3 className="text-xl font-bold">Copy Lab</h3>
+                    <FieldHelp
+                      title="Copy Lab"
+                      description="Fitur ini dipakai untuk membuat caption, hook, CTA, dan sudut copywriting yang siap masuk composer."
+                      howToUse="Pilih content type dan tone dulu, isi brief dengan produk, offer, dan angle yang diinginkan, lalu klik Generate copy. Kalau hasilnya cocok, copy atau kirim ke composer."
+                    />
+                  </div>
                   <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Bikin caption, hook, dan CTA yang lebih siap pakai untuk composer.</p>
                 </div>
                 <button type="button" onClick={() => void runCopy()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
@@ -601,7 +623,14 @@ export default function AdvancedContentStudio({
             <div className="space-y-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <h3 className="text-xl font-bold">Visual Brief</h3>
+                  <div className="flex items-start gap-2">
+                    <h3 className="text-xl font-bold">Visual Brief</h3>
+                    <FieldHelp
+                      title="Visual Brief"
+                      description="Fitur ini dipakai untuk menyusun prompt visual, art direction, ratio, dan negative prompt untuk kebutuhan foto atau image generation."
+                      howToUse="Isi visual utama yang diinginkan, negative prompt, style, dan rasio. Lalu generate visual brief untuk diberikan ke tim desain atau generator gambar."
+                    />
+                  </div>
                   <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Bangun prompt dan direction foto / hero visual sebelum dieksekusi di generator atau tim desain.</p>
                 </div>
                 <button type="button" onClick={() => void runImageBrief()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
@@ -646,7 +675,14 @@ export default function AdvancedContentStudio({
             <div className="space-y-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <h3 className="text-xl font-bold">Motion Board</h3>
+                  <div className="flex items-start gap-2">
+                    <h3 className="text-xl font-bold">Motion Board</h3>
+                    <FieldHelp
+                      title="Motion Board"
+                      description="Fitur ini dipakai untuk menyusun storyboard video pendek, urutan beat, motion, durasi, dan platform target."
+                      howToUse="Isi ide video, pilih motion dan durasi, tentukan platform, lalu generate storyboard. Gunakan hasilnya sebagai panduan editor atau generator video."
+                    />
+                  </div>
                   <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Susun storyboard video pendek, beat sheet, dan overlay sebelum produksi.</p>
                 </div>
                 <button type="button" onClick={() => void runVideoBoard()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
@@ -690,7 +726,14 @@ export default function AdvancedContentStudio({
             <div className="space-y-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <h3 className="text-xl font-bold">Campaign Blueprint</h3>
+                  <div className="flex items-start gap-2">
+                    <h3 className="text-xl font-bold">Campaign Blueprint</h3>
+                    <FieldHelp
+                      title="Campaign Blueprint"
+                      description="Fitur ini dipakai untuk memetakan offer, audience, objective, CTA, dan blueprint funnel sebelum campaign dibuat."
+                      howToUse="Isi produk, offer, audience, dan goal campaign. Generate blueprint, lalu pakai hasilnya untuk menyusun caption awal, asset list, atau lane planner."
+                    />
+                  </div>
                   <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Susun angle, offer, asset stack, dan CTA sebelum produksi campaign besar.</p>
                 </div>
                 <button type="button" onClick={() => void runCampaign()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
@@ -726,7 +769,14 @@ export default function AdvancedContentStudio({
             <div className="space-y-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <h3 className="text-xl font-bold">Copilot</h3>
+                  <div className="flex items-start gap-2">
+                    <h3 className="text-xl font-bold">Copilot</h3>
+                    <FieldHelp
+                      title="Copilot"
+                      description="Fitur ini adalah sparring partner cepat untuk bantu brainstorming, refine angle, dan mencari langkah kerja berikutnya."
+                      howToUse="Tulis pertanyaan spesifik seperti hook yang mau dites atau angle terbaik untuk target tertentu, lalu klik Ask copilot dan pakai jawabannya sebagai bahan revisi."
+                    />
+                  </div>
                   <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Pakai sebagai sparring partner untuk refine hook, angle, dan next-step produksi.</p>
                 </div>
                 <button type="button" onClick={() => void runCopilot()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
@@ -750,7 +800,14 @@ export default function AdvancedContentStudio({
           {activeTab === 'provider' && (
             <div className="space-y-5">
               <div>
-                <h3 className="text-xl font-bold">Pilot Config</h3>
+                <div className="flex items-start gap-2">
+                  <h3 className="text-xl font-bold">Pilot Config</h3>
+                  <FieldHelp
+                    title="Pilot Config"
+                    description="Panel ini dipakai untuk memilih provider AI, memasukkan API key, model, dan endpoint override per browser seat."
+                    howToUse="Pilih provider dulu, isi API key aktif kalau ada, tentukan model yang ingin dipakai, lalu simpan saja di browser ini. Setiap pilot bisa punya konfigurasi berbeda."
+                  />
+                </div>
                 <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Atur provider, API key, model, dan endpoint. Ini sengaja dipisah agar tiap pilot bisa punya setup sendiri.</p>
               </div>
               <div className={`grid gap-3 md:grid-cols-3 ${isDark ? '' : ''}`}>
@@ -827,7 +884,14 @@ export default function AdvancedContentStudio({
               <div className={`rounded-[28px] p-5 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-sm'}`}>
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-bold">Operator Console</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold">Operator Console</p>
+                      <FieldHelp
+                        title="Operator Console"
+                        description="Bagian ini adalah tempat isi detail teknis provider yang akan dipakai oleh lane studio saat generate output."
+                        howToUse="Isi API key, model, dan kalau perlu base URL custom. Kalau hanya belajar atau demo, field bisa dibiarkan kosong dan sistem akan pakai fallback lokal."
+                      />
+                    </div>
                     <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Simpan slot provider, model utama, dan endpoint override khusus untuk pilot ini.</p>
                   </div>
                   <div className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200'}`}>

@@ -829,9 +829,20 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
             <div>
               <div className="flex items-center gap-2">
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{titleByChannel(channel)}</p>
-                <FieldHelp title={titleByChannel(channel)} description={descriptionByChannel(channel)} />
+                <FieldHelp
+                  title={titleByChannel(channel)}
+                  description={descriptionByChannel(channel)}
+                  howToUse="Pilih thread dari kolom kiri, baca konteks di panel kanan, lalu balas dari composer bawah. Filter dipakai untuk fokus ke unread, pending, atau eskalasi."
+                />
               </div>
-              <h2 className="text-lg font-bold">Queue & Response Desk</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold">Queue & Response Desk</h2>
+                <FieldHelp
+                  title="Queue & Response Desk"
+                  description="Ini meja kerja operator untuk memilih antrean chat, menyaring prioritas, dan membuka percakapan aktif."
+                  howToUse="Pakai filter untuk mempersempit antrean, gunakan pencarian bila butuh customer tertentu, lalu klik salah satu thread agar percakapannya terbuka di panel tengah."
+                />
+              </div>
             </div>
             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isDark ? 'bg-slate-700 text-gray-200' : 'bg-blue-50 text-blue-600'}`}>
               {channel === 'wa' ? '5 pesan masuk' : channel === 'social' ? '3 percakapan aktif' : '4 buyer chat aktif'}
@@ -1019,7 +1030,14 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
 
       <aside className={`hidden xl:flex flex-col ${isDark ? 'bg-slate-850' : 'bg-gray-50/70'}`}>
         <div className={`p-5 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
-          <h3 className="font-bold text-lg">Customer Context</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-lg">Customer Context</h3>
+            <FieldHelp
+              title="Customer Context"
+              description="Panel ini merangkum nilai customer, order context, template, dan saran aksi agar operator tidak balas chat secara buta."
+              howToUse="Baca panel ini dulu sebelum membalas. Gunakan ringkasan, order context, dan template reply untuk mempercepat respons tanpa kehilangan konteks."
+            />
+          </div>
           <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ringkasan cepat untuk operator sebelum membalas.</p>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
