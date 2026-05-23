@@ -4,11 +4,15 @@ import {
   Bot,
   CheckCircle2,
   Copy,
+  Cpu,
   Download,
+  Globe2,
   Image as ImageIcon,
+  KeyRound,
   Loader2,
   PlaySquare,
   Send,
+  ShieldCheck,
   Settings2,
   Sparkles,
   Wand2,
@@ -87,6 +91,12 @@ function mergeProviderConfigs(source?: Partial<ProviderConfigMap>): ProviderConf
     };
     return acc;
   }, {} as ProviderConfigMap);
+}
+
+function maskSecret(value: string) {
+  if (!value) return 'Belum diisi';
+  if (value.length <= 8) return 'Tersimpan';
+  return `${value.slice(0, 3)}••••${value.slice(-3)}`;
 }
 
 function ChoicePill({
@@ -743,6 +753,32 @@ export default function AdvancedContentStudio({
                 <h3 className="text-xl font-bold">Pilot Config</h3>
                 <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Atur provider, API key, model, dan endpoint. Ini sengaja dipisah agar tiap pilot bisa punya setup sendiri.</p>
               </div>
+              <div className={`grid gap-3 md:grid-cols-3 ${isDark ? '' : ''}`}>
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                  <div className="flex items-center gap-2">
+                    <Cpu size={15} className="text-blue-500" />
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Current lane</p>
+                  </div>
+                  <p className="mt-3 text-base font-bold">{providerMeta.label}</p>
+                  <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{providerMeta.badge}</p>
+                </div>
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                  <div className="flex items-center gap-2">
+                    <KeyRound size={15} className="text-emerald-500" />
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">API status</p>
+                  </div>
+                  <p className="mt-3 text-base font-bold">{providerConfig.apiKey ? 'Key loaded' : 'Manual / demo'}</p>
+                  <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{maskSecret(providerConfig.apiKey)}</p>
+                </div>
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                  <div className="flex items-center gap-2">
+                    <Globe2 size={15} className="text-purple-500" />
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Endpoint mode</p>
+                  </div>
+                  <p className="mt-3 text-base font-bold">{providerMeta.supportsBaseUrl ? 'Custom endpoint' : 'Managed default'}</p>
+                  <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{providerConfig.baseUrl || providerMeta.baseUrl || 'Gunakan endpoint bawaan provider'}</p>
+                </div>
+              </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {PROVIDER_IDS.map((id) => {
                   const meta = PROVIDER_META[id];
@@ -764,44 +800,92 @@ export default function AdvancedContentStudio({
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-sm font-bold">{meta.label}</span>
-                        {active ? <CheckCircle2 size={16} className="text-blue-500" /> : null}
+                        {active ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 size={12} />
+                            Live slot
+                          </span>
+                        ) : null}
                       </div>
                       <p className={`mt-2 text-xs font-semibold ${active ? (isDark ? 'text-blue-200' : 'text-blue-700') : isDark ? 'text-slate-400' : 'text-slate-500'}`}>{meta.badge}</p>
                       <p className={`mt-2 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{meta.description}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
+                          Model: {providerConfigs[id].model || meta.defaultModel || 'manual'}
+                        </span>
+                        {meta.supportsBaseUrl ? (
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
+                            Endpoint custom
+                          </span>
+                        ) : null}
+                      </div>
                     </button>
                   );
                 })}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-2 md:col-span-2">
-                  <span className="text-sm font-semibold">API key</span>
-                  <input
-                    type="password"
-                    value={providerConfig.apiKey}
-                    onChange={(e) => updateProviderConfig({ apiKey: e.target.value })}
-                    placeholder={providerMeta.envKey ? `Bisa pakai env ${providerMeta.envKey} atau isi manual di sini` : 'Isi API key manual'}
-                    className={fieldClass}
-                  />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-semibold">Model</span>
-                  <input value={providerConfig.model} onChange={(e) => updateProviderConfig({ model: e.target.value })} placeholder={providerMeta.defaultModel} className={fieldClass} />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-semibold">Base URL</span>
-                  <input
-                    value={providerConfig.baseUrl}
-                    onChange={(e) => updateProviderConfig({ baseUrl: e.target.value })}
-                    placeholder={providerMeta.baseUrl || 'Tidak perlu diubah'}
-                    disabled={!providerMeta.supportsBaseUrl}
-                    className={`${fieldClass} disabled:cursor-not-allowed disabled:opacity-55`}
-                  />
-                </label>
+              <div className={`rounded-[28px] p-5 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-sm'}`}>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold">Operator Console</p>
+                    <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Simpan slot provider, model utama, dan endpoint override khusus untuk pilot ini.</p>
+                  </div>
+                  <div className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200'}`}>
+                    {providerMeta.label}
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="space-y-2 md:col-span-2">
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <KeyRound size={14} className="text-emerald-500" />
+                      API key
+                    </span>
+                    <input
+                      type="password"
+                      value={providerConfig.apiKey}
+                      onChange={(e) => updateProviderConfig({ apiKey: e.target.value })}
+                      placeholder={providerMeta.envKey ? `Bisa pakai env ${providerMeta.envKey} atau isi manual di sini` : 'Isi API key manual'}
+                      className={fieldClass}
+                    />
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Kalau kosong, pilot bisa tetap pakai demo/local fallback. Untuk produksi, isi key aktif sesuai provider ini.</p>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <Cpu size={14} className="text-blue-500" />
+                      Model
+                    </span>
+                    <input value={providerConfig.model} onChange={(e) => updateProviderConfig({ model: e.target.value })} placeholder={providerMeta.defaultModel} className={fieldClass} />
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Masukkan slug model yang memang mau dipaksa dipakai oleh pilot lane ini.</p>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <Globe2 size={14} className="text-purple-500" />
+                      Base URL
+                    </span>
+                    <input
+                      value={providerConfig.baseUrl}
+                      onChange={(e) => updateProviderConfig({ baseUrl: e.target.value })}
+                      placeholder={providerMeta.baseUrl || 'Tidak perlu diubah'}
+                      disabled={!providerMeta.supportsBaseUrl}
+                      className={`${fieldClass} disabled:cursor-not-allowed disabled:opacity-55`}
+                    />
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{providerMeta.supportsBaseUrl ? 'Gunakan hanya kalau pilot memang butuh endpoint compatible/custom proxy.' : 'Provider ini memang tidak butuh override endpoint.'}</p>
+                  </label>
+                </div>
               </div>
 
-              <div className={`rounded-[24px] p-4 text-sm leading-6 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-amber-50 text-amber-800 border border-amber-100'}`}>
-                <strong>Mode advanced:</strong> studio ini memang bukan autopilot ajaib. Ia cuma cockpit. Kalau prompt, style, dan model yang dipakai bagus, output ikut naik. Kalau setup pilot berantakan, hasilnya juga ikut biasa.
+              <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+                <div className={`rounded-[24px] p-4 text-sm leading-6 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-amber-50 text-amber-800 border border-amber-100'}`}>
+                  <strong>Mode advanced:</strong> studio ini memang bukan autopilot ajaib. Ia cuma cockpit. Kalau prompt, style, dan model yang dipakai bagus, output ikut naik. Kalau setup pilot berantakan, hasilnya juga ikut biasa.
+                </div>
+                <div className={`rounded-[24px] p-4 text-sm leading-6 ${isDark ? 'bg-slate-950/80 text-slate-300 ring-1 ring-white/10' : 'bg-slate-50 text-slate-700 border border-slate-200'}`}>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={15} className="text-emerald-500" />
+                    <strong>Ops note</strong>
+                  </div>
+                  <p className="mt-2">Slot provider disimpan lokal per browser seat. Jadi tiap pilot bisa punya taste, key, model, dan endpoint berbeda tanpa saling bentrok.</p>
+                </div>
               </div>
             </div>
           )}
