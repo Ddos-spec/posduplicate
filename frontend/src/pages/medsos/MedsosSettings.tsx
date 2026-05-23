@@ -284,6 +284,10 @@ export default function MedsosSettings() {
   const [managedLogisticsStatus, setManagedLogisticsStatus] = useState<ManagedLogisticsStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const fieldClass = isDark
+    ? 'w-full rounded-2xl border border-slate-700/80 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder:text-gray-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/15'
+    : 'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm transition focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10';
+  const textareaFieldClass = `${fieldClass} min-h-[112px] resize-y leading-6`;
 
   useEffect(() => {
     const load = async () => {
@@ -696,7 +700,7 @@ export default function MedsosSettings() {
                   }))
                 }
                 placeholder="Contoh: 501"
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+                className={fieldClass}
               />
             </label>
 
@@ -717,7 +721,7 @@ export default function MedsosSettings() {
                   }))
                 }
                 placeholder="Contoh: Gudang Jakarta Barat"
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+                className={fieldClass}
               />
             </label>
 
@@ -738,7 +742,7 @@ export default function MedsosSettings() {
                   }))
                 }
                 placeholder="jne, sicepat, anteraja"
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+                className={fieldClass}
               />
             </label>
 
@@ -761,7 +765,7 @@ export default function MedsosSettings() {
                     },
                   }))
                 }
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
+                className={fieldClass}
               />
             </label>
           </div>
@@ -931,7 +935,7 @@ export default function MedsosSettings() {
                   setDirty(true);
                 }}
                 placeholder={settings.aiAnalysis.hasApiKey ? 'API key sudah tersimpan — isi lagi untuk mengganti' : 'Masukkan API key analysis'}
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+                className={fieldClass}
               />
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 {settings.aiAnalysis.hasApiKey ? (
@@ -1014,7 +1018,7 @@ export default function MedsosSettings() {
                     },
                   }))
                 }
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
+                className={fieldClass}
               />
             </label>
 
@@ -1036,7 +1040,7 @@ export default function MedsosSettings() {
                     }))
                   }
                   placeholder="Masukkan model ID custom"
-                  className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+                  className={fieldClass}
                 />
               </label>
             ) : null}
@@ -1052,8 +1056,8 @@ export default function MedsosSettings() {
                   <textarea
                     value={settings.systemMessages.postAnalysis}
                     onChange={(e) => updateSettings(curr => ({ ...curr, systemMessages: { ...curr.systemMessages, postAnalysis: e.target.value } }))}
-                    rows={2}
-                    className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
+                    rows={4}
+                    className={textareaFieldClass}
                     placeholder="Contoh: Jadilah analis yang kritis..."
                   />
                 </label>
@@ -1065,8 +1069,8 @@ export default function MedsosSettings() {
                   <textarea
                     value={settings.systemMessages.contentGeneration}
                     onChange={(e) => updateSettings(curr => ({ ...curr, systemMessages: { ...curr.systemMessages, contentGeneration: e.target.value } }))}
-                    rows={2}
-                    className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
+                    rows={4}
+                    className={textareaFieldClass}
                     placeholder="Contoh: Gunakan gaya bahasa anak muda..."
                   />
                 </label>
@@ -1078,8 +1082,8 @@ export default function MedsosSettings() {
                   <textarea
                     value={settings.systemMessages.inboxReply}
                     onChange={(e) => updateSettings(curr => ({ ...curr, systemMessages: { ...curr.systemMessages, inboxReply: e.target.value } }))}
-                    rows={2}
-                    className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'bg-white ring-1 ring-slate-900/5 text-gray-900'}`}
+                    rows={4}
+                    className={textareaFieldClass}
                     placeholder="Contoh: Balas dengan sangat sabar..."
                   />
                 </label>
@@ -1111,7 +1115,7 @@ export default function MedsosSettings() {
                     onChange={(e) => updateSettings(curr => ({ ...curr, externalWebhook: { ...curr.externalWebhook, url: e.target.value } }))}
                     placeholder="https://api.domain-anda.com/webhook/receive"
                     disabled={!settings.externalWebhook.active}
-                    className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white disabled:opacity-50' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 disabled:opacity-50'}`}
+                    className={`${fieldClass} disabled:cursor-not-allowed disabled:opacity-55`}
                   />
                 </label>
               </div>
@@ -1161,7 +1165,7 @@ export default function MedsosSettings() {
                 value={seatDraft.name}
                 onChange={(event) => setSeatDraft((current) => ({ ...current, name: event.target.value }))}
                 placeholder="Contoh: Admin CS 1"
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+                className={fieldClass}
               />
             </label>
 
@@ -1174,7 +1178,7 @@ export default function MedsosSettings() {
                 value={seatDraft.role}
                 onChange={(event) => setSeatDraft((current) => ({ ...current, role: event.target.value }))}
                 placeholder="Contoh: Customer Service"
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+                className={fieldClass}
               />
             </label>
 
@@ -1187,7 +1191,7 @@ export default function MedsosSettings() {
                 value={seatDraft.channels}
                 onChange={(event) => setSeatDraft((current) => ({ ...current, channels: event.target.value }))}
                 placeholder="Contoh: WhatsApp, Instagram"
-                className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
+                className={fieldClass}
               />
             </label>
           </div>
