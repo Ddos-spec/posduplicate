@@ -289,6 +289,25 @@ export interface ZernioPostAnalyticsItem {
   }>;
 }
 
+export interface ZernioDemographicBucket {
+  dimension: string;
+  value: number;
+}
+
+export interface ZernioAudienceDemographics {
+  accountId: string;
+  platform: string;
+  metric: string | null;
+  timeframe: string | null;
+  demographics: {
+    age: ZernioDemographicBucket[];
+    gender: ZernioDemographicBucket[];
+    city: ZernioDemographicBucket[];
+    country: ZernioDemographicBucket[];
+  };
+  note: string | null;
+}
+
 function toNum(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -361,6 +380,70 @@ export async function getZernioPostAnalytics(
       const raw = await zFetch<any>(`/analytics?${qs}`);
       const list: any[] = raw.posts ?? raw.data ?? (Array.isArray(raw) ? raw : []);
       return list.map(mapAnalyticsPost);
+    },
+    params.refresh ?? false,
+  );
+}
+
+function normalizeDemographicBuckets(input: unknown): ZernioDemographicBucket[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((item) => {
+      const bucket = item as { dimension?: unknown; value?: unknown };
+      return {
+        dimension: typeof bucket.dimension === 'string' ? bucket.dimension : '',
+        value: toNum(bucket.value),
+      };
+    })
+    .filter((item) => item.dimension);
+}
+
+export async function getZernioAudienceDemographics(
+  tenantId: number,
+  params: {
+    accountId: string;
+    platform?: string;
+    metric?: string;
+    breakdown?: string[];
+    timeframe?: string;
+    refresh?: boolean;
+  },
+): Promise<ZernioAudienceDemographics> {
+  const cacheKey = `zernio-audience-demographics-${tenantId}-${JSON.stringify(params)}`;
+  return getOrSetCache(
+    cacheKey,
+    async () => {
+      const platform = (params.platform || 'instagram').toLowerCase();
+      if (!['instagram', 'youtube'].includes(platform)) {
+        throw new Error('Demografi audience saat ini hanya tersedia untuk Instagram atau YouTube.');
+      }
+
+      const qs = new URLSearchParams({ accountId: params.accountId });
+      if (params.breakdown?.length) qs.set('breakdown', params.breakdown.join(','));
+
+      let path = '';
+      if (platform === 'instagram') {
+        path = '/analytics/instagram/demographics';
+        if (params.metric) qs.set('metric', params.metric);
+        if (params.timeframe) qs.set('timeframe', params.timeframe);
+      } else {
+        path = '/analytics/youtube/demographics';
+      }
+
+      const raw = await zFetch<any>(`${path}?${qs}`);
+      return {
+        accountId: String(raw.accountId ?? params.accountId),
+        platform: String(raw.platform ?? platform),
+        metric: typeof raw.metric === 'string' ? raw.metric : null,
+        timeframe: typeof raw.timeframe === 'string' ? raw.timeframe : null,
+        demographics: {
+          age: normalizeDemographicBuckets(raw.demographics?.age),
+          gender: normalizeDemographicBuckets(raw.demographics?.gender),
+          city: normalizeDemographicBuckets(raw.demographics?.city),
+          country: normalizeDemographicBuckets(raw.demographics?.country),
+        },
+        note: typeof raw.note === 'string' ? raw.note : null,
+      };
     },
     params.refresh ?? false,
   );

@@ -533,6 +533,25 @@ export interface ZernioPostAnalyticsItem {
   }>;
 }
 
+export interface ZernioAudienceDemographicBucket {
+  dimension: string;
+  value: number;
+}
+
+export interface ZernioAudienceDemographics {
+  accountId: string;
+  platform: string;
+  metric: string | null;
+  timeframe: string | null;
+  demographics: {
+    age: ZernioAudienceDemographicBucket[];
+    gender: ZernioAudienceDemographicBucket[];
+    city: ZernioAudienceDemographicBucket[];
+    country: ZernioAudienceDemographicBucket[];
+  };
+  note: string | null;
+}
+
 export async function getZernioPostAnalytics(params?: {
   platform?: string;
   fromDate?: string;
@@ -556,6 +575,27 @@ export async function getZernioPostAnalytics(params?: {
     },
   });
   return (data.data?.posts ?? []) as ZernioPostAnalyticsItem[];
+}
+
+export async function getZernioAudienceDemographics(params: {
+  accountId: string;
+  platform?: string;
+  metric?: string;
+  timeframe?: string;
+  breakdown?: string[];
+  refresh?: boolean;
+}): Promise<ZernioAudienceDemographics> {
+  const { data } = await api.get('/medsos/zernio/audience-demographics', {
+    params: {
+      accountId: params.accountId,
+      platform: params.platform,
+      metric: params.metric,
+      timeframe: params.timeframe,
+      breakdown: params.breakdown?.join(','),
+      refresh: params.refresh ? 'true' : undefined,
+    },
+  });
+  return data.data as ZernioAudienceDemographics;
 }
 
 // ─── Zernio Inbox Conversations ────────────────────────────────────────────

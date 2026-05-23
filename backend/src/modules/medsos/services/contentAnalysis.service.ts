@@ -219,6 +219,8 @@ function buildPrompt(post: PromptPostShape) {
     'Tulis tepat 4 bagian bernomor: 1. Ringkasan singkat, 2. Yang bekerja, 3. Yang perlu dibenahi, 4. Rekomendasi eksperimen berikutnya.',
     'Setiap bagian harus 1-3 kalimat pendek dan jangan terpotong di tengah kalimat.',
     'Hindari pembukaan panjang dan hindari istilah teknis yang tidak perlu.',
+    'Jika performa konten lemah, sepi, atau tidak ramai, wajib jelaskan penyebab paling mungkin dan beri solusi paling prioritas, bukan komentar umum.',
+    'Rekomendasi eksperimen berikutnya harus konkret, bisa dicoba, dan langsung menarget kelemahan konten ini.',
     '',
     'Gunakan format ini:',
     '1. Ringkasan singkat: ...',

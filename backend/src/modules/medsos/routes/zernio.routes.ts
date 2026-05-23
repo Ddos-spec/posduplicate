@@ -10,6 +10,7 @@ import {
   listZernioAccounts,
   disconnectZernioAccount,
   getZernioAdsSummary,
+  getZernioAudienceDemographics,
   getZernioPostAnalytics,
   getZernioConversations,
   getZernioConversationMessages,
@@ -297,6 +298,37 @@ router.get('/post-analytics', async (req, res, next) => {
 
     const posts = await getZernioPostAnalytics(req.tenantId!, { platform, fromDate, toDate, limit, page, sortBy, order, refresh });
     return res.json({ success: true, data: { posts } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/medsos/zernio/audience-demographics
+router.get('/audience-demographics', async (req, res, next) => {
+  try {
+    const accountId = typeof req.query.accountId === 'string' ? req.query.accountId : '';
+    const platform = typeof req.query.platform === 'string' ? req.query.platform : 'instagram';
+    const metric = typeof req.query.metric === 'string' ? req.query.metric : undefined;
+    const timeframe = typeof req.query.timeframe === 'string' ? req.query.timeframe : undefined;
+    const refresh = String(req.query.refresh || '').toLowerCase() === 'true';
+    const breakdown = typeof req.query.breakdown === 'string'
+      ? req.query.breakdown.split(',').map((item) => item.trim()).filter(Boolean)
+      : undefined;
+
+    if (!accountId) {
+      return res.status(400).json({ success: false, error: { code: 'ACCOUNT_ID_REQUIRED', message: 'accountId wajib diisi.' } });
+    }
+
+    const data = await getZernioAudienceDemographics(req.tenantId!, {
+      accountId,
+      platform,
+      metric,
+      timeframe,
+      breakdown,
+      refresh,
+    });
+
+    return res.json({ success: true, data });
   } catch (err) {
     next(err);
   }
