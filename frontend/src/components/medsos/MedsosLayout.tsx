@@ -351,11 +351,11 @@ export default function MedsosLayout() {
           <div className={`mb-4 px-2 ${sidebarCollapsed ? 'flex justify-center' : ''}`}>
             <button
               onClick={() => navigateFromSidebar(`${basePath}/create`)}
-              title="Buka composer untuk membuat campaign atau post baru"
+              title="Buka Content Studio untuk meracik caption, visual brief, dan publish"
               className={`${sidebarCollapsed ? 'h-11 w-11 rounded-xl' : 'w-full rounded-xl py-3'} flex items-center justify-center gap-2 bg-blue-600 font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 active:scale-95 transition-all`}
             >
               <Plus size={20} />
-              {!sidebarCollapsed ? 'Create Campaign' : null}
+              {!sidebarCollapsed ? 'Content Studio' : null}
             </button>
           </div>
 
@@ -551,7 +551,7 @@ export default function MedsosLayout() {
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-transform group-hover:scale-105">
             <Plus size={24} />
           </div>
-          <span className={`mt-1 text-[10px] font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Post</span>
+          <span className={`mt-1 text-[10px] font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Studio</span>
         </button>
         <button
           onClick={() => navigate(`${basePath}/analytics/social`)}
