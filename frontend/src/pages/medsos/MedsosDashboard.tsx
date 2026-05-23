@@ -241,7 +241,7 @@ export default function MedsosDashboard() {
               className="flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-blue-700 active:scale-95 transition-all hover:shadow-lg hover:shadow-blue-600/30 active:scale-95"
             >
               <Plus size={16} />
-              Create Post
+              Content Studio
             </button>
           </div>
         </div>

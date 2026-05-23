@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
+import AdvancedContentStudio from '../../components/medsos/AdvancedContentStudio';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera, Sparkles } from 'lucide-react';
+import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera, Sparkles, Wand2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createZernioPost, getZernioAccounts, generateZernioUploadLink, generateAiCaption, type ZernioAccount } from '../../services/medsosPostsService';
 import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera';
@@ -114,14 +115,43 @@ export default function CreatePost() {
     }
   };
 
+  const handleApplyStudioText = (value: string) => {
+    setCaption(value);
+    toast.success('Output studio dipindahkan ke composer.');
+  };
+
   return (
-    <div className="min-h-[calc(100vh-100px)] grid xl:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className={`p-6 rounded-2xl border flex flex-col ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
+              <Wand2 size={14} />
+              Content Studio
+            </div>
+            <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Buat caption, visual brief, dan storyboard dari satu cockpit</h1>
+            <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Mode ini dibuat advanced. Pilot bebas atur provider, model, prompt, dan workflow sendiri — hasil akhir memang ditentukan oleh skill dan konfigurasi mereka.
+            </p>
+          </div>
+          <div className={`rounded-[24px] px-4 py-3 text-sm ${isDark ? 'bg-slate-900/70 text-slate-300 ring-1 ring-white/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
+            Composer di kanan adalah bridge untuk publish. Studio di kiri dipakai untuk ngeracik ide, brief, dan output advanced sebelum dilempar ke channel tujuan.
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <AdvancedContentStudio isDark={isDark} onApplyToComposer={handleApplyStudioText} />
+
+        <div className={`p-6 rounded-[32px] border flex flex-col ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div className="mb-6">
           <div className="flex items-center gap-2">
-            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Omnichannel Post Composer</h2>
-            <FieldHelp title="Composer post" description="Buat, jadwalkan, atau publish langsung ke berbagai platform lewat dashboard terpadu." />
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Quick Publish Bridge</h2>
+            <FieldHelp title="Quick publish bridge" description="Gunakan panel ini untuk mengirim caption final, upload media, lalu publish atau schedule ke channel tujuan." />
           </div>
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            Setelah output dari studio dirasa pas, tempel ke composer ini lalu kirim ke akun tujuan.
+          </p>
         </div>
 
         <div className="flex items-center gap-2 mb-3">
@@ -209,7 +239,7 @@ export default function CreatePost() {
           <div className={`mb-4 p-4 rounded-2xl border-2 border-dashed ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-blue-100 bg-blue-50/50'}`}>
             <div className="flex items-center gap-2 mb-3">
               <Sparkles size={16} className="text-purple-500" />
-              <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">AI Caption Generator</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">Quick AI Caption</span>
             </div>
             <div className="flex gap-2">
               <input 
@@ -262,6 +292,7 @@ export default function CreatePost() {
             {saving ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Publish Now</>}
           </button>
         </div>
+      </div>
       </div>
 
       <div className="flex items-center justify-center bg-gray-100 dark:bg-slate-900 rounded-2xl border dark:border-slate-800 p-8 h-full">
