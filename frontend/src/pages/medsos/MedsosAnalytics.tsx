@@ -273,6 +273,41 @@ function buildTrendRows(posts: SocialPost[]) {
     .map(([, row]) => row);
 }
 
+function AnalyticsAiButton({
+  isDark,
+  loading,
+  disabled,
+  onClick,
+  title = 'Generate AI analysis',
+  helper = 'Baca data lalu tulis insight',
+}: {
+  isDark: boolean;
+  loading: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  title?: string;
+  helper?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`inline-flex items-center gap-3 rounded-2xl px-4 py-2.5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+        isDark
+          ? 'bg-slate-800 text-purple-300 hover:bg-slate-700'
+          : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+      }`}
+    >
+      {loading ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />}
+      <span className="flex flex-col leading-tight">
+        <span className="text-sm font-semibold">{title}</span>
+        <span className={`text-[11px] ${isDark ? 'text-purple-200/80' : 'text-purple-600/80'}`}>{helper}</span>
+      </span>
+    </button>
+  );
+}
+
 function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: boolean }) {
   const [loading, setLoading] = useState(!isDemo);
   const [posts, setPosts] = useState<SocialPost[]>(isDemo ? demoSocialPosts : []);
@@ -655,10 +690,14 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
                        void runAnalysis(post, { scrollToPanel: true });
                      }}
                      disabled={analysisLoading || previewMode}
-                     className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 lg:hidden"
+                     className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold transition disabled:opacity-50 lg:hidden ${
+                       isDark
+                         ? 'bg-slate-800 text-purple-300 hover:bg-slate-700'
+                         : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                     }`}
                    >
                      {analysisLoading && selectedPostId === post.id ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                     <span>Analisis AI</span>
+                     <span>Generate AI analysis</span>
                    </button>
                 </div>
               ))}
@@ -671,13 +710,14 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
                     <Sparkles size={18} className="text-purple-500" />
                     <h3 className="font-bold">AI Analysis</h3>
                  </div>
-                 <button 
+                 <AnalyticsAiButton
+                   isDark={isDark}
+                   loading={analysisLoading}
+                   disabled={previewMode}
                    onClick={handleGenerateAnalysis}
-                   disabled={analysisLoading || previewMode}
-                   className="p-2 rounded-xl bg-purple-600 text-white shadow-lg shadow-purple-500/20 disabled:opacity-50"
-                 >
-                    {analysisLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                 </button>
+                   title="Generate AI analysis"
+                   helper="Baca caption dan metrik lalu tulis insight"
+                 />
               </div>
 
               {selectedPost ? (
@@ -700,7 +740,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
                    ) : (
                      <div className="flex-1 flex flex-col items-center justify-center text-center py-10 opacity-30">
                         <Bot size={48} className="mb-4" />
-                        <p className="text-xs font-bold">Pilih post dan tekan tombol sparkle untuk mulai analisis.</p>
+                        <p className="text-xs font-bold">Pilih post lalu tekan tombol Generate AI analysis untuk mulai analisis.</p>
                      </div>
                    )}
                    
@@ -884,15 +924,13 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
             <Sparkles size={18} className="text-purple-500" />
             <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>AI Analysis — WA Inbox</h3>
           </div>
-          <button
-            type="button"
+          <AnalyticsAiButton
+            isDark={isDark}
+            loading={aiLoading}
             onClick={() => void handleWaAnalysis()}
-            disabled={aiLoading}
-            className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
-          >
-            {aiLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-            Generate Analysis
-          </button>
+            title="Generate AI analysis"
+            helper="Rangkum inbox live dan beri rekomendasi"
+          />
         </div>
         {aiResult ? (
           <div className={`rounded-[24px] p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
@@ -900,7 +938,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
           </div>
         ) : (
           <div className={`rounded-2xl border border-dashed p-4 text-sm ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
-            Tekan <strong>Generate Analysis</strong> untuk insight AI dari data WA Inbox.
+            Tekan <strong>Generate AI analysis</strong> untuk insight AI dari data WA Inbox.
           </div>
         )}
       </div>
@@ -1089,15 +1127,13 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
             <Sparkles size={18} className="text-purple-500" />
             <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>AI Analysis — Marketplace</h3>
           </div>
-          <button
-            type="button"
+          <AnalyticsAiButton
+            isDark={isDark}
+            loading={aiLoading}
             onClick={() => void handleMktAnalysis()}
-            disabled={aiLoading}
-            className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
-          >
-            {aiLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-            Generate Analysis
-          </button>
+            title="Generate AI analysis"
+            helper="Baca buyer chat dan kondisi funnel marketplace"
+          />
         </div>
         {aiResult ? (
           <div className={`rounded-[24px] p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-gray-100 bg-gray-50'}`}>
@@ -1105,7 +1141,7 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
           </div>
         ) : (
           <div className={`rounded-2xl border border-dashed p-4 text-sm ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
-            Tekan <strong>Generate Analysis</strong> untuk insight AI dari data Marketplace Hub.
+            Tekan <strong>Generate AI analysis</strong> untuk insight AI dari data Marketplace Hub.
           </div>
         )}
       </div>
