@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
-import MyCommerSocialLogo from '../../components/medsos/MyCommerSocialLogo';
 import FieldHelp from '../../components/medsos/FieldHelp';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import {
@@ -186,8 +185,8 @@ export default function MedsosDashboard() {
   ];
 
   const cardBase = `relative overflow-hidden rounded-[24px] transition-all duration-300 ${
-    isDark 
-      ? 'bg-[#111318] ring-1 ring-white/10 hover:ring-white/20' 
+    isDark
+      ? 'bg-[#111318] ring-1 ring-white/10 hover:ring-white/20'
       : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5 hover:shadow-[0_8px_16px_rgb(0,0,0,0.06)] hover:ring-slate-900/10'
   }`;
 
@@ -201,56 +200,23 @@ export default function MedsosDashboard() {
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Hero Section */}
-      <div className={`relative overflow-hidden rounded-[32px] p-6 md:p-8 ${
-        isDark ? 'bg-gradient-to-br from-blue-900/20 to-[#111318] ring-1 ring-white/10' : 'bg-gradient-to-br from-blue-50 to-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'
-      }`}>
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <MyCommerSocialLogo size={48} className="shadow-2xl shadow-blue-500/30 shrink-0 rounded-2xl" />
-            <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>MyCommerSocial</h1>
-                <FieldHelp
-                  title="MyCommerSocial dashboard"
-                  description="Ini command center utama untuk membaca status channel, membuka inbox, mengelola planner, ads, analytics, dan workspace tim dari satu tempat."
-                  howToUse="Mulai dari kartu status untuk cek kesehatan channel, pakai Quick Actions untuk lompat ke fitur inti, lalu buka bagian Active Channels kalau mau audit koneksi akun yang aktif."
-                />
-                {previewMode ? (
-                  <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
-                    Preview Mode
-                  </span>
-                ) : (
-                  <span className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                    Live Active
-                  </span>
-                )}
-              </div>
-              <p className={`text-sm mt-1 font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Omnichannel Workspace — WA · Social · Marketplace · Ads
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              onClick={() => navigate(`${base}/connections`)}
-              className={`flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-bold transition-all active:scale-95 ${
-                isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
-              }`}
-            >
-              <McsConnectionsIcon size={16} />
-              Connections
-            </button>
-            <button
-              onClick={() => navigate(`${base}/crm/content/photo`)}
-              className="flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-blue-700 active:scale-95 transition-all hover:shadow-lg hover:shadow-blue-600/30 active:scale-95"
-            >
-              <Plus size={16} />
-              Create Content
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          onClick={() => navigate(`${base}/connections`)}
+          className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold transition-all active:scale-95 ${
+            isDark ? 'bg-white/5 hover:bg-white/10 text-white ring-1 ring-white/10' : 'bg-white hover:bg-slate-50 text-slate-900 ring-1 ring-slate-200 shadow-sm'
+          }`}
+        >
+          <McsConnectionsIcon size={16} />
+          Connections
+        </button>
+        <button
+          onClick={() => navigate(`${base}/crm/content/photo`)}
+          className="flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition-all hover:bg-blue-700 active:scale-95 hover:shadow-lg hover:shadow-blue-600/25"
+        >
+          <Plus size={16} />
+          Create Content
+        </button>
       </div>
 
       {/* Status cards */}

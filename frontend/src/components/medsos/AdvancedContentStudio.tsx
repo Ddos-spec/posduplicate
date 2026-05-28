@@ -85,7 +85,7 @@ type PersistedStudioState = {
 const tabs: Array<{ id: StudioTab; label: string; helper: string; icon: ComponentType<{ size?: number; className?: string }> }> = [
   { id: 'copy', label: 'Copy Lab', helper: 'Caption & hook', icon: Wand2 },
   { id: 'image', label: 'Visual Brief', helper: 'Foto / key visual', icon: ImageIcon },
-  { id: 'video', label: 'Motion Board', helper: 'Storyboard video', icon: PlaySquare },
+  { id: 'video', label: 'Video', helper: 'Generate video', icon: PlaySquare },
   { id: 'campaign', label: 'Campaign', helper: 'Blueprint funnel', icon: Send },
   { id: 'copilot', label: 'Copilot', helper: 'Bantu brainstorming', icon: Bot },
   { id: 'provider', label: 'OpenRouter', helper: 'Model & API key', icon: Settings2 },
@@ -470,7 +470,7 @@ export default function AdvancedContentStudio({
 
   const providerMeta = PROVIDER_META[providerId];
   const providerConfig = providerConfigs[providerId];
-  const mainTabs = tabs.filter((tab) => tab.id === 'image' || tab.id === 'video');
+  const mainTabs = tabs.filter((tab) => preferredTab ? tab.id === preferredTab : (tab.id === 'image' || tab.id === 'video'));
   const activeMainLane = activeTab === 'video' ? 'video' : 'image';
   const openRouterKey = getOpenRouterKey(providerConfig);
   const hasOpenRouterKey = Boolean(openRouterKey);
@@ -804,57 +804,38 @@ export default function AdvancedContentStudio({
         <div className="relative overflow-hidden rounded-[20px]">
           <div className={`pointer-events-none absolute inset-0 ${isDark ? 'bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.14),transparent_35%)]' : 'bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_35%)]'}`} />
           <div className="relative space-y-4">
-            <div className="mb-1 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
-              <Sparkles size={14} />
-              Content Studio
-            </div>
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-              <div className="max-w-2xl">
-                <div className="flex items-start gap-2">
-                  <h2 className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Generator konten</h2>
-                  <FieldHelp
-                    title="Content Studio"
-                    description="Ini cockpit utama untuk bikin caption, visual brief, storyboard video, dan output final tanpa bikin user kebanyakan setting."
-                    howToUse="Pilih mode foto atau video, pasang media kalau ada, isi prompt utama, pilih model, lalu generate. Detail lanjutan cukup dibuka kalau memang perlu."
-                  />
-                </div>
-                <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Fokus ke 4 hal saja: mode, media, prompt, dan model. Yang advance saya sembunyikan ke pop-up settings.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {mainTabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const active = activeMainLane === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${
-                        active
-                          ? isDark
-                            ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30'
-                            : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                          : isDark
-                            ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800'
-                            : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-white'
-                      }`}
-                    >
-                      <Icon size={16} />
-                      {tab.label}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  onClick={() => setShowStudioSettings(true)}
-                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${isDark ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800' : 'bg-slate-50 text-slate-700 ring-1 ring-slate-200 hover:bg-white'}`}
-                >
-                  <Settings2 size={16} />
-                  Settings
-                </button>
-              </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {mainTabs.map((tab) => {
+                const Icon = tab.icon;
+                const active = activeMainLane === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition ${
+                      active
+                        ? isDark
+                          ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30'
+                          : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                        : isDark
+                          ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800'
+                          : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon size={16} />
+                    {preferredTab ? (tab.id === 'video' ? 'Video' : 'Foto') : tab.label}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setShowStudioSettings(true)}
+                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition ${isDark ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'}`}
+              >
+                <Settings2 size={16} />
+                Settings
+              </button>
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)]">
@@ -1335,7 +1316,7 @@ export default function AdvancedContentStudio({
                     <select value={providerConfig.videoModel || videoModelOptions[0]?.id || ''} onChange={(e) => updateProviderConfig({ videoModel: e.target.value })} className={fieldClass}>
                       {videoModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelLabel(model)}</option>)}
                     </select>
-                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Khusus untuk Motion Board / lane video.</p>
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Khusus untuk lane video.</p>
                   </label>
                   <label className="space-y-2">
                     <span className="flex items-center gap-2 text-sm font-semibold">
@@ -1472,14 +1453,3 @@ export default function AdvancedContentStudio({
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-

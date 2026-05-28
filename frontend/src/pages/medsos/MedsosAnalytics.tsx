@@ -586,14 +586,10 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
 
   return (
     <div className="space-y-8 pb-20" ref={exportRef}>
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-           <h1 className={`text-xl md:text-2xl font-bold tracking-tight tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics</h1>
-           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>View post performance metrics across all channels.</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <div className="flex flex-wrap items-center gap-2">
-           <select 
-             value={platformFilter} 
+           <select
+             value={platformFilter}
              onChange={(e) => setPlatformFilter(e.target.value)}
              className={`rounded-xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-3 py-2 text-xs font-semibold ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200 shadow-sm'}`}
            >
@@ -607,7 +603,8 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
               <Download size={14} /> Export
            </button>
         </div>
-      </header>
+
+      </div>
 
       {/* Activity Heatmap Mock */}
       <section className={`rounded-[32px] p-6 grid lg:grid-cols-[1fr_300px] gap-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
@@ -617,12 +614,12 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
           </div>
           <div className="flex flex-wrap gap-1.5">
             {Array.from({ length: 90 }).map((_, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 className={`w-4 h-4 rounded-sm ${
-                  i % 7 === 0 ? 'bg-blue-500' : 
-                  i % 11 === 0 ? 'bg-blue-400' : 
-                  i % 5 === 0 ? 'bg-blue-200' : 
+                  i % 7 === 0 ? 'bg-blue-500' :
+                  i % 11 === 0 ? 'bg-blue-400' :
+                  i % 5 === 0 ? 'bg-blue-200' :
                   isDark ? 'bg-slate-700' : 'bg-gray-100'
                 }`}
               />
@@ -894,7 +891,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
                         <p className="text-xs font-bold">Pilih post lalu tekan tombol Generate AI analysis untuk mulai analisis.</p>
                      </div>
                    )}
-                   
+
                    {analysisError && (
                      <p className="text-[10px] text-rose-500 font-bold text-center mt-2">{analysisError}</p>
                    )}
@@ -903,7 +900,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
            </aside>
         </div>
       </div>
-      
+
       {/* AI Analysis Floating / Sidebar component could go here, but I will reuse the existing one in a modal or side drawer later */}
     </div>
   );
@@ -1300,33 +1297,14 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
   );
 }
 
-function SectionHeader({
-  isDark,
-  title,
-  description,
-  icon,
-  exportButton,
-}: {
+function SectionHeader({ exportButton }: {
   isDark: boolean;
   title: string;
   description: string;
   icon?: ReactNode;
   exportButton?: ReactNode;
 }) {
-  return (
-    <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-4">
-          {icon ? <div className={`rounded-2xl p-3 shrink-0 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>{icon}</div> : null}
-          <div>
-            <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h1>
-            <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
-          </div>
-        </div>
-        {exportButton ? <div className="shrink-0">{exportButton}</div> : null}
-      </div>
-    </div>
-  );
+  return exportButton ? <div className="flex justify-end">{exportButton}</div> : null;
 }
 
 export default function MedsosAnalytics() {

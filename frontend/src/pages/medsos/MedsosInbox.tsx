@@ -191,28 +191,13 @@ function descriptionByChannel(channel: InboxChannel) {
   return 'Percakapan WhatsApp operasional yang aktif di workspace inbox.';
 }
 
-function SectionHeader({
-  isDark,
-  title,
-  description,
-  icon,
-}: {
+function SectionHeader(_props: {
   isDark: boolean;
   title: string;
   description: string;
   icon: ReactNode;
 }) {
-  return (
-    <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-      <div className="flex items-start gap-4">
-        <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>{icon}</div>
-        <div>
-          <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h1>
-          <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void }) {
@@ -396,7 +381,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
 
   return (
     <div className={`flex flex-col xl:flex-row h-[750px] rounded-3xl border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200 shadow-xl'}`}>
-      
+
       {/* Column 1: Filter & Conversation List */}
       <div className={`w-full xl:w-96 flex flex-col border-r ${isDark ? 'bg-[#111318] ring-1 ring-white/10/50' : 'border-gray-100 bg-gray-50/30'}`}>
         <div className="p-4 space-y-4">
@@ -409,7 +394,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
-          
+
           <div className="flex gap-2">
             <select
               value={platform}
@@ -435,7 +420,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                 <option>Newest first</option>
               </select>
             </div>
-            
+
             {filtered.length === 0 ? (
               <div className="py-20 text-center">
                 <MessageSquareQuote size={40} className="mx-auto mb-3 opacity-10" />
@@ -450,8 +435,8 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                       key={conv.id}
                       onClick={() => setSelected(conv)}
                       className={`w-full text-left px-3 py-3 rounded-2xl flex items-start gap-3 transition-all ${
-                        isActive 
-                          ? (isDark ? 'bg-blue-600/20 text-blue-100 shadow-inner' : 'bg-white shadow-md border border-gray-100 ring-1 ring-black/5') 
+                        isActive
+                          ? (isDark ? 'bg-blue-600/20 text-blue-100 shadow-inner' : 'bg-white shadow-md border border-gray-100 ring-1 ring-black/5')
                           : (isDark ? 'hover:bg-slate-700/50 text-gray-300' : 'hover:bg-white/60 text-gray-600')
                       }`}
                     >
@@ -552,7 +537,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                   <div className="flex justify-center mb-8">
                      <span className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-slate-800 text-gray-500' : 'bg-gray-100 text-gray-400'}`}>Today</span>
                   </div>
-                  
+
                   {messages.map((msg) => {
                     return (
                       <div key={msg.id} className={`flex ${msg.fromParticipant ? 'justify-start' : 'justify-end animate-in fade-in slide-in-from-bottom-2'}`}>
@@ -589,8 +574,8 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
             {/* Message Input */}
             <div className={`p-6 border-t ${isDark ? 'border-slate-700 bg-slate-900' : 'border-gray-100 bg-white'}`}>
               <div className={`relative flex items-end gap-3 p-2 rounded-2xl border-2 transition-all focus-within:ring-4 ${
-                isDark 
-                  ? 'bg-[#111318] ring-1 ring-white/10 focus-within:border-blue-500 focus-within:ring-blue-500/10' 
+                isDark
+                  ? 'bg-[#111318] ring-1 ring-white/10 focus-within:border-blue-500 focus-within:ring-blue-500/10'
                   : 'bg-gray-50 border-gray-100 focus-within:border-blue-600 focus-within:ring-blue-600/5 shadow-inner'
               }`}>
                 <button type="button" title="Attach" className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-white text-gray-400 hover:text-gray-600 shadow-sm'}`}>
@@ -605,11 +590,11 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                   className={`flex-1 py-2.5 bg-transparent outline-none text-sm resize-none custom-scrollbar min-h-[44px] ${isDark ? 'text-white' : 'text-gray-900'}`}
                 />
                 <div className="flex items-center gap-1">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={handleAiReply}
                     disabled={sending || !selected}
-                    title="AI Smart Reply" 
+                    title="AI Smart Reply"
                     className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-700 text-purple-400' : 'hover:bg-purple-50 text-purple-600 shadow-sm'}`}
                   >
                     <Sparkles size={20} />
@@ -629,7 +614,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
               </div>
               <p className="mt-2 text-[10px] text-center text-gray-400 font-medium">Response SLA: <span className="text-emerald-500">Under 5 minutes</span></p>
             </div>
-            
+
             {/* Floating context button like in reference */}
             <button className="absolute bottom-32 right-10 h-14 w-14 rounded-full bg-orange-600 text-white shadow-2xl shadow-orange-600/40 flex items-center justify-center transition-transform hover:scale-110 active:scale-90 z-20">
                <MessageSquareQuote size={28} />

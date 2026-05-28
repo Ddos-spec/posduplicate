@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Trash2,
   UserRound,
-  UsersRound,
   X,
 } from 'lucide-react';
 
@@ -165,16 +164,7 @@ export default function MedsosTeamPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500 text-white">
-            <UsersRound size={20} />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold">Tim MCS</h1>
-            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Kelola akses anggota tim MyCommerSocial</p>
-          </div>
-        </div>
+      <div className="flex justify-end">
         <button
           onClick={openCreate}
           className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
