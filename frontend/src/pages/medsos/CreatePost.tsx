@@ -32,6 +32,8 @@ export default function CreatePost() {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [aiPrompt, setAiPrompt] = useState('');
   const [generatingAi, setGeneratingAi] = useState(false);
+  const [showQuickCaption, setShowQuickCaption] = useState(false);
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
   const modeCards = useMemo(() => ([
     {
       id: 'photo',
@@ -249,7 +251,7 @@ export default function CreatePost() {
               />
             </div>
             <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Panel kanan ini sengaja jadi execution lane. Studio di kiri fokus untuk racik prompt dan output; panel ini fokus buat publish, schedule, dan preview final.
+              Panel kanan sengaja dibuat sesingkat mungkin: pilih akun, siapkan media, isi caption, lalu publish atau schedule.
             </p>
           </div>
 
@@ -342,46 +344,58 @@ export default function CreatePost() {
           <div className="min-h-[150px]">
             <div className="flex items-center justify-between gap-2 mb-2">
               <p className="text-sm font-semibold">Caption / message</p>
-              <FieldHelp
-                title="Caption / message"
-                description="Area ini adalah composer final yang akan dikirim ke channel tujuan."
-                howToUse="Kalau output dari studio sudah cocok, klik tombol pakai ke composer. Setelah itu cek lagi secara manual sebelum save draft, schedule, atau publish."
-              />
-              <button
-                onClick={() => setAiPrompt('')}
-                className="text-[10px] font-bold text-blue-500 uppercase hover:underline"
-              >
-                Clear
-              </button>
-            </div>
-
-            <div className={`mb-4 p-4 rounded-2xl border-2 border-dashed ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-blue-100 bg-blue-50/50'}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={16} className="text-purple-500" />
-                <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">Quick AI Caption</span>
+              <div className="flex items-center gap-2">
                 <FieldHelp
-                  title="Quick AI Caption"
-                  description="Generator cepat ini dipakai saat user butuh draft caption singkat tanpa masuk ke studio penuh."
-                  howToUse="Isi instruksi sederhana, klik Generate, lalu pakai hasilnya sebagai draft awal. Kalau butuh hasil lebih dalam, balik ke Copy Lab di studio kiri."
-                />
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <input
-                  value={aiPrompt}
-                  onChange={e => setAiPrompt(e.target.value)}
-                  placeholder="Tulis instruksi... (misal: Bikin caption promo diskon 50%)"
-                  className={`flex-1 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`}
+                  title="Caption / message"
+                  description="Area ini adalah composer final yang akan dikirim ke channel tujuan."
+                  howToUse="Kalau output dari studio sudah cocok, klik tombol pakai ke composer. Setelah itu cek lagi secara manual sebelum save draft, schedule, atau publish."
                 />
                 <button
-                  onClick={handleGenerateAi}
-                  disabled={generatingAi || !aiPrompt.trim()}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                  onClick={() => setShowQuickCaption((current) => !current)}
+                  className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase transition ${isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                 >
-                  {generatingAi ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  Generate
+                  {showQuickCaption ? 'Tutup AI cepat' : 'AI cepat'}
                 </button>
               </div>
             </div>
+
+            {showQuickCaption ? (
+              <div className={`mb-4 p-4 rounded-2xl border-2 border-dashed ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-blue-100 bg-blue-50/50'}`}>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-purple-500" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">Quick AI Caption</span>
+                    <FieldHelp
+                      title="Quick AI Caption"
+                      description="Generator cepat ini dipakai saat user butuh draft caption singkat tanpa masuk ke studio penuh."
+                      howToUse="Isi instruksi sederhana, klik Generate, lalu pakai hasilnya sebagai draft awal. Kalau butuh hasil lebih dalam, balik ke Copy Lab di studio kiri."
+                    />
+                  </div>
+                  <button
+                    onClick={() => setAiPrompt('')}
+                    className="text-[10px] font-bold text-blue-500 uppercase hover:underline"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={aiPrompt}
+                    onChange={e => setAiPrompt(e.target.value)}
+                    placeholder="Tulis instruksi... (misal: Bikin caption promo diskon 50%)"
+                    className={`flex-1 px-3 py-2 rounded-xl text-xs border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`}
+                  />
+                  <button
+                    onClick={handleGenerateAi}
+                    disabled={generatingAi || !aiPrompt.trim()}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    {generatingAi ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                    Generate
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <textarea
               value={caption}
@@ -404,41 +418,47 @@ export default function CreatePost() {
                     howToUse="Cek apakah caption terlalu panjang, gambar terasa pas, dan flow konten enak dibaca. Ini preview cepat, bukan simulasi semua platform 100% akurat."
                   />
                 </div>
-                  <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Preview kecil ini cukup buat cek rasa final tanpa makan ruang terlalu banyak.</p>
+                  <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Buka hanya saat perlu cek rasa final.</p>
                 </div>
-              <div className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
-                {activeMode === 'video' ? 'Video lane' : 'Photo lane'}
-              </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMobilePreview((current) => !current)}
+                  className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50'}`}
+                >
+                  {showMobilePreview ? 'Sembunyikan preview' : 'Lihat preview'}
+                </button>
             </div>
-            <div className="flex items-center justify-center">
-              <div className="w-[240px] h-[470px] bg-black rounded-[34px] p-2.5 shadow-2xl border-4 border-gray-800 relative overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-b-xl z-20"></div>
-                <div className="w-full h-full bg-white rounded-[26px] overflow-hidden relative flex flex-col">
-                  <div className="h-12 border-b flex items-center px-3 justify-between bg-white z-10">
-                    <div className="flex items-center gap-2">
-                      <BrandLogo brand="instagram" size={20} className="rounded-lg px-1" withRing />
-                      <span className="font-bold text-xs">Preview</span>
+            {showMobilePreview ? (
+              <div className="flex items-center justify-center">
+                <div className="w-[240px] h-[470px] bg-black rounded-[34px] p-2.5 shadow-2xl border-4 border-gray-800 relative overflow-hidden">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-b-xl z-20"></div>
+                  <div className="w-full h-full bg-white rounded-[26px] overflow-hidden relative flex flex-col">
+                    <div className="h-12 border-b flex items-center px-3 justify-between bg-white z-10">
+                      <div className="flex items-center gap-2">
+                        <BrandLogo brand="instagram" size={20} className="rounded-lg px-1" withRing />
+                        <span className="font-bold text-xs">Preview</span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-slate-400">{activeModeCard.title}</span>
                     </div>
-                    <span className="text-[10px] font-semibold text-slate-400">{activeModeCard.title}</span>
-                  </div>
 
-                  <div className="w-full aspect-square bg-gray-200 flex items-center justify-center text-gray-400 relative overflow-hidden">
-                    {mediaPreview ? (
-                      <img src={mediaPreview} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <ImageIcon size={42} />
-                    )}
-                  </div>
+                    <div className="w-full aspect-square bg-gray-200 flex items-center justify-center text-gray-400 relative overflow-hidden">
+                      {mediaPreview ? (
+                        <img src={mediaPreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon size={42} />
+                      )}
+                    </div>
 
-                  <div className="p-3 bg-white flex-1 overflow-y-auto">
-                    <p className="text-[11px] text-gray-800 whitespace-pre-wrap leading-5">
-                      <span className="font-bold mr-1">my_brand</span>
-                      {caption || 'Caption preview...'}
-                    </p>
+                    <div className="p-3 bg-white flex-1 overflow-y-auto">
+                      <p className="text-[11px] text-gray-800 whitespace-pre-wrap leading-5">
+                        <span className="font-bold mr-1">my_brand</span>
+                        {caption || 'Caption preview...'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap justify-end gap-3">
