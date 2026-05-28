@@ -132,10 +132,19 @@ export default function CreatePost() {
   const handleLocalMediaChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    setMediaPreview(objectUrl);
-    setMediaLabel(file.name);
-    toast.success('Media lokal berhasil dipilih.');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      if (!dataUrl) {
+        toast.error('Gagal membaca media lokal.');
+        return;
+      }
+      setMediaPreview(dataUrl);
+      setMediaLabel(file.name);
+      toast.success('Media lokal berhasil dipilih.');
+    };
+    reader.onerror = () => toast.error('Gagal membaca media lokal.');
+    reader.readAsDataURL(file);
   };
 
   const submitPost = async (isDraft: boolean, publishNow: boolean) => {
@@ -555,3 +564,4 @@ export default function CreatePost() {
     </div>
   );
 }
+
