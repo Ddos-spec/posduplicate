@@ -414,7 +414,7 @@ export default function MedsosLayout() {
   const contentOffsetClass = sidebarCollapsed ? 'md:ml-24' : 'md:ml-64';
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${isDark ? 'bg-slate-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`h-[100dvh] min-h-screen overflow-hidden transition-colors duration-200 ${isDark ? 'bg-slate-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {sidebarOpen ? (
         <button
           type="button"
@@ -587,7 +587,7 @@ export default function MedsosLayout() {
         </div>
       </aside>
 
-      <div className={`p-2 md:p-3 lg:p-3 transition-[margin] duration-300 ${contentOffsetClass}`}>
+      <div className={`mcs-scroll-root h-[100dvh] overflow-y-auto overflow-x-hidden overscroll-y-auto p-2 md:p-3 lg:p-3 transition-[margin] duration-300 ${contentOffsetClass}`}>
         <div className={`mcs-topbar mb-2 flex items-center justify-between gap-3`}>
           <button
             type="button"
@@ -681,8 +681,3 @@ export default function MedsosLayout() {
     </div>
   );
 }
-
-
-
-
-
