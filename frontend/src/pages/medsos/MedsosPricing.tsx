@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { ArrowRight, BadgeDollarSign, BriefcaseBusiness, MessageSquareText, PlugZap, Store } from 'lucide-react';
+import { ArrowRight, BadgeDollarSign, MessageSquareText, PlugZap, Store } from 'lucide-react';
 
 const cards = [
   {
@@ -58,22 +58,6 @@ export default function MedsosPricing() {
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="max-w-3xl">
-          <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-5 ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
-            <BriefcaseBusiness size={14} />
-            Commercial model
-          </div>
-          <div className="flex items-center gap-2">
-            <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Pricing yang ringkas dan mudah dipahami</h1>
-            <FieldHelp title="Pricing workspace" description="Halaman ini menjelaskan struktur harga per komponen: dashboard inti, social + ads engine, add-on WA, dan marketplace yang masih coming soon." />
-          </div>
-          <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Paket harga difokuskan agar customer langsung paham komponen utama: dashboard MyCommerSocial, social + ads engine, dan add-on WA bila diperlukan.
-          </p>
-        </div>
-      </div>
-
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
         {cards.map((card) => (
           <div key={card.title} title={card.description} className={`rounded-[24px] p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>

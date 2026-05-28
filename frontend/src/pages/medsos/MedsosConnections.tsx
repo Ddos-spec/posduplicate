@@ -10,7 +10,6 @@ import {
   McsMarketplaceIcon,
   McsSocialIcon,
 } from '../../components/medsos/MyCommerSocialIcons';
-import MyCommerSocialLogo from '../../components/medsos/MyCommerSocialLogo';
 import { PlatformBadge } from '../../components/medsos/PlatformBadge';
 import FieldHelp from '../../components/medsos/FieldHelp';
 import {
@@ -518,7 +517,7 @@ export default function MedsosConnections() {
     try {
       await disconnectZernioAccount(account.id);
       toast.success(`${humanizePlatform(account.platform)} diputus dari workspace tenant.`);
-      
+
       if (isDemo) {
         setZernioAccounts((current) => current.filter((item) => item.id !== account.id));
       } else {
@@ -707,50 +706,30 @@ export default function MedsosConnections() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'border-blue-100 bg-white shadow-sm'}`}>
-        <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
-          <div className="max-w-4xl">
-            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
-              <McsConnectionsIcon size={14} />
-              Channel activation
-            </div>
-            <div className="flex items-center gap-3 mb-3">
-              <MyCommerSocialLogo size={46} className="shadow-lg shadow-blue-500/25" />
-              <div>
-                <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Connections</h1>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Hubungkan WA Inbox, marketplace chat engine, social media, dan ads dari satu workspace operasional.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-3 min-w-[280px]">
-            <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
-              <McsIconBadge icon={McsInboxIcon} size={38} iconSize={16} tone="emerald" className="mb-3" />
-              <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>WA Inbox</p>
-              <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{waState.card}</p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{waState.helper}</p>
-            </div>
-            <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
-              <McsIconBadge icon={McsMarketplaceIcon} size={38} iconSize={16} tone="violet" className="mb-3" />
-              <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Marketplace AI</p>
-              <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{marketplaceState.card}</p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{marketplaceState.helper}</p>
-            </div>
-            <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
-              <McsIconBadge icon={McsSocialIcon} size={38} iconSize={16} tone="blue" className="mb-3" />
-              <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Social connected</p>
-              <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{zernioLoading ? '...' : socialAccounts.length}</p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Akun organik yang aktif di workspace ini</p>
-            </div>
-            <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/60' : 'bg-gray-50'}`}>
-              <McsIconBadge icon={McsAdsIcon} size={38} iconSize={16} tone="amber" className="mb-3" />
-              <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ads connected</p>
-              <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{zernioLoading ? '...' : adsAccounts.length}</p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Meta, Google, LinkedIn, TikTok, Pinterest, X</p>
-            </div>
-          </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className={`rounded-2xl p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200 shadow-sm'}`}>
+          <McsIconBadge icon={McsInboxIcon} size={38} iconSize={16} tone="emerald" className="mb-3" />
+          <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>WA Inbox</p>
+          <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{waState.card}</p>
+          <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{waState.helper}</p>
+        </div>
+        <div className={`rounded-2xl p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200 shadow-sm'}`}>
+          <McsIconBadge icon={McsMarketplaceIcon} size={38} iconSize={16} tone="violet" className="mb-3" />
+          <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Marketplace AI</p>
+          <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{marketplaceState.card}</p>
+          <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{marketplaceState.helper}</p>
+        </div>
+        <div className={`rounded-2xl p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200 shadow-sm'}`}>
+          <McsIconBadge icon={McsSocialIcon} size={38} iconSize={16} tone="blue" className="mb-3" />
+          <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Social connected</p>
+          <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{zernioLoading ? '...' : socialAccounts.length}</p>
+          <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Akun organik aktif</p>
+        </div>
+        <div className={`rounded-2xl p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200 shadow-sm'}`}>
+          <McsIconBadge icon={McsAdsIcon} size={38} iconSize={16} tone="amber" className="mb-3" />
+          <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ads connected</p>
+          <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{zernioLoading ? '...' : adsAccounts.length}</p>
+          <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Network ads aktif</p>
         </div>
       </div>
 

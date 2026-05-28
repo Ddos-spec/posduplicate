@@ -21,7 +21,6 @@ import {
   Download,
   ExternalLink,
   Loader2,
-  Megaphone,
   PlugZap,
   RefreshCw,
   Sparkles,
@@ -544,24 +543,8 @@ export default function OmnichannelAdsHub() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'border-blue-100 bg-white shadow-sm'}`}>
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="max-w-3xl">
-            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>
-              <Megaphone size={14} />
-              Ads workspace
-            </div>
-            <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Semua jalur ads sekarang dipusatkan ke satu workspace</h1>
-            <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Workspace ini sekarang membaca account, ad account, campaign, dan metrik lintas network langsung dari layer ads terpusat. Jadi kalau tenant menghubungkan beberapa network sekaligus, semuanya bisa tetap muncul di satu tempat.
-            </p>
-            {previewMode ? (
-              <div className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-900 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
-                Preview netral • belum ada ad account aktif
-              </div>
-            ) : null}
-          </div>
-
+      <div className={`rounded-[24px] p-3 md:p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200 shadow-sm'}`}>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div className="grid grid-cols-2 gap-3 sm:min-w-[260px]">
             <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-gray-50 text-gray-700'}`}>
               <p className="text-xs uppercase tracking-[0.18em]">Connected ads</p>
@@ -574,7 +557,7 @@ export default function OmnichannelAdsHub() {
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => void handleRefreshWorkspace()}
@@ -594,11 +577,11 @@ export default function OmnichannelAdsHub() {
             title="Export campaign lintas network ke CSV"
           >
             <Download size={15} />
-            Export campaign CSV
+            Export CSV
           </button>
         </div>
 
-        <div className={`mt-6 rounded-[24px] p-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-blue-100 bg-blue-50/60'}`}>
+        <div className={`mt-3 rounded-[20px] p-3 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-blue-100 bg-blue-50/60'}`}>
           <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">

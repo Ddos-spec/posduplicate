@@ -21,7 +21,6 @@ import {
   Loader2,
   MessageSquareMore,
   Plus,
-  Sparkles,
   UserRoundCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -84,7 +83,7 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh, isDemo }: {
   const month = today.getMonth();
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  
+
   const startPadding = firstDay.getDay(); // 0 = Sunday
   const daysInMonth = lastDay.getDate();
 
@@ -102,7 +101,7 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh, isDemo }: {
     if (!postIdStr) return;
     const postId = parseInt(postIdStr, 10);
     const post = posts.find(p => p.id === postId);
-    
+
     if (!post || post.status === 'published') {
       toast.error('Post yang sudah tayang tidak bisa digeser jadwalnya.');
       return;
@@ -127,23 +126,14 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh, isDemo }: {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Content Planner</h1>
-              <FieldHelp title="Content Planner live" description="Tarik (drag) post draft/scheduled ke tanggal lain untuk mengubah jadwal. Post yang sudah published tidak bisa digeser." />
-            </div>
-            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{posts.length} post bulan ini · planner ini sekarang jadi lane kerja di CRM &amp; Automation.</p>
-          </div>
-          <button
-            onClick={() => navigate(createContentPath)}
-            title="Buka create content cockpit"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all font-semibold"
-          >
-            <Plus size={18} /> Create Content
-          </button>
-        </div>
+      <div className="flex justify-end">
+        <button
+          onClick={() => navigate(createContentPath)}
+          title="Buka create content cockpit"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all font-semibold"
+        >
+          <Plus size={18} /> Create Content
+        </button>
       </div>
 
       <div className={`rounded-3xl border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200'}`}>
@@ -168,8 +158,8 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh, isDemo }: {
             });
 
             return (
-              <div 
-                key={dayNum} 
+              <div
+                key={dayNum}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, dayNum)}
                 className={`min-h-[120px] p-2 border-r border-b transition-colors relative group ${isDark ? 'border-slate-700 hover:bg-slate-700/30' : 'border-gray-100 hover:bg-blue-50/30'} ${isToday ? (isDark ? 'bg-blue-900/20' : 'bg-blue-50/50') : ''}`}
@@ -181,7 +171,7 @@ function LiveCalendar({ posts, isDark, navigate, onRefresh, isDemo }: {
                 </div>
                 <div className="space-y-1.5">
                   {dayPosts.map(post => (
-                    <div 
+                    <div
                       key={post.id}
                       draggable={post.status !== 'published'}
                       onDragStart={(e) => handleDragStart(e, post)}
@@ -255,30 +245,13 @@ export default function ContentCalendar() {
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="max-w-3xl">
-            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-3 ${isDark ? 'bg-purple-500/20 text-purple-200' : 'bg-purple-100 text-purple-700'}`}>
-              <Sparkles size={14} />
-              Content operations workspace
-            </div>
-            <div className="flex items-center gap-2">
-              <h1 className={`text-2xl md:text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner kampanye yang terasa seperti alat kerja tim sungguhan</h1>
-              <FieldHelp title="Planner campaign" description="Planner dipakai untuk memindahkan campaign dari ide sampai published. Semua kartu, brief, reviewer, asset, dan approval chain bisa dibaca dari satu halaman ini." />
-            </div>
-            <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Kelola pipeline, reviewer, asset, preview channel, dan approval campaign dari satu workspace.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button title="Ubah tampilan planner menjadi ringkasan mingguan" className={`px-4 py-2 rounded-xl font-semibold border ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-700'}`}>
-              Weekly View
-            </button>
-            <button title="Buka composer untuk menyiapkan campaign baru" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all">
-              <Plus size={18} /> New Campaign
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
+        <button title="Ubah tampilan planner menjadi ringkasan mingguan" className={`px-4 py-2 rounded-xl font-semibold border ${isDark ? 'border-slate-600 text-gray-300' : 'bg-white border-gray-200 text-gray-700 shadow-sm'}`}>
+          Weekly View
+        </button>
+        <button title="Buka composer untuk menyiapkan campaign baru" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-95 transition-all">
+          <Plus size={18} /> New Campaign
+        </button>
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useThemeStore } from '../../store/themeStore';
-import { Loader2, Send, Megaphone, Users, Clock } from 'lucide-react';
-import FieldHelp from '../../components/medsos/FieldHelp';
+import { Loader2, Send } from 'lucide-react';
 import { createZernioBroadcast } from '../../services/medsosPostsService';
 import toast from 'react-hot-toast';
 
@@ -32,25 +31,6 @@ export default function BroadcastManagerPage() {
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className={`rounded-[28px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-sm ring-1 ring-slate-900/5'}`}>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
-              <Megaphone size={13} /> Broadcast
-            </div>
-            <div className="flex items-start gap-2">
-              <h1 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Broadcast Manager</h1>
-              <FieldHelp title="Broadcast Manager" description="Kirim pesan massal ke kontak CRM yang ada di platform terkait." howToUse="Pilih platform, isi nama campaign dan pesan. Sistem akan membuat broadcast draft yang bisa diproses oleh channel terkait." />
-            </div>
-            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Buat broadcast cepat tanpa wizard panjang. Fokus ke platform, pesan, dan eksekusi.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className={`rounded-2xl px-3 py-2 ${isDark ? 'bg-slate-900 text-slate-300' : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200'}`}><Users size={14} className="mb-1 text-blue-500" /> Target CRM</div>
-            <div className={`rounded-2xl px-3 py-2 ${isDark ? 'bg-slate-900 text-slate-300' : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200'}`}><Clock size={14} className="mb-1 text-blue-500" /> Siap dijadwalkan</div>
-          </div>
-        </div>
-      </div>
-
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(320px,0.65fr)]">
         <div className={`rounded-[28px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-sm ring-1 ring-slate-900/5'}`}>
           <div className="grid gap-4 md:grid-cols-2">

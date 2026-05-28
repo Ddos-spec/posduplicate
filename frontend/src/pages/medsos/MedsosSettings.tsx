@@ -16,7 +16,6 @@ import {
   McsIconBadge,
   McsInboxIcon,
   McsMarketplaceIcon,
-  McsSettingsIcon,
 } from '../../components/medsos/MyCommerSocialIcons';
 import {
   BellRing,
@@ -528,40 +527,23 @@ export default function MedsosSettings() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="max-w-3xl">
-            <div className="mb-4 flex items-center gap-3">
-              <McsIconBadge icon={McsSettingsIcon} size={44} iconSize={19} tone="slate" />
-              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>
-                Workspace control
-              </div>
-            </div>
-            <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Settings</h1>
-            <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Atur channel aktif, rule operasional, notifikasi, dan team seat untuk workspace MyCommerSocial.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-start lg:items-end gap-3">
-            <div className={`rounded-2xl px-4 py-3 ${isDark ? 'bg-slate-900/60 text-gray-200' : 'bg-gray-50 text-gray-700'}`}>
-              <p className="text-xs uppercase tracking-[0.18em]">Last saved</p>
-              <p className="text-sm font-semibold mt-1">{formatSavedAt(lastSavedAt)}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void saveSettings()}
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
-            >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              {saving ? 'Menyimpan...' : 'Simpan perubahan'}
-            </button>
-            {dirty ? (
-              <p className={`text-xs ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>Ada perubahan yang belum disimpan.</p>
-            ) : null}
-          </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className={`rounded-2xl px-4 py-2.5 ${isDark ? 'bg-slate-900/60 text-gray-200 ring-1 ring-white/10' : 'bg-white text-gray-700 ring-1 ring-slate-200 shadow-sm'}`}>
+          <p className="text-[10px] uppercase tracking-[0.18em]">Last saved</p>
+          <p className="text-xs font-semibold mt-0.5">{formatSavedAt(lastSavedAt)}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => void saveSettings()}
+          disabled={saving}
+          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-60"
+        >
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {saving ? 'Menyimpan...' : 'Simpan'}
+        </button>
+        {dirty ? (
+          <p className={`text-xs ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>Ada perubahan belum disimpan.</p>
+        ) : null}
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">

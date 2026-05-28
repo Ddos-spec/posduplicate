@@ -5,7 +5,7 @@ import FieldHelp from '../../components/medsos/FieldHelp';
 import { PlatformBadge } from '../../components/medsos/PlatformBadge';
 import { getMyCommerSocialIntegrationHub, type ManagedIntegrationConnector } from '../../services/myCommerSocialIntegrations';
 import { getMarketplaceHubStatus, type MarketplaceHubConnectionStatus } from '../../services/medsosPostsService';
-import { ArrowRight, Bot, Loader2, MessageCircleMore, ShoppingBag, ShieldCheck, Store, Workflow } from 'lucide-react';
+import { ArrowRight, Bot, Loader2, MessageCircleMore, ShoppingBag, ShieldCheck, Workflow } from 'lucide-react';
 
 const demoStatus: MarketplaceHubConnectionStatus = {
   configured: true,
@@ -124,35 +124,15 @@ export default function MarketplaceControl() {
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="max-w-3xl">
-            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4 ${isDark ? 'bg-amber-500/15 text-amber-200' : 'bg-amber-100 text-amber-700'}`}>
-              <Store size={14} />
-              Marketplace chat workspace
-            </div>
-            <div className="flex items-center gap-2">
-              <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Marketplace chat + AI workspace</h1>
-              <FieldHelp title="Marketplace chat workspace" description="Halaman ini dipakai untuk memantau apakah chat marketplace tenant sudah aktif, channel apa saja yang terbaca, dan apakah AI routing sudah siap dipakai." />
-            </div>
-            <p className={`text-sm mt-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Fokus modul ini adalah menyatukan chat dari toko yang sudah berjalan, lalu menyerahkan percakapan repetitif ke AI dengan fallback ke agent manusia saat perlu.
-            </p>
-            {previewMode ? (
-              <div className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${isDark ? 'bg-slate-900 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
-                Preview netral • workspace marketplace belum aktif
-              </div>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate(isDemo ? '/demo/medsos/connections' : '/medsos/connections')}
-            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
-          >
-            Buka Connections
-            <ArrowRight size={16} />
-          </button>
-        </div>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => navigate(isDemo ? '/demo/medsos/connections' : '/medsos/connections')}
+          className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
+        >
+          Buka Connections
+          <ArrowRight size={16} />
+        </button>
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">

@@ -18,7 +18,6 @@ import {
   Smile,
   Sparkles,
   UserRoundCheck,
-  Wifi,
 } from 'lucide-react';
 import {
   generateAiReply,
@@ -682,71 +681,36 @@ export default function WaInboxWorkspace({
   }
 
   return (
-    <div className="space-y-4">
-      <div className={`rounded-[30px] px-4 py-4 md:px-5 md:py-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10 shadow-[0_20px_50px_rgba(15,23,42,0.26)]' : 'bg-white border border-gray-100 shadow-[0_18px_50px_rgba(15,23,42,0.08)]'}`}>
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="min-w-0 flex items-start gap-3">
-            <div className={`rounded-2xl p-3 ${isDark ? 'bg-slate-900 text-emerald-300 ring-1 ring-white/10' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'}`}>
-              <MessageSquareQuote size={18} />
-            </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>Inbox WA</h1>
-                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold ${crmStatus?.reachable ? (isDark ? 'bg-emerald-500/15 text-emerald-300' : 'bg-emerald-50 text-emerald-700') : (isDark ? 'bg-amber-500/15 text-amber-300' : 'bg-amber-50 text-amber-700')}`}>
-                  <Wifi size={11} />
-                  {crmStatus?.reachable ? 'Tersambung' : 'Perlu cek'}
-                </span>
-                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
-                  {connector?.workspaceName || stats?.tenant?.company_name || 'WA Inbox'}
-                </span>
-              </div>
-              <p className={`mt-1.5 text-xs md:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Fokuskan kerja ke antrean, metrik, dan balasan chat — tanpa pindah portal.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-gray-50 text-slate-600 border border-slate-200'}`}>
-                  Session {stats?.tenant?.session_id || 'belum aktif'}
-                </span>
-                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-gray-50 text-slate-600 border border-slate-200'}`}>
-                  Queue {conversations.length}
-                </span>
-                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? 'bg-slate-800 text-slate-200' : 'bg-gray-50 text-slate-600 border border-slate-200'}`}>
-                  AI Ready
-                </span>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setReloadTick((value) => value + 1)}
+          className={`inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-white text-gray-700 ring-1 ring-slate-200 hover:bg-gray-50'}`}
+        >
+          <RefreshCw size={15} className={conversationLoading || conversationRefreshing || messageRefreshing ? 'animate-spin' : ''} />
+          Refresh
+        </button>
+        <button
+          type="button"
+          onClick={onSetup}
+          className={`inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-white text-gray-700 ring-1 ring-slate-200 hover:bg-gray-50'}`}
+        >
+          <Settings size={15} />
+          Connections
+        </button>
+        {crmUrl ? (
+          <a
+            href={crmUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={`inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold ${isDark ? 'bg-slate-800 text-slate-100 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-50 ring-1 ring-slate-200'}`}
+          >
+            <ExternalLink size={15} />
+            Portal lama
+          </a>
+        ) : null}
 
-          <div className="flex flex-wrap gap-2 xl:justify-end">
-            <button
-              type="button"
-              onClick={() => setReloadTick((value) => value + 1)}
-              className={`inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              <RefreshCw size={15} className={conversationLoading || conversationRefreshing || messageRefreshing ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-            <button
-              type="button"
-              onClick={onSetup}
-              className={`inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold ${isDark ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              <Settings size={15} />
-              Connections
-            </button>
-            {crmUrl ? (
-              <a
-                href={crmUrl}
-                target="_blank"
-                rel="noreferrer"
-                className={`inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold ${isDark ? 'bg-slate-800 text-slate-100 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`}
-              >
-                <ExternalLink size={15} />
-                Portal lama
-              </a>
-            ) : null}
-          </div>
-        </div>
       </div>
 
       {warning ? (

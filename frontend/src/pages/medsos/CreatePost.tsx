@@ -4,7 +4,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import AdvancedContentStudio from '../../components/medsos/AdvancedContentStudio';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Sparkles, Wand2, PlaySquare } from 'lucide-react';
+import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Sparkles, PlaySquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createZernioPost, getZernioAccounts, generateZernioUploadLink, generateAiCaption, type ZernioAccount } from '../../services/medsosPostsService';
 import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera';
@@ -151,7 +151,7 @@ export default function CreatePost() {
     if (isDemo) { toast.success('Berhasil (demo)'); return; }
     if (!caption.trim()) { toast.error('Caption tidak boleh kosong'); return; }
     if (selectedAccounts.size === 0) { toast.error('Pilih minimal 1 akun'); return; }
-    
+
     setSaving(true);
     try {
       await createZernioPost({
@@ -187,55 +187,30 @@ export default function CreatePost() {
         className="hidden"
         onChange={handleLocalMediaChange}
       />
-      <div className={`rounded-[24px] p-3 md:p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-gray-100 shadow-sm'}`}>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="mb-1 inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
-              <Wand2 size={12} />
-              Create Content
-            </div>
-            <div className="flex items-start gap-2">
-              <h1 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Generate {activeMode === 'video' ? 'video' : 'foto'} marketing
-              </h1>
-              <FieldHelp
-                title="Create Content"
-                description="Workspace simpel untuk pilih mode, masukin media, tulis prompt, pilih model, lalu generate."
-                howToUse="Pilih Photo atau Video, upload media jika ada, isi prompt utama, pilih model, lalu klik generate. Pengaturan detail tetap ada di tombol Settings dalam studio."
-              />
-            </div>
-            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Jalur utama dibuat simpel. Advanced tetap ada, tapi disembunyikan sampai user butuh.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {modeCards.map((item) => {
-              const isActive = item.id === activeMode;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => navigate(item.path)}
-                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
-                    isActive
-                      ? item.accent === 'violet'
-                        ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20'
-                        : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                      : isDark
-                        ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800'
-                        : 'bg-slate-50 text-slate-700 ring-1 ring-slate-200 hover:bg-white'
-                  }`}
-                >
-                  <Icon size={16} />
-                  {item.id === 'video' ? 'Video' : 'Foto'}
-                  {isActive ? <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">aktif</span> : null}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {modeCards.map((item) => {
+          const isActive = item.id === activeMode;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => navigate(item.path)}
+              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold transition ${
+                isActive
+                  ? item.accent === 'violet'
+                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20'
+                    : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                  : isDark
+                    ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800'
+                    : 'bg-white text-slate-700 ring-1 ring-slate-200 shadow-sm hover:bg-slate-50'
+              }`}
+            >
+              <Icon size={16} />
+              {item.id === 'video' ? 'Video' : 'Foto'}
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.18fr)_minmax(380px,0.82fr)]">
@@ -509,5 +484,3 @@ export default function CreatePost() {
     </div>
   );
 }
-
-
