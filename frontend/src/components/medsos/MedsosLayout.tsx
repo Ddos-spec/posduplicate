@@ -644,7 +644,7 @@ export default function MedsosLayout() {
           </div>
         </div>
 
-        <div className={roomyView ? 'mcs-roomy-view' : ''}>
+        <div className={`mcs-page-shell ${roomyView ? 'mcs-roomy-view' : ''}`.trim()}>
           <Outlet />
         </div>
       </div>
@@ -698,3 +698,5 @@ export default function MedsosLayout() {
     </div>
   );
 }
+
+
