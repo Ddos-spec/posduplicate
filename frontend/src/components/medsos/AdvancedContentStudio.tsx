@@ -43,6 +43,15 @@ import {
   type ProviderId,
 } from '../../lib/contentStudio';
 import FieldHelp from './FieldHelp';
+import {
+  generateOpenRouterImage,
+  generateOpenRouterVideo,
+  getOpenRouterImageModels,
+  getOpenRouterVideoModels,
+  getOpenRouterVideoStatus,
+  type ContentStudioModelOption,
+  type GenerateVideoResponse,
+} from '../../services/medsosContentStudioService';
 
 type StudioTab = 'copy' | 'image' | 'video' | 'campaign' | 'copilot' | 'provider';
 
@@ -170,6 +179,45 @@ function maskSecret(value: string) {
   if (!value) return 'Belum diisi';
   if (value.length <= 8) return 'Tersimpan';
   return `${value.slice(0, 3)}••••${value.slice(-3)}`;
+}
+
+const FALLBACK_IMAGE_MODELS: ContentStudioModelOption[] = [
+  { id: 'google/gemini-3.1-flash-image-preview', name: 'Gemini 3.1 Flash Image Preview', outputModalities: ['image', 'text'] },
+];
+
+const FALLBACK_VIDEO_MODELS: ContentStudioModelOption[] = [
+  { id: 'google/veo-3.1', name: 'Veo 3.1', supportedAspectRatios: ['16:9'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+];
+
+function getModelLabel(model: ContentStudioModelOption) {
+  return model.name && model.name !== model.id ? `${model.name} — ${model.id}` : model.id;
+}
+
+function getOpenRouterKey(config: ProviderConfigMap[ProviderId]) {
+  return (config.apiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '').trim();
+}
+
+function videoAspectFromPlatform(platform: string) {
+  const normalized = platform.toLowerCase();
+  if (normalized.includes('tiktok') || normalized.includes('reels') || normalized.includes('short')) return '9:16';
+  return '16:9';
+}
+
+function buildVideoPrompt(input: {
+  idea: string;
+  platform: string;
+  motion: string;
+  duration: string;
+  mediaLabel?: string;
+}) {
+  return [
+    input.idea,
+    `Target platform: ${input.platform}`,
+    `Camera / motion direction: ${input.motion}`,
+    `Creative duration intent: ${input.duration}`,
+    input.mediaLabel ? `Use the uploaded reference media as product/style context: ${input.mediaLabel}` : '',
+    'Create a polished short-form marketing video. Keep it natural, commercial-ready, and visually clear.',
+  ].filter(Boolean).join('\n');
 }
 
 function ChoicePill({
@@ -302,8 +350,14 @@ export default function AdvancedContentStudio({
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const [showProviderConsole, setShowProviderConsole] = useState(false);
   const [showStudioSettings, setShowStudioSettings] = useState(false);
+  const [imageModelOptions, setImageModelOptions] = useState<ContentStudioModelOption[]>(FALLBACK_IMAGE_MODELS);
+  const [videoModelOptions, setVideoModelOptions] = useState<ContentStudioModelOption[]>(FALLBACK_VIDEO_MODELS);
+  const [modelSourceNote, setModelSourceNote] = useState('Model akan dibaca dari OpenRouter setelah API key siap.');
+  const [generatedImageUrl, setGeneratedImageUrl] = useState('');
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState('');
+  const [videoJob, setVideoJob] = useState<GenerateVideoResponse['job'] | null>(null);
 
-  const [loadingKey, setLoadingKey] = useState<null | 'copy' | 'image' | 'video' | 'campaign' | 'copilot'>(null);
+  const [loadingKey, setLoadingKey] = useState<null | 'copy' | 'image' | 'video' | 'campaign' | 'copilot' | 'models' | 'video-status'>(null);
   const fieldClass = isDark
     ? 'w-full rounded-2xl border border-slate-700/80 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/15'
     : 'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10';
@@ -401,15 +455,16 @@ export default function AdvancedContentStudio({
   const providerConfig = providerConfigs[providerId];
   const mainTabs = tabs.filter((tab) => tab.id === 'image' || tab.id === 'video');
   const activeMainLane = activeTab === 'video' ? 'video' : 'image';
-  const hasOpenRouterKey = Boolean((providerConfig.apiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '').trim());
+  const openRouterKey = getOpenRouterKey(providerConfig);
+  const hasOpenRouterKey = Boolean(openRouterKey);
   const isVideoLane = activeMainLane === 'video';
-  const selectedModel = isVideoLane ? (providerConfig.videoModel || providerConfig.model) : (providerConfig.imageModel || providerConfig.model);
   const currentPresetLabel = isVideoLane
     ? VIDEO_PRESETS.find((preset) => preset.id === videoPresetId)?.label ?? 'Default'
     : IMAGE_PRESETS.find((preset) => preset.id === imagePresetId)?.label ?? 'Default';
-  const availableModels = isVideoLane
-    ? ['google/gemini-2.5-flash', 'anthropic/claude-sonnet-4.5', 'openai/gpt-5.1-mini']
-    : ['google/gemini-2.5-flash-image-preview', 'openai/gpt-image-1', 'google/gemini-2.5-flash'];
+  const availableModels = isVideoLane ? videoModelOptions : imageModelOptions;
+  const selectedModel = isVideoLane
+    ? (providerConfig.videoModel || videoModelOptions[0]?.id || providerConfig.model)
+    : (providerConfig.imageModel || imageModelOptions[0]?.id || providerConfig.model);
   const imagePreview = useMemo(
     () => buildPreviewSvg(imagePrompt || 'Visual direction', `${artStyle} · ${aspectRatio}`, 'Image Brief', `${imagePrompt}-${artStyle}-${aspectRatio}`),
     [imagePrompt, artStyle, aspectRatio],
@@ -427,6 +482,65 @@ export default function AdvancedContentStudio({
       },
     }));
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        setLoadingKey((current) => (current ? current : 'models'));
+        const [imageResult, videoResult] = await Promise.allSettled([
+          getOpenRouterImageModels(openRouterKey || undefined),
+          openRouterKey ? getOpenRouterVideoModels(openRouterKey) : Promise.resolve({ models: FALLBACK_VIDEO_MODELS, source: 'fallback' as const, warning: 'Isi API key OpenRouter untuk membaca semua model video yang tersedia.' }),
+        ]);
+
+        if (cancelled) return;
+
+        const nextImageModels = imageResult.status === 'fulfilled' && imageResult.value.models.length
+          ? imageResult.value.models
+          : FALLBACK_IMAGE_MODELS;
+        const nextVideoModels = videoResult.status === 'fulfilled' && videoResult.value.models.length
+          ? videoResult.value.models
+          : FALLBACK_VIDEO_MODELS;
+
+        setImageModelOptions(nextImageModels);
+        setVideoModelOptions(nextVideoModels);
+
+        const imageSource = imageResult.status === 'fulfilled' ? imageResult.value.source : 'fallback';
+        const videoSource = videoResult.status === 'fulfilled' ? videoResult.value.source : 'fallback';
+        setModelSourceNote(
+          imageSource === 'openrouter' || videoSource === 'openrouter'
+            ? 'Daftar model dibaca langsung dari OpenRouter. Model video hanya muncul lengkap kalau API key valid.'
+            : 'Memakai fallback model. Isi API key OpenRouter agar daftar video lengkap terbaca.',
+        );
+
+        setProviderConfigs((current) => {
+          const currentImageModel = current.openrouter.imageModel || '';
+          const currentVideoModel = current.openrouter.videoModel || '';
+          const imageValid = nextImageModels.some((model) => model.id === currentImageModel);
+          const videoValid = nextVideoModels.some((model) => model.id === currentVideoModel);
+          return {
+            ...current,
+            openrouter: {
+              ...current.openrouter,
+              imageModel: imageValid ? currentImageModel : nextImageModels[0]?.id || current.openrouter.imageModel,
+              videoModel: videoValid ? currentVideoModel : nextVideoModels[0]?.id || current.openrouter.videoModel,
+            },
+          };
+        });
+      } catch (error: any) {
+        if (!cancelled) {
+          setModelSourceNote(error?.message || 'Gagal membaca model OpenRouter. Fallback tetap tersedia.');
+        }
+      } finally {
+        if (!cancelled) setLoadingKey((current) => (current === 'models' ? null : current));
+      }
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [openRouterKey]);
 
   const applyVideoPreset = (presetId: string) => {
     const preset = VIDEO_PRESETS.find((item) => item.id === presetId);
@@ -481,34 +595,66 @@ export default function AdvancedContentStudio({
 
   const runImageBrief = async () => {
     if (!imagePrompt.trim()) {
-      toast.error('Isi ide visual dulu.');
+      toast.error('Isi prompt foto dulu.');
       return;
     }
     setLoadingKey('image');
+    setGeneratedImageUrl('');
     try {
-      const result = !hasOpenRouterKey
-        ? createImageFallback(imagePrompt, 'Studio Visual', artStyle, aspectRatio, negativePrompt)
-        : await requestProviderText({
-            providerId: 'openrouter',
-            config: {
-              ...providerConfig,
-              model: (providerConfig.imageModel || providerConfig.model || '').trim(),
-            },
-            messages: [
-              {
-                role: 'system',
-                content: 'Anda adalah creative director untuk iklan visual. Susun output dalam Bahasa Indonesia dengan struktur prompt, negative prompt, camera, lighting, dan production notes.',
-              },
-              {
-                role: 'user',
-                content: `Buat visual brief untuk ide: ${imagePrompt}. Style: ${artStyle}. Aspect ratio: ${aspectRatio}. Negative prompt: ${negativePrompt}. Fokus ke foto/hero visual yang siap dieksekusi tim desain atau image generator.`,
-              },
-            ],
-          });
-      setImageOutput(result);
+      if (!hasOpenRouterKey) {
+        const result = createImageFallback(imagePrompt, 'Studio Visual', artStyle, aspectRatio, negativePrompt);
+        setImageOutput(result);
+        setActiveTab('image');
+        toast('Fallback aktif. Isi API key OpenRouter untuk generate gambar asli.');
+        return;
+      }
+
+      const result = await generateOpenRouterImage({
+        apiKey: openRouterKey,
+        model: (providerConfig.imageModel || providerConfig.model || imageModelOptions[0]?.id || '').trim(),
+        prompt: `${imagePrompt}\nStyle: ${artStyle}\nOutput harus berupa gambar final, bukan hanya deskripsi.`,
+        aspectRatio,
+        negativePrompt,
+        referenceImage: mediaPreview || null,
+      });
+      const imageUrl = result.imageUrls[0] || '';
+      setGeneratedImageUrl(imageUrl);
+      setImageOutput(result.text || `Gambar berhasil dibuat dengan model ${result.model}.`);
+      setShowImagePreview(true);
       setActiveTab('image');
+      toast.success('Gambar berhasil digenerate.');
     } catch (error: any) {
-      toast.error(error?.message || 'Gagal membuat visual brief.');
+      toast.error(error?.response?.data?.error?.message || error?.message || 'Gagal generate foto.');
+    } finally {
+      setLoadingKey(null);
+    }
+  };
+
+  const refreshVideoJobStatus = async (jobId = videoJob?.id) => {
+    if (!jobId) return;
+    if (!hasOpenRouterKey) {
+      toast.error('API key OpenRouter belum diisi.');
+      return;
+    }
+    setLoadingKey('video-status');
+    try {
+      const status = await getOpenRouterVideoStatus(openRouterKey, jobId);
+      setVideoJob(status);
+      const videoUrl = status.unsigned_urls?.[0] || '';
+      if (videoUrl) {
+        setGeneratedVideoUrl(videoUrl);
+        setShowVideoPreview(true);
+      }
+      setVideoOutput([
+        `Status video: ${status.status}`,
+        `Job ID: ${status.id}`,
+        status.generation_id ? `Generation ID: ${status.generation_id}` : '',
+        videoUrl ? `Video URL: ${videoUrl}` : 'Video belum selesai. Klik refresh status beberapa saat lagi.',
+        status.error ? `Error: ${status.error}` : '',
+      ].filter(Boolean).join('\n'));
+      if (status.status === 'completed') toast.success('Video sudah selesai.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error?.message || error?.message || 'Gagal cek status video.');
     } finally {
       setLoadingKey(null);
     }
@@ -516,34 +662,46 @@ export default function AdvancedContentStudio({
 
   const runVideoBoard = async () => {
     if (!videoIdea.trim()) {
-      toast.error('Isi ide video dulu.');
+      toast.error('Isi prompt video dulu.');
       return;
     }
     setLoadingKey('video');
+    setGeneratedVideoUrl('');
+    setVideoJob(null);
     try {
-      const result = !hasOpenRouterKey
-        ? createVideoFallback(videoIdea, videoMotion, videoDuration, videoPlatform)
-        : await requestProviderText({
-            providerId: 'openrouter',
-            config: {
-              ...providerConfig,
-              model: (providerConfig.videoModel || providerConfig.model || '').trim(),
-            },
-            messages: [
-              {
-                role: 'system',
-                content: 'Anda adalah director untuk short-form video ads. Tulis storyboard ringkas dalam Bahasa Indonesia dengan opening hook, beat sheet, camera motion, overlay text, dan CTA visual.',
-              },
-              {
-                role: 'user',
-                content: `Buat storyboard video untuk ide: ${videoIdea}. Platform: ${videoPlatform}. Motion: ${videoMotion}. Durasi: ${videoDuration}.`,
-              },
-            ],
-          });
-      setVideoOutput(result);
+      if (!hasOpenRouterKey) {
+        const result = createVideoFallback(videoIdea, videoMotion, videoDuration, videoPlatform);
+        setVideoOutput(result);
+        setActiveTab('video');
+        toast('Fallback aktif. Isi API key OpenRouter untuk submit video asli.');
+        return;
+      }
+
+      const result = await generateOpenRouterVideo({
+        apiKey: openRouterKey,
+        model: (providerConfig.videoModel || videoModelOptions[0]?.id || '').trim(),
+        prompt: buildVideoPrompt({ idea: videoIdea, platform: videoPlatform, motion: videoMotion, duration: videoDuration, mediaLabel }),
+        aspectRatio: videoAspectFromPlatform(videoPlatform),
+        duration: videoDuration,
+        resolution: '720p',
+        generateAudio: true,
+      });
+      setVideoJob(result.job);
+      const videoUrl = result.job.unsigned_urls?.[0] || '';
+      if (videoUrl) setGeneratedVideoUrl(videoUrl);
+      setVideoOutput([
+        `Video job berhasil dikirim ke OpenRouter.`,
+        `Model: ${result.model}`,
+        `Status: ${result.job.status}`,
+        `Job ID: ${result.job.id}`,
+        result.job.polling_url ? `Polling: ${result.job.polling_url}` : '',
+        videoUrl ? `Video URL: ${videoUrl}` : 'Video generation async. Tunggu lalu klik Refresh status.',
+      ].filter(Boolean).join('\n'));
+      setShowVideoPreview(true);
       setActiveTab('video');
+      toast.success('Job video dikirim. Tunggu proses OpenRouter selesai.');
     } catch (error: any) {
-      toast.error(error?.message || 'Gagal membuat storyboard video.');
+      toast.error(error?.response?.data?.error?.message || error?.message || 'Gagal submit video.');
     } finally {
       setLoadingKey(null);
     }
@@ -757,14 +915,15 @@ export default function AdvancedContentStudio({
                       className={`${fieldClass} min-w-[240px] py-2.5`}
                     >
                       {availableModels.map((model) => (
-                        <option key={model} value={model}>{model}</option>
+                        <option key={model.id} value={model.id}>{getModelLabel(model)}</option>
                       ))}
                     </select>
                   </label>
                   <div className={`rounded-2xl px-3 py-2 text-xs ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
-                    {hasOpenRouterKey ? 'OpenRouter aktif' : 'Fallback aktif'}
+                    {loadingKey === 'models' ? 'Membaca model...' : hasOpenRouterKey ? 'OpenRouter aktif' : 'Fallback aktif'}
                   </div>
                 </div>
+                <p className={`mb-3 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{modelSourceNote}</p>
 
                 <textarea
                   value={isVideoLane ? videoIdea : imagePrompt}
@@ -878,9 +1037,9 @@ export default function AdvancedContentStudio({
 
               {showImagePreview ? (
                 <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                  <img src={imagePreview} alt="Visual preview" className="w-full rounded-[24px] object-cover shadow-sm" />
+                  <img src={generatedImageUrl || imagePreview} alt="Visual preview" className="w-full rounded-[24px] object-cover shadow-sm" />
                   <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Preview ini hanya mood board visual. Output utama tetap berupa brief yang nanti dieksekusi pilot / designer / generator.
+                    {generatedImageUrl ? 'Ini hasil gambar asli dari OpenRouter.' : 'Preview ini hanya mood board visual. Generate dengan API key OpenRouter untuk menghasilkan gambar asli.'}
                   </p>
                 </div>
               ) : null}
@@ -929,10 +1088,27 @@ export default function AdvancedContentStudio({
 
               {showVideoPreview ? (
                 <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                  <img src={videoPreview} alt="Video preview" className="w-full rounded-[24px] object-cover shadow-sm" />
-                  <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Ini preview mood board motion. Output utamanya tetap storyboard teks agar pilot tinggal eksekusi di tool video mana pun tanpa ribet setup.
-                  </p>
+                  {generatedVideoUrl ? (
+                    <video src={generatedVideoUrl} controls className="w-full rounded-[24px] bg-black shadow-sm" />
+                  ) : (
+                    <img src={videoPreview} alt="Video preview" className="w-full rounded-[24px] object-cover shadow-sm" />
+                  )}
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <p className={`text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {generatedVideoUrl ? 'Ini hasil video asli dari OpenRouter.' : videoJob ? `Job video ${videoJob.status}. Klik refresh status sampai completed.` : 'Preview ini mood board. Generate dengan API key OpenRouter untuk membuat video asli.'}
+                    </p>
+                    {videoJob && !generatedVideoUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => void refreshVideoJobStatus(videoJob.id)}
+                        disabled={loadingKey !== null}
+                        className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+                      >
+                        {loadingKey === 'video-status' ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                        Refresh status
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
 
@@ -1129,12 +1305,9 @@ export default function AdvancedContentStudio({
                       <ImageIcon size={14} className="text-cyan-500" />
                       Model foto
                     </span>
-                    <input
-                      value={providerConfig.imageModel || ''}
-                      onChange={(e) => updateProviderConfig({ imageModel: e.target.value })}
-                      placeholder="google/gemini-2.5-flash-image-preview"
-                      className={fieldClass}
-                    />
+                    <select value={providerConfig.imageModel || imageModelOptions[0]?.id || ''} onChange={(e) => updateProviderConfig({ imageModel: e.target.value })} className={fieldClass}>
+                      {imageModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelLabel(model)}</option>)}
+                    </select>
                     <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Khusus untuk Visual Brief / lane foto.</p>
                   </label>
                   <label className="space-y-2">
@@ -1142,12 +1315,9 @@ export default function AdvancedContentStudio({
                       <PlaySquare size={14} className="text-fuchsia-500" />
                       Model video
                     </span>
-                    <input
-                      value={providerConfig.videoModel || ''}
-                      onChange={(e) => updateProviderConfig({ videoModel: e.target.value })}
-                      placeholder="google/gemini-2.5-flash"
-                      className={fieldClass}
-                    />
+                    <select value={providerConfig.videoModel || videoModelOptions[0]?.id || ''} onChange={(e) => updateProviderConfig({ videoModel: e.target.value })} className={fieldClass}>
+                      {videoModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelLabel(model)}</option>)}
+                    </select>
                     <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Khusus untuk Motion Board / lane video.</p>
                   </label>
                   <label className="space-y-2">
@@ -1227,11 +1397,15 @@ export default function AdvancedContentStudio({
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-semibold">Model foto</span>
-                    <input value={providerConfig.imageModel || ''} onChange={(e) => updateProviderConfig({ imageModel: e.target.value })} className={fieldClass} />
+                    <select value={providerConfig.imageModel || imageModelOptions[0]?.id || ''} onChange={(e) => updateProviderConfig({ imageModel: e.target.value })} className={fieldClass}>
+                      {imageModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelLabel(model)}</option>)}
+                    </select>
                   </label>
                   <label className="space-y-2 md:col-span-2">
                     <span className="text-sm font-semibold">Model video</span>
-                    <input value={providerConfig.videoModel || ''} onChange={(e) => updateProviderConfig({ videoModel: e.target.value })} className={fieldClass} />
+                    <select value={providerConfig.videoModel || videoModelOptions[0]?.id || ''} onChange={(e) => updateProviderConfig({ videoModel: e.target.value })} className={fieldClass}>
+                      {videoModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelLabel(model)}</option>)}
+                    </select>
                   </label>
                 </div>
               </div>
@@ -1281,3 +1455,14 @@ export default function AdvancedContentStudio({
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+

@@ -127,8 +127,8 @@ export function createDefaultProviderConfigs(): ProviderConfigMap {
     openrouter: {
       apiKey: '',
       model: PROVIDER_META.openrouter.defaultModel,
-      imageModel: 'google/gemini-2.5-flash-image-preview',
-      videoModel: 'google/gemini-2.5-flash',
+      imageModel: 'google/gemini-3.1-flash-image-preview',
+      videoModel: 'google/veo-3.1',
       baseUrl: PROVIDER_META.openrouter.baseUrl,
     },
     openai: { apiKey: '', model: PROVIDER_META.openai.defaultModel, imageModel: PROVIDER_META.openai.defaultModel, videoModel: PROVIDER_META.openai.defaultModel, baseUrl: PROVIDER_META.openai.baseUrl },
@@ -549,3 +549,4 @@ export function downloadTextFile(filename: string, content: string) {
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
 }
+
