@@ -4,7 +4,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import AdvancedContentStudio from '../../components/medsos/AdvancedContentStudio';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera, Sparkles, Wand2, PlaySquare, Bot, ArrowRight } from 'lucide-react';
+import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera, Sparkles, Wand2, PlaySquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createZernioPost, getZernioAccounts, generateZernioUploadLink, generateAiCaption, type ZernioAccount } from '../../services/medsosPostsService';
 import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera';
@@ -56,13 +56,6 @@ export default function CreatePost() {
       detail: 'Storyboard, hook, CTA',
     },
   ] as const), [photoPath, videoPath]);
-  const workflowChips = useMemo(() => ([
-    { label: 'Copy Lab', note: 'Hook, angle, CTA' },
-    { label: 'Campaign Blueprint', note: 'Offer + audience + funnel' },
-    { label: 'Copilot', note: 'Brainstorm cepat' },
-    { label: 'OpenRouter Console', note: 'Satu jalur, setting simpel' },
-  ]), []);
-
   const handleGenerateAi = async () => {
     if (!aiPrompt.trim()) { toast.error('Isi instruksi caption dulu'); return; }
     setGeneratingAi(true);
@@ -162,8 +155,7 @@ export default function CreatePost() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-gray-100 shadow-sm'}`}>
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="max-w-4xl">
+        <div className="max-w-5xl">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
               <Wand2 size={14} />
               CRM &amp; Automation · Create Content
@@ -236,61 +228,6 @@ export default function CreatePost() {
                 );
               })}
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {workflowChips.map((chip) => (
-                <div key={chip.label} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'}`}>
-                  {chip.label}
-                  <span className={`ml-2 font-normal ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{chip.note}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="grid gap-3 xl:w-[320px]">
-            <div className={`rounded-[24px] p-4 text-sm ${isDark ? 'bg-slate-900/70 text-slate-300 ring-1 ring-white/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
-              <div className="flex items-center gap-2">
-                <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Single cockpit</p>
-                <FieldHelp
-                  title="Single cockpit"
-                  description="Panel ini menjelaskan bahwa semua konfigurasi besar sengaja ditaruh di satu halaman supaya pilot tidak pindah-pindah tool."
-                  howToUse="Pakai studio kiri untuk generate output. Pakai lane kanan untuk eksekusi publish. Kalau butuh revisi, bolak-baliknya tetap di halaman yang sama."
-                />
-              </div>
-              <p className="mt-2 leading-6">Studio di kiri dipakai buat ngeracik brief, prompt, storyboard, dan blueprint. Panel kanan dipakai untuk publish, schedule, dan lempar ke workflow tim.</p>
-            </div>
-            <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-100'}`}>
-              <div className="flex items-center gap-2">
-                <Bot size={16} className="text-purple-500" />
-                <p className="text-sm font-bold">Pilot workflow</p>
-                <FieldHelp
-                  title="Pilot workflow"
-                  description="Ini urutan kerja paling aman supaya user tidak asal generate tanpa arah."
-                  howToUse="Mulai dari brief, refine prompt dan style, baru kirim ke planner atau publish. Kalau output jelek, balik ke step 1 atau 2, bukan langsung publish."
-                />
-              </div>
-              <div className="mt-3 space-y-2 text-sm">
-                <div className="flex items-center justify-between rounded-2xl px-3 py-2.5 bg-white/70 dark:bg-white/5">
-                  <span>1. Generate brief</span>
-                  <ArrowRight size={14} className="opacity-60" />
-                </div>
-                <div className="flex items-center justify-between rounded-2xl px-3 py-2.5 bg-white/70 dark:bg-white/5">
-                  <span>2. Refine prompt & style</span>
-                  <ArrowRight size={14} className="opacity-60" />
-                </div>
-                <div className="flex items-center justify-between rounded-2xl px-3 py-2.5 bg-white/70 dark:bg-white/5">
-                  <span>3. Kirim ke planner / publish</span>
-                  <ArrowRight size={14} className="opacity-60" />
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate(plannerPath)}
-                className={`mt-4 inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'}`}
-              >
-                Buka planner
-                <ArrowRight size={15} />
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
