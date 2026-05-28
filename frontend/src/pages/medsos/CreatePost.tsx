@@ -4,7 +4,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import AdvancedContentStudio from '../../components/medsos/AdvancedContentStudio';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Sparkles, Wand2, PlaySquare, ChevronRight } from 'lucide-react';
+import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Sparkles, Wand2, PlaySquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createZernioPost, getZernioAccounts, generateZernioUploadLink, generateAiCaption, type ZernioAccount } from '../../services/medsosPostsService';
 import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera';
@@ -187,109 +187,54 @@ export default function CreatePost() {
         className="hidden"
         onChange={handleLocalMediaChange}
       />
-      <div className={`rounded-[28px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-gray-100 shadow-sm'}`}>
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] xl:items-start">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
-              <Wand2 size={14} />
-              CRM &amp; Automation · Create Content
+      <div className={`rounded-[24px] p-3 md:p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-gray-100 shadow-sm'}`}>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="mb-1 inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
+              <Wand2 size={12} />
+              Create Content
             </div>
             <div className="flex items-start gap-2">
-              <h1 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Create Content
+              <h1 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Generate {activeMode === 'video' ? 'video' : 'foto'} marketing
               </h1>
               <FieldHelp
-                title="Create Content cockpit"
-                description="Ini adalah workspace untuk meracik brief konten, prompt, storyboard, dan output final sebelum dipublish."
-                howToUse="Pilih dulu lane Photo atau Video, racik output di studio kiri, lalu pakai panel kanan untuk upload media, isi caption, dan publish atau schedule."
+                title="Create Content"
+                description="Workspace simpel untuk pilih mode, masukin media, tulis prompt, pilih model, lalu generate."
+                howToUse="Pilih Photo atau Video, upload media jika ada, isi prompt utama, pilih model, lalu klik generate. Pengaturan detail tetap ada di tombol Settings dalam studio."
               />
             </div>
-            <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Pilih lane, isi ide utama, generate, lalu kirim ke publish bridge. Sengaja dibuat ringkas supaya user tidak tenggelam di setting.
+            <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Jalur utama dibuat simpel. Advanced tetap ada, tapi disembunyikan sampai user butuh.
             </p>
           </div>
 
-          <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Mode aktif</p>
-                <p className="text-base font-bold">{activeModeCard.title}</p>
-              </div>
-              <div className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
-                {activeMode === 'video' ? 'Motion lane' : 'Visual lane'}
-              </div>
-            </div>
-            <div className="mt-3 space-y-2 text-xs">
-              <div className={`flex items-center gap-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                <ChevronRight size={14} className="text-blue-500" />
-                1. pilih lane yang paling cocok
-              </div>
-              <div className={`flex items-center gap-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                <ChevronRight size={14} className="text-blue-500" />
-                2. isi ide inti, jangan terlalu panjang
-              </div>
-              <div className={`flex items-center gap-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                <ChevronRight size={14} className="text-blue-500" />
-                3. generate lalu publish / schedule
-              </div>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {modeCards.map((item) => {
+              const isActive = item.id === activeMode;
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => navigate(item.path)}
+                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
+                    isActive
+                      ? item.accent === 'violet'
+                        ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20'
+                        : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                      : isDark
+                        ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800'
+                        : 'bg-slate-50 text-slate-700 ring-1 ring-slate-200 hover:bg-white'
+                  }`}
+                >
+                  <Icon size={16} />
+                  {item.id === 'video' ? 'Video' : 'Foto'}
+                  {isActive ? <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">aktif</span> : null}
+                </button>
+              );
+            })}
           </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {modeCards.map((item) => {
-                const isActive = item.id === activeMode;
-                const Icon = item.icon;
-                const toneClass = item.accent === 'violet'
-                  ? isActive
-                    ? isDark ? 'border-violet-400/40 bg-violet-500/10 shadow-lg shadow-violet-500/10' : 'border-violet-200 bg-violet-50 shadow-sm'
-                    : isDark ? 'border-white/10 bg-slate-900/70 hover:border-violet-400/20 hover:bg-slate-900' : 'border-slate-200 bg-slate-50 hover:border-violet-200 hover:bg-white'
-                  : isActive
-                    ? isDark ? 'border-blue-400/40 bg-blue-500/10 shadow-lg shadow-blue-500/10' : 'border-blue-200 bg-blue-50 shadow-sm'
-                    : isDark ? 'border-white/10 bg-slate-900/70 hover:border-blue-400/20 hover:bg-slate-900' : 'border-slate-200 bg-slate-50 hover:border-blue-200 hover:bg-white';
-                const iconTone = item.accent === 'violet'
-                  ? (isActive ? 'bg-violet-600 text-white' : isDark ? 'bg-slate-800 text-violet-300' : 'bg-white text-violet-600 shadow-sm')
-                  : (isActive ? 'bg-blue-600 text-white' : isDark ? 'bg-slate-800 text-blue-300' : 'bg-white text-blue-600 shadow-sm');
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => navigate(item.path)}
-                    className={`rounded-[22px] border p-4 text-left transition-all ${toneClass}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`rounded-2xl p-3 ${iconTone}`}>
-                        <Icon size={18} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-bold">{item.title}</p>
-                          <FieldHelp
-                            title={item.title}
-                            description={item.id === 'photo' ? 'Lane ini fokus ke visual statis seperti hero image, katalog, key visual, dan image prompt.' : 'Lane ini fokus ke video pendek seperti reels, hook 3 detik, storyboard, motion board, dan CTA visual.'}
-                            howToUse={item.id === 'photo' ? 'Pakai kalau targetmu butuh gambar/foto. Isi visual brief, style, dan negative prompt, lalu hasilnya lempar ke tim desain atau image generator.' : 'Pakai kalau targetmu butuh video. Isi ide video, motion, platform, dan durasi, lalu hasilnya pakai sebagai storyboard untuk editor atau generator video.'}
-                          />
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${item.accent === 'violet' ? 'bg-violet-500/10 text-violet-600 dark:text-violet-300' : 'bg-blue-500/10 text-blue-600 dark:text-blue-300'}`}>
-                            {item.badge}
-                          </span>
-                          {isActive ? (
-                            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-                              Active lane
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.description}</p>
-                        <div className="mt-3 flex items-center justify-between gap-3">
-                          <p className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.helper}</p>
-                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
-                            {item.detail}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
         </div>
       </div>
 
@@ -564,4 +509,5 @@ export default function CreatePost() {
     </div>
   );
 }
+
 

@@ -182,17 +182,28 @@ function maskSecret(value: string) {
 }
 
 const FALLBACK_IMAGE_MODELS: ContentStudioModelOption[] = [
-  { id: 'google/gemini-3.1-flash-image-preview', name: 'Gemini 3.1 Flash Image Preview', outputModalities: ['image', 'text'] },
-  { id: 'google/gemini-2.5-flash-image-preview', name: 'Gemini 2.5 Flash Image Preview', outputModalities: ['image', 'text'] },
-  { id: 'openai/gpt-image-1', name: 'GPT Image 1', outputModalities: ['image'] },
+  { id: 'x-ai/grok-imagine-image-quality', name: 'xAI: Grok Imagine Image Quality', outputModalities: ['image'] },
+  { id: 'recraft/recraft-v4.1-pro', name: 'Recraft: Recraft V4.1 Pro', outputModalities: ['image'] },
+  { id: 'openai/gpt-5.4-image-2', name: 'OpenAI: GPT-5.4 Image 2', outputModalities: ['image', 'text'] },
+  { id: 'google/gemini-3.1-flash-image-preview', name: 'Google: Nano Banana 2 / Gemini 3.1 Flash Image Preview', outputModalities: ['image', 'text'] },
+  { id: 'sourceful/riverflow-v2-pro', name: 'Sourceful: Riverflow V2 Pro', outputModalities: ['image'] },
+  { id: 'black-forest-labs/flux.2-max', name: 'Black Forest Labs: FLUX.2 Max', outputModalities: ['image'] },
+  { id: 'bytedance-seed/seedream-4.5', name: 'ByteDance Seed: Seedream 4.5', outputModalities: ['image'] },
 ];
 
 const FALLBACK_VIDEO_MODELS: ContentStudioModelOption[] = [
-  { id: 'google/veo-3.1', name: 'Veo 3.1', supportedAspectRatios: ['16:9'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
-  { id: 'google/veo-3.1-fast', name: 'Veo 3.1 Fast', supportedAspectRatios: ['16:9'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
-  { id: 'google/veo-3', name: 'Veo 3', supportedAspectRatios: ['16:9'], supportedDurations: [8], supportedResolutions: ['720p'] },
-  { id: 'google/veo-3-fast', name: 'Veo 3 Fast', supportedAspectRatios: ['16:9'], supportedDurations: [8], supportedResolutions: ['720p'] },
-  { id: 'google/veo-2', name: 'Veo 2', supportedAspectRatios: ['16:9'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'x-ai/grok-imagine-video', name: 'xAI: Grok Imagine Video', supportedAspectRatios: ['16:9', '9:16'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'kwaivgi/kling-v3.0-pro', name: 'Kling: Video v3.0 Pro', supportedAspectRatios: ['16:9', '9:16'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'kwaivgi/kling-v3.0-std', name: 'Kling: Video v3.0 Standard', supportedAspectRatios: ['16:9', '9:16'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'google/veo-3.1-fast', name: 'Google: Veo 3.1 Fast', supportedAspectRatios: ['16:9'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'google/veo-3.1-lite', name: 'Google: Veo 3.1 Lite', supportedAspectRatios: ['16:9'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'kwaivgi/kling-video-o1', name: 'Kling: Video O1', supportedAspectRatios: ['16:9', '9:16'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'minimax/hailuo-2.3', name: 'MiniMax: Hailuo 2.3', supportedAspectRatios: ['16:9', '9:16'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'bytedance/seedance-2.0-fast', name: 'ByteDance: Seedance 2.0 Fast', supportedAspectRatios: ['16:9', '9:16'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'alibaba/wan-2.7', name: 'Alibaba: Wan 2.7', supportedAspectRatios: ['16:9', '9:16'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'bytedance/seedance-2.0', name: 'ByteDance: Seedance 2.0', supportedAspectRatios: ['16:9', '9:16'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'openai/sora-2-pro', name: 'OpenAI: Sora 2 Pro', supportedAspectRatios: ['16:9', '9:16'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'google/veo-3.1', name: 'Google: Veo 3.1', supportedAspectRatios: ['16:9'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
 ];
 
 function getModelLabel(model: ContentStudioModelOption) {
