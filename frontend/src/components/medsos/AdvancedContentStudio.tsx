@@ -80,6 +80,8 @@ type PersistedStudioState = {
   campaignOutput?: string;
   copilotInput?: string;
   copilotOutput?: string;
+  promptSeed?: string;
+  promptHelperOutput?: string;
 };
 
 const tabs: Array<{ id: StudioTab; label: string; helper: string; icon: ComponentType<{ size?: number; className?: string }> }> = [
@@ -218,6 +220,30 @@ function videoAspectFromPlatform(platform: string) {
   const normalized = platform.toLowerCase();
   if (normalized.includes('tiktok') || normalized.includes('reels') || normalized.includes('short')) return '9:16';
   return '16:9';
+}
+
+function buildPromptHelperFallback(seed: string, lane: 'image' | 'video') {
+  const cleaned = seed.trim();
+  const contentType = lane === 'video' ? 'short-form video / Reels' : 'foto promosi / key visual';
+  const finalPrompt = lane === 'video'
+    ? `Buat ${contentType} berdasarkan ide: ${cleaned}. Awali dengan hook visual kuat 2 detik pertama, tampilkan masalah utama, solusi, bukti visual, lalu tutup dengan CTA jelas. Gaya natural, modern, commercial-ready, lighting bersih, pacing cepat, tidak hard-sell berlebihan.`
+    : `Buat ${contentType} berdasarkan ide: ${cleaned}. Komposisi clean premium, produk/objek utama paling menonjol, background rapi, lighting profesional, warna brand terasa, ruang teks aman untuk headline, hasil siap dipakai ads dan social media.`;
+
+  return [
+    `Jenis konten disarankan: ${contentType}`,
+    `Hook / angle: Ambil problem paling dekat dengan customer, lalu tunjukkan transformasi setelah memakai solusi ini.`,
+    '',
+    'Prompt final:',
+    finalPrompt,
+    '',
+    'Negative prompt / guardrail:',
+    lane === 'video'
+      ? 'jangan terlalu ramai, jangan text kecil sulit dibaca, jangan pacing lambat, jangan visual gelap, jangan klaim berlebihan'
+      : 'blur, low contrast, cluttered frame, text rusak, anatomy error, watermark, logo palsu, noise berlebihan',
+    '',
+    'Caption awal:',
+    `Ide simpel: ${cleaned}. Simpan dulu, bandingkan hasilnya, lalu pilih angle yang paling gampang dipahami customer.`,
+  ].join('\n');
 }
 
 function buildVideoPrompt(input: {
@@ -361,6 +387,8 @@ export default function AdvancedContentStudio({
 
   const [copilotInput, setCopilotInput] = useState('');
   const [copilotOutput, setCopilotOutput] = useState('');
+  const [promptSeed, setPromptSeed] = useState('');
+  const [promptHelperOutput, setPromptHelperOutput] = useState('');
   const [imagePresetId, setImagePresetId] = useState<string>('hero');
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [videoPresetId, setVideoPresetId] = useState<string>('hook');
@@ -374,7 +402,7 @@ export default function AdvancedContentStudio({
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState('');
   const [videoJob, setVideoJob] = useState<GenerateVideoResponse['job'] | null>(null);
 
-  const [loadingKey, setLoadingKey] = useState<null | 'copy' | 'image' | 'video' | 'campaign' | 'copilot' | 'models' | 'video-status'>(null);
+  const [loadingKey, setLoadingKey] = useState<null | 'copy' | 'image' | 'video' | 'campaign' | 'copilot' | 'prompt' | 'models' | 'video-status'>(null);
   const fieldClass = isDark
     ? 'w-full rounded-2xl border border-slate-700/80 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/15'
     : 'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10';
@@ -408,6 +436,8 @@ export default function AdvancedContentStudio({
       if (typeof saved.campaignOutput === 'string') setCampaignOutput(saved.campaignOutput);
       if (typeof saved.copilotInput === 'string') setCopilotInput(saved.copilotInput);
       if (typeof saved.copilotOutput === 'string') setCopilotOutput(saved.copilotOutput);
+      if (typeof saved.promptSeed === 'string') setPromptSeed(saved.promptSeed);
+      if (typeof saved.promptHelperOutput === 'string') setPromptHelperOutput(saved.promptHelperOutput);
     } catch {
       // ignore local parsing error
     }
@@ -440,6 +470,8 @@ export default function AdvancedContentStudio({
       campaignOutput,
       copilotInput,
       copilotOutput,
+      promptSeed,
+      promptHelperOutput,
     };
     window.localStorage.setItem(CONTENT_STUDIO_STORAGE_KEY, JSON.stringify(payload));
   }, [
@@ -448,7 +480,7 @@ export default function AdvancedContentStudio({
     imagePrompt, negativePrompt, artStyle, aspectRatio, imageOutput,
     videoIdea, videoMotion, videoDuration, videoPlatform, videoOutput,
     campaignProduct, campaignOffer, campaignAudience, campaignGoal, campaignOutput,
-    copilotInput, copilotOutput,
+    copilotInput, copilotOutput, promptSeed, promptHelperOutput,
   ]);
 
   useEffect(() => {
@@ -576,6 +608,54 @@ export default function AdvancedContentStudio({
     setArtStyle(preset.style);
     setAspectRatio(preset.ratio);
     setImagePrompt((current) => current.trim() ? current : preset.starter);
+  };
+
+  const runPromptHelper = async () => {
+    if (!promptSeed.trim()) {
+      toast.error('Isi ide mentah dulu. Contoh: promo parfum baru untuk perempuan aktif.');
+      return;
+    }
+    setLoadingKey('prompt');
+    try {
+      const lane = isVideoLane ? 'video' : 'image';
+      const result = !hasOpenRouterKey
+        ? buildPromptHelperFallback(promptSeed, lane)
+        : await requestProviderText({
+            providerId: 'openrouter',
+            config: providerConfig,
+            messages: [
+              {
+                role: 'system',
+                content: 'Anda adalah prompt engineer dan creative strategist senior. Bahasa Indonesia. Ubah ide mentah menjadi prompt siap generate yang spesifik, visual, dan gampang dipakai operator non-teknis. Jangan bertele-tele.',
+              },
+              {
+                role: 'user',
+                content: `Mode output: ${lane === 'video' ? 'VIDEO short-form ads/reels' : 'FOTO/key visual ads'}. Ide mentah user: ${promptSeed}. Buat format: 1) Jenis konten disarankan, 2) Hook/angle, 3) Prompt final yang siap ditempel ke generator, 4) Negative prompt/guardrail, 5) Caption awal singkat. Jika ide masih lemah, pilih angle yang paling realistis untuk bisnis kecil.`,
+              },
+            ],
+          });
+      setPromptHelperOutput(result);
+      if (lane === 'video') {
+        setVideoIdea(result);
+      } else {
+        setImagePrompt(result);
+      }
+      toast.success('Prompt siap dipakai.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Gagal membuat prompt dari ide.');
+    } finally {
+      setLoadingKey(null);
+    }
+  };
+
+  const applyPromptHelperToLane = () => {
+    if (!promptHelperOutput.trim()) return;
+    if (isVideoLane) {
+      setVideoIdea(promptHelperOutput);
+    } else {
+      setImagePrompt(promptHelperOutput);
+    }
+    toast.success(isVideoLane ? 'Prompt masuk ke video.' : 'Prompt masuk ke foto.');
   };
 
   const runCopy = async () => {
@@ -922,6 +1002,48 @@ export default function AdvancedContentStudio({
                   </div>
                 </div>
                 <p className={`mb-3 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{modelSourceNote}</p>
+
+                <div className={`mb-4 rounded-[22px] p-3 ${isDark ? 'bg-slate-900/80 ring-1 ring-white/10' : 'bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100'}`}>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={15} className="text-purple-500" />
+                      <p className="text-sm font-bold">Mentok ide? Bikin prompt otomatis</p>
+                      <FieldHelp
+                        title="Ide mentah ke prompt"
+                        description="Tulis ide kasar seperti produk, promo, target, atau masalah customer. AI akan mengubahnya jadi prompt foto/video yang lebih siap generate."
+                        howToUse="Pilih mode Foto atau Video, tulis ide mentah, klik Buat prompt, lalu hasilnya otomatis masuk ke kolom prompt utama dan bisa diedit lagi."
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void runPromptHelper()}
+                      disabled={loadingKey !== null}
+                      className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60 dark:bg-white dark:text-slate-950"
+                    >
+                      {loadingKey === 'prompt' ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                      Buat prompt
+                    </button>
+                  </div>
+                  <textarea
+                    value={promptSeed}
+                    onChange={(e) => setPromptSeed(e.target.value)}
+                    rows={2}
+                    placeholder="Contoh: promo paket parfum untuk wanita aktif, mau terlihat premium tapi tetap natural..."
+                    className={`${fieldClass} min-h-[78px] resize-y leading-5`}
+                  />
+                  {promptHelperOutput ? (
+                    <div className={`mt-3 rounded-2xl p-3 text-xs leading-5 ${isDark ? 'bg-slate-950 text-slate-300 ring-1 ring-white/10' : 'bg-white/80 text-slate-700 ring-1 ring-blue-100'}`}>
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-bold">Prompt helper siap</span>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={applyPromptHelperToLane} className="rounded-lg bg-blue-600 px-2.5 py-1.5 font-semibold text-white hover:bg-blue-700">Pakai ke prompt</button>
+                          <button type="button" onClick={() => onApplyToComposer(promptHelperOutput)} className={`rounded-lg px-2.5 py-1.5 font-semibold ${isDark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Pakai caption</button>
+                        </div>
+                      </div>
+                      <p className="line-clamp-3 whitespace-pre-wrap">{promptHelperOutput}</p>
+                    </div>
+                  ) : null}
+                </div>
 
                 <textarea
                   value={isVideoLane ? videoIdea : imagePrompt}

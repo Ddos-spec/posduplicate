@@ -4,6 +4,13 @@ import { useThemeStore } from '../../store/themeStore';
 import { PlatformBadge } from '../../components/medsos/PlatformBadge';
 import FieldHelp from '../../components/medsos/FieldHelp';
 import {
+  CONTENT_STUDIO_STORAGE_KEY,
+  createDefaultProviderConfigs,
+  downloadTextFile,
+  requestProviderText,
+  type ProviderRuntimeConfig,
+} from '../../lib/contentStudio';
+import {
   disconnectZernioAccount,
   getZernioAdAnalytics,
   getZernioAdsByCampaign,
@@ -18,6 +25,8 @@ import {
 } from '../../services/medsosPostsService';
 import { isZernioAdsAccount, zernioAdsPlatforms } from '../../data/zernioCatalog';
 import {
+  Bot,
+  Copy,
   Download,
   ExternalLink,
   Loader2,
@@ -25,6 +34,7 @@ import {
   RefreshCw,
   Sparkles,
   Unplug,
+  Wand2,
 } from 'lucide-react';
 import {
   Area,
@@ -167,6 +177,67 @@ function downloadCsv(filename: string, rows: Array<Array<string | number | null 
   URL.revokeObjectURL(url);
 }
 
+
+type AdsCopilotGoal = 'Leads' | 'Sales' | 'Awareness' | 'Retargeting';
+type AdsCopilotPlatform = 'Meta Ads' | 'TikTok Ads' | 'Google Ads' | 'Omnichannel';
+
+function getStoredOpenRouterRuntimeConfig(): ProviderRuntimeConfig {
+  const defaults = createDefaultProviderConfigs().openrouter;
+  if (typeof window === 'undefined') return defaults;
+  try {
+    const raw = window.localStorage.getItem(CONTENT_STUDIO_STORAGE_KEY);
+    if (!raw) return defaults;
+    const saved = JSON.parse(raw) as { providerConfigs?: { openrouter?: Partial<ProviderRuntimeConfig> } };
+    return {
+      ...defaults,
+      ...(saved.providerConfigs?.openrouter ?? {}),
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+function buildAdsFallbackPlan(input: {
+  brief: string;
+  goal: AdsCopilotGoal;
+  platform: AdsCopilotPlatform;
+  connectedPlatforms: string;
+  activeCampaigns: number;
+  alerts: Array<{ title: string; detail: string }>;
+}) {
+  const alertLine = input.alerts.length
+    ? input.alerts.map((item, index) => `${index + 1}. ${item.title}: ${item.detail}`).join('\n')
+    : 'Belum ada alert keras. Fokus mulai dari struktur campaign dan creative test.';
+
+  return [
+    '1. Ringkasan situasi',
+    `Brief: ${input.brief}`,
+    `Goal: ${input.goal}. Platform prioritas: ${input.platform}. Platform tersambung: ${input.connectedPlatforms || 'belum ada / preview'}. Active campaign: ${input.activeCampaigns}.`,
+    '',
+    '2. Angle campaign yang disarankan',
+    '- Angle problem-solution: buka dengan masalah paling nyata customer, lalu tampilkan solusi dan bukti sederhana.',
+    '- Angle offer: tekankan benefit utama + alasan kenapa harus action sekarang.',
+    '- Angle trust: tampilkan proses, hasil, testimoni, atau before-after yang believable.',
+    '',
+    '3. Draft copy iklan',
+    'Headline A: Solusi cepat untuk masalah yang sering bikin customer ragu',
+    'Headline B: Coba cara lebih simpel mulai hari ini',
+    'Primary text: Kalau selama ini customer masih ragu, mulai dari penjelasan paling sederhana: masalahnya apa, solusinya apa, dan kenapa produk ini layak dicoba sekarang. Tutup dengan CTA jelas.',
+    'CTA: Chat sekarang / Cek penawaran / Konsultasi gratis',
+    '',
+    '4. Prompt creative siap generate',
+    `Buat creative ads untuk ${input.platform}. Produk/brief: ${input.brief}. Visual modern, clean, hook kuat di 2 detik pertama, tampilkan problem customer, solusi, benefit utama, proof sederhana, dan CTA jelas. Gaya natural, tidak berlebihan, cocok untuk bisnis Indonesia.`,
+    '',
+    '5. Eksperimen 7 hari',
+    '- Test 3 hook berbeda: problem, benefit, social proof.',
+    '- Test 2 visual: UGC natural vs produk premium.',
+    '- Matikan asset CTR rendah setelah data cukup, pindahkan budget ke hook terbaik.',
+    '',
+    '6. Alert dari data saat ini',
+    alertLine,
+  ].join('\n');
+}
+
 function slugifyFilenamePart(value: string) {
   return value
     .toLowerCase()
@@ -226,6 +297,11 @@ export default function OmnichannelAdsHub() {
   const [datePreset, setDatePreset] = useState<DatePreset>('30d');
   const [fromDate, setFromDate] = useState<string>(() => buildPresetRange('30d').fromDate);
   const [toDate, setToDate] = useState<string>(() => buildPresetRange('30d').toDate);
+  const [adsCopilotBrief, setAdsCopilotBrief] = useState('');
+  const [adsCopilotGoal, setAdsCopilotGoal] = useState<AdsCopilotGoal>('Leads');
+  const [adsCopilotPlatform, setAdsCopilotPlatform] = useState<AdsCopilotPlatform>('Omnichannel');
+  const [adsCopilotOutput, setAdsCopilotOutput] = useState('');
+  const [adsCopilotLoading, setAdsCopilotLoading] = useState(false);
 
   const load = async (options?: { refresh?: boolean; silent?: boolean }) => {
     if (options?.silent) {
@@ -533,6 +609,84 @@ export default function OmnichannelAdsHub() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCampaign, fromDate, toDate]);
 
+
+  const runAdsCopilot = async () => {
+    const brief = adsCopilotBrief.trim();
+    if (!brief) {
+      setAdsCopilotOutput('Isi brief kasar dulu. Contoh: promo parfum baru, target wanita aktif 20-35, goal leads WhatsApp.');
+      return;
+    }
+
+    setAdsCopilotLoading(true);
+    try {
+      const connectedPlatforms = adAccounts.map((account) => account.platform).join(', ');
+      const topCampaignContext = topCampaigns.slice(0, 5).map((campaign) => (
+        `- ${campaign.name}: status ${campaign.status}, spend ${campaign.currency ? formatCurrencyValue(campaign.currency, campaign.metrics.spend) : formatMetricValue(campaign.metrics.spend)}, CTR ${formatMetricValue(campaign.metrics.ctr)}%, conversions ${formatNumber(campaign.metrics.conversions)}`
+      )).join('\n') || 'Belum ada campaign terbaca.';
+      const config = getStoredOpenRouterRuntimeConfig();
+      const hasKey = Boolean((config.apiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '').trim());
+      const fallback = buildAdsFallbackPlan({
+        brief,
+        goal: adsCopilotGoal,
+        platform: adsCopilotPlatform,
+        connectedPlatforms,
+        activeCampaigns: summary?.totals.activeCampaigns ?? 0,
+        alerts,
+      });
+
+      const result = !hasKey
+        ? fallback
+        : await requestProviderText({
+            providerId: 'openrouter',
+            config,
+            messages: [
+              {
+                role: 'system',
+                content: 'Anda adalah AI Ads Strategist senior untuk bisnis Indonesia. Jawab ringkas, actionable, tanpa jargon. Bantu operator membuat campaign plan, copy, prompt creative, dan eksperimen berikutnya berdasarkan data dashboard jika ada.',
+              },
+              {
+                role: 'user',
+                content: [
+                  `Brief kasar user: ${brief}`,
+                  `Goal: ${adsCopilotGoal}`,
+                  `Platform prioritas: ${adsCopilotPlatform}`,
+                  `Platform tersambung: ${connectedPlatforms || 'belum ada / preview'}`,
+                  `Total campaign aktif: ${summary?.totals.activeCampaigns ?? 0}`,
+                  'Alert dashboard:',
+                  alerts.length ? alerts.map((item) => `- ${item.title}: ${item.detail}`).join('\n') : '- Tidak ada alert keras.',
+                  'Campaign sample:',
+                  topCampaignContext,
+                  '',
+                  'Format wajib: 1) Ringkasan situasi, 2) Rekomendasi objective & audience, 3) Draft copy iklan, 4) Prompt creative foto/video siap generate, 5) Budget split eksperimen, 6) Next action 7 hari, 7) Risiko yang harus dicek.',
+                ].join('\n'),
+              },
+            ],
+          });
+      setAdsCopilotOutput(result);
+    } catch (error) {
+      console.error('Failed to run ads copilot', error);
+      setAdsCopilotOutput(buildAdsFallbackPlan({
+        brief,
+        goal: adsCopilotGoal,
+        platform: adsCopilotPlatform,
+        connectedPlatforms: adAccounts.map((account) => account.platform).join(', '),
+        activeCampaigns: summary?.totals.activeCampaigns ?? 0,
+        alerts,
+      }));
+    } finally {
+      setAdsCopilotLoading(false);
+    }
+  };
+
+  const copyAdsCopilotOutput = async () => {
+    if (!adsCopilotOutput.trim()) return;
+    try {
+      await navigator.clipboard.writeText(adsCopilotOutput);
+    } catch {
+      // ignore clipboard errors; download is still available
+    }
+  };
+
   if (!isDemo && loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
@@ -644,6 +798,95 @@ export default function OmnichannelAdsHub() {
           </div>
         </div>
       </div>
+
+      <section className={`rounded-[32px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Bot className="text-purple-500" size={18} />
+                  <h2 className="text-xl font-bold">AI Ads Copilot</h2>
+                  <FieldHelp
+                    title="AI Ads Copilot"
+                    description="Bantu tim yang bingung mulai campaign: dari brief kasar menjadi objective, audience, copy iklan, prompt creative, budget test, dan action 7 hari."
+                    howToUse="Tulis produk, target, promo, atau masalah yang mau dikejar. Pilih goal dan platform, lalu klik Generate ads plan. Kalau OpenRouter key ada, AI live dipakai; kalau belum, fallback tetap memberi template demo."
+                  />
+                </div>
+                <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Brief kasar masuk, plan campaign dan prompt iklan keluar.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void runAdsCopilot()}
+                disabled={adsCopilotLoading}
+                className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-purple-700 disabled:opacity-60"
+              >
+                {adsCopilotLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                Generate ads plan
+              </button>
+            </div>
+
+            <textarea
+              value={adsCopilotBrief}
+              onChange={(event) => setAdsCopilotBrief(event.target.value)}
+              rows={5}
+              placeholder="Contoh: produk parfum premium, target wanita aktif 20-35, promo bundling, goal leads WhatsApp, butuh creative yang elegan tapi tetap natural..."
+              className={`w-full min-h-[140px] resize-y rounded-3xl px-4 py-3 text-sm leading-6 outline-none transition ${isDark ? 'bg-slate-950 text-white placeholder:text-slate-500 ring-1 ring-white/10 focus:ring-blue-400/40' : 'bg-slate-50 text-slate-900 placeholder:text-slate-400 ring-1 ring-slate-200 focus:ring-blue-300'}`}
+            />
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="space-y-1 text-sm font-semibold">
+                <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Goal iklan</span>
+                <select
+                  value={adsCopilotGoal}
+                  onChange={(event) => setAdsCopilotGoal(event.target.value as AdsCopilotGoal)}
+                  className={`w-full rounded-2xl px-3 py-2.5 text-sm outline-none ${isDark ? 'bg-slate-950 text-white ring-1 ring-white/10' : 'bg-white text-slate-800 ring-1 ring-slate-200'}`}
+                >
+                  {(['Leads', 'Sales', 'Awareness', 'Retargeting'] as AdsCopilotGoal[]).map((goal) => <option key={goal} value={goal}>{goal}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1 text-sm font-semibold">
+                <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Platform fokus</span>
+                <select
+                  value={adsCopilotPlatform}
+                  onChange={(event) => setAdsCopilotPlatform(event.target.value as AdsCopilotPlatform)}
+                  className={`w-full rounded-2xl px-3 py-2.5 text-sm outline-none ${isDark ? 'bg-slate-950 text-white ring-1 ring-white/10' : 'bg-white text-slate-800 ring-1 ring-slate-200'}`}
+                >
+                  {(['Omnichannel', 'Meta Ads', 'TikTok Ads', 'Google Ads'] as AdsCopilotPlatform[]).map((platform) => <option key={platform} value={platform}>{platform}</option>)}
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50 ring-1 ring-blue-100'}`}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Wand2 className="text-blue-500" size={17} />
+                <p className="font-bold">Output strategi</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => void copyAdsCopilotOutput()} disabled={!adsCopilotOutput.trim()} className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold disabled:opacity-50 ${isDark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'}`}>
+                  <Copy size={14} />
+                  Copy
+                </button>
+                <button type="button" onClick={() => downloadTextFile('ai-ads-copilot-plan.txt', adsCopilotOutput)} disabled={!adsCopilotOutput.trim()} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+                  <Download size={14} />
+                  Download
+                </button>
+              </div>
+            </div>
+            {adsCopilotOutput ? (
+              <pre className={`max-h-[360px] overflow-y-auto whitespace-pre-wrap rounded-2xl p-4 text-sm leading-6 font-sans ${isDark ? 'bg-slate-900 text-slate-200' : 'bg-white/85 text-slate-800 ring-1 ring-slate-100'}`}>{adsCopilotOutput}</pre>
+            ) : (
+              <div className={`flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
+                <Sparkles size={30} className="mb-3 text-purple-500" />
+                <p className="font-semibold">Belum ada plan.</p>
+                <p className="mt-1 text-sm">Tulis brief kasar, nanti AI susun campaign plan dan prompt creative.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {alerts.length > 0 ? (
         <section className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
