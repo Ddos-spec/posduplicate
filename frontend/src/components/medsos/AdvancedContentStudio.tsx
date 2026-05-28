@@ -79,7 +79,45 @@ const tabs: Array<{ id: StudioTab; label: string; helper: string; icon: Componen
   { id: 'video', label: 'Motion Board', helper: 'Storyboard video', icon: PlaySquare },
   { id: 'campaign', label: 'Campaign', helper: 'Blueprint funnel', icon: Send },
   { id: 'copilot', label: 'Copilot', helper: 'Bantu brainstorming', icon: Bot },
-  { id: 'provider', label: 'Pilot Config', helper: 'Provider & model', icon: Settings2 },
+  { id: 'provider', label: 'OpenRouter', helper: 'Model & API key', icon: Settings2 },
+];
+
+const VIDEO_PRESETS: Array<{
+  id: string;
+  label: string;
+  detail: string;
+  motion: (typeof VIDEO_MOTIONS)[number];
+  duration: (typeof VIDEO_DURATIONS)[number];
+  platform: string;
+  starter: string;
+}> = [
+  {
+    id: 'hook',
+    label: 'Hook Cepat',
+    detail: '3-15 detik untuk scroll stopper',
+    motion: 'Crash zoom',
+    duration: '15 detik',
+    platform: 'Instagram Reels',
+    starter: 'Buka dengan hook paling nyentak di 3 detik pertama, tampilkan problem utama, lalu arahkan ke CTA singkat.',
+  },
+  {
+    id: 'ugc',
+    label: 'UGC Natural',
+    detail: 'Testimoni / edukasi santai',
+    motion: 'Handheld UGC',
+    duration: '30 detik',
+    platform: 'TikTok',
+    starter: 'Bikin video terasa natural seperti creator asli, fokus ke masalah user lalu kasih solusi sederhana yang believable.',
+  },
+  {
+    id: 'premium',
+    label: 'Promo Premium',
+    detail: 'Visual rapi untuk ads produk/jasa',
+    motion: 'Reveal cinematic',
+    duration: '30 detik',
+    platform: 'YouTube Shorts',
+    starter: 'Tampilkan visual premium, transisi halus, sorot benefit utama, dan tutup dengan CTA visual yang elegan.',
+  },
 ];
 
 function mergeProviderConfigs(source?: Partial<ProviderConfigMap>): ProviderConfigMap {
@@ -186,7 +224,7 @@ export default function AdvancedContentStudio({
   preferredTab?: StudioTab;
 }) {
   const [activeTab, setActiveTab] = useState<StudioTab>('copy');
-  const [providerId, setProviderId] = useState<ProviderId>('demo');
+  const [providerId] = useState<ProviderId>('openrouter');
   const [providerConfigs, setProviderConfigs] = useState<ProviderConfigMap>(createDefaultProviderConfigs());
 
   const [copyType, setCopyType] = useState<ContentType>('Caption Instagram');
@@ -214,6 +252,9 @@ export default function AdvancedContentStudio({
 
   const [copilotInput, setCopilotInput] = useState('');
   const [copilotOutput, setCopilotOutput] = useState('');
+  const [videoPresetId, setVideoPresetId] = useState<string>('hook');
+  const [showVideoAdvanced, setShowVideoAdvanced] = useState(false);
+  const [showProviderConsole, setShowProviderConsole] = useState(false);
 
   const [loadingKey, setLoadingKey] = useState<null | 'copy' | 'image' | 'video' | 'campaign' | 'copilot'>(null);
   const fieldClass = isDark
@@ -227,7 +268,6 @@ export default function AdvancedContentStudio({
       if (!raw) return;
       const saved = JSON.parse(raw) as PersistedStudioState;
       if (saved.activeTab) setActiveTab(saved.activeTab);
-      if (saved.providerId && PROVIDER_IDS.includes(saved.providerId)) setProviderId(saved.providerId);
       setProviderConfigs(mergeProviderConfigs(saved.providerConfigs));
       if (saved.copyType && CONTENT_TYPES.includes(saved.copyType as ContentType)) setCopyType(saved.copyType as ContentType);
       if (saved.copyTone && COPY_TONES.includes(saved.copyTone as (typeof COPY_TONES)[number])) setCopyTone(saved.copyTone as (typeof COPY_TONES)[number]);
@@ -298,8 +338,15 @@ export default function AdvancedContentStudio({
     setActiveTab(preferredTab);
   }, [preferredTab]);
 
+  useEffect(() => {
+    if (videoIdea.trim()) return;
+    applyVideoPreset(videoPresetId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const providerMeta = PROVIDER_META[providerId];
   const providerConfig = providerConfigs[providerId];
+  const hasOpenRouterKey = Boolean((providerConfig.apiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '').trim());
   const imagePreview = useMemo(
     () => buildPreviewSvg(imagePrompt || 'Visual direction', `${artStyle} · ${aspectRatio}`, 'Image Brief', `${imagePrompt}-${artStyle}-${aspectRatio}`),
     [imagePrompt, artStyle, aspectRatio],
@@ -309,19 +356,29 @@ export default function AdvancedContentStudio({
     [videoIdea, videoPlatform, videoMotion],
   );
   const studioStats = useMemo(() => ([
-    { label: 'Mode', value: providerMeta.label, detail: providerId === 'demo' ? 'Belajar tanpa biaya token' : providerMeta.badge },
+    { label: 'Mode', value: providerMeta.label, detail: hasOpenRouterKey ? 'Live via OpenRouter' : 'Fallback siap pakai' },
     { label: 'Tabs aktif', value: '5+', detail: 'Copy, image, video, campaign, copilot' },
     { label: 'Pilot note', value: 'Advanced', detail: 'Hasil bergantung prompt & taste user' },
-  ]), [providerMeta.label, providerMeta.badge, providerId]);
+  ]), [providerMeta.label, hasOpenRouterKey]);
 
   const updateProviderConfig = (patch: Partial<ProviderConfigMap[ProviderId]>) => {
     setProviderConfigs((current) => ({
       ...current,
-      [providerId]: {
-        ...current[providerId],
+      openrouter: {
+        ...current.openrouter,
         ...patch,
       },
     }));
+  };
+
+  const applyVideoPreset = (presetId: string) => {
+    const preset = VIDEO_PRESETS.find((item) => item.id === presetId);
+    if (!preset) return;
+    setVideoPresetId(preset.id);
+    setVideoMotion(preset.motion);
+    setVideoDuration(preset.duration);
+    setVideoPlatform(preset.platform);
+    setVideoIdea((current) => current.trim() ? current : preset.starter);
   };
 
   const runCopy = async () => {
@@ -331,10 +388,10 @@ export default function AdvancedContentStudio({
     }
     setLoadingKey('copy');
     try {
-      const result = providerId === 'demo'
+      const result = !hasOpenRouterKey
         ? createCopyFallback(copyType, copyTone, copyPrompt)
         : await requestProviderText({
-            providerId,
+            providerId: 'openrouter',
             config: providerConfig,
             messages: [
               {
@@ -363,10 +420,10 @@ export default function AdvancedContentStudio({
     }
     setLoadingKey('image');
     try {
-      const result = providerId === 'demo'
+      const result = !hasOpenRouterKey
         ? createImageFallback(imagePrompt, 'Studio Visual', artStyle, aspectRatio, negativePrompt)
         : await requestProviderText({
-            providerId,
+            providerId: 'openrouter',
             config: providerConfig,
             messages: [
               {
@@ -395,10 +452,10 @@ export default function AdvancedContentStudio({
     }
     setLoadingKey('video');
     try {
-      const result = providerId === 'demo'
+      const result = !hasOpenRouterKey
         ? createVideoFallback(videoIdea, videoMotion, videoDuration, videoPlatform)
         : await requestProviderText({
-            providerId,
+            providerId: 'openrouter',
             config: providerConfig,
             messages: [
               {
@@ -427,10 +484,10 @@ export default function AdvancedContentStudio({
     }
     setLoadingKey('campaign');
     try {
-      const result = providerId === 'demo'
+      const result = !hasOpenRouterKey
         ? createCampaignFallback(campaignProduct, campaignOffer, campaignAudience, campaignGoal)
         : await requestProviderText({
-            providerId,
+            providerId: 'openrouter',
             config: providerConfig,
             messages: [
               {
@@ -459,10 +516,10 @@ export default function AdvancedContentStudio({
     }
     setLoadingKey('copilot');
     try {
-      const result = providerId === 'demo'
+      const result = !hasOpenRouterKey
         ? createChatFallback(copilotInput)
         : await requestProviderText({
-            providerId,
+            providerId: 'openrouter',
             config: providerConfig,
             messages: [
               {
@@ -570,7 +627,7 @@ export default function AdvancedContentStudio({
             })}
           </div>
           <div className={`mt-4 rounded-2xl p-4 text-xs leading-5 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
-            <strong>Catatan:</strong> konfigurasi provider disimpan lokal di browser seat ini. Jadi tiap pilot bisa punya style, key, dan model sendiri.
+            <strong>Catatan:</strong> studio ini sekarang dipusatkan ke OpenRouter saja. Kalau API key belum diisi, sistem tetap bisa jalan pakai fallback default supaya pilot tidak mandek.
           </div>
         </aside>
 
@@ -680,32 +737,96 @@ export default function AdvancedContentStudio({
                     <FieldHelp
                       title="Motion Board"
                       description="Fitur ini dipakai untuk menyusun storyboard video pendek, urutan beat, motion, durasi, dan platform target."
-                      howToUse="Isi ide video, pilih motion dan durasi, tentukan platform, lalu generate storyboard. Gunakan hasilnya sebagai panduan editor atau generator video."
+                      howToUse="Pilih preset video dulu kalau ingin cepat. Isi ide utama, lalu klik generate storyboard. Kalau butuh kontrol lebih, baru buka pengaturan lanjutan."
                     />
                   </div>
-                  <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Susun storyboard video pendek, beat sheet, dan overlay sebelum produksi.</p>
+                  <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Mode ini sengaja dibuat simpel: pakai preset default dulu, lalu sistem bantu susun storyboard yang lebih siap eksekusi.</p>
                 </div>
-                <button type="button" onClick={() => void runVideoBoard()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
-                  {loadingKey === 'video' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                  Generate storyboard
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowVideoAdvanced((current) => !current)}
+                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${
+                      isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <Settings2 size={16} />
+                    {showVideoAdvanced ? 'Sembunyikan pengaturan' : 'Pengaturan lanjutan'}
+                  </button>
+                  <button type="button" onClick={() => void runVideoBoard()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
+                    {loadingKey === 'video' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    Generate storyboard
+                  </button>
+                </div>
               </div>
 
               <div className="grid gap-5 2xl:grid-cols-[1.05fr_0.95fr]">
                 <div className="space-y-4">
-                  <textarea value={videoIdea} onChange={(e) => setVideoIdea(e.target.value)} rows={5} placeholder="Contoh: video hook calon driver rental, buka dengan mobil premium + syarat daftar paling penting..." className={`${fieldClass} min-h-[132px] resize-y leading-6`} />
-                  <div className="flex flex-wrap gap-2">
-                    {VIDEO_MOTIONS.map((item) => <ChoicePill key={item} active={videoMotion === item} label={item} onClick={() => setVideoMotion(item)} isDark={isDark} />)}
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {VIDEO_PRESETS.map((preset) => {
+                      const active = videoPresetId === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => applyVideoPreset(preset.id)}
+                          className={`rounded-[22px] border p-4 text-left transition ${
+                            active
+                              ? isDark
+                                ? 'border-violet-400/40 bg-violet-500/10 shadow-lg shadow-violet-500/10'
+                                : 'border-violet-200 bg-violet-50 shadow-sm'
+                              : isDark
+                                ? 'border-white/10 bg-slate-900/70 hover:border-violet-400/20'
+                                : 'border-slate-200 bg-slate-50 hover:border-violet-200 hover:bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-bold">{preset.label}</p>
+                            {active ? <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Default</span> : null}
+                          </div>
+                          <p className={`mt-2 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{preset.detail}</p>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {VIDEO_DURATIONS.map((item) => <ChoicePill key={item} active={videoDuration === item} label={item} onClick={() => setVideoDuration(item)} isDark={isDark} />)}
+
+                  <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>{videoPlatform}</span>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{videoDuration}</span>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{videoMotion}</span>
+                    </div>
+                    <p className={`mt-3 text-xs leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Default ini sengaja dibikin aman dulu. Kalau user tidak mau ribet, cukup isi ide utama di bawah lalu generate. Pengaturan lanjutan hanya dipakai kalau benar-benar perlu.
+                    </p>
                   </div>
-                  <input value={videoPlatform} onChange={(e) => setVideoPlatform(e.target.value)} placeholder="Platform target, misal Instagram Reels / TikTok / YouTube Shorts" className={fieldClass} />
+
+                  <textarea value={videoIdea} onChange={(e) => setVideoIdea(e.target.value)} rows={5} placeholder="Contoh: bikin video promo rental mobil premium, buka dengan hook paling mahal, sorot benefit utama, lalu tutup dengan CTA booking." className={`${fieldClass} min-h-[132px] resize-y leading-6`} />
+
+                  {showVideoAdvanced ? (
+                    <div className={`space-y-4 rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold">Fine tune lane</p>
+                        <FieldHelp
+                          title="Pengaturan lanjutan video"
+                          description="Bagian ini hanya untuk pilot yang mau override default preset seperti motion, durasi, atau platform target."
+                          howToUse="Kalau hasil default sudah cukup, abaikan bagian ini. Pakai hanya saat butuh eksperimen khusus atau style video yang lebih presisi."
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {VIDEO_MOTIONS.map((item) => <ChoicePill key={item} active={videoMotion === item} label={item} onClick={() => setVideoMotion(item)} isDark={isDark} />)}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {VIDEO_DURATIONS.map((item) => <ChoicePill key={item} active={videoDuration === item} label={item} onClick={() => setVideoDuration(item)} isDark={isDark} />)}
+                      </div>
+                      <input value={videoPlatform} onChange={(e) => setVideoPlatform(e.target.value)} placeholder="Platform target, misal Instagram Reels / TikTok / YouTube Shorts" className={fieldClass} />
+                    </div>
+                  ) : null}
                 </div>
                 <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                   <img src={videoPreview} alt="Video preview" className="w-full rounded-[24px] object-cover shadow-sm" />
                   <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Ini preview mood board motion. Output utamanya tetap storyboard teks agar pilot bebas eksekusi dengan tools video apa pun.
+                    Ini preview mood board motion. Output utamanya tetap storyboard teks agar pilot tinggal eksekusi di tool video mana pun tanpa ribet setup.
                   </p>
                 </div>
               </div>
@@ -801,14 +922,14 @@ export default function AdvancedContentStudio({
             <div className="space-y-5">
               <div>
                 <div className="flex items-start gap-2">
-                  <h3 className="text-xl font-bold">Pilot Config</h3>
+                  <h3 className="text-xl font-bold">OpenRouter Console</h3>
                   <FieldHelp
-                    title="Pilot Config"
-                    description="Panel ini dipakai untuk memilih provider AI, memasukkan API key, model, dan endpoint override per browser seat."
-                    howToUse="Pilih provider dulu, isi API key aktif kalau ada, tentukan model yang ingin dipakai, lalu simpan saja di browser ini. Setiap pilot bisa punya konfigurasi berbeda."
+                    title="OpenRouter Console"
+                    description="Panel ini sekarang dipusatkan ke OpenRouter saja supaya pilot tidak bingung milih terlalu banyak provider."
+                    howToUse="Kalau ada API key OpenRouter, isi di sini lalu pilih model. Kalau belum ada, biarkan kosong dan studio tetap pakai fallback default untuk belajar workflow."
                   />
                 </div>
-                <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Atur provider, API key, model, dan endpoint. Ini sengaja dipisah agar tiap pilot bisa punya setup sendiri.</p>
+                <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Sengaja dibuat satu jalur saja: OpenRouter. Lebih simpel, lebih modern, dan user tidak perlu pusing milih terlalu banyak engine.</p>
               </div>
               <div className={`grid gap-3 md:grid-cols-3 ${isDark ? '' : ''}`}>
                 <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
@@ -817,7 +938,7 @@ export default function AdvancedContentStudio({
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Current lane</p>
                   </div>
                   <p className="mt-3 text-base font-bold">{providerMeta.label}</p>
-                  <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{providerMeta.badge}</p>
+                  <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Semua tool studio sekarang dirouting ke OpenRouter.</p>
                 </div>
                 <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                   <div className="flex items-center gap-2">
@@ -825,62 +946,38 @@ export default function AdvancedContentStudio({
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">API status</p>
                   </div>
                   <p className="mt-3 text-base font-bold">{providerConfig.apiKey ? 'Key loaded' : 'Manual / demo'}</p>
-                  <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{maskSecret(providerConfig.apiKey)}</p>
+                  <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{maskSecret(providerConfig.apiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '')}</p>
                 </div>
                 <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                   <div className="flex items-center gap-2">
                     <Globe2 size={15} className="text-purple-500" />
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Endpoint mode</p>
                   </div>
-                  <p className="mt-3 text-base font-bold">{providerMeta.supportsBaseUrl ? 'Custom endpoint' : 'Managed default'}</p>
-                  <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{providerConfig.baseUrl || providerMeta.baseUrl || 'Gunakan endpoint bawaan provider'}</p>
+                  <p className="mt-3 text-base font-bold">Managed default</p>
+                  <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{providerMeta.baseUrl}</p>
                 </div>
               </div>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {PROVIDER_IDS.map((id) => {
-                  const meta = PROVIDER_META[id];
-                  const active = providerId === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setProviderId(id)}
-                      className={`rounded-[24px] p-4 text-left transition ${
-                        active
-                          ? isDark
-                            ? 'bg-blue-500/15 ring-2 ring-blue-400/40'
-                            : 'bg-blue-50 ring-2 ring-blue-200'
-                          : isDark
-                            ? 'bg-slate-900 ring-1 ring-white/10 hover:ring-white/20'
-                            : 'bg-white ring-1 ring-slate-200 hover:ring-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-bold">{meta.label}</span>
-                        {active ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle2 size={12} />
-                            Live slot
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className={`mt-2 text-xs font-semibold ${active ? (isDark ? 'text-blue-200' : 'text-blue-700') : isDark ? 'text-slate-400' : 'text-slate-500'}`}>{meta.badge}</p>
-                      <p className={`mt-2 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{meta.description}</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
-                          Model: {providerConfigs[id].model || meta.defaultModel || 'manual'}
-                        </span>
-                        {meta.supportsBaseUrl ? (
-                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
-                            Endpoint custom
-                          </span>
-                        ) : null}
-                      </div>
-                    </button>
-                  );
-                })}
+
+              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold">Slot default OpenRouter</p>
+                    <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Cukup satu jalur, tinggal pilih model yang cocok. Selebihnya biarkan setting default supaya user tidak pusing.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowProviderConsole((current) => !current)}
+                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${
+                      isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Settings2 size={16} />
+                    {showProviderConsole ? 'Tutup console' : 'Buka console'}
+                  </button>
+                </div>
               </div>
 
+              {showProviderConsole ? (
               <div className={`rounded-[28px] p-5 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-sm'}`}>
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
@@ -888,14 +985,14 @@ export default function AdvancedContentStudio({
                       <p className="text-sm font-bold">Operator Console</p>
                       <FieldHelp
                         title="Operator Console"
-                        description="Bagian ini adalah tempat isi detail teknis provider yang akan dipakai oleh lane studio saat generate output."
-                        howToUse="Isi API key, model, dan kalau perlu base URL custom. Kalau hanya belajar atau demo, field bisa dibiarkan kosong dan sistem akan pakai fallback lokal."
+                        description="Bagian ini adalah tempat isi detail OpenRouter yang akan dipakai oleh lane studio saat generate output."
+                        howToUse="Isi API key OpenRouter dan model utama. Kalau tidak diisi, studio akan tetap hidup memakai fallback lokal supaya pilot tidak berhenti kerja."
                       />
                     </div>
                     <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Simpan slot provider, model utama, dan endpoint override khusus untuk pilot ini.</p>
                   </div>
                   <div className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200'}`}>
-                    {providerMeta.label}
+                    OpenRouter only
                   </div>
                 </div>
 
@@ -931,24 +1028,25 @@ export default function AdvancedContentStudio({
                       value={providerConfig.baseUrl}
                       onChange={(e) => updateProviderConfig({ baseUrl: e.target.value })}
                       placeholder={providerMeta.baseUrl || 'Tidak perlu diubah'}
-                      disabled={!providerMeta.supportsBaseUrl}
+                      disabled
                       className={`${fieldClass} disabled:cursor-not-allowed disabled:opacity-55`}
                     />
-                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{providerMeta.supportsBaseUrl ? 'Gunakan hanya kalau pilot memang butuh endpoint compatible/custom proxy.' : 'Provider ini memang tidak butuh override endpoint.'}</p>
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Tidak perlu diubah. Studio ini sengaja dikunci ke endpoint default OpenRouter.</p>
                   </label>
                 </div>
               </div>
+              ) : null}
 
               <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
                 <div className={`rounded-[24px] p-4 text-sm leading-6 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-amber-50 text-amber-800 border border-amber-100'}`}>
-                  <strong>Mode advanced:</strong> studio ini memang bukan autopilot ajaib. Ia cuma cockpit. Kalau prompt, style, dan model yang dipakai bagus, output ikut naik. Kalau setup pilot berantakan, hasilnya juga ikut biasa.
+                  <strong>Mode advanced:</strong> walau jalurnya sekarang disederhanakan ke OpenRouter, hasil tetap bergantung pada prompt, taste, dan eksekusi pilot. Jadi cockpit ini sengaja dibuat simpel, bukan serba otomatis.
                 </div>
                 <div className={`rounded-[24px] p-4 text-sm leading-6 ${isDark ? 'bg-slate-950/80 text-slate-300 ring-1 ring-white/10' : 'bg-slate-50 text-slate-700 border border-slate-200'}`}>
                   <div className="flex items-center gap-2">
                     <ShieldCheck size={15} className="text-emerald-500" />
                     <strong>Ops note</strong>
                   </div>
-                  <p className="mt-2">Slot provider disimpan lokal per browser seat. Jadi tiap pilot bisa punya taste, key, model, dan endpoint berbeda tanpa saling bentrok.</p>
+                  <p className="mt-2">Key dan model OpenRouter tetap disimpan lokal per browser seat. Jadi tiap pilot masih bisa punya rasa kerja sendiri tanpa membebani user awam dengan terlalu banyak pilihan provider.</p>
                 </div>
               </div>
             </div>

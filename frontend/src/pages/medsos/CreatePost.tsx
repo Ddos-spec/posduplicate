@@ -60,7 +60,7 @@ export default function CreatePost() {
     { label: 'Copy Lab', note: 'Hook, angle, CTA' },
     { label: 'Campaign Blueprint', note: 'Offer + audience + funnel' },
     { label: 'Copilot', note: 'Brainstorm cepat' },
-    { label: 'Pilot Config', note: 'Provider, model, endpoint' },
+    { label: 'OpenRouter Console', note: 'Satu jalur, setting simpel' },
   ]), []);
 
   const handleGenerateAi = async () => {
@@ -179,7 +179,7 @@ export default function CreatePost() {
               />
             </div>
             <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Biar konfigurasi banyak tetap waras, halaman ini dijadikan satu cockpit: pilih engine foto/video, racik prompt, atur provider, lalu lempar ke publish bridge atau planner tanpa pindah tool.
+              Biar konfigurasi banyak tetap waras, halaman ini dijadikan satu cockpit: pilih engine foto/video, racik prompt, pakai default OpenRouter yang sudah disederhanakan, lalu lempar ke publish bridge atau planner tanpa pindah tool.
             </p>
             <div className="mt-5 grid gap-3 md:grid-cols-2">
               {modeCards.map((item) => {
