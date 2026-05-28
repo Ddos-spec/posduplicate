@@ -120,6 +120,40 @@ const VIDEO_PRESETS: Array<{
   },
 ];
 
+const IMAGE_PRESETS: Array<{
+  id: string;
+  label: string;
+  detail: string;
+  style: (typeof ART_STYLES)[number];
+  ratio: AspectRatio;
+  starter: string;
+}> = [
+  {
+    id: 'hero',
+    label: 'Hero Produk',
+    detail: 'Visual utama untuk ads / landing',
+    style: 'Luxury Product',
+    ratio: '16:9',
+    starter: 'Hero visual produk utama, rapi, clean, fokus ke produk dan value paling mahal.',
+  },
+  {
+    id: 'social',
+    label: 'Konten Sosial',
+    detail: 'Feed / thumbnail / promosi ringan',
+    style: 'Editorial',
+    ratio: '1:1',
+    starter: 'Visual promosi sosial media yang clean, menarik, dan gampang dibaca dalam sekali lihat.',
+  },
+  {
+    id: 'catalog',
+    label: 'Katalog Premium',
+    detail: 'Untuk katalog dan listing',
+    style: 'Photorealistic',
+    ratio: '4:3',
+    starter: 'Foto katalog yang terang, rapi, fokus ke detail produk, dan siap dipakai listing atau brosur.',
+  },
+];
+
 function mergeProviderConfigs(source?: Partial<ProviderConfigMap>): ProviderConfigMap {
   const defaults = createDefaultProviderConfigs();
   if (!source) return defaults;
@@ -252,6 +286,8 @@ export default function AdvancedContentStudio({
 
   const [copilotInput, setCopilotInput] = useState('');
   const [copilotOutput, setCopilotOutput] = useState('');
+  const [imagePresetId, setImagePresetId] = useState<string>('hero');
+  const [showImageAdvanced, setShowImageAdvanced] = useState(false);
   const [videoPresetId, setVideoPresetId] = useState<string>('hook');
   const [showVideoAdvanced, setShowVideoAdvanced] = useState(false);
   const [showProviderConsole, setShowProviderConsole] = useState(false);
@@ -339,6 +375,12 @@ export default function AdvancedContentStudio({
   }, [preferredTab]);
 
   useEffect(() => {
+    if (imagePrompt.trim()) return;
+    applyImagePreset(imagePresetId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (videoIdea.trim()) return;
     applyVideoPreset(videoPresetId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -355,12 +397,6 @@ export default function AdvancedContentStudio({
     () => buildPreviewSvg(videoIdea || 'Motion storyboard', `${videoPlatform} · ${videoMotion}`, 'Video Board', `${videoIdea}-${videoPlatform}-${videoMotion}`),
     [videoIdea, videoPlatform, videoMotion],
   );
-  const studioStats = useMemo(() => ([
-    { label: 'Mode', value: providerMeta.label, detail: hasOpenRouterKey ? 'Live via OpenRouter' : 'Fallback siap pakai' },
-    { label: 'Tabs aktif', value: '5+', detail: 'Copy, image, video, campaign, copilot' },
-    { label: 'Pilot note', value: 'Advanced', detail: 'Hasil bergantung prompt & taste user' },
-  ]), [providerMeta.label, hasOpenRouterKey]);
-
   const updateProviderConfig = (patch: Partial<ProviderConfigMap[ProviderId]>) => {
     setProviderConfigs((current) => ({
       ...current,
@@ -379,6 +415,15 @@ export default function AdvancedContentStudio({
     setVideoDuration(preset.duration);
     setVideoPlatform(preset.platform);
     setVideoIdea((current) => current.trim() ? current : preset.starter);
+  };
+
+  const applyImagePreset = (presetId: string) => {
+    const preset = IMAGE_PRESETS.find((item) => item.id === presetId);
+    if (!preset) return;
+    setImagePresetId(preset.id);
+    setArtStyle(preset.style);
+    setAspectRatio(preset.ratio);
+    setImagePrompt((current) => current.trim() ? current : preset.starter);
   };
 
   const runCopy = async () => {
@@ -552,86 +597,70 @@ export default function AdvancedContentStudio({
   };
 
   return (
-    <div className="space-y-5">
-      <div className={`rounded-[32px] p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="space-y-4">
+      <div className={`rounded-[32px] p-5 md:p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
               <Sparkles size={14} />
-              Content Studio Advanced
+              Content Studio
             </div>
             <div className="flex items-start gap-2">
-              <h2 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Cockpit untuk pilot konten yang mau ngulik sendiri</h2>
+              <h2 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Studio konten yang lebih simpel, tapi tetap lengkap</h2>
               <FieldHelp
-                title="Content Studio Advanced"
-                description="Ini cockpit utama untuk meracik copy, visual brief, storyboard video, blueprint campaign, sampai konfigurasi provider AI."
-                howToUse="Pilih tool dari sidebar kiri, isi brief atau prompt sesuai tujuan, generate output, lalu copy atau lempar ke composer publish di panel kanan halaman create content."
+                title="Content Studio"
+                description="Ini cockpit utama untuk bikin caption, visual brief, storyboard video, dan blueprint campaign tanpa bikin user kebanyakan setting."
+                howToUse="Pilih mode kerja dari tombol di bawah, isi ide utama, lalu generate. Kalau perlu kontrol lebih detail, baru buka pengaturan lanjutan."
               />
             </div>
             <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Halaman ini sengaja dibuat advanced. Sistem membantu bikin brief, storyboard, dan blueprint — tapi hasil bagus tetap murni bergantung prompt, taste, dan konfigurasi pilot.
+              Jalurnya sengaja dipotong: fokus ke ide utama, preset cepat, dan OpenRouter sebagai engine default. Fitur tetap ada, tapi tidak dijejelkan semua ke muka user.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:w-full 2xl:w-[360px]">
-            {studioStats.map((stat) => (
-              <div key={stat.label} className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-100'}`}>
-                <p className={`text-[10px] uppercase tracking-[0.2em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{stat.label}</p>
-                <p className="mt-2 text-lg font-bold">{stat.value}</p>
-                <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{stat.detail}</p>
-              </div>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            <div className={`rounded-2xl px-4 py-3 text-sm ${isDark ? 'bg-slate-900 ring-1 ring-white/10 text-slate-200' : 'bg-slate-50 border border-slate-200 text-slate-700'}`}>
+              <span className="block text-[10px] uppercase tracking-[0.18em] opacity-60">Mode</span>
+              <span className="font-bold">{providerMeta.label}</span>
+            </div>
+            <div className={`rounded-2xl px-4 py-3 text-sm ${isDark ? 'bg-slate-900 ring-1 ring-white/10 text-slate-200' : 'bg-slate-50 border border-slate-200 text-slate-700'}`}>
+              <span className="block text-[10px] uppercase tracking-[0.18em] opacity-60">Status</span>
+              <span className="font-bold">{hasOpenRouterKey ? 'Live key siap' : 'Fallback aman'}</span>
+            </div>
           </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${
+                  active
+                    ? isDark
+                      ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30'
+                      : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                    : isDark
+                      ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800'
+                      : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-white'
+                }`}
+              >
+                <Icon size={16} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className={`mt-4 rounded-2xl px-4 py-3 text-xs leading-6 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
+          <strong>Catatan:</strong> OpenRouter jadi jalur utama. Kalau API key belum diisi, studio tetap hidup pakai fallback default supaya user tetap bisa kerja tanpa ribet setup.
         </div>
       </div>
 
-      <div className="grid gap-5 2xl:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className={`rounded-[28px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
-          <div className="mb-3 flex items-center gap-2">
-            <p className={`text-[11px] uppercase tracking-[0.2em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Studio tools</p>
-            <FieldHelp
-              title="Studio tools"
-              description="Ini daftar mode kerja di dalam cockpit, mulai dari copy, visual, video, campaign, copilot, sampai provider config."
-              howToUse="Klik salah satu tool sesuai kebutuhan. Kalau butuh caption pilih Copy Lab, kalau butuh gambar pilih Visual Brief, kalau butuh video pilih Motion Board, dan seterusnya."
-            />
-          </div>
-          <div className="space-y-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full rounded-2xl p-3 text-left transition ${
-                    active
-                      ? isDark
-                        ? 'bg-blue-500/15 ring-1 ring-blue-400/30'
-                        : 'bg-blue-50 ring-1 ring-blue-200'
-                      : isDark
-                        ? 'hover:bg-slate-900'
-                        : 'hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 rounded-xl p-2 ${active ? 'bg-blue-600 text-white' : isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
-                      <Icon size={16} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{tab.label}</p>
-                      <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{tab.helper}</p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <div className={`mt-4 rounded-2xl p-4 text-xs leading-5 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
-            <strong>Catatan:</strong> studio ini sekarang dipusatkan ke OpenRouter saja. Kalau API key belum diisi, sistem tetap bisa jalan pakai fallback default supaya pilot tidak mandek.
-          </div>
-        </aside>
-
-        <div className={`rounded-[28px] p-5 md:p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
+      <div className={`rounded-[28px] p-5 md:p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
           {activeTab === 'copy' && (
             <div className="space-y-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -685,27 +714,90 @@ export default function AdvancedContentStudio({
                     <FieldHelp
                       title="Visual Brief"
                       description="Fitur ini dipakai untuk menyusun prompt visual, art direction, ratio, dan negative prompt untuk kebutuhan foto atau image generation."
-                      howToUse="Isi visual utama yang diinginkan, negative prompt, style, dan rasio. Lalu generate visual brief untuk diberikan ke tim desain atau generator gambar."
+                      howToUse="Pilih preset visual dulu, isi ide utama, lalu generate. Kalau perlu rasio, style, atau negative prompt yang lebih spesifik, baru buka pengaturan lanjutan."
                     />
                   </div>
-                  <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Bangun prompt dan direction foto / hero visual sebelum dieksekusi di generator atau tim desain.</p>
+                  <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Visual lane juga saya bikin cepat: pilih preset, isi ide utama, lalu generate brief tanpa terlalu banyak atur-atur di depan.</p>
                 </div>
-                <button type="button" onClick={() => void runImageBrief()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
-                  {loadingKey === 'image' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                  Generate visual brief
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowImageAdvanced((current) => !current)}
+                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${
+                      isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <Settings2 size={16} />
+                    {showImageAdvanced ? 'Sembunyikan detail' : 'Atur detail'}
+                  </button>
+                  <button type="button" onClick={() => void runImageBrief()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
+                    {loadingKey === 'image' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    Generate visual brief
+                  </button>
+                </div>
               </div>
 
               <div className="grid gap-5 2xl:grid-cols-[1.05fr_0.95fr]">
                 <div className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {IMAGE_PRESETS.map((preset) => {
+                      const active = imagePresetId === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => applyImagePreset(preset.id)}
+                          className={`rounded-[22px] border p-4 text-left transition ${
+                            active
+                              ? isDark
+                                ? 'border-blue-400/40 bg-blue-500/10 shadow-lg shadow-blue-500/10'
+                                : 'border-blue-200 bg-blue-50 shadow-sm'
+                              : isDark
+                                ? 'border-white/10 bg-slate-900/70 hover:border-blue-400/20'
+                                : 'border-slate-200 bg-slate-50 hover:border-blue-200 hover:bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-bold">{preset.label}</p>
+                            {active ? <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Default</span> : null}
+                          </div>
+                          <p className={`mt-2 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{preset.detail}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   <textarea value={imagePrompt} onChange={(e) => setImagePrompt(e.target.value)} rows={5} placeholder="Contoh: sedan hitam premium di jalan basah malam hari, city glow, cocok untuk hero rental mobil..." className={`${fieldClass} min-h-[132px] resize-y leading-6`} />
-                  <textarea value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} rows={3} placeholder="Negative prompt" className={`${fieldClass} min-h-[92px] resize-y leading-6`} />
-                  <div className="flex flex-wrap gap-2">
-                    {ART_STYLES.map((item) => <ChoicePill key={item} active={artStyle === item} label={item} onClick={() => setArtStyle(item)} isDark={isDark} />)}
+
+                  <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>{artStyle}</span>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{aspectRatio}</span>
+                    </div>
+                    <p className={`mt-3 text-xs leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Default visual ini sengaja disederhanakan. Isi ide utama dulu, lalu generate. Detail seperti negative prompt dan rasio lanjutan hanya dibuka saat benar-benar dibutuhkan.
+                    </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {ASPECT_RATIOS.map((item) => <ChoicePill key={item} active={aspectRatio === item} label={item} onClick={() => setAspectRatio(item)} isDark={isDark} />)}
-                  </div>
+
+                  {showImageAdvanced ? (
+                    <div className={`space-y-4 rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold">Fine tune visual</p>
+                        <FieldHelp
+                          title="Pengaturan lanjutan visual"
+                          description="Bagian ini hanya untuk pilot yang ingin mengatur style, ratio, dan negative prompt lebih spesifik."
+                          howToUse="Kalau hasil default sudah cukup, jangan dibuka. Pakai hanya saat butuh eksplorasi visual yang lebih detail."
+                        />
+                      </div>
+                      <textarea value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} rows={3} placeholder="Negative prompt" className={`${fieldClass} min-h-[92px] resize-y leading-6`} />
+                      <div className="flex flex-wrap gap-2">
+                        {ART_STYLES.map((item) => <ChoicePill key={item} active={artStyle === item} label={item} onClick={() => setArtStyle(item)} isDark={isDark} />)}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {ASPECT_RATIOS.map((item) => <ChoicePill key={item} active={aspectRatio === item} label={item} onClick={() => setAspectRatio(item)} isDark={isDark} />)}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
@@ -730,66 +822,108 @@ export default function AdvancedContentStudio({
 
           {activeTab === 'video' && (
             <div className="space-y-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <div className="flex items-start gap-2">
-                    <h3 className="text-xl font-bold">Motion Board</h3>
-                    <FieldHelp
-                      title="Motion Board"
-                      description="Fitur ini dipakai untuk menyusun storyboard video pendek, urutan beat, motion, durasi, dan platform target."
-                      howToUse="Pilih preset video dulu kalau ingin cepat. Isi ide utama, lalu klik generate storyboard. Kalau butuh kontrol lebih, baru buka pengaturan lanjutan."
-                    />
+              <div className={`overflow-hidden rounded-[32px] border p-6 md:p-8 ${
+                isDark
+                  ? 'border-fuchsia-500/20 bg-[radial-gradient(circle_at_top,_rgba(236,72,153,0.28),_transparent_42%),linear-gradient(180deg,rgba(73,11,44,0.96),rgba(28,7,26,0.98))]'
+                  : 'border-fuchsia-100 bg-[radial-gradient(circle_at_top,_rgba(244,114,182,0.32),_transparent_40%),linear-gradient(180deg,#fff1f7,#fff9fc)]'
+              }`}>
+                <div className="mx-auto max-w-5xl space-y-6">
+                  <div className="text-center">
+                    <p className={`text-[11px] font-bold uppercase tracking-[0.24em] ${isDark ? 'text-fuchsia-200/80' : 'text-fuchsia-500'}`}>Marketing Studio</p>
+                    <div className="mt-3 flex items-start justify-center gap-2">
+                      <h3 className={`max-w-3xl text-3xl font-black uppercase tracking-tight md:text-5xl ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                        Turn any product into a video ad
+                      </h3>
+                      <FieldHelp
+                        title="Video Marketing Studio"
+                        description="Lane ini dibuat seperti studio prompt cepat: fokus ke brief inti, preset style, lalu generate storyboard tanpa bikin user tenggelam di setting."
+                        howToUse="Pilih preset yang paling dekat, isi brief produk atau ide utama, lalu generate. Kalau perlu kontrol lebih detail, baru buka pengaturan lanjutan di bawah."
+                      />
+                    </div>
+                    <p className={`mx-auto mt-3 max-w-2xl text-sm leading-6 ${isDark ? 'text-fuchsia-100/75' : 'text-slate-600'}`}>
+                      Fokus ke brief utama, hook, tone, dan CTA. Setting berat disembunyikan supaya pilot bisa langsung kerja tanpa ribet.
+                    </p>
                   </div>
-                  <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Mode ini sengaja dibuat simpel: pakai preset default dulu, lalu sistem bantu susun storyboard yang lebih siap eksekusi.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowVideoAdvanced((current) => !current)}
-                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${
-                      isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    <Settings2 size={16} />
-                    {showVideoAdvanced ? 'Sembunyikan pengaturan' : 'Pengaturan lanjutan'}
-                  </button>
-                  <button type="button" onClick={() => void runVideoBoard()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
-                    {loadingKey === 'video' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                    Generate storyboard
-                  </button>
+
+                  <div className={`rounded-[28px] border p-4 md:p-5 ${
+                    isDark
+                      ? 'border-white/10 bg-black/20 backdrop-blur'
+                      : 'border-white/70 bg-white/80 shadow-sm backdrop-blur'
+                  }`}>
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+                      <div className="space-y-4">
+                        <textarea
+                          value={videoIdea}
+                          onChange={(e) => setVideoIdea(e.target.value)}
+                          rows={4}
+                          placeholder="Contoh: buat video UGC casual bahasa Indonesia untuk produk AI glasses. Hook: kerja hands-free, terjemahan real-time, desain tetap seperti kacamata biasa. Tutup dengan CTA halus."
+                          className={`${fieldClass} min-h-[136px] resize-y border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0 ${isDark ? 'text-white placeholder:text-fuchsia-100/35' : 'text-slate-900 placeholder:text-slate-400'}`}
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          {VIDEO_PRESETS.map((preset) => {
+                            const active = videoPresetId === preset.id;
+                            return (
+                              <button
+                                key={preset.id}
+                                type="button"
+                                onClick={() => applyVideoPreset(preset.id)}
+                                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                                  active
+                                    ? isDark
+                                      ? 'bg-fuchsia-500/20 text-white ring-1 ring-fuchsia-300/40'
+                                      : 'bg-fuchsia-100 text-fuchsia-700 ring-1 ring-fuchsia-200'
+                                    : isDark
+                                      ? 'bg-white/5 text-fuchsia-100/85 hover:bg-white/10'
+                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                {preset.label}
+                              </button>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => setShowVideoAdvanced((current) => !current)}
+                            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                              isDark ? 'bg-white/5 text-fuchsia-100/85 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {showVideoAdvanced ? 'Sembunyikan detail' : 'Atur detail'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex min-w-[220px] flex-col gap-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className={`rounded-[22px] border p-3 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}>
+                            <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>Preset</p>
+                            <p className="mt-2 text-sm font-bold">{VIDEO_PRESETS.find((preset) => preset.id === videoPresetId)?.label ?? 'Default'}</p>
+                            <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Siap pakai</p>
+                          </div>
+                          <div className={`rounded-[22px] border p-3 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}>
+                            <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>Output</p>
+                            <p className="mt-2 text-sm font-bold">Storyboard</p>
+                            <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Hook + CTA</p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => void runVideoBoard()}
+                          disabled={loadingKey !== null}
+                          className="inline-flex items-center justify-center gap-2 rounded-[22px] bg-fuchsia-500 px-5 py-4 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-fuchsia-500/30 transition hover:bg-fuchsia-600 disabled:opacity-60"
+                        >
+                          {loadingKey === 'video' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                          Generate storyboard
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div className="grid gap-5 2xl:grid-cols-[1.05fr_0.95fr]">
                 <div className="space-y-4">
-                  <div className="grid gap-3 md:grid-cols-3">
-                    {VIDEO_PRESETS.map((preset) => {
-                      const active = videoPresetId === preset.id;
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => applyVideoPreset(preset.id)}
-                          className={`rounded-[22px] border p-4 text-left transition ${
-                            active
-                              ? isDark
-                                ? 'border-violet-400/40 bg-violet-500/10 shadow-lg shadow-violet-500/10'
-                                : 'border-violet-200 bg-violet-50 shadow-sm'
-                              : isDark
-                                ? 'border-white/10 bg-slate-900/70 hover:border-violet-400/20'
-                                : 'border-slate-200 bg-slate-50 hover:border-violet-200 hover:bg-white'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-bold">{preset.label}</p>
-                            {active ? <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Default</span> : null}
-                          </div>
-                          <p className={`mt-2 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{preset.detail}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-
                   <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>{videoPlatform}</span>
@@ -800,8 +934,6 @@ export default function AdvancedContentStudio({
                       Default ini sengaja dibikin aman dulu. Kalau user tidak mau ribet, cukup isi ide utama di bawah lalu generate. Pengaturan lanjutan hanya dipakai kalau benar-benar perlu.
                     </p>
                   </div>
-
-                  <textarea value={videoIdea} onChange={(e) => setVideoIdea(e.target.value)} rows={5} placeholder="Contoh: bikin video promo rental mobil premium, buka dengan hook paling mahal, sorot benefit utama, lalu tutup dengan CTA booking." className={`${fieldClass} min-h-[132px] resize-y leading-6`} />
 
                   {showVideoAdvanced ? (
                     <div className={`space-y-4 rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
@@ -1052,7 +1184,6 @@ export default function AdvancedContentStudio({
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }
