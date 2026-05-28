@@ -206,7 +206,8 @@ button, [role="button"] {
 @media (min-width: 1280px) {
   .mcs-roomy-view {
     zoom: 0.92;
-    width: calc(100% / 0.92);
+    width: 100%;
+    max-width: 100%;
     transform-origin: top left;
   }
 
@@ -345,7 +346,8 @@ button, [role="button"] {
 @media (min-width: 1280px) {
   .mcs-roomy-view {
     zoom: 0.9;
-    width: calc(100% / 0.9);
+    width: 100%;
+    max-width: 100%;
     transform-origin: top left;
   }
 
@@ -455,3 +457,76 @@ button, [role="button"] {
     max-height: none !important;
   }
 }
+
+/* MyCommerSocial anti horizontal overflow guardrail */
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.mcs-page-shell,
+.mcs-page-shell > *,
+.mcs-page-shell main,
+.mcs-page-shell section,
+.mcs-page-shell article,
+.mcs-page-shell aside,
+.mcs-page-shell header,
+.mcs-page-shell footer,
+.mcs-page-shell form,
+.mcs-page-shell .grid,
+.mcs-page-shell [class*="grid-cols-"],
+.mcs-page-shell [class*="flex"] {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.mcs-page-shell {
+  overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+  .mcs-page-shell {
+    overflow-x: hidden;
+  }
+}
+
+.mcs-page-shell img,
+.mcs-page-shell video,
+.mcs-page-shell canvas,
+.mcs-page-shell svg,
+.mcs-page-shell iframe {
+  max-width: 100%;
+}
+
+.mcs-page-shell input,
+.mcs-page-shell select,
+.mcs-page-shell textarea,
+.mcs-page-shell button {
+  max-width: 100%;
+}
+
+.mcs-page-shell .overflow-x-auto,
+.mcs-page-shell .overflow-x-scroll {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+}
+
+.mcs-page-shell table {
+  max-width: 100%;
+}
+
+.mcs-page-shell code,
+.mcs-page-shell pre,
+.mcs-page-shell [class*="break-all"] {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mcs-page-shell [class*="min-w-"] {
+  max-width: 100%;
+}
+
