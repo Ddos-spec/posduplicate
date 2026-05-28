@@ -24,8 +24,20 @@ const imageFallbackModels: StudioModelOption[] = [
   {
     id: 'google/gemini-3.1-flash-image-preview',
     name: 'Gemini 3.1 Flash Image Preview',
-    description: 'Fallback image model. Daftar lengkap akan muncul setelah OpenRouter berhasil dibaca.',
+    description: 'Fast image generation/editing lane. Daftar lengkap tetap dibaca dari OpenRouter kalau API key tersedia.',
     outputModalities: ['image', 'text'],
+  },
+  {
+    id: 'google/gemini-2.5-flash-image-preview',
+    name: 'Gemini 2.5 Flash Image Preview',
+    description: 'Fallback image model generasi sebelumnya untuk kompatibilitas.',
+    outputModalities: ['image', 'text'],
+  },
+  {
+    id: 'openai/gpt-image-1',
+    name: 'GPT Image 1',
+    description: 'OpenAI image model jika tersedia di akun OpenRouter.',
+    outputModalities: ['image'],
   },
 ];
 
@@ -33,11 +45,47 @@ const videoFallbackModels: StudioModelOption[] = [
   {
     id: 'google/veo-3.1',
     name: 'Veo 3.1',
-    description: 'Fallback video model dari dokumentasi OpenRouter. Daftar lengkap muncul kalau API key valid.',
+    description: 'Google Veo 3.1. Default video lane untuk hasil generasi modern.',
     supportedAspectRatios: ['16:9'],
     supportedDurations: [5, 8],
     supportedResolutions: ['720p'],
     generateAudio: true,
+  },
+  {
+    id: 'google/veo-3.1-fast',
+    name: 'Veo 3.1 Fast',
+    description: 'Veo fast mode untuk draft lebih cepat jika tersedia.',
+    supportedAspectRatios: ['16:9'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: true,
+  },
+  {
+    id: 'google/veo-3',
+    name: 'Veo 3',
+    description: 'Veo 3 standard fallback.',
+    supportedAspectRatios: ['16:9'],
+    supportedDurations: [8],
+    supportedResolutions: ['720p'],
+    generateAudio: true,
+  },
+  {
+    id: 'google/veo-3-fast',
+    name: 'Veo 3 Fast',
+    description: 'Veo 3 fast fallback untuk draft.',
+    supportedAspectRatios: ['16:9'],
+    supportedDurations: [8],
+    supportedResolutions: ['720p'],
+    generateAudio: true,
+  },
+  {
+    id: 'google/veo-2',
+    name: 'Veo 2',
+    description: 'Veo 2 fallback bila akun belum punya akses model terbaru.',
+    supportedAspectRatios: ['16:9'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: false,
   },
 ];
 

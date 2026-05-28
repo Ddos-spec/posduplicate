@@ -183,10 +183,16 @@ function maskSecret(value: string) {
 
 const FALLBACK_IMAGE_MODELS: ContentStudioModelOption[] = [
   { id: 'google/gemini-3.1-flash-image-preview', name: 'Gemini 3.1 Flash Image Preview', outputModalities: ['image', 'text'] },
+  { id: 'google/gemini-2.5-flash-image-preview', name: 'Gemini 2.5 Flash Image Preview', outputModalities: ['image', 'text'] },
+  { id: 'openai/gpt-image-1', name: 'GPT Image 1', outputModalities: ['image'] },
 ];
 
 const FALLBACK_VIDEO_MODELS: ContentStudioModelOption[] = [
   { id: 'google/veo-3.1', name: 'Veo 3.1', supportedAspectRatios: ['16:9'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'google/veo-3.1-fast', name: 'Veo 3.1 Fast', supportedAspectRatios: ['16:9'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
+  { id: 'google/veo-3', name: 'Veo 3', supportedAspectRatios: ['16:9'], supportedDurations: [8], supportedResolutions: ['720p'] },
+  { id: 'google/veo-3-fast', name: 'Veo 3 Fast', supportedAspectRatios: ['16:9'], supportedDurations: [8], supportedResolutions: ['720p'] },
+  { id: 'google/veo-2', name: 'Veo 2', supportedAspectRatios: ['16:9'], supportedDurations: [5, 8], supportedResolutions: ['720p'] },
 ];
 
 function getModelLabel(model: ContentStudioModelOption) {

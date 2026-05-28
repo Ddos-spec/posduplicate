@@ -243,3 +243,144 @@ button, [role="button"] {
     margin-top: 0.875rem !important;
   }
 }
+
+/* ===================================
+   MyCommerSocial global product redesign pass
+   =================================== */
+
+.mcs-page-shell {
+  --mcs-card-radius: 22px;
+  --mcs-page-gap: 0.95rem;
+}
+
+@media (min-width: 1024px) {
+  .mcs-page-shell > .space-y-6,
+  .mcs-page-shell > .space-y-5,
+  .mcs-page-shell > .space-y-4 {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mcs-page-gap);
+  }
+
+  .mcs-page-shell > .space-y-6 > :not([hidden]) ~ :not([hidden]),
+  .mcs-page-shell > .space-y-5 > :not([hidden]) ~ :not([hidden]),
+  .mcs-page-shell > .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0 !important;
+  }
+
+  .mcs-page-shell .rounded-\[40px\],
+  .mcs-page-shell .rounded-\[36px\],
+  .mcs-page-shell .rounded-\[32px\] {
+    border-radius: var(--mcs-card-radius) !important;
+    padding: 1.05rem !important;
+  }
+
+  .mcs-page-shell .rounded-\[28px\],
+  .mcs-page-shell .rounded-\[24px\] {
+    border-radius: 20px !important;
+    padding: 0.9rem !important;
+  }
+
+  .mcs-page-shell h1 {
+    font-size: clamp(1.45rem, 1.5vw, 2rem) !important;
+    line-height: 1.12 !important;
+  }
+
+  .mcs-page-shell h2 {
+    font-size: clamp(1.2rem, 1.15vw, 1.55rem) !important;
+    line-height: 1.18 !important;
+  }
+
+  .mcs-page-shell .text-3xl,
+  .mcs-page-shell .text-4xl,
+  .mcs-page-shell .text-5xl {
+    font-size: clamp(1.45rem, 1.55vw, 2.05rem) !important;
+    line-height: 1.12 !important;
+  }
+
+  .mcs-page-shell .p-8,
+  .mcs-page-shell .md\:p-8,
+  .mcs-page-shell .lg\:p-8 {
+    padding: 1.1rem !important;
+  }
+
+  .mcs-page-shell .p-6,
+  .mcs-page-shell .md\:p-6,
+  .mcs-page-shell .lg\:p-6 {
+    padding: 1rem !important;
+  }
+
+  .mcs-page-shell .gap-8,
+  .mcs-page-shell .gap-7,
+  .mcs-page-shell .gap-6 {
+    gap: 1rem !important;
+  }
+
+  .mcs-page-shell .gap-5,
+  .mcs-page-shell .gap-4 {
+    gap: 0.8rem !important;
+  }
+
+  .mcs-page-shell .mb-8,
+  .mcs-page-shell .mb-7,
+  .mcs-page-shell .mb-6,
+  .mcs-page-shell .mt-8,
+  .mcs-page-shell .mt-7,
+  .mcs-page-shell .mt-6 {
+    margin-top: 0.85rem !important;
+    margin-bottom: 0.85rem !important;
+  }
+
+  .mcs-page-shell input,
+  .mcs-page-shell select,
+  .mcs-page-shell textarea {
+    border-radius: 14px !important;
+  }
+
+  .mcs-page-shell button {
+    border-radius: 14px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .mcs-roomy-view {
+    zoom: 0.9;
+    width: calc(100% / 0.9);
+    transform-origin: top left;
+  }
+
+  .mcs-roomy-view .space-y-6 > :not([hidden]) ~ :not([hidden]),
+  .mcs-roomy-view .space-y-5 > :not([hidden]) ~ :not([hidden]),
+  .mcs-roomy-view .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0 !important;
+  }
+
+  .mcs-roomy-view .rounded-\[40px\],
+  .mcs-roomy-view .rounded-\[36px\],
+  .mcs-roomy-view .rounded-\[32px\] {
+    padding: 0.95rem !important;
+  }
+
+  .mcs-roomy-view .rounded-\[28px\],
+  .mcs-roomy-view .rounded-\[24px\] {
+    padding: 0.78rem !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .mcs-page-shell {
+    padding-bottom: 5rem;
+  }
+
+  .mcs-page-shell .grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .mcs-page-shell .rounded-\[40px\],
+  .mcs-page-shell .rounded-\[36px\],
+  .mcs-page-shell .rounded-\[32px\],
+  .mcs-page-shell .rounded-\[28px\],
+  .mcs-page-shell .rounded-\[24px\] {
+    border-radius: 20px !important;
+  }
+}
