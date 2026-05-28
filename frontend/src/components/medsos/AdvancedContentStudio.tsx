@@ -469,7 +469,10 @@ export default function AdvancedContentStudio({
         ? createImageFallback(imagePrompt, 'Studio Visual', artStyle, aspectRatio, negativePrompt)
         : await requestProviderText({
             providerId: 'openrouter',
-            config: providerConfig,
+            config: {
+              ...providerConfig,
+              model: (providerConfig.imageModel || providerConfig.model || '').trim(),
+            },
             messages: [
               {
                 role: 'system',
@@ -501,7 +504,10 @@ export default function AdvancedContentStudio({
         ? createVideoFallback(videoIdea, videoMotion, videoDuration, videoPlatform)
         : await requestProviderText({
             providerId: 'openrouter',
-            config: providerConfig,
+            config: {
+              ...providerConfig,
+              model: (providerConfig.videoModel || providerConfig.model || '').trim(),
+            },
             messages: [
               {
                 role: 'system',
@@ -938,7 +944,7 @@ export default function AdvancedContentStudio({
                   {showVideoAdvanced ? (
                     <div className={`space-y-4 rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold">Fine tune lane</p>
+                        <p className="text-sm font-bold">Atur Detail Video</p>
                         <FieldHelp
                           title="Pengaturan lanjutan video"
                           description="Bagian ini hanya untuk pilot yang mau override default preset seperti motion, durasi, atau platform target."
@@ -950,6 +956,11 @@ export default function AdvancedContentStudio({
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {VIDEO_DURATIONS.map((item) => <ChoicePill key={item} active={videoDuration === item} label={item} onClick={() => setVideoDuration(item)} isDark={isDark} />)}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {['TikTok', 'Instagram Reels', 'YouTube Shorts', 'Facebook Reels'].map((platform) => (
+                          <ChoicePill key={platform} active={videoPlatform === platform} label={platform} onClick={() => setVideoPlatform(platform)} isDark={isDark} />
+                        ))}
                       </div>
                       <input value={videoPlatform} onChange={(e) => setVideoPlatform(e.target.value)} placeholder="Platform target, misal Instagram Reels / TikTok / YouTube Shorts" className={fieldClass} />
                     </div>
@@ -1121,7 +1132,7 @@ export default function AdvancedContentStudio({
                         howToUse="Isi API key OpenRouter dan model utama. Kalau tidak diisi, studio akan tetap hidup memakai fallback lokal supaya pilot tidak berhenti kerja."
                       />
                     </div>
-                    <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Simpan slot provider, model utama, dan endpoint override khusus untuk pilot ini.</p>
+                    <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Isi key OpenRouter sekali, lalu bedakan model untuk kerja umum, foto, dan video supaya output tiap lane lebih pas.</p>
                   </div>
                   <div className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200'}`}>
                     OpenRouter only
@@ -1146,10 +1157,36 @@ export default function AdvancedContentStudio({
                   <label className="space-y-2">
                     <span className="flex items-center gap-2 text-sm font-semibold">
                       <Cpu size={14} className="text-blue-500" />
-                      Model
+                      Model umum
                     </span>
                     <input value={providerConfig.model} onChange={(e) => updateProviderConfig({ model: e.target.value })} placeholder={providerMeta.defaultModel} className={fieldClass} />
-                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Masukkan slug model yang memang mau dipaksa dipakai oleh pilot lane ini.</p>
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Dipakai untuk copy, campaign, dan copilot.</p>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <ImageIcon size={14} className="text-cyan-500" />
+                      Model foto
+                    </span>
+                    <input
+                      value={providerConfig.imageModel || ''}
+                      onChange={(e) => updateProviderConfig({ imageModel: e.target.value })}
+                      placeholder="google/gemini-2.5-flash-image-preview"
+                      className={fieldClass}
+                    />
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Khusus untuk Visual Brief / lane foto.</p>
+                  </label>
+                  <label className="space-y-2">
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <PlaySquare size={14} className="text-fuchsia-500" />
+                      Model video
+                    </span>
+                    <input
+                      value={providerConfig.videoModel || ''}
+                      onChange={(e) => updateProviderConfig({ videoModel: e.target.value })}
+                      placeholder="google/gemini-2.5-flash"
+                      className={fieldClass}
+                    />
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Khusus untuk Motion Board / lane video.</p>
                   </label>
                   <label className="space-y-2">
                     <span className="flex items-center gap-2 text-sm font-semibold">
