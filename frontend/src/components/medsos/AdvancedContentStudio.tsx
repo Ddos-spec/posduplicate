@@ -288,9 +288,13 @@ export default function AdvancedContentStudio({
   const [copilotOutput, setCopilotOutput] = useState('');
   const [imagePresetId, setImagePresetId] = useState<string>('hero');
   const [showImageAdvanced, setShowImageAdvanced] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
   const [videoPresetId, setVideoPresetId] = useState<string>('hook');
   const [showVideoAdvanced, setShowVideoAdvanced] = useState(false);
+  const [showVideoPreview, setShowVideoPreview] = useState(false);
   const [showProviderConsole, setShowProviderConsole] = useState(false);
+  const [showHelperTabs, setShowHelperTabs] = useState(false);
+  const [simpleMode, setSimpleMode] = useState(true);
 
   const [loadingKey, setLoadingKey] = useState<null | 'copy' | 'image' | 'video' | 'campaign' | 'copilot'>(null);
   const fieldClass = isDark
@@ -388,6 +392,9 @@ export default function AdvancedContentStudio({
 
   const providerMeta = PROVIDER_META[providerId];
   const providerConfig = providerConfigs[providerId];
+  const mainTabs = tabs.filter((tab) => tab.id === 'image' || tab.id === 'video');
+  const helperTabs = tabs.filter((tab) => tab.id === 'copy' || tab.id === 'campaign' || tab.id === 'copilot');
+  const activeMainLane = activeTab === 'video' ? 'video' : 'image';
   const hasOpenRouterKey = Boolean((providerConfig.apiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '').trim());
   const imagePreview = useMemo(
     () => buildPreviewSvg(imagePrompt || 'Visual direction', `${artStyle} · ${aspectRatio}`, 'Image Brief', `${imagePrompt}-${artStyle}-${aspectRatio}`),
@@ -605,14 +612,14 @@ export default function AdvancedContentStudio({
   return (
     <div className="space-y-4">
       <div className={`rounded-[32px] p-5 md:p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="max-w-3xl">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-3xl space-y-4">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
               <Sparkles size={14} />
               Content Studio
             </div>
             <div className="flex items-start gap-2">
-              <h2 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Studio konten yang lebih simpel, tapi tetap lengkap</h2>
+              <h2 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Studio foto & video yang lebih simpel</h2>
               <FieldHelp
                 title="Content Studio"
                 description="Ini cockpit utama untuk bikin caption, visual brief, storyboard video, dan blueprint campaign tanpa bikin user kebanyakan setting."
@@ -620,13 +627,80 @@ export default function AdvancedContentStudio({
               />
             </div>
             <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Jalurnya sengaja dipotong: fokus ke ide utama, preset cepat, dan OpenRouter sebagai engine default. Fitur tetap ada, tapi tidak dijejelkan semua ke muka user.
+              Fokus ke ide utama, preset cepat, dan OpenRouter sebagai engine default. Tool tambahan tetap ada, tapi disembunyikan dulu supaya cockpit terasa ringan.
             </p>
+            <div className="flex flex-wrap gap-3">
+              {mainTabs.map((tab) => {
+                const Icon = tab.icon;
+                const active = activeMainLane === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`inline-flex min-w-[180px] items-center gap-3 rounded-[20px] px-4 py-3 text-left text-sm font-semibold transition ${
+                      active
+                        ? isDark
+                          ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30'
+                          : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                        : isDark
+                          ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800'
+                          : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-white'
+                    }`}
+                  >
+                    <Icon size={18} />
+                    <span className="space-y-0.5">
+                      <span className="block">{tab.label}</span>
+                      <span className={`block text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{tab.helper}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <div className={`rounded-2xl px-4 py-3 text-sm ${isDark ? 'bg-slate-900 ring-1 ring-white/10 text-slate-200' : 'bg-slate-50 border border-slate-200 text-slate-700'}`}>
-              <span className="block text-[10px] uppercase tracking-[0.18em] opacity-60">Mode</span>
-              <span className="font-bold">{providerMeta.label}</span>
+          <div className="flex flex-col gap-3 xl:min-w-[280px] xl:max-w-[320px]">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSimpleMode(true)}
+                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  simpleMode
+                    ? isDark ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30' : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                    : isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200'
+                }`}
+              >
+                Mode simpel
+              </button>
+              <button
+                type="button"
+                onClick={() => setSimpleMode(false)}
+                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  !simpleMode
+                    ? isDark ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30' : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                    : isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200'
+                }`}
+              >
+                Mode lengkap
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setShowHelperTabs((current) => !current)}
+                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${isDark ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800' : 'bg-slate-50 text-slate-700 ring-1 ring-slate-200 hover:bg-white'}`}
+              >
+                {showHelperTabs ? 'Tutup tool bantu' : 'Tool bantu'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('provider');
+                  setShowProviderConsole(true);
+                }}
+                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${isDark ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800' : 'bg-slate-50 text-slate-700 ring-1 ring-slate-200 hover:bg-white'}`}
+              >
+                Atur OpenRouter
+              </button>
             </div>
             <div className={`rounded-2xl px-4 py-3 text-sm ${isDark ? 'bg-slate-900 ring-1 ring-white/10 text-slate-200' : 'bg-slate-50 border border-slate-200 text-slate-700'}`}>
               <span className="block text-[10px] uppercase tracking-[0.18em] opacity-60">Status</span>
@@ -635,8 +709,9 @@ export default function AdvancedContentStudio({
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          {tabs.map((tab) => {
+        {showHelperTabs || !simpleMode ? (
+          <div className="mt-5 flex flex-wrap gap-2">
+          {helperTabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
             return (
@@ -659,10 +734,11 @@ export default function AdvancedContentStudio({
               </button>
             );
           })}
-        </div>
+          </div>
+        ) : null}
 
         <div className={`mt-4 rounded-2xl px-4 py-3 text-xs leading-6 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
-          <strong>Catatan:</strong> OpenRouter jadi jalur utama. Kalau API key belum diisi, studio tetap hidup pakai fallback default supaya user tetap bisa kerja tanpa ribet setup.
+          <strong>Tip cepat:</strong> mulai dari Photo atau Video dulu. Copy, Campaign, Copilot, dan console OpenRouter cukup dibuka saat memang dibutuhkan.
         </div>
       </div>
 
@@ -743,8 +819,7 @@ export default function AdvancedContentStudio({
                 </div>
               </div>
 
-              <div className="grid gap-5 2xl:grid-cols-[1.05fr_0.95fr]">
-                <div className="space-y-4">
+              <div className="space-y-4">
                   <div className="grid gap-3 md:grid-cols-3">
                     {IMAGE_PRESETS.map((preset) => {
                       const active = imagePresetId === preset.id;
@@ -775,14 +850,16 @@ export default function AdvancedContentStudio({
 
                   <textarea value={imagePrompt} onChange={(e) => setImagePrompt(e.target.value)} rows={5} placeholder="Contoh: sedan hitam premium di jalan basah malam hari, city glow, cocok untuk hero rental mobil..." className={`${fieldClass} min-h-[132px] resize-y leading-6`} />
 
-                  <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>{artStyle}</span>
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{aspectRatio}</span>
-                    </div>
-                    <p className={`mt-3 text-xs leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Default visual ini sengaja disederhanakan. Isi ide utama dulu, lalu generate. Detail seperti negative prompt dan rasio lanjutan hanya dibuka saat benar-benar dibutuhkan.
-                    </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>{artStyle}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{aspectRatio}</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowImagePreview((current) => !current)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                    >
+                      {showImagePreview ? 'Sembunyikan preview' : 'Lihat preview'}
+                    </button>
                   </div>
 
                   {showImageAdvanced ? (
@@ -804,14 +881,14 @@ export default function AdvancedContentStudio({
                       </div>
                     </div>
                   ) : null}
-                </div>
-
-                <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                  <img src={imagePreview} alt="Visual preview" className="w-full rounded-[24px] object-cover shadow-sm" />
-                  <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Preview ini hanya mood board visual. Output utama tetap berupa brief yang nanti dieksekusi pilot / designer / generator.
-                  </p>
-                </div>
+                  {showImagePreview ? (
+                    <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                      <img src={imagePreview} alt="Visual preview" className="w-full rounded-[24px] object-cover shadow-sm" />
+                      <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Preview ini hanya mood board visual. Output utama tetap berupa brief yang nanti dieksekusi pilot / designer / generator.
+                      </p>
+                    </div>
+                  ) : null}
               </div>
 
               {imageOutput ? (
@@ -928,14 +1005,20 @@ export default function AdvancedContentStudio({
                 </div>
               </div>
 
-              <div className="grid gap-5 2xl:grid-cols-[1.05fr_0.95fr]">
-                <div className="space-y-4">
-                  <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                    <div className="flex flex-wrap items-center gap-2">
+              <div className="space-y-4">
+                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                  <div className="flex flex-wrap items-center gap-2">
                       <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>{videoPlatform}</span>
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{videoDuration}</span>
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{videoMotion}</span>
-                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{videoDuration}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{videoMotion}</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowVideoPreview((current) => !current)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'}`}
+                    >
+                      {showVideoPreview ? 'Sembunyikan preview' : 'Lihat preview'}
+                    </button>
+                  </div>
                     <p className={`mt-3 text-xs leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                       Default ini sengaja dibikin aman dulu. Kalau user tidak mau ribet, cukup isi ide utama di bawah lalu generate. Pengaturan lanjutan hanya dipakai kalau benar-benar perlu.
                     </p>
@@ -965,13 +1048,14 @@ export default function AdvancedContentStudio({
                       <input value={videoPlatform} onChange={(e) => setVideoPlatform(e.target.value)} placeholder="Platform target, misal Instagram Reels / TikTok / YouTube Shorts" className={fieldClass} />
                     </div>
                   ) : null}
-                </div>
-                <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                  <img src={videoPreview} alt="Video preview" className="w-full rounded-[24px] object-cover shadow-sm" />
-                  <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Ini preview mood board motion. Output utamanya tetap storyboard teks agar pilot tinggal eksekusi di tool video mana pun tanpa ribet setup.
-                  </p>
-                </div>
+                  {showVideoPreview ? (
+                    <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                      <img src={videoPreview} alt="Video preview" className="w-full rounded-[24px] object-cover shadow-sm" />
+                      <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Ini preview mood board motion. Output utamanya tetap storyboard teks agar pilot tinggal eksekusi di tool video mana pun tanpa ribet setup.
+                      </p>
+                    </div>
+                  ) : null}
               </div>
 
               {videoOutput ? (

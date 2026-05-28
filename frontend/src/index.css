@@ -198,3 +198,15 @@ button, [role="button"] {
   -ms-user-select: none;
   user-select: none;
 }
+
+/* ===================================
+   MyCommerSocial roomy desktop mode
+   =================================== */
+
+@media (min-width: 1280px) {
+  .mcs-roomy-view {
+    zoom: 0.92;
+    width: calc(100% / 0.92);
+    transform-origin: top left;
+  }
+}
