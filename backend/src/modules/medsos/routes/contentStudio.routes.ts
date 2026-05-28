@@ -22,70 +22,157 @@ interface StudioModelOption {
 
 const imageFallbackModels: StudioModelOption[] = [
   {
+    id: 'x-ai/grok-imagine-image-quality',
+    name: 'xAI: Grok Imagine Image Quality',
+    description: 'High-quality image generation option from OpenRouter.',
+    outputModalities: ['image'],
+  },
+  {
+    id: 'recraft/recraft-v4.1-pro',
+    name: 'Recraft: Recraft V4.1 Pro',
+    description: 'Design/brand visual generator, useful for product and ad assets.',
+    outputModalities: ['image'],
+  },
+  {
+    id: 'openai/gpt-5.4-image-2',
+    name: 'OpenAI: GPT-5.4 Image 2',
+    description: 'OpenAI image model exposed by OpenRouter when account access is available.',
+    outputModalities: ['image', 'text'],
+  },
+  {
     id: 'google/gemini-3.1-flash-image-preview',
-    name: 'Gemini 3.1 Flash Image Preview',
-    description: 'Fast image generation/editing lane. Daftar lengkap tetap dibaca dari OpenRouter kalau API key tersedia.',
+    name: 'Google: Nano Banana 2 / Gemini 3.1 Flash Image Preview',
+    description: 'Fast image generation/editing lane.',
     outputModalities: ['image', 'text'],
   },
   {
-    id: 'google/gemini-2.5-flash-image-preview',
-    name: 'Gemini 2.5 Flash Image Preview',
-    description: 'Fallback image model generasi sebelumnya untuk kompatibilitas.',
-    outputModalities: ['image', 'text'],
+    id: 'sourceful/riverflow-v2-pro',
+    name: 'Sourceful: Riverflow V2 Pro',
+    description: 'Image generation option for polished creative direction.',
+    outputModalities: ['image'],
   },
   {
-    id: 'openai/gpt-image-1',
-    name: 'GPT Image 1',
-    description: 'OpenAI image model jika tersedia di akun OpenRouter.',
+    id: 'black-forest-labs/flux.2-max',
+    name: 'Black Forest Labs: FLUX.2 Max',
+    description: 'FLUX family model for high quality visual generation.',
+    outputModalities: ['image'],
+  },
+  {
+    id: 'bytedance-seed/seedream-4.5',
+    name: 'ByteDance Seed: Seedream 4.5',
+    description: 'Image model from ByteDance Seed for creative content assets.',
     outputModalities: ['image'],
   },
 ];
 
 const videoFallbackModels: StudioModelOption[] = [
   {
-    id: 'google/veo-3.1',
-    name: 'Veo 3.1',
-    description: 'Google Veo 3.1. Default video lane untuk hasil generasi modern.',
-    supportedAspectRatios: ['16:9'],
+    id: 'x-ai/grok-imagine-video',
+    name: 'xAI: Grok Imagine Video',
+    description: 'Video generation option from OpenRouter.',
+    supportedAspectRatios: ['16:9', '9:16'],
     supportedDurations: [5, 8],
     supportedResolutions: ['720p'],
     generateAudio: true,
   },
   {
-    id: 'google/veo-3.1-fast',
-    name: 'Veo 3.1 Fast',
-    description: 'Veo fast mode untuk draft lebih cepat jika tersedia.',
-    supportedAspectRatios: ['16:9'],
-    supportedDurations: [5, 8],
-    supportedResolutions: ['720p'],
-    generateAudio: true,
-  },
-  {
-    id: 'google/veo-3',
-    name: 'Veo 3',
-    description: 'Veo 3 standard fallback.',
-    supportedAspectRatios: ['16:9'],
-    supportedDurations: [8],
-    supportedResolutions: ['720p'],
-    generateAudio: true,
-  },
-  {
-    id: 'google/veo-3-fast',
-    name: 'Veo 3 Fast',
-    description: 'Veo 3 fast fallback untuk draft.',
-    supportedAspectRatios: ['16:9'],
-    supportedDurations: [8],
-    supportedResolutions: ['720p'],
-    generateAudio: true,
-  },
-  {
-    id: 'google/veo-2',
-    name: 'Veo 2',
-    description: 'Veo 2 fallback bila akun belum punya akses model terbaru.',
-    supportedAspectRatios: ['16:9'],
+    id: 'kwaivgi/kling-v3.0-pro',
+    name: 'Kling: Video v3.0 Pro',
+    description: 'Kling pro video generation model.',
+    supportedAspectRatios: ['16:9', '9:16'],
     supportedDurations: [5, 8],
     supportedResolutions: ['720p'],
     generateAudio: false,
+  },
+  {
+    id: 'kwaivgi/kling-v3.0-std',
+    name: 'Kling: Video v3.0 Standard',
+    description: 'Kling standard video generation model.',
+    supportedAspectRatios: ['16:9', '9:16'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: false,
+  },
+  {
+    id: 'google/veo-3.1-fast',
+    name: 'Google: Veo 3.1 Fast',
+    description: 'Veo fast mode for faster drafts.',
+    supportedAspectRatios: ['16:9'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: true,
+  },
+  {
+    id: 'google/veo-3.1-lite',
+    name: 'Google: Veo 3.1 Lite',
+    description: 'Veo lite mode for lighter drafts.',
+    supportedAspectRatios: ['16:9'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: true,
+  },
+  {
+    id: 'kwaivgi/kling-video-o1',
+    name: 'Kling: Video O1',
+    description: 'Kling O1 video model.',
+    supportedAspectRatios: ['16:9', '9:16'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: false,
+  },
+  {
+    id: 'minimax/hailuo-2.3',
+    name: 'MiniMax: Hailuo 2.3',
+    description: 'MiniMax Hailuo video model.',
+    supportedAspectRatios: ['16:9', '9:16'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: false,
+  },
+  {
+    id: 'bytedance/seedance-2.0-fast',
+    name: 'ByteDance: Seedance 2.0 Fast',
+    description: 'Fast ByteDance Seedance video model.',
+    supportedAspectRatios: ['16:9', '9:16'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: false,
+  },
+  {
+    id: 'alibaba/wan-2.7',
+    name: 'Alibaba: Wan 2.7',
+    description: 'Alibaba Wan video model.',
+    supportedAspectRatios: ['16:9', '9:16'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: false,
+  },
+  {
+    id: 'bytedance/seedance-2.0',
+    name: 'ByteDance: Seedance 2.0',
+    description: 'ByteDance Seedance video generation model.',
+    supportedAspectRatios: ['16:9', '9:16'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: false,
+  },
+  {
+    id: 'openai/sora-2-pro',
+    name: 'OpenAI: Sora 2 Pro',
+    description: 'OpenAI Sora video model if account access is available.',
+    supportedAspectRatios: ['16:9', '9:16'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: true,
+  },
+  {
+    id: 'google/veo-3.1',
+    name: 'Google: Veo 3.1',
+    description: 'Google Veo 3.1 standard.',
+    supportedAspectRatios: ['16:9'],
+    supportedDurations: [5, 8],
+    supportedResolutions: ['720p'],
+    generateAudio: true,
   },
 ];
 
@@ -220,7 +307,7 @@ router.post('/models/image', async (req: Request, res: Response, next: NextFunct
 
 router.post('/models/video', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const apiKey = resolveApiKey(req, true);
+    const apiKey = resolveApiKey(req, false);
     const response = await fetch(`${OPENROUTER_BASE_URL}/videos/models`, {
       headers: openRouterHeaders(apiKey),
     });
@@ -375,3 +462,4 @@ router.post('/video-status', async (req: Request, res: Response, next: NextFunct
 });
 
 export default router;
+

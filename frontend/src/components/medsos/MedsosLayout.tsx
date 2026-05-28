@@ -114,11 +114,7 @@ export default function MedsosLayout() {
   const mcsPerms = user?.dashboard_preferences?.mcs;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [roomyView, setRoomyView] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    const saved = window.localStorage.getItem('mcs-roomy-view');
-    return saved ? saved === 'true' : true;
-  });
+  const [roomyView] = useState<boolean>(() => true);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const expandedByDefault = !isMobileViewport();
     return {
@@ -150,11 +146,6 @@ export default function MedsosLayout() {
       setSidebarOpen(false);
     }
   }, [location.pathname]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem('mcs-roomy-view', String(roomyView));
-  }, [roomyView]);
 
   useEffect(() => {
     if (!isMobileViewport()) return;
@@ -596,8 +587,8 @@ export default function MedsosLayout() {
         </div>
       </aside>
 
-      <div className={`p-3 md:p-3 lg:p-4 transition-[margin] duration-300 ${contentOffsetClass}`}>
-        <div className={`mb-4 flex items-center justify-between gap-3 ${roomyView ? 'lg:mb-3' : 'lg:mb-5'}`}>
+      <div className={`p-2 md:p-3 lg:p-3 transition-[margin] duration-300 ${contentOffsetClass}`}>
+        <div className={`mcs-topbar mb-2 flex items-center justify-between gap-3`}>
           <button
             type="button"
             title={sidebarCollapsed || !sidebarOpen ? 'Buka navigasi MyCommerSocial' : 'Tutup navigasi MyCommerSocial'}
@@ -626,14 +617,6 @@ export default function MedsosLayout() {
                 <p className="max-w-[220px] truncate text-sm font-semibold">Inbox, analytics, dan AI workspace</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setRoomyView((current) => !current)}
-              title={roomyView ? 'Kembali ke tampilan standar' : 'Pakai tampilan lebih lega'}
-              className={`hidden rounded-xl px-3 py-2 text-xs font-semibold md:inline-flex ${isDark ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-white text-slate-600 ring-1 ring-slate-900/5 shadow-sm hover:bg-gray-100'}`}
-            >
-              {roomyView ? 'Tampilan standar' : 'Tampilan lega'}
-            </button>
             <button
               onClick={toggleTheme}
               title={isDark ? 'Pakai mode terang' : 'Pakai mode gelap'}
@@ -698,5 +681,8 @@ export default function MedsosLayout() {
     </div>
   );
 }
+
+
+
 
 
