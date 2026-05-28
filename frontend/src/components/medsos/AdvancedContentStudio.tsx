@@ -252,10 +252,20 @@ export default function AdvancedContentStudio({
   isDark,
   onApplyToComposer,
   preferredTab,
+  mediaPreview,
+  mediaLabel,
+  onPickMedia,
+  onOpenCamera,
+  canUseCamera = false,
 }: {
   isDark: boolean;
   onApplyToComposer: (text: string) => void;
   preferredTab?: StudioTab;
+  mediaPreview?: string | null;
+  mediaLabel?: string;
+  onPickMedia?: () => void;
+  onOpenCamera?: () => void;
+  canUseCamera?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<StudioTab>('copy');
   const [providerId] = useState<ProviderId>('openrouter');
@@ -287,14 +297,11 @@ export default function AdvancedContentStudio({
   const [copilotInput, setCopilotInput] = useState('');
   const [copilotOutput, setCopilotOutput] = useState('');
   const [imagePresetId, setImagePresetId] = useState<string>('hero');
-  const [showImageAdvanced, setShowImageAdvanced] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [videoPresetId, setVideoPresetId] = useState<string>('hook');
-  const [showVideoAdvanced, setShowVideoAdvanced] = useState(false);
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const [showProviderConsole, setShowProviderConsole] = useState(false);
-  const [showHelperTabs, setShowHelperTabs] = useState(false);
-  const [simpleMode, setSimpleMode] = useState(true);
+  const [showStudioSettings, setShowStudioSettings] = useState(false);
 
   const [loadingKey, setLoadingKey] = useState<null | 'copy' | 'image' | 'video' | 'campaign' | 'copilot'>(null);
   const fieldClass = isDark
@@ -393,9 +400,16 @@ export default function AdvancedContentStudio({
   const providerMeta = PROVIDER_META[providerId];
   const providerConfig = providerConfigs[providerId];
   const mainTabs = tabs.filter((tab) => tab.id === 'image' || tab.id === 'video');
-  const helperTabs = tabs.filter((tab) => tab.id === 'copy' || tab.id === 'campaign' || tab.id === 'copilot');
   const activeMainLane = activeTab === 'video' ? 'video' : 'image';
   const hasOpenRouterKey = Boolean((providerConfig.apiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '').trim());
+  const isVideoLane = activeMainLane === 'video';
+  const selectedModel = isVideoLane ? (providerConfig.videoModel || providerConfig.model) : (providerConfig.imageModel || providerConfig.model);
+  const currentPresetLabel = isVideoLane
+    ? VIDEO_PRESETS.find((preset) => preset.id === videoPresetId)?.label ?? 'Default'
+    : IMAGE_PRESETS.find((preset) => preset.id === imagePresetId)?.label ?? 'Default';
+  const availableModels = isVideoLane
+    ? ['google/gemini-2.5-flash', 'anthropic/claude-sonnet-4.5', 'openai/gpt-5.1-mini']
+    : ['google/gemini-2.5-flash-image-preview', 'openai/gpt-image-1', 'google/gemini-2.5-flash'];
   const imagePreview = useMemo(
     () => buildPreviewSvg(imagePrompt || 'Visual direction', `${artStyle} · ${aspectRatio}`, 'Image Brief', `${imagePrompt}-${artStyle}-${aspectRatio}`),
     [imagePrompt, artStyle, aspectRatio],
@@ -612,133 +626,179 @@ export default function AdvancedContentStudio({
   return (
     <div className="space-y-3">
       <div className={`rounded-[24px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="max-w-3xl space-y-4">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
+        <div className="relative overflow-hidden rounded-[20px]">
+          <div className={`pointer-events-none absolute inset-0 ${isDark ? 'bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.14),transparent_35%)]' : 'bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_35%)]'}`} />
+          <div className="relative space-y-4">
+            <div className="mb-1 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
               <Sparkles size={14} />
               Content Studio
             </div>
-            <div className="flex items-start gap-2">
-              <h2 className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Studio kerja</h2>
-              <FieldHelp
-                title="Content Studio"
-                description="Ini cockpit utama untuk bikin caption, visual brief, storyboard video, dan blueprint campaign tanpa bikin user kebanyakan setting."
-                howToUse="Pilih mode kerja dari tombol di bawah, isi ide utama, lalu generate. Kalau perlu kontrol lebih detail, baru buka pengaturan lanjutan."
-              />
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+              <div className="max-w-2xl">
+                <div className="flex items-start gap-2">
+                  <h2 className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Generator konten</h2>
+                  <FieldHelp
+                    title="Content Studio"
+                    description="Ini cockpit utama untuk bikin caption, visual brief, storyboard video, dan output final tanpa bikin user kebanyakan setting."
+                    howToUse="Pilih mode foto atau video, pasang media kalau ada, isi prompt utama, pilih model, lalu generate. Detail lanjutan cukup dibuka kalau memang perlu."
+                  />
+                </div>
+                <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Fokus ke 4 hal saja: mode, media, prompt, dan model. Yang advance saya sembunyikan ke pop-up settings.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {mainTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const active = activeMainLane === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${
+                        active
+                          ? isDark
+                            ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30'
+                            : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                          : isDark
+                            ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800'
+                            : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-white'
+                      }`}
+                    >
+                      <Icon size={16} />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setShowStudioSettings(true)}
+                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${isDark ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800' : 'bg-slate-50 text-slate-700 ring-1 ring-slate-200 hover:bg-white'}`}
+                >
+                  <Settings2 size={16} />
+                  Settings
+                </button>
+              </div>
             </div>
-            <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Fokus ke ide utama dan generate cepat. Tool tambahan tetap ada, tapi disembunyikan dulu supaya cockpit terasa ringan.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {mainTabs.map((tab) => {
-                const Icon = tab.icon;
-                const active = activeMainLane === tab.id;
-                return (
+
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)]">
+              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-sm'}`}>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Media referensi</p>
+                    <p className="text-sm font-semibold">{mediaLabel || (mediaPreview ? 'Media siap' : 'Tambahkan gambar / video')}</p>
+                  </div>
                   <button
-                    key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex min-w-[180px] items-center gap-3 rounded-[20px] px-4 py-3 text-left text-sm font-semibold transition ${
-                      active
-                        ? isDark
-                          ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30'
-                          : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                        : isDark
-                          ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800'
-                          : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-white'
-                    }`}
+                    onClick={onPickMedia}
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700"
                   >
-                    <Icon size={18} />
-                    <span className="space-y-0.5">
-                      <span className="block">{tab.label}</span>
-                      <span className={`block text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{tab.helper}</span>
-                    </span>
+                    <ImageIcon size={14} />
+                    {mediaPreview ? 'Ganti' : 'Pilih media'}
                   </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 xl:min-w-[260px] xl:max-w-[300px]">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setSimpleMode(true)}
-                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                  simpleMode
-                    ? isDark ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30' : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                    : isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200'
-                }`}
-              >
-                Mode simpel
-              </button>
-              <button
-                type="button"
-                onClick={() => setSimpleMode(false)}
-                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                  !simpleMode
-                    ? isDark ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30' : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                    : isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200'
-                }`}
-              >
-                Mode lengkap
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setShowHelperTabs((current) => !current)}
-                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${isDark ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800' : 'bg-slate-50 text-slate-700 ring-1 ring-slate-200 hover:bg-white'}`}
-              >
-                {showHelperTabs ? 'Tutup tool bantu' : 'Tool bantu'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('provider');
-                  setShowProviderConsole(true);
-                }}
-                className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${isDark ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800' : 'bg-slate-50 text-slate-700 ring-1 ring-slate-200 hover:bg-white'}`}
-              >
-                Atur OpenRouter
-              </button>
-            </div>
-            <div className={`rounded-2xl px-4 py-3 text-sm ${isDark ? 'bg-slate-900 ring-1 ring-white/10 text-slate-200' : 'bg-slate-50 border border-slate-200 text-slate-700'}`}>
-              <span className="block text-[10px] uppercase tracking-[0.18em] opacity-60">Status</span>
-              <span className="font-bold">{hasOpenRouterKey ? 'Live key siap' : 'Fallback aman'}</span>
-            </div>
-          </div>
-        </div>
+                </div>
+                <div className={`overflow-hidden rounded-[20px] border ${isDark ? 'border-white/10 bg-slate-900' : 'border-slate-200 bg-slate-50'}`}>
+                  {mediaPreview ? (
+                    <img src={mediaPreview} alt="Media reference" className="h-44 w-full object-cover" />
+                  ) : (
+                    <div className={`flex h-44 flex-col items-center justify-center gap-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <ImageIcon size={34} />
+                      <p className="text-xs">Masukkan media supaya pilot tinggal fokus ke prompt.</p>
+                    </div>
+                  )}
+                </div>
+                {canUseCamera && onOpenCamera ? (
+                  <button
+                    type="button"
+                    onClick={onOpenCamera}
+                    className={`mt-3 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                  >
+                    <ImageIcon size={14} />
+                    Buka kamera
+                  </button>
+                ) : null}
+              </div>
 
-        {showHelperTabs || !simpleMode ? (
-          <div className="mt-5 flex flex-wrap gap-2">
-          {helperTabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${
-                  active
-                    ? isDark
-                      ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30'
-                      : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                    : isDark
-                      ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10 hover:bg-slate-800'
-                      : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-white'
-                }`}
-              >
-                <Icon size={16} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-          </div>
-        ) : null}
+              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-sm'}`}>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    {(isVideoLane ? VIDEO_PRESETS : IMAGE_PRESETS).map((preset) => {
+                      const active = isVideoLane ? videoPresetId === preset.id : imagePresetId === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => isVideoLane ? applyVideoPreset(preset.id) : applyImagePreset(preset.id)}
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                            active
+                              ? isDark ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30' : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                              : isDark ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200'}`}>
+                    {currentPresetLabel}
+                  </div>
+                </div>
 
-        <div className={`mt-3 rounded-2xl px-4 py-3 text-xs leading-6 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
-          <strong>Tip cepat:</strong> mulai dari Photo atau Video dulu. Copy, Campaign, Copilot, dan console OpenRouter cukup dibuka saat memang dibutuhkan.
+                <div className="mb-3 flex flex-wrap items-center gap-3">
+                  <label className="space-y-1">
+                    <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Model</span>
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => isVideoLane
+                        ? updateProviderConfig({ videoModel: e.target.value })
+                        : updateProviderConfig({ imageModel: e.target.value })}
+                      className={`${fieldClass} min-w-[240px] py-2.5`}
+                    >
+                      {availableModels.map((model) => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className={`rounded-2xl px-3 py-2 text-xs ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
+                    {hasOpenRouterKey ? 'OpenRouter aktif' : 'Fallback aktif'}
+                  </div>
+                </div>
+
+                <textarea
+                  value={isVideoLane ? videoIdea : imagePrompt}
+                  onChange={(e) => isVideoLane ? setVideoIdea(e.target.value) : setImagePrompt(e.target.value)}
+                  rows={6}
+                  placeholder={isVideoLane
+                    ? 'Tulis ide video, hook utama, tone, CTA, atau jalannya video di sini...'
+                    : 'Tulis ide foto, visual utama, suasana, angle, dan hasil akhir yang diinginkan di sini...'}
+                  className={`${fieldClass} min-h-[180px] resize-y leading-6`}
+                />
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {isVideoLane
+                      ? 'Video: isi brief, pilih model, lalu generate storyboard.'
+                      : 'Foto: isi visual intent, pilih model, lalu generate brief.'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => isVideoLane ? void runVideoBoard() : void runImageBrief()}
+                    disabled={loadingKey !== null}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-5 py-3 text-sm font-bold text-white hover:bg-purple-700 disabled:opacity-60"
+                  >
+                    {loadingKey === (isVideoLane ? 'video' : 'image') ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    {isVideoLane ? 'Generate video' : 'Generate foto'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-2xl px-4 py-3 text-xs leading-6 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
+              <strong>Tip cepat:</strong> mulai dari satu media, satu prompt, dan satu model dulu. Detail lanjutan cukup dibuka kalau output awal belum pas.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -789,107 +849,41 @@ export default function AdvancedContentStudio({
 
           {activeTab === 'image' && (
             <div className="space-y-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="flex items-start gap-2">
-                    <h3 className="text-xl font-bold">Visual Brief</h3>
+                    <h3 className="text-lg font-bold">Hasil foto</h3>
                     <FieldHelp
-                      title="Visual Brief"
-                      description="Fitur ini dipakai untuk menyusun prompt visual, art direction, ratio, dan negative prompt untuk kebutuhan foto atau image generation."
-                      howToUse="Pilih preset visual dulu, isi ide utama, lalu generate. Kalau perlu rasio, style, atau negative prompt yang lebih spesifik, baru buka pengaturan lanjutan."
+                      title="Hasil foto"
+                      description="Bagian ini menampilkan brief dan preview visual setelah prompt diproses."
+                      howToUse="Kalau hasilnya belum pas, ubah prompt utama atau buka settings. Kalau sudah pas, copy hasilnya atau pakai ke proses publish berikutnya."
                     />
                   </div>
-                  <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Visual lane juga saya bikin cepat: pilih preset, isi ide utama, lalu generate brief tanpa terlalu banyak atur-atur di depan.</p>
+                  <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Preview dan brief akhir ditampilkan di sini.</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowImageAdvanced((current) => !current)}
-                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold ${
-                      isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    <Settings2 size={16} />
-                    {showImageAdvanced ? 'Sembunyikan detail' : 'Atur detail'}
-                  </button>
-                  <button type="button" onClick={() => void runImageBrief()} disabled={loadingKey !== null} className="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60">
-                    {loadingKey === 'image' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                    Generate visual brief
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowImagePreview((current) => !current)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                >
+                  {showImagePreview ? 'Sembunyikan preview' : 'Lihat preview'}
+                </button>
               </div>
 
-              <div className="space-y-4">
-                  <div className="grid gap-3 md:grid-cols-3">
-                    {IMAGE_PRESETS.map((preset) => {
-                      const active = imagePresetId === preset.id;
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => applyImagePreset(preset.id)}
-                          className={`rounded-[22px] border p-4 text-left transition ${
-                            active
-                              ? isDark
-                                ? 'border-blue-400/40 bg-blue-500/10 shadow-lg shadow-blue-500/10'
-                                : 'border-blue-200 bg-blue-50 shadow-sm'
-                              : isDark
-                                ? 'border-white/10 bg-slate-900/70 hover:border-blue-400/20'
-                                : 'border-slate-200 bg-slate-50 hover:border-blue-200 hover:bg-white'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-bold">{preset.label}</p>
-                            {active ? <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Default</span> : null}
-                          </div>
-                          <p className={`mt-2 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{preset.detail}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <textarea value={imagePrompt} onChange={(e) => setImagePrompt(e.target.value)} rows={5} placeholder="Contoh: sedan hitam premium di jalan basah malam hari, city glow, cocok untuk hero rental mobil..." className={`${fieldClass} min-h-[132px] resize-y leading-6`} />
-
-                  <div className="flex flex-wrap gap-2">
-                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>{artStyle}</span>
-                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{aspectRatio}</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowImagePreview((current) => !current)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-                    >
-                      {showImagePreview ? 'Sembunyikan preview' : 'Lihat preview'}
-                    </button>
-                  </div>
-
-                  {showImageAdvanced ? (
-                    <div className={`space-y-4 rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold">Fine tune visual</p>
-                        <FieldHelp
-                          title="Pengaturan lanjutan visual"
-                          description="Bagian ini hanya untuk pilot yang ingin mengatur style, ratio, dan negative prompt lebih spesifik."
-                          howToUse="Kalau hasil default sudah cukup, jangan dibuka. Pakai hanya saat butuh eksplorasi visual yang lebih detail."
-                        />
-                      </div>
-                      <textarea value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} rows={3} placeholder="Negative prompt" className={`${fieldClass} min-h-[92px] resize-y leading-6`} />
-                      <div className="flex flex-wrap gap-2">
-                        {ART_STYLES.map((item) => <ChoicePill key={item} active={artStyle === item} label={item} onClick={() => setArtStyle(item)} isDark={isDark} />)}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {ASPECT_RATIOS.map((item) => <ChoicePill key={item} active={aspectRatio === item} label={item} onClick={() => setAspectRatio(item)} isDark={isDark} />)}
-                      </div>
-                    </div>
-                  ) : null}
-                  {showImagePreview ? (
-                    <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                      <img src={imagePreview} alt="Visual preview" className="w-full rounded-[24px] object-cover shadow-sm" />
-                      <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Preview ini hanya mood board visual. Output utama tetap berupa brief yang nanti dieksekusi pilot / designer / generator.
-                      </p>
-                    </div>
-                  ) : null}
+              <div className="flex flex-wrap gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700'}`}>{artStyle}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{aspectRatio}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{currentPresetLabel}</span>
               </div>
+
+              {showImagePreview ? (
+                <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                  <img src={imagePreview} alt="Visual preview" className="w-full rounded-[24px] object-cover shadow-sm" />
+                  <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Preview ini hanya mood board visual. Output utama tetap berupa brief yang nanti dieksekusi pilot / designer / generator.
+                  </p>
+                </div>
+              ) : null}
 
               {imageOutput ? (
                 <OutputCard
@@ -905,158 +899,42 @@ export default function AdvancedContentStudio({
 
           {activeTab === 'video' && (
             <div className="space-y-5">
-              <div className={`overflow-hidden rounded-[32px] border p-6 md:p-8 ${
-                isDark
-                  ? 'border-fuchsia-500/20 bg-[radial-gradient(circle_at_top,_rgba(236,72,153,0.28),_transparent_42%),linear-gradient(180deg,rgba(73,11,44,0.96),rgba(28,7,26,0.98))]'
-                  : 'border-fuchsia-100 bg-[radial-gradient(circle_at_top,_rgba(244,114,182,0.32),_transparent_40%),linear-gradient(180deg,#fff1f7,#fff9fc)]'
-              }`}>
-                <div className="mx-auto max-w-5xl space-y-6">
-                  <div className="text-center">
-                    <p className={`text-[11px] font-bold uppercase tracking-[0.24em] ${isDark ? 'text-fuchsia-200/80' : 'text-fuchsia-500'}`}>Marketing Studio</p>
-                    <div className="mt-3 flex items-start justify-center gap-2">
-                      <h3 className={`max-w-3xl text-3xl font-black uppercase tracking-tight md:text-5xl ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        Turn any product into a video ad
-                      </h3>
-                      <FieldHelp
-                        title="Video Marketing Studio"
-                        description="Lane ini dibuat seperti studio prompt cepat: fokus ke brief inti, preset style, lalu generate storyboard tanpa bikin user tenggelam di setting."
-                        howToUse="Pilih preset yang paling dekat, isi brief produk atau ide utama, lalu generate. Kalau perlu kontrol lebih detail, baru buka pengaturan lanjutan di bawah."
-                      />
-                    </div>
-                    <p className={`mx-auto mt-3 max-w-2xl text-sm leading-6 ${isDark ? 'text-fuchsia-100/75' : 'text-slate-600'}`}>
-                      Fokus ke brief utama, hook, tone, dan CTA. Setting berat disembunyikan supaya pilot bisa langsung kerja tanpa ribet.
-                    </p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-start gap-2">
+                    <h3 className="text-lg font-bold">Hasil video</h3>
+                    <FieldHelp
+                      title="Hasil video"
+                      description="Bagian ini menampilkan storyboard, preview motion, dan hasil akhir setelah prompt video diproses."
+                      howToUse="Kalau hasilnya kurang pas, ubah brief utama atau buka settings. Kalau sudah pas, copy hasil storyboard lalu lanjut ke publish."
+                    />
                   </div>
-
-                  <div className={`rounded-[28px] border p-4 md:p-5 ${
-                    isDark
-                      ? 'border-white/10 bg-black/20 backdrop-blur'
-                      : 'border-white/70 bg-white/80 shadow-sm backdrop-blur'
-                  }`}>
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
-                      <div className="space-y-4">
-                        <textarea
-                          value={videoIdea}
-                          onChange={(e) => setVideoIdea(e.target.value)}
-                          rows={4}
-                          placeholder="Contoh: buat video UGC casual bahasa Indonesia untuk produk AI glasses. Hook: kerja hands-free, terjemahan real-time, desain tetap seperti kacamata biasa. Tutup dengan CTA halus."
-                          className={`${fieldClass} min-h-[136px] resize-y border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0 ${isDark ? 'text-white placeholder:text-fuchsia-100/35' : 'text-slate-900 placeholder:text-slate-400'}`}
-                        />
-                        <div className="flex flex-wrap gap-2">
-                          {VIDEO_PRESETS.map((preset) => {
-                            const active = videoPresetId === preset.id;
-                            return (
-                              <button
-                                key={preset.id}
-                                type="button"
-                                onClick={() => applyVideoPreset(preset.id)}
-                                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                                  active
-                                    ? isDark
-                                      ? 'bg-fuchsia-500/20 text-white ring-1 ring-fuchsia-300/40'
-                                      : 'bg-fuchsia-100 text-fuchsia-700 ring-1 ring-fuchsia-200'
-                                    : isDark
-                                      ? 'bg-white/5 text-fuchsia-100/85 hover:bg-white/10'
-                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
-                              >
-                                {preset.label}
-                              </button>
-                            );
-                          })}
-                          <button
-                            type="button"
-                            onClick={() => setShowVideoAdvanced((current) => !current)}
-                            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                              isDark ? 'bg-white/5 text-fuchsia-100/85 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                          >
-                            {showVideoAdvanced ? 'Sembunyikan detail' : 'Atur detail'}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex min-w-[220px] flex-col gap-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className={`rounded-[22px] border p-3 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}>
-                            <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>Preset</p>
-                            <p className="mt-2 text-sm font-bold">{VIDEO_PRESETS.find((preset) => preset.id === videoPresetId)?.label ?? 'Default'}</p>
-                            <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Siap pakai</p>
-                          </div>
-                          <div className={`rounded-[22px] border p-3 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-white'}`}>
-                            <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>Output</p>
-                            <p className="mt-2 text-sm font-bold">Storyboard</p>
-                            <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Hook + CTA</p>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => void runVideoBoard()}
-                          disabled={loadingKey !== null}
-                          className="inline-flex items-center justify-center gap-2 rounded-[22px] bg-fuchsia-500 px-5 py-4 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-fuchsia-500/30 transition hover:bg-fuchsia-600 disabled:opacity-60"
-                        >
-                          {loadingKey === 'video' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                          Generate storyboard
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Storyboard dan preview motion ditampilkan di sini.</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowVideoPreview((current) => !current)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                >
+                  {showVideoPreview ? 'Sembunyikan preview' : 'Lihat preview'}
+                </button>
               </div>
 
-              <div className="space-y-4">
-                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                  <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>{videoPlatform}</span>
-                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{videoDuration}</span>
-                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{videoMotion}</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowVideoPreview((current) => !current)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${isDark ? 'bg-white/5 text-slate-200 hover:bg-white/10' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'}`}
-                    >
-                      {showVideoPreview ? 'Sembunyikan preview' : 'Lihat preview'}
-                    </button>
-                  </div>
-                    <p className={`mt-3 text-xs leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Default ini sengaja dibikin aman dulu. Kalau user tidak mau ribet, cukup isi ide utama di bawah lalu generate. Pengaturan lanjutan hanya dipakai kalau benar-benar perlu.
-                    </p>
-                  </div>
-
-                  {showVideoAdvanced ? (
-                    <div className={`space-y-4 rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold">Atur Detail Video</p>
-                        <FieldHelp
-                          title="Pengaturan lanjutan video"
-                          description="Bagian ini hanya untuk pilot yang mau override default preset seperti motion, durasi, atau platform target."
-                          howToUse="Kalau hasil default sudah cukup, abaikan bagian ini. Pakai hanya saat butuh eksperimen khusus atau style video yang lebih presisi."
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {VIDEO_MOTIONS.map((item) => <ChoicePill key={item} active={videoMotion === item} label={item} onClick={() => setVideoMotion(item)} isDark={isDark} />)}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {VIDEO_DURATIONS.map((item) => <ChoicePill key={item} active={videoDuration === item} label={item} onClick={() => setVideoDuration(item)} isDark={isDark} />)}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {['TikTok', 'Instagram Reels', 'YouTube Shorts', 'Facebook Reels'].map((platform) => (
-                          <ChoicePill key={platform} active={videoPlatform === platform} label={platform} onClick={() => setVideoPlatform(platform)} isDark={isDark} />
-                        ))}
-                      </div>
-                      <input value={videoPlatform} onChange={(e) => setVideoPlatform(e.target.value)} placeholder="Platform target, misal Instagram Reels / TikTok / YouTube Shorts" className={fieldClass} />
-                    </div>
-                  ) : null}
-                  {showVideoPreview ? (
-                    <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
-                      <img src={videoPreview} alt="Video preview" className="w-full rounded-[24px] object-cover shadow-sm" />
-                      <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Ini preview mood board motion. Output utamanya tetap storyboard teks agar pilot tinggal eksekusi di tool video mana pun tanpa ribet setup.
-                      </p>
-                    </div>
-                  ) : null}
+              <div className="flex flex-wrap gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-violet-500/15 text-violet-200' : 'bg-violet-100 text-violet-700'}`}>{videoPlatform}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{videoDuration}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{videoMotion}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>{currentPresetLabel}</span>
               </div>
+
+              {showVideoPreview ? (
+                <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                  <img src={videoPreview} alt="Video preview" className="w-full rounded-[24px] object-cover shadow-sm" />
+                  <p className={`mt-3 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Ini preview mood board motion. Output utamanya tetap storyboard teks agar pilot tinggal eksekusi di tool video mana pun tanpa ribet setup.
+                  </p>
+                </div>
+              ) : null}
 
               {videoOutput ? (
                 <OutputCard
@@ -1305,6 +1183,101 @@ export default function AdvancedContentStudio({
             </div>
           )}
         </div>
+
+      {showStudioSettings ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div className={`max-h-[88vh] w-full max-w-4xl overflow-y-auto rounded-[28px] p-5 md:p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-2xl'}`}>
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className={`text-[11px] font-semibold uppercase tracking-[0.2em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Studio Settings</p>
+                <h3 className="mt-1 text-xl font-bold">Pengaturan lanjutan</h3>
+                <p className={`mt-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Area ini sengaja dipisah. User biasa cukup fokus ke media, prompt, model, lalu generate.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowStudioSettings(false)}
+                className={`rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+              >
+                Tutup
+              </button>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                <div className="mb-4 flex items-center gap-2">
+                  <Settings2 size={16} className="text-blue-500" />
+                  <p className="text-sm font-bold">OpenRouter</p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="space-y-2 md:col-span-2">
+                    <span className="text-sm font-semibold">API key</span>
+                    <input
+                      type="password"
+                      value={providerConfig.apiKey}
+                      onChange={(e) => updateProviderConfig({ apiKey: e.target.value })}
+                      placeholder={providerMeta.envKey ? `Bisa pakai env ${providerMeta.envKey} atau isi manual di sini` : 'Isi API key manual'}
+                      className={fieldClass}
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold">Model umum</span>
+                    <input value={providerConfig.model} onChange={(e) => updateProviderConfig({ model: e.target.value })} className={fieldClass} />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-semibold">Model foto</span>
+                    <input value={providerConfig.imageModel || ''} onChange={(e) => updateProviderConfig({ imageModel: e.target.value })} className={fieldClass} />
+                  </label>
+                  <label className="space-y-2 md:col-span-2">
+                    <span className="text-sm font-semibold">Model video</span>
+                    <input value={providerConfig.videoModel || ''} onChange={(e) => updateProviderConfig({ videoModel: e.target.value })} className={fieldClass} />
+                  </label>
+                </div>
+              </div>
+
+              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                <div className="mb-4 flex items-center gap-2">
+                  <Sparkles size={16} className="text-purple-500" />
+                  <p className="text-sm font-bold">{isVideoLane ? 'Detail video' : 'Detail foto'}</p>
+                </div>
+
+                {isVideoLane ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      {VIDEO_MOTIONS.map((item) => <ChoicePill key={item} active={videoMotion === item} label={item} onClick={() => setVideoMotion(item)} isDark={isDark} />)}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {VIDEO_DURATIONS.map((item) => <ChoicePill key={item} active={videoDuration === item} label={item} onClick={() => setVideoDuration(item)} isDark={isDark} />)}
+                    </div>
+                    <input value={videoPlatform} onChange={(e) => setVideoPlatform(e.target.value)} placeholder="Platform target, misal TikTok / Reels / Shorts" className={fieldClass} />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <textarea value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} rows={3} placeholder="Negative prompt" className={`${fieldClass} min-h-[92px] resize-y leading-6`} />
+                    <div className="flex flex-wrap gap-2">
+                      {ART_STYLES.map((item) => <ChoicePill key={item} active={artStyle === item} label={item} onClick={() => setArtStyle(item)} isDark={isDark} />)}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {ASPECT_RATIOS.map((item) => <ChoicePill key={item} active={aspectRatio === item} label={item} onClick={() => setAspectRatio(item)} isDark={isDark} />)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className={`mt-4 rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+              <p className="text-sm font-bold">Tool tambahan</p>
+              <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Kalau butuh brainstorming atau blueprint, buka tool ini secara terpisah.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={() => { setActiveTab('copy'); setShowStudioSettings(false); }} className={`rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'}`}>Copy Lab</button>
+                <button type="button" onClick={() => { setActiveTab('campaign'); setShowStudioSettings(false); }} className={`rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'}`}>Campaign</button>
+                <button type="button" onClick={() => { setActiveTab('copilot'); setShowStudioSettings(false); }} className={`rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? 'bg-white/5 text-white hover:bg-white/10' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'}`}>Copilot</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

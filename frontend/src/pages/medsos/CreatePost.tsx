@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, type ChangeEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import AdvancedContentStudio from '../../components/medsos/AdvancedContentStudio';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera, Sparkles, Wand2, PlaySquare, ChevronRight } from 'lucide-react';
+import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Sparkles, Wand2, PlaySquare, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createZernioPost, getZernioAccounts, generateZernioUploadLink, generateAiCaption, type ZernioAccount } from '../../services/medsosPostsService';
 import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera';
@@ -34,6 +34,8 @@ export default function CreatePost() {
   const [generatingAi, setGeneratingAi] = useState(false);
   const [showQuickCaption, setShowQuickCaption] = useState(false);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const [mediaLabel, setMediaLabel] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const modeCards = useMemo(() => ([
     {
       id: 'photo',
@@ -123,6 +125,19 @@ export default function CreatePost() {
     }
   };
 
+  const handlePickLocalMedia = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleLocalMediaChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    setMediaPreview(objectUrl);
+    setMediaLabel(file.name);
+    toast.success('Media lokal berhasil dipilih.');
+  };
+
   const submitPost = async (isDraft: boolean, publishNow: boolean) => {
     if (isDemo) { toast.success('Berhasil (demo)'); return; }
     if (!caption.trim()) { toast.error('Caption tidak boleh kosong'); return; }
@@ -156,6 +171,13 @@ export default function CreatePost() {
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/*"
+        className="hidden"
+        onChange={handleLocalMediaChange}
+      />
       <div className={`rounded-[28px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-gray-100 shadow-sm'}`}>
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] xl:items-start">
           <div>
@@ -267,6 +289,11 @@ export default function CreatePost() {
           isDark={isDark}
           onApplyToComposer={handleApplyStudioText}
           preferredTab={preferredStudioTab}
+          mediaPreview={mediaPreview}
+          mediaLabel={mediaLabel}
+          onPickMedia={handlePickLocalMedia}
+          onOpenCamera={handleTakePicture}
+          canUseCamera={Capacitor.isNativePlatform()}
         />
 
         <div className={`self-start 2xl:sticky 2xl:top-24 rounded-[32px] border p-6 flex flex-col gap-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
@@ -318,38 +345,48 @@ export default function CreatePost() {
             )}
           </div>
 
-          <div className={`rounded-[24px] border-2 border-dashed p-5 transition-colors relative overflow-hidden ${
-            isDark ? 'border-slate-600 bg-slate-700/30' : 'border-gray-300 bg-gray-50'
-          }`}>
-            {mediaPreview ? (
-              <img src={mediaPreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover opacity-20" />
-            ) : null}
-            <div className="relative z-10 flex flex-col items-center text-center">
-              <ImageIcon className="w-10 h-10 mb-2 text-gray-400" />
-              <div className="mb-3 flex items-center gap-2">
-                <p className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Media Upload</p>
-                <FieldHelp
-                  title="Media Upload"
-                  description="Bagian ini dipakai untuk menyiapkan file gambar atau video yang akan dipasangkan dengan caption sebelum publish."
-                  howToUse="Klik Get Upload Link kalau file berasal dari luar, atau buka kamera kalau lewat aplikasi mobile. Setelah media siap, cek preview kecil di bawah sebelum publish."
-                />
+          <div className={`rounded-[24px] border p-4 ${isDark ? 'bg-slate-900/50 ring-1 ring-white/10' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="mb-1 flex items-center gap-2">
+                  <p className="text-sm font-semibold">Media terpasang</p>
+                  <FieldHelp
+                    title="Media terpasang"
+                    description="Bagian ini menunjukkan file referensi/utama yang sedang dipakai untuk konten ini."
+                    howToUse="Idealnya pilih media dari panel generator kiri. Di sini user tinggal cek apakah file yang terpasang sudah benar sebelum publish."
+                  />
+                </div>
+                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {mediaLabel || (mediaPreview ? 'Media siap dipakai' : 'Belum ada media dipilih')}
+                </p>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <button onClick={handleGenerateUploadLink} className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-xl text-sm font-semibold hover:bg-blue-200 transition">
-                  <UploadCloud size={16} /> Get Upload Link
-                </button>
-                {Capacitor.isNativePlatform() && (
-                  <button onClick={handleTakePicture} className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 rounded-xl text-sm font-semibold hover:bg-indigo-200 transition">
-                    <Camera size={16} /> Buka Kamera
-                  </button>
-                )}
-              </div>
-              {uploadLink && (
-                 <a href={uploadLink} target="_blank" rel="noreferrer" className="mt-3 text-xs text-blue-500 underline break-all text-center">
-                   {uploadLink}
-                 </a>
-              )}
+              <button
+                type="button"
+                onClick={handlePickLocalMedia}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700"
+              >
+                <UploadCloud size={14} />
+                {mediaPreview ? 'Ganti media' : 'Pilih media'}
+              </button>
             </div>
+            {mediaPreview ? (
+              <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white/70 dark:border-white/10 dark:bg-white/5">
+                <img src={mediaPreview} alt="Media preview" className="h-40 w-full object-cover" />
+              </div>
+            ) : null}
+            {uploadLink ? (
+              <a href={uploadLink} target="_blank" rel="noreferrer" className="mt-3 block text-xs text-blue-500 underline break-all">
+                Upload link cadangan: {uploadLink}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={handleGenerateUploadLink}
+                className="mt-3 text-xs font-semibold text-blue-500 hover:underline"
+              >
+                Butuh upload link cadangan?
+              </button>
+            )}
           </div>
 
           <div className={`rounded-[24px] p-4 border ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
