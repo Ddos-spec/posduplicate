@@ -48,6 +48,8 @@ export interface OpenRouterMessage {
 export interface ProviderRuntimeConfig {
   apiKey: string;
   model: string;
+  imageModel?: string;
+  videoModel?: string;
   baseUrl: string;
 }
 
@@ -122,16 +124,24 @@ export const PROVIDER_META: Record<ProviderId, ProviderMeta> = {
 
 export function createDefaultProviderConfigs(): ProviderConfigMap {
   return {
-    openrouter: { apiKey: '', model: PROVIDER_META.openrouter.defaultModel, baseUrl: PROVIDER_META.openrouter.baseUrl },
-    openai: { apiKey: '', model: PROVIDER_META.openai.defaultModel, baseUrl: PROVIDER_META.openai.baseUrl },
-    anthropic: { apiKey: '', model: PROVIDER_META.anthropic.defaultModel, baseUrl: PROVIDER_META.anthropic.baseUrl },
-    gemini: { apiKey: '', model: PROVIDER_META.gemini.defaultModel, baseUrl: PROVIDER_META.gemini.baseUrl },
+    openrouter: {
+      apiKey: '',
+      model: PROVIDER_META.openrouter.defaultModel,
+      imageModel: 'google/gemini-2.5-flash-image-preview',
+      videoModel: 'google/gemini-2.5-flash',
+      baseUrl: PROVIDER_META.openrouter.baseUrl,
+    },
+    openai: { apiKey: '', model: PROVIDER_META.openai.defaultModel, imageModel: PROVIDER_META.openai.defaultModel, videoModel: PROVIDER_META.openai.defaultModel, baseUrl: PROVIDER_META.openai.baseUrl },
+    anthropic: { apiKey: '', model: PROVIDER_META.anthropic.defaultModel, imageModel: PROVIDER_META.anthropic.defaultModel, videoModel: PROVIDER_META.anthropic.defaultModel, baseUrl: PROVIDER_META.anthropic.baseUrl },
+    gemini: { apiKey: '', model: PROVIDER_META.gemini.defaultModel, imageModel: PROVIDER_META.gemini.defaultModel, videoModel: PROVIDER_META.gemini.defaultModel, baseUrl: PROVIDER_META.gemini.baseUrl },
     compatible: {
       apiKey: '',
       model: PROVIDER_META.compatible.defaultModel,
+      imageModel: PROVIDER_META.compatible.defaultModel,
+      videoModel: PROVIDER_META.compatible.defaultModel,
       baseUrl: import.meta.env.VITE_COMPATIBLE_BASE_URL || PROVIDER_META.compatible.baseUrl,
     },
-    demo: { apiKey: '', model: PROVIDER_META.demo.defaultModel, baseUrl: PROVIDER_META.demo.baseUrl },
+    demo: { apiKey: '', model: PROVIDER_META.demo.defaultModel, imageModel: PROVIDER_META.demo.defaultModel, videoModel: PROVIDER_META.demo.defaultModel, baseUrl: PROVIDER_META.demo.baseUrl },
   };
 }
 
@@ -539,4 +549,3 @@ export function downloadTextFile(filename: string, content: string) {
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
 }
-
