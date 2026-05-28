@@ -187,32 +187,6 @@ export default function CreatePost() {
         className="hidden"
         onChange={handleLocalMediaChange}
       />
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {modeCards.map((item) => {
-          const isActive = item.id === activeMode;
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => navigate(item.path)}
-              className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-bold transition ${
-                isActive
-                  ? item.accent === 'violet'
-                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20'
-                    : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                  : isDark
-                    ? 'bg-slate-900 text-slate-200 ring-1 ring-white/10 hover:bg-slate-800'
-                    : 'bg-white text-slate-700 ring-1 ring-slate-200 shadow-sm hover:bg-slate-50'
-              }`}
-            >
-              <Icon size={16} />
-              {item.id === 'video' ? 'Video' : 'Foto'}
-            </button>
-          );
-        })}
-      </div>
-
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.18fr)_minmax(380px,0.82fr)]">
         <AdvancedContentStudio
           isDark={isDark}

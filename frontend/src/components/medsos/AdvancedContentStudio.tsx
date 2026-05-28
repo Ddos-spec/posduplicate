@@ -880,11 +880,13 @@ export default function AdvancedContentStudio({
 
   return (
     <div className="space-y-3">
-      <div className={`rounded-[24px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
+      <div className={`rounded-[24px] p-3 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
         <div className="relative overflow-hidden rounded-[20px]">
           <div className={`pointer-events-none absolute inset-0 ${isDark ? 'bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.14),transparent_35%)]' : 'bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.10),transparent_35%)]'}`} />
-          <div className="relative space-y-4">
-            <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="relative space-y-3">
+            <div className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-2 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 ring-1 ring-slate-200'}`}>
+              <span className={`text-[11px] font-bold uppercase tracking-[0.18em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Create mode</span>
+              <div className="flex flex-wrap items-center gap-2">
               {mainTabs.map((tab) => {
                 const Icon = tab.icon;
                 const active = activeMainLane === tab.id;
@@ -916,10 +918,11 @@ export default function AdvancedContentStudio({
                 <Settings2 size={16} />
                 Settings
               </button>
+              </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)]">
-              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-sm'}`}>
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
+              <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-sm'}`}>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Media referensi</p>
@@ -936,9 +939,9 @@ export default function AdvancedContentStudio({
                 </div>
                 <div className={`overflow-hidden rounded-[20px] border ${isDark ? 'border-white/10 bg-slate-900' : 'border-slate-200 bg-slate-50'}`}>
                   {mediaPreview ? (
-                    <img src={mediaPreview} alt="Media reference" className="h-44 w-full object-cover" />
+                    <img src={mediaPreview} alt="Media reference" className="h-36 w-full object-cover" />
                   ) : (
-                    <div className={`flex h-44 flex-col items-center justify-center gap-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <div className={`flex h-36 flex-col items-center justify-center gap-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                       <ImageIcon size={34} />
                       <p className="text-xs">Masukkan media supaya pilot tinggal fokus ke prompt.</p>
                     </div>
@@ -956,7 +959,7 @@ export default function AdvancedContentStudio({
                 ) : null}
               </div>
 
-              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-sm'}`}>
+              <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-sm'}`}>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap gap-2">
                     {(isVideoLane ? VIDEO_PRESETS : IMAGE_PRESETS).map((preset) => {
@@ -1048,11 +1051,11 @@ export default function AdvancedContentStudio({
                 <textarea
                   value={isVideoLane ? videoIdea : imagePrompt}
                   onChange={(e) => isVideoLane ? setVideoIdea(e.target.value) : setImagePrompt(e.target.value)}
-                  rows={6}
+                  rows={4}
                   placeholder={isVideoLane
                     ? 'Tulis ide video, hook utama, tone, CTA, atau jalannya video di sini...'
                     : 'Tulis ide foto, visual utama, suasana, angle, dan hasil akhir yang diinginkan di sini...'}
-                  className={`${fieldClass} min-h-[180px] resize-y leading-6`}
+                  className={`${fieldClass} min-h-[132px] resize-y leading-6`}
                 />
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -1074,9 +1077,6 @@ export default function AdvancedContentStudio({
               </div>
             </div>
 
-            <div className={`rounded-2xl px-4 py-3 text-xs leading-6 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
-              <strong>Tip cepat:</strong> mulai dari satu media, satu prompt, dan satu model dulu. Detail lanjutan cukup dibuka kalau output awal belum pas.
-            </div>
           </div>
         </div>
       </div>
@@ -1333,7 +1333,7 @@ export default function AdvancedContentStudio({
                 <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Sengaja dibuat satu jalur saja: OpenRouter. Lebih simpel, lebih modern, dan user tidak perlu pusing milih terlalu banyak engine.</p>
               </div>
               <div className={`grid gap-3 md:grid-cols-3 ${isDark ? '' : ''}`}>
-                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                   <div className="flex items-center gap-2">
                     <Cpu size={15} className="text-blue-500" />
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Current lane</p>
@@ -1341,7 +1341,7 @@ export default function AdvancedContentStudio({
                   <p className="mt-3 text-base font-bold">{providerMeta.label}</p>
                   <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Semua tool studio sekarang dirouting ke OpenRouter.</p>
                 </div>
-                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                   <div className="flex items-center gap-2">
                     <KeyRound size={15} className="text-emerald-500" />
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">API status</p>
@@ -1349,7 +1349,7 @@ export default function AdvancedContentStudio({
                   <p className="mt-3 text-base font-bold">{providerConfig.apiKey ? 'Key loaded' : 'Manual / demo'}</p>
                   <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{maskSecret(providerConfig.apiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '')}</p>
                 </div>
-                <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+                <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                   <div className="flex items-center gap-2">
                     <Globe2 size={15} className="text-purple-500" />
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Endpoint mode</p>
@@ -1359,7 +1359,7 @@ export default function AdvancedContentStudio({
                 </div>
               </div>
 
-              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+              <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold">Slot default OpenRouter</p>
@@ -1495,7 +1495,7 @@ export default function AdvancedContentStudio({
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+              <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                 <div className="mb-4 flex items-center gap-2">
                   <Settings2 size={16} className="text-blue-500" />
                   <p className="text-sm font-bold">OpenRouter</p>
@@ -1530,7 +1530,7 @@ export default function AdvancedContentStudio({
                 </div>
               </div>
 
-              <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+              <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
                 <div className="mb-4 flex items-center gap-2">
                   <Sparkles size={16} className="text-purple-500" />
                   <p className="text-sm font-bold">{isVideoLane ? 'Detail video' : 'Detail foto'}</p>
@@ -1560,7 +1560,7 @@ export default function AdvancedContentStudio({
               </div>
             </div>
 
-            <div className={`mt-4 rounded-[24px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+            <div className={`mt-4 rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
               <p className="text-sm font-bold">Tool tambahan</p>
               <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Kalau butuh brainstorming atau blueprint, buka tool ini secara terpisah.</p>
               <div className="mt-3 flex flex-wrap gap-2">
