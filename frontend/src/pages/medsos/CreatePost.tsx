@@ -4,7 +4,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import AdvancedContentStudio from '../../components/medsos/AdvancedContentStudio';
 import FieldHelp from '../../components/medsos/FieldHelp';
-import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera, Sparkles, Wand2, PlaySquare } from 'lucide-react';
+import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Camera, Sparkles, Wand2, PlaySquare, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createZernioPost, getZernioAccounts, generateZernioUploadLink, generateAiCaption, type ZernioAccount } from '../../services/medsosPostsService';
 import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera';
@@ -155,16 +155,17 @@ export default function CreatePost() {
   const activeModeCard = modeCards.find((item) => item.id === activeMode) ?? modeCards[0];
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className={`rounded-[32px] p-6 md:p-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-gray-100 shadow-sm'}`}>
-        <div className="max-w-5xl">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className={`rounded-[28px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-gray-100 shadow-sm'}`}>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] xl:items-start">
+          <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
               <Wand2 size={14} />
               CRM &amp; Automation · Create Content
             </div>
             <div className="flex items-start gap-2">
-              <h1 className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {activeModeCard.title} untuk pilot yang mau ngulik foto dan video dari satu dashboard
+              <h1 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Create Content
               </h1>
               <FieldHelp
                 title="Create Content cockpit"
@@ -173,9 +174,38 @@ export default function CreatePost() {
               />
             </div>
             <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Biar konfigurasi banyak tetap waras, halaman ini dijadikan satu cockpit: pilih engine foto/video, racik prompt, pakai default OpenRouter yang sudah disederhanakan, lalu lempar ke publish bridge atau planner tanpa pindah tool.
+              Pilih lane, isi ide utama, generate, lalu kirim ke publish bridge. Sengaja dibuat ringkas supaya user tidak tenggelam di setting.
             </p>
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
+          </div>
+
+          <div className={`rounded-[24px] p-4 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-200'}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Mode aktif</p>
+                <p className="text-base font-bold">{activeModeCard.title}</p>
+              </div>
+              <div className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'bg-white/5 text-slate-300' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
+                {activeMode === 'video' ? 'Motion lane' : 'Visual lane'}
+              </div>
+            </div>
+            <div className="mt-3 space-y-2 text-xs">
+              <div className={`flex items-center gap-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                <ChevronRight size={14} className="text-blue-500" />
+                1. pilih lane yang paling cocok
+              </div>
+              <div className={`flex items-center gap-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                <ChevronRight size={14} className="text-blue-500" />
+                2. isi ide inti, jangan terlalu panjang
+              </div>
+              <div className={`flex items-center gap-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                <ChevronRight size={14} className="text-blue-500" />
+                3. generate lalu publish / schedule
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
               {modeCards.map((item) => {
                 const isActive = item.id === activeMode;
                 const Icon = item.icon;
@@ -194,7 +224,7 @@ export default function CreatePost() {
                     key={item.id}
                     type="button"
                     onClick={() => navigate(item.path)}
-                    className={`rounded-[24px] border p-4 text-left transition-all ${toneClass}`}
+                    className={`rounded-[22px] border p-4 text-left transition-all ${toneClass}`}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`rounded-2xl p-3 ${iconTone}`}>
@@ -229,7 +259,6 @@ export default function CreatePost() {
                   </button>
                 );
               })}
-            </div>
         </div>
       </div>
 

@@ -610,8 +610,8 @@ export default function AdvancedContentStudio({
   };
 
   return (
-    <div className="space-y-4">
-      <div className={`rounded-[32px] p-5 md:p-6 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
+    <div className="space-y-3">
+      <div className={`rounded-[24px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border border-slate-100 shadow-sm'}`}>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl space-y-4">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-200">
@@ -619,7 +619,7 @@ export default function AdvancedContentStudio({
               Content Studio
             </div>
             <div className="flex items-start gap-2">
-              <h2 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Studio foto & video yang lebih simpel</h2>
+              <h2 className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Studio kerja</h2>
               <FieldHelp
                 title="Content Studio"
                 description="Ini cockpit utama untuk bikin caption, visual brief, storyboard video, dan blueprint campaign tanpa bikin user kebanyakan setting."
@@ -627,7 +627,7 @@ export default function AdvancedContentStudio({
               />
             </div>
             <p className={`mt-2 text-sm leading-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Fokus ke ide utama, preset cepat, dan OpenRouter sebagai engine default. Tool tambahan tetap ada, tapi disembunyikan dulu supaya cockpit terasa ringan.
+              Fokus ke ide utama dan generate cepat. Tool tambahan tetap ada, tapi disembunyikan dulu supaya cockpit terasa ringan.
             </p>
             <div className="flex flex-wrap gap-3">
               {mainTabs.map((tab) => {
@@ -658,7 +658,7 @@ export default function AdvancedContentStudio({
               })}
             </div>
           </div>
-          <div className="flex flex-col gap-3 xl:min-w-[280px] xl:max-w-[320px]">
+          <div className="flex flex-col gap-2 xl:min-w-[260px] xl:max-w-[300px]">
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -737,7 +737,7 @@ export default function AdvancedContentStudio({
           </div>
         ) : null}
 
-        <div className={`mt-4 rounded-2xl px-4 py-3 text-xs leading-6 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
+        <div className={`mt-3 rounded-2xl px-4 py-3 text-xs leading-6 ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
           <strong>Tip cepat:</strong> mulai dari Photo atau Video dulu. Copy, Campaign, Copilot, dan console OpenRouter cukup dibuka saat memang dibutuhkan.
         </div>
       </div>
