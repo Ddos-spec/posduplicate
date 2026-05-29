@@ -187,7 +187,7 @@ export default function CreatePost() {
         className="hidden"
         onChange={handleLocalMediaChange}
       />
-      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.18fr)_minmax(380px,0.82fr)]">
+      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.22fr)_minmax(360px,0.78fr)]">
         <AdvancedContentStudio
           isDark={isDark}
           onApplyToComposer={handleApplyStudioText}
@@ -199,19 +199,17 @@ export default function CreatePost() {
           canUseCamera={Capacitor.isNativePlatform()}
         />
 
-        <div className={`self-start 2xl:sticky 2xl:top-24 rounded-[32px] border p-6 flex flex-col gap-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`self-start 2xl:sticky 2xl:top-20 rounded-[28px] border p-4 flex flex-col gap-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Planner &amp; Publish Bridge</h2>
+              <h2 className={`text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Publish Bridge</h2>
               <FieldHelp
                 title="Quick publish bridge"
                 description="Gunakan panel ini untuk mengirim caption final, upload media, lalu publish atau schedule ke channel tujuan."
                 howToUse="Setelah studio kiri menghasilkan output, pilih akun tujuan, siapkan media, isi jadwal bila perlu, lalu gunakan save draft, schedule, atau publish now sesuai kebutuhan."
               />
             </div>
-            <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Panel kanan sengaja dibuat sesingkat mungkin: pilih akun, siapkan media, isi caption, lalu publish atau schedule.
-            </p>
+
           </div>
 
           <div>
@@ -248,7 +246,7 @@ export default function CreatePost() {
             )}
           </div>
 
-          <div className={`rounded-[24px] border p-4 ${isDark ? 'bg-slate-900/50 ring-1 ring-white/10' : 'bg-slate-50 border-slate-200'}`}>
+          <div className={`rounded-[22px] border p-3 ${isDark ? 'bg-slate-900/50 ring-1 ring-white/10' : 'bg-slate-50 border-slate-200'}`}>
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="mb-1 flex items-center gap-2">
@@ -292,7 +290,7 @@ export default function CreatePost() {
             )}
           </div>
 
-          <div className={`rounded-[24px] p-4 border ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
+          <div className={`rounded-[22px] p-3 border ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>
             <div className="flex items-center gap-2 mb-2">
               <CalendarClock size={16} className="text-blue-500" />
               <p className="font-semibold text-sm">Jadwal Publish</p>
@@ -370,13 +368,13 @@ export default function CreatePost() {
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Tulis caption..."
-              className={`w-full min-h-[220px] p-4 rounded-2xl border resize-y outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full min-h-[170px] p-3 rounded-2xl border resize-y outline-none focus:ring-2 focus:ring-blue-500 ${
                 isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-200 text-gray-900'
               }`}
             />
           </div>
 
-          <div className={`rounded-[28px] p-5 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-100'}`}>
+          <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/70 ring-1 ring-white/10' : 'bg-slate-50 border border-slate-100'}`}>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                 <div className="flex items-center gap-2">
@@ -430,25 +428,25 @@ export default function CreatePost() {
             ) : null}
           </div>
 
-          <div className="flex flex-wrap justify-end gap-3">
+          <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => submitPost(true, false)}
               disabled={saving}
-              className={`px-5 py-2.5 rounded-xl font-bold border disabled:opacity-60 ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}
+              className={`px-3 py-2.5 rounded-xl text-sm font-bold border disabled:opacity-60 ${isDark ? 'border-slate-600 text-gray-300' : 'border-gray-200 text-gray-600'}`}
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save Draft'}
             </button>
             <button
               onClick={() => submitPost(false, false)}
               disabled={saving || !scheduledAt}
-              className="px-5 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
+              className="px-3 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : 'Schedule'}
             </button>
             <button
               onClick={() => submitPost(false, true)}
               disabled={saving}
-              className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-60"
+              className="px-3 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Publish Now</>}
             </button>
