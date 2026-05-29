@@ -6,6 +6,7 @@
  */
 
 import request from 'supertest';
+import bcrypt from 'bcrypt';
 import app from '../../src/server';
 import prisma from '../../src/utils/prisma';
 
@@ -80,7 +81,6 @@ describe('🔥 Smoke Tests - All Modules', () => {
     testOutletId = outlet.id;
 
     // Create test user
-    const bcrypt = require('bcrypt');
     const hashedPassword = await bcrypt.hash('testpassword123', 10);
 
     const user = await prisma.users.create({

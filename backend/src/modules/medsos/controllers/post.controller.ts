@@ -384,7 +384,6 @@ async function publishToSocialMedia(post: any, account: any): Promise<{ success:
   // Production: Make actual API call based on platform
   try {
     let response;
-    let externalId: string;
 
     switch (account.platform) {
       case 'instagram':
@@ -436,7 +435,7 @@ async function publishToSocialMedia(post: any, account: any): Promise<{ success:
       return { success: false, error: data.error?.message || data.error_description || 'Publish failed' };
     }
 
-    externalId = data.id || data.post_id || `${account.platform}_${Date.now()}`;
+    const externalId = data.id || data.post_id || `${account.platform}_${Date.now()}`;
     return { success: true, externalId };
   } catch (error: any) {
     console.error(`[Publisher] Error publishing to ${account.platform}:`, error);
