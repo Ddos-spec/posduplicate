@@ -3,7 +3,7 @@ import prisma from '../../../utils/prisma';
 const OPENROUTER_ENDPOINT = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_MODEL = 'openrouter/auto';
 const DEFAULT_TEMPERATURE = 0.3;
-const DEFAULT_MAX_TOKENS = 1200;
+const DEFAULT_MAX_TOKENS = 1800;
 
 type TenantAiAnalysisSettings = {
   apiKey?: string;
@@ -210,23 +210,40 @@ function buildPrompt(post: PromptPostShape) {
   const channelName = post.social_accounts?.account_name || post.platform || 'social';
   const caption = normalizeContent(post.content || '');
   const summary = firstParagraph(caption);
+  const impressions = Number(analytics.impressions ?? 0) || 0;
+  const reach = Number(analytics.reach ?? 0) || 0;
+  const likes = Number(analytics.likes ?? 0) || 0;
+  const comments = Number(analytics.comments ?? 0) || 0;
+  const shares = Number(analytics.shares ?? 0) || 0;
+  const saves = Number(analytics.saves ?? 0) || 0;
+  const interactions = likes + comments + shares + saves;
+  const engagementRate = Number(analytics.engagement_rate ?? 0) || (reach ? Number(((interactions / reach) * 100).toFixed(2)) : 0);
+  const frequency = reach ? Number((impressions / reach).toFixed(2)) : 0;
+  const likeRate = impressions ? Number(((likes / impressions) * 100).toFixed(2)) : 0;
+  const commentRate = impressions ? Number(((comments / impressions) * 100).toFixed(2)) : 0;
+  const shareRate = impressions ? Number(((shares / impressions) * 100).toFixed(2)) : 0;
+  const saveRate = impressions ? Number(((saves / impressions) * 100).toFixed(2)) : 0;
+  const passiveSignal = comments + shares + saves === 0 ? 'Interaksi aktif nol; konten kemungkinan hanya dikonsumsi pasif.' : 'Ada interaksi aktif; cek jenis interaksi paling kuat untuk menentukan angle berikutnya.';
 
   return [
-    'Anda adalah analis performa konten untuk dashboard bisnis.',
-    'Tulis jawaban final dalam Bahasa Indonesia yang ringkas, langsung, fokus tindakan, dan mudah dibaca.',
-    'Jangan tampilkan proses berpikir, draft, langkah analisis, atau reasoning internal.',
-    'Jangan gunakan markdown atau simbol dekoratif seperti **, *, #, bullet, atau backtick.',
-    'Tulis tepat 4 bagian bernomor: 1. Ringkasan singkat, 2. Yang bekerja, 3. Yang perlu dibenahi, 4. Rekomendasi eksperimen berikutnya.',
-    'Setiap bagian harus 1-3 kalimat pendek dan jangan terpotong di tengah kalimat.',
-    'Hindari pembukaan panjang dan hindari istilah teknis yang tidak perlu.',
-    'Jika performa konten lemah, sepi, atau tidak ramai, wajib jelaskan penyebab paling mungkin dan beri solusi paling prioritas, bukan komentar umum.',
-    'Rekomendasi eksperimen berikutnya harus konkret, bisa dicoba, dan langsung menarget kelemahan konten ini.',
+    'Anda adalah analis performa konten untuk dashboard bisnis dan social commerce.',
+    'Tulis jawaban final dalam Bahasa Indonesia yang jelas, tajam, dan fokus tindakan.',
+    'Jangan tampilkan proses berpikir, draft, reasoning internal, markdown tebal, bullet dekoratif, atau backtick.',
+    'Analisis harus lebih kaya dari ringkasan biasa: baca metrik, jelaskan kemungkinan penyebab, sebutkan risiko, dan beri eksperimen konkret.',
+    'Jangan memberi saran generik. Semua insight harus nyambung dengan caption, platform, dan angka performa konten ini.',
+    'Jika konten tidak ramai, wajib jelaskan kemungkinan penyebab paling realistis dan tindakan prioritas pertama.',
+    'Jika data lokasi, usia, atau gender tidak tersedia di payload post, tulis jelas bahwa data audience belum tersedia untuk post ini dan arahkan membaca panel Audience Breakdown jika akun mendukung.',
+    'Jangan mengarang demografi, lokasi, atau gender jika tidak ada datanya.',
+    'Gunakan tepat 7 bagian bernomor. Setiap bagian 2-4 kalimat pendek, tidak terpotong di tengah kalimat.',
     '',
-    'Gunakan format ini:',
-    '1. Ringkasan singkat: ...',
-    '2. Yang bekerja: ...',
-    '3. Yang perlu dibenahi: ...',
-    '4. Rekomendasi eksperimen berikutnya: ...',
+    'Format wajib:',
+    '1. Ringkasan eksekutif: ...',
+    '2. Pembacaan metrik: ...',
+    '3. Yang bekerja: ...',
+    '4. Yang menghambat performa: ...',
+    '5. Audience dan data yang belum tersedia: ...',
+    '6. Rekomendasi prioritas: ...',
+    '7. Eksperimen berikutnya: ...',
     '',
     `Platform: ${post.platform}`,
     `Akun/channel: ${channelName}`,
@@ -235,16 +252,25 @@ function buildPrompt(post: PromptPostShape) {
     `Deskripsi singkat: ${summary}`,
     `Caption lengkap: ${caption}`,
     '',
-    'Metrik yang tersedia:',
-    `- Impressions/Views: ${analytics.impressions ?? 0}`,
-    `- Reach: ${analytics.reach ?? 0}`,
-    `- Likes: ${analytics.likes ?? 0}`,
-    `- Comments: ${analytics.comments ?? 0}`,
-    `- Shares: ${analytics.shares ?? 0}`,
-    `- Saves: ${analytics.saves ?? 0}`,
-    `- Engagement rate: ${analytics.engagement_rate ?? 0}`,
+    'Metrik mentah:',
+    `Impressions/Views: ${impressions}`,
+    `Reach: ${reach}`,
+    `Likes: ${likes}`,
+    `Comments: ${comments}`,
+    `Shares: ${shares}`,
+    `Saves: ${saves}`,
+    `Engagement rate: ${engagementRate}`,
     '',
-    'Berikan insight yang realistis terhadap konten ini saja, bukan saran generik untuk semua konten.',
+    'Metrik turunan untuk dibaca:',
+    `Total interaksi: ${interactions}`,
+    `Frekuensi impresi per orang: ${frequency}`,
+    `Like rate terhadap impressions: ${likeRate}%`,
+    `Comment rate terhadap impressions: ${commentRate}%`,
+    `Share rate terhadap impressions: ${shareRate}%`,
+    `Save rate terhadap impressions: ${saveRate}%`,
+    `Sinyal interaksi: ${passiveSignal}`,
+    '',
+    'Beri insight realistis untuk konten ini saja. Jangan menjanjikan data yang tidak tersedia.',
   ].join('\n');
 }
 
@@ -348,6 +374,7 @@ export async function generatePostPerformanceAnalysis(tenantId: number, input: A
   const requestBody = {
     model: settings.model || DEFAULT_MODEL,
     temperature: settings.temperature ?? DEFAULT_TEMPERATURE,
+    max_tokens: Math.max(settings.maxTokens ?? DEFAULT_MAX_TOKENS, 1500),
     messages,
   };
 

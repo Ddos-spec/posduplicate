@@ -111,10 +111,10 @@ const defaultSettings: SettingsState = {
     model: 'openrouter/auto',
     customModel: '',
     temperature: 0.3,
-    maxTokens: 900,
+    maxTokens: 1800,
   },
   systemMessages: {
-    postAnalysis: 'Anda adalah analis performa konten untuk dashboard bisnis. Tulis jawaban dalam Bahasa Indonesia yang ringkas, langsung, dan fokus tindakan.',
+    postAnalysis: 'Anda adalah analis performa konten untuk dashboard bisnis dan social commerce. Tulis Bahasa Indonesia yang jelas, tajam, berbasis metrik, menyebut penyebab performa, risiko, rekomendasi prioritas, dan eksperimen berikutnya. Jangan mengarang data audience jika data lokasi, usia, atau gender tidak tersedia.',
     contentGeneration: 'Anda adalah copywriter kreatif profesional yang ahli dalam membuat caption media sosial yang menarik dan berorientasi pada konversi.',
     inboxReply: 'Anda adalah staf layanan pelanggan yang ramah dan membantu. Balas pesan pelanggan dengan sopan dan berikan solusi yang tepat.',
   },
