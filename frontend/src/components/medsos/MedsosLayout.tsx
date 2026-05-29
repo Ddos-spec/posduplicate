@@ -244,7 +244,7 @@ export default function MedsosLayout() {
           || path.endsWith('/automations')
         ) return Boolean(mcsPerms?.inbox);
         if (path.includes('/analytics/')) return Boolean(mcsPerms?.analytics);
-        if (path.endsWith('/pricing') || path.endsWith('/connections')) return false;
+        if (path.endsWith('/connections')) return false;
         return true;
       };
 

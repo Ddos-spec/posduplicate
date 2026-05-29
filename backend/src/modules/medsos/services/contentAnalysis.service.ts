@@ -197,6 +197,33 @@ function buildRepairPrompt(rawAnalysis: string) {
   ].join('\n');
 }
 
+
+function buildDeterministicPostAnalysis(post: PromptPostShape) {
+  const analytics = post.social_analytics || {};
+  const impressions = Number(analytics.impressions ?? 0) || 0;
+  const reach = Number(analytics.reach ?? 0) || 0;
+  const likes = Number(analytics.likes ?? 0) || 0;
+  const comments = Number(analytics.comments ?? 0) || 0;
+  const shares = Number(analytics.shares ?? 0) || 0;
+  const saves = Number(analytics.saves ?? 0) || 0;
+  const interactions = likes + comments + shares + saves;
+  const engagementRate = Number(analytics.engagement_rate ?? 0) || (reach ? Number(((interactions / reach) * 100).toFixed(2)) : 0);
+  const frequency = reach ? Number((impressions / reach).toFixed(2)) : 0;
+  const passive = comments + shares + saves === 0;
+  const caption = normalizeContent(post.content || '');
+  const captionLooksShort = caption.length < 80;
+
+  return [
+    `1. Ringkasan eksekutif: Konten ini menghasilkan ${impressions} impressions, ${reach} reach, dan ${interactions} total interaksi. Engagement rate terbaca ${engagementRate}%, sehingga fokus evaluasi utama adalah kualitas interaksi, bukan hanya jumlah tayangan.`,
+    `2. Pembacaan metrik: Frekuensi tayang per orang sekitar ${frequency}x. Likes ${likes}, comments ${comments}, shares ${shares}, dan saves ${saves}; ${passive ? 'interaksi aktif masih kosong sehingga konten cenderung dikonsumsi pasif.' : 'ada interaksi aktif yang bisa dijadikan sinyal angle lanjutan.'}`,
+    `3. Yang bekerja: Konten sudah memiliki distribusi awal melalui impressions dan reach yang tercatat. Jika engagement rate terlihat cukup baik, berarti visual atau topik masih punya daya tarik dasar untuk audiens yang melihatnya.`,
+    `4. Yang menghambat performa: ${passive ? 'Hambatan terbesar adalah tidak ada comments, shares, atau saves sehingga konten belum memicu respons lanjutan.' : 'Hambatan utama perlu dilihat dari rasio interaksi mana yang paling lemah dibanding likes.'} ${captionLooksShort ? 'Caption juga terlihat pendek, jadi kemungkinan CTA dan konteks belum cukup kuat.' : 'Pastikan caption tidak hanya informatif, tapi juga punya ajakan tindakan yang jelas.'}`,
+    '5. Audience dan data yang belum tersedia: Data lokasi, usia, dan gender tidak tersedia langsung di payload post ini. Untuk membaca demografi, gunakan panel Audience Breakdown jika akun dan provider mendukung data tersebut.',
+    `6. Rekomendasi prioritas: Prioritaskan perbaikan hook, CTA, dan alasan orang harus komentar, save, atau share. Buat caption yang meminta tindakan spesifik, misalnya pilih opsi, tag teman, simpan tips, atau tanya pengalaman audiens.`,
+    `7. Eksperimen berikutnya: Jalankan 3 variasi konten dengan angle berbeda: problem-solution, social proof, dan offer langsung. Bandingkan comments, shares, saves, dan engagement rate dalam 24-72 jam agar keputusan berikutnya berbasis data.`
+  ].join('\n\n');
+}
+
 function extractAnalysisText(data: ChatCompletionResponse) {
   const choice = data.choices?.[0];
 
@@ -448,20 +475,29 @@ ${systemMsg}`,
   }
 
   if (analysis && !isCompliantPostAnalysis(analysis)) {
-    const repairCompletion = await requestAnalysisCompletion(apiKey, {
-      model: requestBody.model,
-      temperature: 0.1,
-      max_tokens: requestBody.max_tokens,
-      messages: [
-        { role: 'system', content: POST_ANALYSIS_SYSTEM_GUARDRAIL },
-        { role: 'user', content: buildRepairPrompt(analysis) },
-      ],
-    }, frontendBase);
+    try {
+      const repairCompletion = await requestAnalysisCompletion(apiKey, {
+        model: requestBody.model,
+        temperature: 0.1,
+        max_tokens: requestBody.max_tokens,
+        messages: [
+          { role: 'system', content: POST_ANALYSIS_SYSTEM_GUARDRAIL },
+          { role: 'user', content: buildRepairPrompt(analysis) },
+        ],
+      }, frontendBase);
 
-    if (repairCompletion.analysis) {
-      analysis = repairCompletion.analysis;
-      resolvedModel = repairCompletion.data.model || resolvedModel;
+      if (repairCompletion.analysis) {
+        analysis = repairCompletion.analysis;
+        resolvedModel = repairCompletion.data.model || resolvedModel;
+      }
+    } catch {
+      // If the repair call fails, still never return a malformed dashboard answer.
     }
+  }
+
+  if (analysis && !isCompliantPostAnalysis(analysis)) {
+    analysis = buildDeterministicPostAnalysis(post);
+    resolvedModel = `${resolvedModel}+local-format-guard`;
   }
 
   if (!analysis) {
