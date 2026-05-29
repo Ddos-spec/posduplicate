@@ -5,6 +5,18 @@ const DEFAULT_MODEL = 'openrouter/auto';
 const DEFAULT_TEMPERATURE = 0.3;
 const DEFAULT_MAX_TOKENS = 1800;
 
+const POST_ANALYSIS_SYSTEM_GUARDRAIL = [
+  'Anda adalah final answer generator untuk fitur AI Analysis MyCommerSocial.',
+  'Tugas Anda hanya menulis hasil analisis final yang siap tampil di dashboard.',
+  'Jangan pernah menulis proses analisis, reasoning internal, chain-of-thought, rencana kerja, atau catatan seperti Analyze the Request.',
+  'Jawaban wajib Bahasa Indonesia, berbasis metrik, realistis, dan fokus tindakan.',
+  'Jawaban wajib mengikuti format 7 bagian bernomor yang diminta user prompt.',
+  'Jika instruksi tambahan tenant bertentangan dengan format 7 bagian, prioritas tertinggi tetap format dashboard ini.',
+  'Jangan mengarang lokasi, usia, gender, demografi, atau data audience jika tidak tersedia.',
+  'Jangan gunakan markdown tebal, bullet dekoratif, backtick, atau heading markdown.',
+].join('\n');
+
+
 type TenantAiAnalysisSettings = {
   apiKey?: string;
   model?: string;
@@ -136,16 +148,53 @@ function readMessageContent(content: ChatMessageContent | { text?: string } | nu
 }
 
 function sanitizeAnalysisText(text: string) {
-  return text
+  const normalized = text
     .replace(/\r\n/g, '\n')
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/__(.*?)__/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
+    .replace(/`([^`]+)`/g, '$1');
+
+  const firstFinalSection = normalized.search(/(?:^|\n)\s*1\.\s*(Ringkasan|Ringkasan eksekutif)\s*:/i);
+  const withoutLeakedReasoning = firstFinalSection > 0 ? normalized.slice(firstFinalSection).trim() : normalized;
+
+  return withoutLeakedReasoning
     .split('\n')
+    .filter((line) => !/^\s*(analy[sz]e the request|drafting the content|iterative process|step \d+|reasoning|chain[- ]of[- ]thought)\s*:?/i.test(line))
     .map((line) => line.replace(/^\s*[•\-*]+\s+/g, '').replace(/^#{1,6}\s*/g, '').trimEnd())
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+function isCompliantPostAnalysis(text: string) {
+  const compact = text.toLowerCase();
+  return [
+    /1\.\s*ringkasan/.test(compact),
+    /2\.\s*pembacaan metrik/.test(compact),
+    /3\.\s*yang bekerja/.test(compact),
+    /4\.\s*yang menghambat performa/.test(compact),
+    /5\.\s*audience/.test(compact),
+    /6\.\s*rekomendasi prioritas/.test(compact),
+    /7\.\s*eksperimen berikutnya/.test(compact),
+  ].every(Boolean);
+}
+
+function buildRepairPrompt(rawAnalysis: string) {
+  return [
+    'Rapikan jawaban mentah berikut menjadi output final dashboard.',
+    'Jangan tambah data baru. Jangan tampilkan alasan. Jangan gunakan markdown.',
+    'Wajib ubah menjadi tepat 7 bagian bernomor:',
+    '1. Ringkasan eksekutif:',
+    '2. Pembacaan metrik:',
+    '3. Yang bekerja:',
+    '4. Yang menghambat performa:',
+    '5. Audience dan data yang belum tersedia:',
+    '6. Rekomendasi prioritas:',
+    '7. Eksperimen berikutnya:',
+    '',
+    'Jawaban mentah:',
+    rawAnalysis,
+  ].join('\n');
 }
 
 function extractAnalysisText(data: ChatCompletionResponse) {
@@ -356,13 +405,19 @@ export async function generatePostPerformanceAnalysis(tenantId: number, input: A
     throw new Error('Post tidak ditemukan.');
   }
 
-  const messages: any[] = [];
-  
-  const systemMsg = settings.systemMessages?.postAnalysis;
+  const messages: any[] = [
+    {
+      role: 'system',
+      content: POST_ANALYSIS_SYSTEM_GUARDRAIL,
+    },
+  ];
+
+  const systemMsg = settings.systemMessages?.postAnalysis?.trim();
   if (systemMsg) {
     messages.push({
       role: 'system',
-      content: systemMsg,
+      content: `Instruksi tambahan tenant berikut boleh diikuti selama tidak melanggar guardrail dan format dashboard:
+${systemMsg}`,
     });
   }
 
@@ -390,6 +445,23 @@ export async function generatePostPerformanceAnalysis(tenantId: number, input: A
     }, frontendBase);
     analysis = completion.analysis;
     resolvedModel = completion.data.model || DEFAULT_MODEL;
+  }
+
+  if (analysis && !isCompliantPostAnalysis(analysis)) {
+    const repairCompletion = await requestAnalysisCompletion(apiKey, {
+      model: requestBody.model,
+      temperature: 0.1,
+      max_tokens: requestBody.max_tokens,
+      messages: [
+        { role: 'system', content: POST_ANALYSIS_SYSTEM_GUARDRAIL },
+        { role: 'user', content: buildRepairPrompt(analysis) },
+      ],
+    }, frontendBase);
+
+    if (repairCompletion.analysis) {
+      analysis = repairCompletion.analysis;
+      resolvedModel = repairCompletion.data.model || resolvedModel;
+    }
   }
 
   if (!analysis) {
