@@ -12,6 +12,7 @@ import {
   generatePostAnalysis,
   syncAllAnalytics,
   generateAiCaption,
+  generateOperationalAnalysis,
   generateAiReply
 } from '../controllers/post.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
@@ -221,6 +222,7 @@ router.get('/scheduler/status', getSchedulerStatus);
 
 // AI Assistance
 router.post('/generate-caption', generateAiCaption);
+router.post('/generate-operational-analysis', generateOperationalAnalysis);
 router.post('/generate-reply', generateAiReply);
 
 // Analytics routes
