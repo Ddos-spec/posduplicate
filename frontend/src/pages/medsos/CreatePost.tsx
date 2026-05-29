@@ -126,7 +126,7 @@ export default function CreatePost() {
       setUploadedMediaUrl(null);
       toast.success('Foto berhasil diambil!');
     } catch (e) {
-      console.error(e);
+      if (import.meta.env.DEV) console.warn(e);
       toast.error('Gagal mengambil foto');
     }
   };

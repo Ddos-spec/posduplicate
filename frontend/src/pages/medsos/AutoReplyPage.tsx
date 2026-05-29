@@ -38,20 +38,20 @@ export default function AutoReplyPage() {
         <div className={`rounded-[28px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-sm ring-1 ring-slate-900/5'}`}>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-semibold mb-1">Nama Automasi</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Komen 'INFO' kirim link" className={`w-full p-3 rounded-xl border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} />
+              <label htmlFor="autoreply-name" className="block text-sm font-semibold mb-1">Nama Automasi</label>
+              <input id="autoreply-name" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Komen 'INFO' kirim link" className={`w-full p-3 rounded-xl border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">Trigger Keywords</label>
-              <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="info, link, harga, mau" className={`w-full p-3 rounded-xl border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} />
+              <label htmlFor="autoreply-keywords" className="block text-sm font-semibold mb-1">Trigger Keywords</label>
+              <input id="autoreply-keywords" type="text" value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="info, link, harga, mau" className={`w-full p-3 rounded-xl border ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold mb-1">Isi Balasan DM</label>
-              <textarea value={dmMessage} onChange={e => setDmMessage(e.target.value)} rows={4} placeholder="Halo! Ini link promo yang kamu minta..." className={`w-full p-3 rounded-xl border resize-y ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} />
+              <label htmlFor="autoreply-dm" className="block text-sm font-semibold mb-1">Isi Balasan DM</label>
+              <textarea id="autoreply-dm" value={dmMessage} onChange={e => setDmMessage(e.target.value)} rows={4} placeholder="Halo! Ini link promo yang kamu minta..." className={`w-full p-3 rounded-xl border resize-y ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold mb-1">Balasan Komen Publik <span className="text-xs font-normal opacity-60">opsional</span></label>
-              <textarea value={commentReply} onChange={e => setCommentReply(e.target.value)} rows={2} placeholder="Cek DM ya kak!" className={`w-full p-3 rounded-xl border resize-y ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} />
+              <label htmlFor="autoreply-comment" className="block text-sm font-semibold mb-1">Balasan Komen Publik <span className="text-xs font-normal opacity-60">opsional</span></label>
+              <textarea id="autoreply-comment" value={commentReply} onChange={e => setCommentReply(e.target.value)} rows={2} placeholder="Cek DM ya kak!" className={`w-full p-3 rounded-xl border resize-y ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200'}`} />
             </div>
           </div>
           <button onClick={handleSave} disabled={loading} className="mt-4 inline-flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 disabled:opacity-50">
