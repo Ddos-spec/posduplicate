@@ -99,7 +99,6 @@ const BroadcastManagerPage = lazy(() => import('./pages/medsos/BroadcastManagerP
 const AutoReplyPage = lazy(() => import('./pages/medsos/AutoReplyPage'));
 const MedsosAnalytics = lazy(() => import('./pages/medsos/MedsosAnalytics'));
 const MedsosSettings = lazy(() => import('./pages/medsos/MedsosSettings'));
-const MedsosPricing = lazy(() => import('./pages/medsos/MedsosPricing'));
 const MedsosTeamPage = lazy(() => import('./pages/medsos/MedsosTeamPage'));
 
 // Loading fallback
@@ -318,7 +317,7 @@ function App() {
           <Route path="analytics" element={<Navigate to="/demo/medsos/analytics/wa" replace />} />
           <Route path="analytics/:channel" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />
-          <Route path="pricing" element={<MedsosPricing />} />
+          <Route path="pricing" element={<Navigate to="/demo/medsos/dashboard" replace />} />
           <Route index element={<Navigate to="/demo/medsos/dashboard" />} />
         </Route>
 
@@ -452,7 +451,7 @@ function App() {
           <Route path="analytics" element={<Navigate to="/medsos/analytics/wa" replace />} />
           <Route path="analytics/:channel" element={<MedsosAnalytics />} />
           <Route path="settings" element={<MedsosSettings />} />
-          <Route path="pricing" element={<MedsosPricing />} />
+          <Route path="pricing" element={<Navigate to="/medsos/dashboard" replace />} />
           <Route path="team" element={<MedsosTeamPage />} />
           <Route index element={<Navigate to="/medsos/dashboard" />} />
         </Route>

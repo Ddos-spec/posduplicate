@@ -940,9 +940,23 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
     const pending = stats?.pendingChats ?? 0;
     const unread = stats?.totalUnread ?? 0;
     const todayMsg = stats?.todayMessages ?? 0;
+    const backlogLevel = pending > 10 ? 'tinggi' : pending > 3 ? 'sedang' : 'rendah';
+    const unreadLevel = unread > 50 ? 'kritis' : unread > 20 ? 'perlu perhatian' : 'terkontrol';
     setAiResult(previewMode
-      ? `WA Inbox belum aktif penuh. Setelah tersambung, analisis AI akan menampilkan ringkasan beban inbox, kecepatan respons, dan rekomendasi operasional berdasarkan data live.`
-      : `Ringkasan Inbox WA:\n• ${openChats} chat sedang open — ${pending > 0 ? `${pending} menunggu balasan, perlu ditindaklanjuti.` : 'tidak ada backlog.'}\n• ${unread} pesan belum dibaca hari ini.\n• Volume: ${todayMsg} pesan masuk hari ini.\n\nRekomendasi:\n${pending > 5 ? '- Backlog cukup tinggi, pertimbangkan distribusi ke lebih banyak agent.' : '- Beban inbox masih terkontrol.'}\n${unread > 20 ? '- Pesan belum dibaca banyak, prioritaskan SLA respons.' : '- Kecepatan respons dalam batas wajar.'}`);
+      ? `1. Ringkasan eksekutif: WA Inbox belum aktif penuh, jadi dashboard belum bisa membaca beban chat live. Setelah koneksi aktif, analisis akan memetakan backlog, unread, volume harian, dan prioritas tindakan.
+
+2. Data yang dibutuhkan: API key WA CRM, status workspace, jumlah open chat, pending reply, unread, dan volume pesan harian. Tanpa data ini, sistem tidak boleh menyimpulkan performa agent.
+
+3. Rekomendasi setup: Sambungkan WA Inbox di Connections, pastikan workspace merespons, lalu jalankan analysis lagi untuk membaca SLA dan risiko operasional.`
+      : `1. Ringkasan eksekutif: Inbox WA memiliki ${openChats} chat open, ${pending} pending reply, ${unread} unread, dan ${todayMsg} pesan hari ini. Level backlog saat ini ${backlogLevel}, sedangkan unread ${unreadLevel}.
+
+2. Pembacaan operasional: ${pending > 0 ? `${pending} chat menunggu balasan berarti ada antrean yang perlu diprioritaskan.` : 'Tidak ada pending reply, artinya antrean balasan sedang bersih.'} ${unread > 0 ? `${unread} unread menunjukkan masih ada pesan yang belum disentuh.` : 'Tidak ada unread yang menonjol.'}
+
+3. Risiko utama: ${pending > 5 || unread > 20 ? 'Risiko terbesar adalah calon customer menunggu terlalu lama lalu pindah channel atau batal beli.' : 'Risiko masih rendah, tapi tetap perlu dipantau agar SLA tidak naik mendadak saat traffic masuk.'}
+
+4. Rekomendasi prioritas: ${pending > 5 ? 'Bagi antrean ke agent tambahan dan dahulukan chat dengan intent beli, komplain, atau follow-up pembayaran.' : 'Pertahankan pola respons sekarang dan gunakan template untuk pertanyaan berulang.'} ${unread > 20 ? 'Buat sweep unread setiap 15 menit sampai angka turun.' : 'Cek unread secara berkala agar tidak menumpuk.'}
+
+5. Eksperimen berikutnya: Uji template jawaban cepat untuk 3 pertanyaan paling sering, tandai chat high-intent, lalu bandingkan pending reply sebelum dan sesudah 1 hari operasional.`);
     setAiLoading(false);
   };
 
@@ -1131,9 +1145,24 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
   const handleMktAnalysis = async () => {
     setAiLoading(true);
     await new Promise((r) => setTimeout(r, 900));
+    const connectedNames = channels.map((c) => c.name).join(', ') || '-';
+    const bestChannel = marketplaceCards.length ? [...marketplaceCards].sort((a, b) => b.conversion - a.conversion)[0] : null;
+    const weakestResponse = marketplaceCards.length ? [...marketplaceCards].sort((a, b) => a.responseRate - b.responseRate)[0] : null;
     setAiResult(previewMode
-      ? `Marketplace hub belum tersambung. Setelah channel aktif, analisis AI akan memberikan ringkasan performa buyer chat, konversi per platform, dan rekomendasi follow-up.`
-      : `Ringkasan Marketplace Hub:\n• ${channels.length} channel aktif: ${channels.map((c) => c.name).join(', ') || '-'}.\n• Status: ${status?.reachable ? 'Workspace merespons dengan baik.' : 'Workspace perlu pengecekan koneksi.'}\n\nRekomendasi:\n${channels.length === 0 ? '- Belum ada channel terdaftar, hubungkan toko marketplace melalui halaman Connections.' : `- ${channels.length} channel tersambung, pastikan SLA respons buyer chat terjaga di bawah 5 menit.`}\n- Pantau metrik konversi per platform secara berkala untuk mengidentifikasi toko dengan performa terbaik.`);
+      ? `1. Ringkasan eksekutif: Marketplace Hub belum tersambung, jadi sistem belum bisa membaca buyer chat dan konversi live. Analisis akan lebih akurat setelah toko marketplace aktif.
+
+2. Data yang dibutuhkan: channel aktif, status workspace, conversion per platform, response rate, volume buyer chat, dan SLA respons. Tanpa data ini, sistem hanya bisa memberi rekomendasi setup.
+
+3. Rekomendasi setup: Hubungkan toko melalui Connections, pastikan channel muncul di inbox, lalu jalankan analysis ulang untuk membaca peluang konversi dan bottleneck follow-up.`
+      : `1. Ringkasan eksekutif: Marketplace Hub membaca ${channels.length} channel aktif: ${connectedNames}. Status workspace saat ini ${status?.reachable ? 'sehat dan merespons' : 'perlu pengecekan koneksi'}.
+
+2. Pembacaan channel: ${bestChannel ? `${bestChannel.channel} terlihat paling kuat dari sisi conversion sekitar ${bestChannel.conversion}%.` : 'Belum ada data conversion yang cukup untuk menentukan channel terbaik.'} ${weakestResponse ? `${weakestResponse.channel} perlu dipantau karena response rate berada di sekitar ${weakestResponse.responseRate}%.` : ''}
+
+3. Risiko utama: Jika response rate turun, buyer chat marketplace berisiko berubah menjadi batal beli karena customer biasanya membandingkan toko dengan cepat. Jika workspace tidak reachable, seluruh funnel buyer chat bisa tampak aktif tapi tidak tertangani.
+
+4. Rekomendasi prioritas: ${channels.length === 0 ? 'Hubungkan toko marketplace terlebih dahulu melalui Connections.' : 'Jaga SLA respons buyer di bawah 5 menit, gunakan template untuk pertanyaan ongkir, stok, variasi, dan pembayaran.'} Pantau toko dengan conversion tertinggi sebagai benchmark script balasan.
+
+5. Eksperimen berikutnya: Buat 3 template follow-up untuk buyer yang tanya harga, tanya stok, dan belum checkout; jalankan 7 hari lalu bandingkan response rate dan conversion per channel.`);
     setAiLoading(false);
   };
 
