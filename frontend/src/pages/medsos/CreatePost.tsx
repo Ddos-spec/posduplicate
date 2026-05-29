@@ -7,6 +7,7 @@ import FieldHelp from '../../components/medsos/FieldHelp';
 import { CalendarClock, Image as ImageIcon, Loader2, Send, UploadCloud, Sparkles, PlaySquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { createZernioPost, getZernioAccounts, generateZernioUploadLink, generateAiCaption, type ZernioAccount } from '../../services/medsosPostsService';
+import api, { getFullUrl } from '../../services/api';
 import { Camera as CapacitorCamera, CameraResultType } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 
@@ -30,6 +31,9 @@ export default function CreatePost() {
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [uploadLink, setUploadLink] = useState<string | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [selectedMediaFile, setSelectedMediaFile] = useState<File | null>(null);
+  const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
+  const [externalMediaUrl, setExternalMediaUrl] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
   const [generatingAi, setGeneratingAi] = useState(false);
   const [showQuickCaption, setShowQuickCaption] = useState(false);
@@ -99,7 +103,7 @@ export default function CreatePost() {
   const handleGenerateUploadLink = async () => {
     try {
       const data = await generateZernioUploadLink();
-      setUploadLink(data.uploadUrl || 'https://upload.omnipilot.ai/dummy'); // fallback if missing
+      setUploadLink(data.uploadUrl || data.url || '')
       toast.success('Upload link generated!');
     } catch {
       toast.error('Gagal membuat upload link');
@@ -118,6 +122,8 @@ export default function CreatePost() {
         resultType: CameraResultType.DataUrl
       });
       setMediaPreview(image.dataUrl ?? null);
+      setSelectedMediaFile(null);
+      setUploadedMediaUrl(null);
       toast.success('Foto berhasil diambil!');
     } catch (e) {
       console.error(e);
@@ -140,11 +146,31 @@ export default function CreatePost() {
         return;
       }
       setMediaPreview(dataUrl);
+      setSelectedMediaFile(file);
+      setUploadedMediaUrl(null);
       setMediaLabel(file.name);
       toast.success('Media lokal berhasil dipilih.');
     };
     reader.onerror = () => toast.error('Gagal membaca media lokal.');
     reader.readAsDataURL(file);
+  };
+
+  const resolveMediaUrls = async (): Promise<string[]> => {
+    const manualUrl = externalMediaUrl.trim();
+    if (manualUrl) return [manualUrl];
+    if (uploadedMediaUrl) return [uploadedMediaUrl];
+    if (!selectedMediaFile) return [];
+    if (!selectedMediaFile.type.startsWith('image/')) {
+      throw new Error('Upload video lokal belum tersedia di endpoint internal. Pakai upload link cadangan lalu masukkan URL video hasil upload.');
+    }
+    const formData = new FormData();
+    formData.append('image', selectedMediaFile);
+    const { data } = await api.post('/upload/image', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+    const rawUrl = String(data.data?.url || '');
+    if (!rawUrl) throw new Error('Upload media berhasil tapi URL file kosong.');
+    const fullUrl = getFullUrl(rawUrl);
+    setUploadedMediaUrl(fullUrl);
+    return [fullUrl];
   };
 
   const submitPost = async (isDraft: boolean, publishNow: boolean) => {
@@ -154,18 +180,19 @@ export default function CreatePost() {
 
     setSaving(true);
     try {
+      const mediaUrls = await resolveMediaUrls();
       await createZernioPost({
         text: caption,
         socialAccountIds: Array.from(selectedAccounts),
         isDraft,
         publishNow,
         scheduledAt: scheduledAt || undefined,
-        mediaUrls: mediaPreview ? ['data-url-placeholder'] : [], // In reality, you'd upload this blob first using the Zernio upload flow
+        mediaUrls,
       });
       toast.success(publishNow ? 'Post dipublish' : isDraft ? 'Draft disimpan' : 'Post dijadwalkan');
       navigate(plannerPath);
-    } catch {
-      toast.error('Gagal memproses post');
+    } catch (error: any) {
+      toast.error(error?.message || 'Gagal memproses post');
     } finally {
       setSaving(false);
     }
@@ -288,6 +315,13 @@ export default function CreatePost() {
                 Butuh upload link cadangan?
               </button>
             )}
+            <input
+              type="url"
+              value={externalMediaUrl}
+              onChange={(event) => setExternalMediaUrl(event.target.value)}
+              placeholder="Opsional: paste URL media hasil upload cadangan"
+              className={`mt-3 w-full rounded-xl border px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-500/30 ${isDark ? 'bg-slate-900 border-white/10 text-white placeholder:text-slate-500' : 'bg-white border-slate-200 text-slate-900'}`}
+            />
           </div>
 
           <div className={`rounded-[22px] p-3 border ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'border-gray-100 bg-gray-50'}`}>

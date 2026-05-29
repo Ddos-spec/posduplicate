@@ -302,6 +302,7 @@ export default function OmnichannelAdsHub() {
   const [adsCopilotPlatform, setAdsCopilotPlatform] = useState<AdsCopilotPlatform>('Omnichannel');
   const [adsCopilotOutput, setAdsCopilotOutput] = useState('');
   const [adsCopilotLoading, setAdsCopilotLoading] = useState(false);
+  const [disconnectTarget, setDisconnectTarget] = useState<ZernioAccount | null>(null);
 
   const load = async (options?: { refresh?: boolean; silent?: boolean }) => {
     if (options?.silent) {
@@ -437,11 +438,14 @@ export default function OmnichannelAdsHub() {
     }
   };
 
-  const handleDisconnect = async (account: ZernioAccount) => {
-    if (!window.confirm(`Putuskan ${account.displayName || account.username || account.platform} dari workspace ini?`)) {
-      return;
-    }
+  const handleDisconnect = (account: ZernioAccount) => {
+    setDisconnectTarget(account);
+  };
 
+  const confirmDisconnect = async () => {
+    if (!disconnectTarget) return;
+    const account = disconnectTarget;
+    setDisconnectTarget(null);
     try {
       await disconnectZernioAccount(account.id);
       if (isDemo) {
@@ -1731,6 +1735,25 @@ export default function OmnichannelAdsHub() {
             </section>
           ) : null}
         </>
+      ) : null}
+
+
+      {disconnectTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className={`w-full max-w-md rounded-[28px] border p-5 shadow-2xl ${isDark ? 'border-white/10 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-950'}`}>
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500"><Unplug size={20} /></span>
+              <div>
+                <h3 className="text-lg font-extrabold tracking-tight">Putuskan akun ads?</h3>
+                <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Putuskan {disconnectTarget.displayName || disconnectTarget.username || disconnectTarget.platform} dari workspace ini?</p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => setDisconnectTarget(null)} className={`rounded-2xl px-4 py-2 text-sm font-bold ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}>Batal</button>
+              <button type="button" onClick={() => void confirmDisconnect()} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">Putuskan</button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

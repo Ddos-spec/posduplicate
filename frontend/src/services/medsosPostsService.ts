@@ -744,3 +744,10 @@ export async function generateAiReply(context: string): Promise<string> {
   const { data } = await api.post('/medsos/posts/generate-reply', { context });
   return data.data.suggestion;
 }
+
+export async function generateOperationalAnalysis(prompt: string): Promise<string> {
+  const { data } = await api.post('/medsos/posts/generate-caption', {
+    prompt: `Tulis analisis operasional Bahasa Indonesia yang ringkas, tajam, dan actionable. Jangan buat caption promosi. Gunakan format bernomor: 1. Ringkasan, 2. Risiko, 3. Prioritas tindakan, 4. Eksperimen berikutnya. Data:\n${prompt}`
+  });
+  return String(data.data?.caption || '').trim();
+}

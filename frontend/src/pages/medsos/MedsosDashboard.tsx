@@ -27,7 +27,7 @@ import {
   type WACrmConnectionStatus,
   type ZernioAccount,
 } from '../../services/medsosPostsService';
-import { isZernioAdsAccount } from '../../data/zernioCatalog';
+import { humanizeZernioPlatform, isZernioAdsAccount } from '../../data/zernioCatalog';
 import {
   Activity,
   ArrowRight,
@@ -74,17 +74,6 @@ function StatusDot({ level }: { level: StatusLevel }) {
   return <span className={`inline-block h-2.5 w-2.5 rounded-full ${colors[level]} shrink-0`} />;
 }
 
-function humanizePlatform(platform: string) {
-  const labels: Record<string, string> = {
-    facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok',
-    youtube: 'YouTube', linkedin: 'LinkedIn', twitter: 'X / Twitter',
-    threads: 'Threads', bluesky: 'Bluesky', pinterest: 'Pinterest',
-    reddit: 'Reddit', googlebusiness: 'Google Business', metaads: 'Meta Ads',
-    linkedinads: 'LinkedIn Ads', pinterestads: 'Pinterest Ads',
-    tiktokads: 'TikTok Ads', googleads: 'Google Ads', xads: 'X Ads',
-  };
-  return labels[platform.toLowerCase()] || platform;
-}
 
 export default function MedsosDashboard() {
   const { isDark } = useThemeStore();
@@ -233,7 +222,7 @@ export default function MedsosDashboard() {
             </div>
             <div>
               <p className={`text-[10px] uppercase tracking-widest font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{card_.label}</p>
-              <p className="mt-1 text-2xl md:text-3xl font-bold tracking-tight tracking-tight tracking-tight">{card_.value}</p>
+              <p className="mt-1 text-2xl md:text-3xl font-bold tracking-tight">{card_.value}</p>
               <p className={`mt-2 text-xs font-medium leading-relaxed line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{card_.helper}</p>
             </div>
             <div className={`mt-auto flex items-center gap-1.5 text-xs font-bold transition-transform group-hover:translate-x-1 ${
@@ -352,7 +341,7 @@ export default function MedsosDashboard() {
               }`}>
                 <BrandLogo brand={resolveBrandKey(account.platform)} size={40} className="shadow-sm" withRing />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold tracking-tight truncate">{humanizePlatform(account.platform)}</p>
+                  <p className="text-sm font-bold tracking-tight truncate">{humanizeZernioPlatform(account.platform)}</p>
                   <p className={`text-[11px] font-medium truncate mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                     @{account.username || account.displayName || 'Connected'}
                   </p>

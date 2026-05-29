@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import { Users, Loader2, Search, MessageCircle } from 'lucide-react';
 import { listZernioContacts } from '../../services/medsosPostsService';
@@ -23,12 +23,12 @@ export default function CustomerDatabasePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredContacts = contacts.filter((contact) => {
+  const filteredContacts = useMemo(() => contacts.filter((contact) => {
     const keyword = search.toLowerCase();
     return [contact.displayName, contact.name, contact.platformIdentifier, contact.username]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(keyword));
-  });
+  }), [contacts, search]);
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">

@@ -50,8 +50,7 @@ import {
   UserRoundCheck,
   Workflow,
 } from 'lucide-react';
-
-const ADS_PLATFORMS = new Set(['metaads', 'googleads', 'linkedinads', 'tiktokads', 'pinterestads', 'xads']);
+import { isZernioAdsAccount } from '../../data/zernioCatalog';
 
 type InboxChannel = 'wa' | 'social' | 'marketplace';
 
@@ -191,13 +190,23 @@ function descriptionByChannel(channel: InboxChannel) {
   return 'Percakapan WhatsApp operasional yang aktif di workspace inbox.';
 }
 
-function SectionHeader(_props: {
+function SectionHeader({ isDark, title, description, icon }: {
   isDark: boolean;
   title: string;
   description: string;
   icon: ReactNode;
 }) {
-  return null;
+  return (
+    <div className={`rounded-[22px] border px-4 py-3 ${isDark ? 'bg-white/[0.03] border-white/10 text-white' : 'bg-white border-slate-100 text-slate-950 shadow-sm'}`}>
+      <div className="flex items-center gap-3">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-600'}`}>{icon}</span>
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-extrabold tracking-tight">{title}</h1>
+          <p className={`mt-0.5 line-clamp-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{description}</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function WACrmPanel({ isDark, onSetup }: { isDark: boolean; onSetup: () => void }) {
@@ -211,7 +220,7 @@ function SocialInboxLiveView({ isDark }: { isDark: boolean }) {
 
   useEffect(() => {
     getZernioAccounts()
-      .then((result) => setAccounts(result.filter((item) => !ADS_PLATFORMS.has(item.platform.toLowerCase()))))
+      .then((result) => setAccounts(result.filter((item) => !isZernioAdsAccount(item.platform))))
       .catch(() => setAccounts([]))
       .finally(() => setLoading(false));
   }, []);
@@ -314,8 +323,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
       .then((r) => {
         setConversations(r.conversations);
         if (r.conversations.length > 0 && !selected) {
-          // Auto select first on desktop if none selected
-          // setSelected(r.conversations[0]);
+          setSelected((current) => current ?? r.conversations[0] ?? null);
         }
       })
       .catch(() => setConversations([]))
@@ -380,13 +388,13 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
   }
 
   return (
-    <div className={`flex flex-col xl:flex-row h-[750px] rounded-3xl border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200 shadow-xl'}`}>
+    <div className={`flex flex-col xl:flex-row min-h-[min(760px,calc(100vh-220px))] xl:h-[calc(100vh-240px)] rounded-3xl border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200 shadow-xl'}`}>
 
       {/* Column 1: Filter & Conversation List */}
       <div className={`w-full xl:w-96 flex flex-col border-r ${isDark ? 'bg-[#111318] ring-1 ring-white/10/50' : 'border-gray-100 bg-gray-50/30'}`}>
         <div className="p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight">Messages</h2>
+            <h2 className="text-xl font-bold tracking-tight">Pesan</h2>
             <button
               onClick={() => setRefreshTick(t => t + 1)}
               className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'}`}
@@ -401,13 +409,13 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
               onChange={(e) => setPlatform(e.target.value)}
               className={`flex-1 text-xs rounded-xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500/20 ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200 text-gray-700 shadow-sm'}`}
             >
-              <option value="all">All platforms</option>
+              <option value="all">Semua platform</option>
               {availablePlatforms.map((p) => (
                 <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
               ))}
             </select>
             <select className={`flex-1 text-xs rounded-xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-3 py-2 outline-none ${isDark ? 'bg-[#111318] ring-1 ring-white/10 text-white' : 'bg-white border-gray-200 text-gray-700 shadow-sm'}`}>
-               <option>All accounts</option>
+               <option>Semua akun</option>
             </select>
           </div>
         </div>
@@ -415,16 +423,16 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="px-3 pb-4">
             <div className="flex items-center justify-between px-2 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Conversations</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Percakapan</span>
               <select className="text-[10px] font-bold bg-transparent border-none outline-none text-gray-400">
-                <option>Newest first</option>
+                <option>Terbaru dulu</option>
               </select>
             </div>
 
             {filtered.length === 0 ? (
               <div className="py-20 text-center">
                 <MessageSquareQuote size={40} className="mx-auto mb-3 opacity-10" />
-                <p className="text-sm text-gray-400">No messages found</p>
+                <p className="text-sm text-gray-400">Belum ada pesan</p>
               </div>
             ) : (
               <div className="space-y-1">
@@ -462,7 +470,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                           </span>
                         </div>
                         <p className={`text-xs mt-0.5 line-clamp-1 ${isActive ? (isDark ? 'text-blue-200/70' : 'text-blue-500') : 'text-gray-400'}`}>
-                          {conv.lastMessage || 'Sent an attachment'}
+                          {conv.lastMessage || 'Mengirim lampiran'}
                         </p>
                         {conv.unreadCount > 0 && !isActive && (
                           <div className="mt-1 flex justify-end">
@@ -486,8 +494,8 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
             <div className={`mb-6 rounded-full p-6 ${isDark ? 'bg-slate-800' : 'bg-gray-50'}`}>
               <MessageSquareQuote size={48} className="text-blue-500 opacity-20" />
             </div>
-            <h3 className="text-lg font-bold mb-2">Select a conversation</h3>
-            <p className="text-sm text-gray-400 max-w-xs mx-auto">Choose a chat from the left panel to start responding to your customers.</p>
+            <h3 className="text-lg font-bold mb-2">Pilih percakapan</h3>
+            <p className="text-sm text-gray-400 max-w-xs mx-auto">Pilih chat dari panel kiri untuk mulai membalas pelanggan.</p>
           </div>
         ) : (
           <>
@@ -513,7 +521,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
               </div>
               <div className="flex items-center gap-2">
                 {selected.url && (
-                  <a href={selected.url} target="_blank" rel="noreferrer" title="Open original chat" className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+                  <a href={selected.url} target="_blank" rel="noreferrer" title="Buka chat asli" className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
                     <ExternalLink size={18} />
                   </a>
                 )}
@@ -525,17 +533,17 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
               {msgLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                  <p className="text-xs text-gray-400 animate-pulse font-medium">Loading history...</p>
+                  <p className="text-xs text-gray-400 animate-pulse font-medium">Memuat riwayat...</p>
                 </div>
               ) : messages.length === 0 ? (
                 <div className="py-20 text-center opacity-20">
                   <Bot size={64} className="mx-auto mb-4" />
-                  <p className="text-sm font-bold">Encrypted connection active</p>
+                  <p className="text-sm font-bold">Koneksi aman aktif</p>
                 </div>
               ) : (
                 <div className="space-y-6 max-w-4xl mx-auto">
                   <div className="flex justify-center mb-8">
-                     <span className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-slate-800 text-gray-500' : 'bg-gray-100 text-gray-400'}`}>Today</span>
+                     <span className={`px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${isDark ? 'bg-slate-800 text-gray-500' : 'bg-gray-100 text-gray-400'}`}>Hari ini</span>
                   </div>
 
                   {messages.map((msg) => {
@@ -606,13 +614,13 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                     type="button"
                     onClick={() => void handleSend()}
                     disabled={!reply.trim() || sending}
-                    className={`shrink-0 h-11 w-11 flex items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale ${!reply.trim() ? 'bg-gray-300 dark:bg-slate-700' : 'shadow-blue-600/30'}`}
+                    className={`shrink-0 h-11 w-11 flex items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all shadow-lg disabled:opacity-50 disabled:grayscale ${!reply.trim() ? 'bg-gray-300 dark:bg-slate-700' : 'shadow-blue-600/30'}`}
                   >
                     {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                   </button>
                 </div>
               </div>
-              <p className="mt-2 text-[10px] text-center text-gray-400 font-medium">Response SLA: <span className="text-emerald-500">Under 5 minutes</span></p>
+              <p className="mt-2 text-[10px] text-center text-gray-400 font-medium">SLA respons: <span className="text-emerald-500">di bawah 5 menit</span></p>
             </div>
 
             {/* Floating context button like in reference */}
@@ -768,24 +776,48 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
   const allMessages = useMemo<Record<number, ConversationMessage[]>>(() => ({ ...conversationMessages, ...demoWaMessages }), []);
   const [selectedThreadId, setSelectedThreadId] = useState<number>(dataThreads[0]?.id ?? 0);
   const [reply, setReply] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState(channel === 'marketplace' ? 'marketplace' : channel === 'social' ? 'social' : 'all');
 
   useEffect(() => {
     setSelectedThreadId(dataThreads[0]?.id ?? 0);
     setReply('');
+    setSearchTerm('');
     setActiveFilter(channel === 'marketplace' ? 'marketplace' : channel === 'social' ? 'social' : 'all');
   }, [channel, dataThreads]);
 
-  const selectedChat = dataThreads.find((item) => item.id === selectedThreadId) ?? dataThreads[0];
+  const filteredThreads = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return dataThreads.filter((item) => {
+      const matchesFilter = activeFilter === 'all'
+        || (activeFilter === 'urgent' && item.priority === 'high')
+        || (activeFilter === 'assigned' && Boolean(item.assignee))
+        || (activeFilter === 'social' && item.kind === 'social')
+        || (activeFilter === 'marketplace' && item.kind === 'marketplace');
+      const haystack = `${item.customer} ${item.channel} ${item.subject} ${item.snippet} ${item.assignee} ${item.tags.join(' ')}`.toLowerCase();
+      return matchesFilter && (!term || haystack.includes(term));
+    });
+  }, [activeFilter, dataThreads, searchTerm]);
+
+  const selectedChat = filteredThreads.find((item) => item.id === selectedThreadId) ?? filteredThreads[0] ?? dataThreads[0];
   const selectedDetail = selectedChat ? allDetails[selectedChat.id] : null;
   const selectedMessages = selectedChat ? allMessages[selectedChat.id] ?? [] : [];
   const assignedSeat = selectedChat ? teamSeats.find((member) => member.name === selectedChat.assignee) : null;
 
-  const filterTabs = channel === 'marketplace'
-    ? [...inboxFilters.filter((item) => ['all', 'urgent'].includes(item.id)), { id: 'marketplace', label: 'Marketplace', count: 12, tone: 'orange' as const }]
-    : channel === 'social'
-      ? [...inboxFilters.filter((item) => ['all', 'assigned'].includes(item.id)), { id: 'social', label: 'Medsos', count: 14, tone: 'blue' as const }]
-      : inboxFilters.filter((item) => ['all', 'assigned', 'urgent'].includes(item.id));
+  const filterTabs = useMemo(() => {
+    const base = channel === 'marketplace'
+      ? [...inboxFilters.filter((item) => ['all', 'urgent'].includes(item.id)), { id: 'marketplace', label: 'Marketplace', count: dataThreads.filter((item) => item.kind === 'marketplace').length, tone: 'orange' as const }]
+      : channel === 'social'
+        ? [...inboxFilters.filter((item) => ['all', 'assigned'].includes(item.id)), { id: 'social', label: 'Medsos', count: dataThreads.filter((item) => item.kind === 'social').length, tone: 'blue' as const }]
+        : inboxFilters.filter((item) => ['all', 'assigned', 'urgent'].includes(item.id));
+    return base.map((item) => ({
+      ...item,
+      count: item.id === 'all' ? dataThreads.length
+        : item.id === 'urgent' ? dataThreads.filter((thread) => thread.priority === 'high').length
+        : item.id === 'assigned' ? dataThreads.filter((thread) => Boolean(thread.assignee)).length
+        : item.count,
+    }));
+  }, [channel, dataThreads]);
 
   const toneClasses = {
     high: 'bg-red-100 text-red-600',
@@ -793,18 +825,18 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
     low: 'bg-emerald-100 text-emerald-600',
   } as const;
 
-  if (!selectedChat || !selectedDetail) {
-    return null;
-  }
-
-  const templateMatches = replyTemplates.filter((template) => {
+  const templateMatches = useMemo(() => replyTemplates.filter((template) => {
     const templateChannel = template.channel.toLowerCase();
-    const selectedChannel = selectedChat.channel.toLowerCase();
+    const selectedChannel = selectedChat?.channel.toLowerCase() ?? '';
     if (channel === 'wa') {
       return templateChannel.includes('whatsapp') || templateChannel.includes('reservation');
     }
-    return templateChannel.includes(selectedChannel);
-  });
+    return Boolean(selectedChannel) && templateChannel.includes(selectedChannel);
+  }), [channel, selectedChat?.channel]);
+
+  if (!selectedChat || !selectedDetail) {
+    return null;
+  }
 
   return (
     <div className={`h-[calc(100vh-100px)] grid lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_320px] rounded-3xl border overflow-hidden ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-200 shadow-sm'}`}>
@@ -858,13 +890,15 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
             <input
               type="text"
               placeholder="Cari thread / buyer / order..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
               className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
             />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {dataThreads.map((chat) => (
+          {filteredThreads.map((chat) => (
             <button
               key={chat.id}
               type="button"

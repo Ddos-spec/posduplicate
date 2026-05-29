@@ -113,7 +113,6 @@ export default function MedsosLayout() {
   const mcsPerms = user?.dashboard_preferences?.mcs;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [roomyView] = useState<boolean>(() => true);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const expandedByDefault = !isMobileViewport();
     return {
@@ -483,7 +482,7 @@ export default function MedsosLayout() {
             <button
               onClick={() => navigateFromSidebar(`${basePath}/crm/content/photo`)}
               title="Buka Create Content cockpit untuk racik foto, video, dan publish"
-              className={`${sidebarCollapsed ? 'h-11 w-11 rounded-xl' : 'w-full rounded-xl py-3'} flex items-center justify-center gap-2 bg-blue-600 font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 active:scale-95 transition-all`}
+              className={`${sidebarCollapsed ? 'h-11 w-11 rounded-xl' : 'w-full rounded-xl py-3'} flex items-center justify-center gap-2 bg-blue-600 font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 active:scale-95`}
             >
               <Plus size={20} />
               {!sidebarCollapsed ? 'Create Content' : null}
@@ -569,7 +568,7 @@ export default function MedsosLayout() {
           {!sidebarCollapsed ? (
             <div className={`mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${isDark ? 'bg-slate-900 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
               <BellRing size={14} />
-              2 channel butuh follow up hari ini
+              {activeChannels} channel aktif hari ini
             </div>
           ) : null}
           <button
@@ -625,7 +624,7 @@ export default function MedsosLayout() {
           </div>
         </div>
 
-        <div className={`mcs-page-shell ${roomyView ? 'mcs-roomy-view' : ''}`.trim()}>
+        <div className="mcs-page-shell">
           <Outlet />
         </div>
       </div>
