@@ -3,6 +3,12 @@ import { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 
 let socialTableWarningShown = false;
+const isTestEnvironment = process.env.NODE_ENV === 'test';
+type SchedulerTask = Pick<ReturnType<typeof cron.schedule>, 'start' | 'stop'>;
+const noopSchedulerTask = (): SchedulerTask => ({
+  start: () => undefined,
+  stop: () => undefined
+});
 
 function isMissingSocialPostsTable(error: unknown) {
   return (
@@ -234,7 +240,7 @@ async function autoGenerateReorderPOs() {
 }
 
 // Run every minute - Social media scheduler
-const socialScheduler = cron.schedule('* * * * *', async () => {
+const socialScheduler: SchedulerTask = isTestEnvironment ? noopSchedulerTask() : cron.schedule('* * * * *', async () => {
   console.log('[Scheduler] Checking for scheduled posts...');
 
   try {
@@ -282,7 +288,7 @@ const socialScheduler = cron.schedule('* * * * *', async () => {
 });
 
 // Run every hour - Inventory alerts
-const inventoryAlertScheduler = cron.schedule('0 * * * *', async () => {
+const inventoryAlertScheduler: SchedulerTask = isTestEnvironment ? noopSchedulerTask() : cron.schedule('0 * * * *', async () => {
   try {
     await generateInventoryAlerts();
   } catch (error) {
@@ -291,7 +297,7 @@ const inventoryAlertScheduler = cron.schedule('0 * * * *', async () => {
 });
 
 // Run every 6 hours - Auto-reorder POs
-const autoReorderScheduler = cron.schedule('0 */6 * * *', async () => {
+const autoReorderScheduler: SchedulerTask = isTestEnvironment ? noopSchedulerTask() : cron.schedule('0 */6 * * *', async () => {
   try {
     await autoGenerateReorderPOs();
   } catch (error) {

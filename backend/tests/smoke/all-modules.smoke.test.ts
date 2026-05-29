@@ -10,7 +10,9 @@ import bcrypt from 'bcrypt';
 import app from '../../src/server';
 import prisma from '../../src/utils/prisma';
 
-describe('🔥 Smoke Tests - All Modules', () => {
+const describeWithDatabase = process.env.DATABASE_URL ? describe : describe.skip;
+
+describeWithDatabase('🔥 Smoke Tests - All Modules', () => {
   let authToken: string;
   let cashierAuthToken: string;
   let testUserId: number;

@@ -568,10 +568,12 @@ export const createTransaction = async (
                 const newStock = currentStock - qtyNeeded;
 
                 await tx.ingredients.update({
-                where: { id: recipe.ingredient_id },
-                data: {
-                    stock: newStock
-                }
+                  where: { id: recipe.ingredient_id },
+                  data: {
+                    stock: {
+                      decrement: qtyNeeded
+                    }
+                  }
                 });
                 
                 // Log Stock Movement for Ingredient

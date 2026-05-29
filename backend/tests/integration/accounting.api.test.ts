@@ -10,6 +10,12 @@ jest.mock('../../src/middlewares/auth.middleware', () => ({
     req.userRole = 'Owner';
     next();
   },
+  optionalAuth: (req: any, _res: any, next: any) => {
+    req.userId = 1;
+    req.tenantId = 1;
+    req.userRole = 'Owner';
+    next();
+  },
   roleMiddleware: (_roles: string[]) => (_req: any, _res: any, next: any) => {
     next(); // Bypass role check
   }
@@ -19,8 +25,11 @@ jest.mock('../../src/middlewares/auth.middleware', () => ({
 jest.mock('../../src/middlewares/tenant.middleware', () => ({
   tenantMiddleware: (req: any, _res: any, next: any) => {
     req.tenantId = 1;
+    req.userRole = 'Owner';
     next();
-  }
+  },
+  ownerOnly: (_req: any, _res: any, next: any) => next(),
+  superAdminOnly: (_req: any, _res: any, next: any) => next()
 }));
 
 // Mock Audit Middleware
@@ -40,6 +49,7 @@ jest.mock('../../src/utils/prisma', () => ({
         },
         journal_entries: {
             findMany: jest.fn(),
+            findFirst: jest.fn(),
             count: jest.fn(),
             create: jest.fn(),
             findUnique: jest.fn(), // Added findUnique

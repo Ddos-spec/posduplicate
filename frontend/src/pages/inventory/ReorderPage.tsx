@@ -85,6 +85,12 @@ export default function ReorderPage() {
 
     // Real mode: create PO via API
     try {
+      const outletId = user?.outletId;
+      if (!outletId) {
+        toast.error('Outlet belum terhubung ke akun ini');
+        return;
+      }
+
       setSubmitting(true);
       const items = cart.map(item => ({
         inventoryId: typeof item.id === 'string' ? parseInt(item.id) : item.id,
@@ -94,7 +100,7 @@ export default function ReorderPage() {
       }));
 
       const response = await purchaseOrderService.create({
-        outletId: user?.outletId!,
+        outletId,
         items
       });
 

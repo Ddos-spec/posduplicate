@@ -10,6 +10,7 @@ module.exports = {
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],
+  setupFiles: ['<rootDir>/tests/env.ts'],
   // Setup file for global test environment (e.g. mocking auth)
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
 };

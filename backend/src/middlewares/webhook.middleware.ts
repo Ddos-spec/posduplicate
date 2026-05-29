@@ -24,8 +24,10 @@ const cleanupIdempotencyCache = () => {
   }
 };
 
-// Run cleanup every hour
-setInterval(cleanupIdempotencyCache, 60 * 60 * 1000);
+// Run cleanup every hour; keep tests from hanging on a background timer.
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(cleanupIdempotencyCache, 60 * 60 * 1000);
+}
 
 /**
  * Rate limiting middleware for webhooks

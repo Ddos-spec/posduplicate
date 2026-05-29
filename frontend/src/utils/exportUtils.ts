@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { printNativeReceipt } from './nativePrinter';
@@ -68,6 +67,24 @@ interface TenantPrintSettings {
 // Format currency for export
 const formatCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
+};
+
+const escapeCsvCell = (value: unknown) => {
+  const raw = value === null || value === undefined ? '' : String(value);
+  return /[",\n\r]/.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw;
+};
+
+const downloadCsv = (filename: string, rows: unknown[][]) => {
+  const csv = rows.map((row) => row.map(escapeCsvCell).join(',')).join('\r\n');
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename.replace(/\.xlsx$/i, '.csv');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 };
 
 // Export Sales Report to PDF - REPLACED with HTML Print for consistency if needed, but keeping jsPDF for reports as requested only for Receipt
@@ -140,13 +157,9 @@ export const exportProductsPDF = (products: TopProduct[]) => {
   doc.save(`products-report-${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
-// Export Sales Report to Excel
+// Export Sales Report to spreadsheet-compatible CSV.
 export const exportSalesExcel = (salesData: SalesDataPoint[], stats: Statistics, products: TopProduct[], categories: CategoryData[]) => {
-  // Create workbook
-  const wb = XLSX.utils.book_new();
-
-  // Sales Summary Sheet
-  const summaryData = [
+  const rows = [
     ['Sales Report'],
     ['Generated:', new Date().toLocaleString('id-ID')],
     [],
@@ -157,42 +170,24 @@ export const exportSalesExcel = (salesData: SalesDataPoint[], stats: Statistics,
     [],
     ['Sales Data'],
     ['Date', 'Sales'],
-    ...salesData.map(item => [item.date, item.sales])
-  ];
-
-  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(wb, summarySheet, 'Sales Summary');
-
-  // Top Products Sheet
-  const productsData = [
+    ...salesData.map(item => [item.date, item.sales]),
+    [],
     ['Top Products'],
     [],
     ['Product Name', 'Quantity Sold', 'Revenue'],
-    ...products.map(item => [item.name, item.qty, item.revenue])
-  ];
-
-  const productsSheet = XLSX.utils.aoa_to_sheet(productsData);
-  XLSX.utils.book_append_sheet(wb, productsSheet, 'Top Products');
-
-  // Category Distribution Sheet
-  const categoriesData = [
+    ...products.map(item => [item.name, item.qty, item.revenue]),
+    [],
     ['Sales by Category'],
     [],
     ['Category', 'Total Sales'],
     ...categories.map(item => [item.name, item.value])
   ];
 
-  const categoriesSheet = XLSX.utils.aoa_to_sheet(categoriesData);
-  XLSX.utils.book_append_sheet(wb, categoriesSheet, 'Categories');
-
-  // Save file
-  XLSX.writeFile(wb, `sales-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+  downloadCsv(`sales-report-${new Date().toISOString().split('T')[0]}.csv`, rows);
 };
 
-// Export Products to Excel (simple version)
+// Export Products to spreadsheet-compatible CSV (simple version)
 export const exportProductsExcel = (products: TopProduct[]) => {
-  const wb = XLSX.utils.book_new();
-
   const data = [
     ['Top Products Report'],
     ['Generated:', new Date().toLocaleString('id-ID')],
@@ -201,10 +196,7 @@ export const exportProductsExcel = (products: TopProduct[]) => {
     ...products.map(item => [item.name, item.qty, item.revenue])
   ];
 
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb, ws, 'Products');
-
-  XLSX.writeFile(wb, `products-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+  downloadCsv(`products-report-${new Date().toISOString().split('T')[0]}.csv`, data);
 };
 
 // Print Receipt/Struk for Transaction (HTML Method matching TransactionHistory)
@@ -458,12 +450,9 @@ export const printReceipt = async (
   receiptWindow.document.close();
 };
 
-// Export Expenses/Stock Movements to Excel
+// Export Expenses/Stock Movements to spreadsheet-compatible CSV
 export const exportExpensesExcel = (movements: any[], summary: any) => {
-  const wb = XLSX.utils.book_new();
-
-  // Summary Sheet
-  const summaryData = [
+  const rows = [
     ['Expense Tracking Report'],
     ['Generated:', new Date().toLocaleString('id-ID')],
     [],
@@ -472,14 +461,7 @@ export const exportExpensesExcel = (movements: any[], summary: any) => {
     ['Stok Masuk', formatCurrency(summary?.stockIn?.totalCost || 0)],
     ['Jumlah Transaksi Masuk', summary?.stockIn?.count || 0],
     ['Jumlah Transaksi Keluar', summary?.stockOut?.count || 0],
-    []
-  ];
-
-  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
-
-  // Movements Sheet
-  const movementsData = [
+    [],
     ['Riwayat Pergerakan Stok'],
     [],
     ['Tanggal', 'Item', 'Tipe', 'Qty', 'Harga/Unit', 'Total Biaya', 'Supplier', 'User'],
@@ -495,10 +477,7 @@ export const exportExpensesExcel = (movements: any[], summary: any) => {
     ])
   ];
 
-  const movementsSheet = XLSX.utils.aoa_to_sheet(movementsData);
-  XLSX.utils.book_append_sheet(wb, movementsSheet, 'Movements');
-
-  XLSX.writeFile(wb, `expense-tracking-${new Date().toISOString().split('T')[0]}.xlsx`);
+  downloadCsv(`expense-tracking-${new Date().toISOString().split('T')[0]}.csv`, rows);
 };
 
 // Export Expenses/Stock Movements to PDF
@@ -546,10 +525,8 @@ export const exportExpensesPDF = (movements: any[], summary: any) => {
   doc.save(`expense-tracking-${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
-// Export Transactions to Excel
+// Export Transactions to spreadsheet-compatible CSV
 export const exportTransactionsExcel = (transactions: any[]) => {
-  const wb = XLSX.utils.book_new();
-
   const data = [
     ['Transaction History Report'],
     ['Generated:', new Date().toLocaleString('id-ID')],
@@ -565,10 +542,7 @@ export const exportTransactionsExcel = (transactions: any[]) => {
     ])
   ];
 
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
-
-  XLSX.writeFile(wb, `transactions-${new Date().toISOString().split('T')[0]}.xlsx`);
+  downloadCsv(`transactions-${new Date().toISOString().split('T')[0]}.csv`, data);
 };
 
 // Export Transactions to PDF
