@@ -1,5 +1,31 @@
 import api from './api';
 
+type RequestCacheEntry<T> = { expiresAt: number; promise: Promise<T> };
+const MCS_CACHE_TTL_MS = 10_000;
+const requestCache = new Map<string, RequestCacheEntry<unknown>>();
+
+function cachedRequest<T>(key: string, loader: () => Promise<T>, ttlMs = MCS_CACHE_TTL_MS): Promise<T> {
+  const current = requestCache.get(key) as RequestCacheEntry<T> | undefined;
+  if (current && current.expiresAt > Date.now()) return current.promise;
+
+  const promise = loader().catch((error) => {
+    requestCache.delete(key);
+    throw error;
+  });
+  requestCache.set(key, { expiresAt: Date.now() + ttlMs, promise });
+  return promise;
+}
+
+export function invalidateMcsRequestCache(prefix?: string) {
+  if (!prefix) {
+    requestCache.clear();
+    return;
+  }
+  for (const key of requestCache.keys()) {
+    if (key.startsWith(prefix)) requestCache.delete(key);
+  }
+}
+
 export type PostPlatform = 'instagram' | 'facebook' | 'tiktok';
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed';
 
@@ -223,8 +249,10 @@ export async function generateSocialPostAnalysis(post: number | SocialPost): Pro
 }
 
 export async function getWACrmStatus(): Promise<WACrmConnectionStatus> {
-  const { data } = await api.get('/medsos/integrations/proxy/social-hub/status');
-  return data.data as WACrmConnectionStatus;
+  return cachedRequest('wa-crm-status', async () => {
+    const { data } = await api.get('/medsos/integrations/proxy/social-hub/status');
+    return data.data as WACrmConnectionStatus;
+  });
 }
 
 export async function getWACrmConversations(params?: {
@@ -267,8 +295,10 @@ export async function sendWACrmMessage(payload: {
 }
 
 export async function getMarketplaceHubStatus(): Promise<MarketplaceHubConnectionStatus> {
-  const { data } = await api.get('/medsos/integrations/proxy/marketplace-hub/status');
-  return data.data as MarketplaceHubConnectionStatus;
+  return cachedRequest('marketplace-hub-status', async () => {
+    const { data } = await api.get('/medsos/integrations/proxy/marketplace-hub/status');
+    return data.data as MarketplaceHubConnectionStatus;
+  });
 }
 
 export interface ZernioCurrencyTotals {
@@ -466,13 +496,17 @@ export async function getZernioAdsConnectUrl(
 }
 
 export async function getZernioAccounts(): Promise<ZernioAccount[]> {
-  const { data } = await api.get('/medsos/zernio/accounts');
-  return (data.data?.accounts ?? []) as ZernioAccount[];
+  return cachedRequest('zernio-accounts', async () => {
+    const { data } = await api.get('/medsos/zernio/accounts');
+    return (data.data?.accounts ?? []) as ZernioAccount[];
+  });
 }
 
 export async function disconnectZernioAccount(accountId: string): Promise<void> {
   await api.delete(`/medsos/zernio/accounts/${accountId}`);
+  invalidateMcsRequestCache('zernio-accounts');
 }
+
 
 // ─── Zernio Post Management & Media ────────────────────────────────────────
 
