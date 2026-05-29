@@ -1,4 +1,19 @@
 import api from './api';
+import { invalidateMcsRequestCache } from './medsosPostsService';
+
+type CacheEntry<T> = { expiresAt: number; promise: Promise<T> };
+const CACHE_TTL_MS = 10_000;
+let hubCache: CacheEntry<ManagedIntegrationHub> | null = null;
+
+function readCached<T>(entry: CacheEntry<T> | null): Promise<T> | null {
+  if (!entry || entry.expiresAt < Date.now()) return null;
+  return entry.promise;
+}
+
+export function invalidateMyCommerSocialIntegrationCache() {
+  hubCache = null;
+  invalidateMcsRequestCache();
+}
 
 export type ManagedIntegrationStatus =
   | 'not_connected'
@@ -147,8 +162,17 @@ export interface CompleteManagedIntegrationPayload {
 }
 
 export async function getMyCommerSocialIntegrationHub(): Promise<ManagedIntegrationHub> {
-  const { data } = await api.get('/medsos/integrations/hub');
-  return data.data as ManagedIntegrationHub;
+  const cached = readCached(hubCache);
+  if (cached) return cached;
+
+  const promise = api.get('/medsos/integrations/hub').then(({ data }) => data.data as ManagedIntegrationHub);
+  hubCache = { expiresAt: Date.now() + CACHE_TTL_MS, promise };
+  try {
+    return await promise;
+  } catch (error) {
+    invalidateMyCommerSocialIntegrationCache();
+    throw error;
+  }
 }
 
 export async function beginMyCommerSocialConnect(slug: string, returnPath = '/medsos/connections'): Promise<BeginConnectResponse> {
@@ -158,15 +182,18 @@ export async function beginMyCommerSocialConnect(slug: string, returnPath = '/me
 
 export async function completeMyCommerSocialConnect(slug: string, payload: CompleteManagedIntegrationPayload): Promise<ManagedIntegrationConnector> {
   const { data } = await api.post(`/medsos/integrations/${slug}/complete`, payload);
+  invalidateMyCommerSocialIntegrationCache();
   return data.data as ManagedIntegrationConnector;
 }
 
 export async function syncMyCommerSocialIntegration(slug: string): Promise<ManagedIntegrationConnector> {
   const { data } = await api.post(`/medsos/integrations/${slug}/sync`);
+  invalidateMyCommerSocialIntegrationCache();
   return data.data as ManagedIntegrationConnector;
 }
 
 export async function disconnectMyCommerSocialIntegration(slug: string): Promise<ManagedIntegrationConnector> {
   const { data } = await api.post(`/medsos/integrations/${slug}/disconnect`);
+  invalidateMyCommerSocialIntegrationCache();
   return data.data as ManagedIntegrationConnector;
 }
