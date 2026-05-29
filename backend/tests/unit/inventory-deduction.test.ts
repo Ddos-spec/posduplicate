@@ -12,7 +12,8 @@ jest.mock('../../src/utils/prisma', () => ({
         modifiers: { findUnique: jest.fn() },
         transactions: { create: jest.fn() },
         recipes: { findMany: jest.fn() },
-        ingredients: { update: jest.fn() }
+        ingredients: { findUnique: jest.fn(), update: jest.fn() },
+        stock_movements: { create: jest.fn() }
     }
 }));
 
@@ -44,6 +45,12 @@ describe('Inventory Deduction Logic (Unit Test)', () => {
         (prisma.recipes.findMany as jest.Mock).mockResolvedValue([
             { id: 1, item_id: 101, ingredient_id: 500, quantity: 50 }
         ]);
+
+        (prisma.ingredients.findUnique as jest.Mock).mockResolvedValue({
+            id: 500,
+            stock: 1000,
+            cost_per_unit: 0
+        });
 
         // 4. Mock Ingredient Update (Spy only)
         (prisma.ingredients.update as jest.Mock).mockResolvedValue({ id: 500, stock: 900 });

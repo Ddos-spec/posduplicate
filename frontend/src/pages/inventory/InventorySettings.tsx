@@ -26,9 +26,16 @@ export default function InventorySettings() {
     if (isDemo) return;
 
     const fetchSettings = async () => {
+      const outletId = user?.outletId;
+      if (!outletId) {
+        setLoading(false);
+        toast.error('Outlet belum terhubung ke akun ini');
+        return;
+      }
+
       try {
         setLoading(true);
-        const response = await inventorySettingsService.get(user?.outletId!);
+        const response = await inventorySettingsService.get(outletId);
         if (response.success && response.data) {
           const data = response.data;
           setSettings(data);
@@ -57,8 +64,14 @@ export default function InventorySettings() {
     }
 
     try {
+      const outletId = user?.outletId;
+      if (!outletId) {
+        toast.error('Outlet belum terhubung ke akun ini');
+        return;
+      }
+
       setSaving(true);
-      const response = await inventorySettingsService.update(user?.outletId!, {
+      const response = await inventorySettingsService.update(outletId, {
         track_expiry: expiryAlert,
         settings: {
           ...settings.settings,

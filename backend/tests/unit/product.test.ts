@@ -14,6 +14,9 @@ jest.mock('../../src/utils/prisma', () => ({
         outlets: {
             findUnique: jest.fn(),
             findMany: jest.fn()
+        },
+        activity_logs: {
+            create: jest.fn()
         }
     }
 }));
@@ -27,7 +30,8 @@ describe('Product Controller Logic', () => {
         it('should create product successfully', async () => {
             const req = {
                 body: { name: 'Kopi Hitam', price: 15000, outletId: 1, categoryId: 5 },
-                tenantId: 1
+                tenantId: 1,
+                userRole: 'Owner'
             } as any;
             const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
 
@@ -58,7 +62,8 @@ describe('Product Controller Logic', () => {
             const req = {
                 params: { id: '100' },
                 body: { price: 18000 },
-                tenantId: 1
+                tenantId: 1,
+                userRole: 'Owner'
             } as any;
             const res = { json: jest.fn() } as any;
 
@@ -66,6 +71,7 @@ describe('Product Controller Logic', () => {
             (prisma.items.findUnique as jest.Mock).mockResolvedValue({ id: 100, outlet_id: 1 });
             // Mock Outlet Check
             (prisma.outlets.findUnique as jest.Mock).mockResolvedValue({ id: 1, tenant_id: 1 });
+            (prisma.items.update as jest.Mock).mockResolvedValue({ id: 100, outlet_id: 1, price: 18000 });
 
             await updateProduct(req, res, jest.fn());
 

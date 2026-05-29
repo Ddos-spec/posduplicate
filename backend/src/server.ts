@@ -199,12 +199,15 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-// Start server using httpServer to support websockets
-httpServer.listen(PORT, () => {
-  scheduler.start();
-  console.log(`🚀 OmniPilot AI API Server running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Internal health check: http://localhost:${PORT}/health`);
-});
+// Start server using httpServer to support websockets.
+// Tests import the Express app directly; do not bind a real port or start schedulers there.
+if (process.env.NODE_ENV !== 'test') {
+  httpServer.listen(PORT, () => {
+    scheduler.start();
+    console.log(`🚀 OmniPilot AI API Server running on port ${PORT}`);
+    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 Internal health check: http://localhost:${PORT}/health`);
+  });
+}
 
 export default app;
