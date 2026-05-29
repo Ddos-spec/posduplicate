@@ -3,11 +3,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { BrandLogo, resolveBrandKey } from '../../components/medsos/BrandLogo';
 import {
-  channelPerformance,
-  replySpeedTrend,
-  slaCompliance,
-} from '../../data/omnichannelMock';
-import {
   getMarketplaceHubStatus,
   getPosts,
   getWACrmStatus,
@@ -15,6 +10,7 @@ import {
   getZernioAccounts,
   getZernioPostAnalytics,
   generateSocialPostAnalysis,
+  generateOperationalAnalysis,
   type MarketplaceHubConnectionStatus,
   type SocialPost,
   type SocialPostAnalysisResult,
@@ -48,8 +44,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-
-const ADS_PLATFORMS = new Set(['metaads', 'googleads', 'linkedinads', 'tiktokads', 'pinterestads', 'xads']);
+import { isZernioAdsAccount } from '../../data/zernioCatalog';
 
 function zernioPostToSocialPost(item: ZernioPostAnalyticsItem, index: number): SocialPost {
   return {
@@ -376,7 +371,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
         const dbZernioIds = new Set(zernioPosts.map((p) => p.external_id).filter(Boolean));
         const uniqueDbPosts = dbPosts.filter((p) => !p.external_id || !dbZernioIds.has(p.external_id));
         setPosts([...zernioPosts, ...uniqueDbPosts]);
-        setAccounts(accountRows.filter((item) => !ADS_PLATFORMS.has(item.platform.toLowerCase())));
+        setAccounts(accountRows.filter((item) => !isZernioAdsAccount(item.platform)));
       })
       .catch(() => {
         getPosts({ status: 'published' })
@@ -538,6 +533,20 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
   }, [displayPosts]);
 
   const trendRows = useMemo(() => buildTrendRows(displayPosts), [displayPosts]);
+  const activityCells = useMemo(() => {
+    const cells = Array.from({ length: 42 }, (_, index) => ({ index, count: 0, intensity: 0 }));
+    for (const post of displayPosts) {
+      const rawDate = post.published_at || post.scheduled_at;
+      if (!rawDate) continue;
+      const time = new Date(rawDate).getTime();
+      if (Number.isNaN(time)) continue;
+      const ageDays = Math.max(0, Math.min(41, Math.floor((Date.now() - time) / 86_400_000)));
+      const cell = cells[41 - ageDays];
+      cell.count += 1;
+      cell.intensity += Math.max(1, Math.round(getPostEngagementRate(post)));
+    }
+    return cells;
+  }, [displayPosts]);
 
   const topPosts = useMemo(
     () =>
@@ -606,24 +615,18 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
 
       </div>
 
-      {/* Activity Heatmap Mock */}
+      {/* Activity heatmap from real post dates */}
       <section className={`rounded-[32px] p-6 grid lg:grid-cols-[1fr_300px] gap-8 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
         <div>
           <div className="flex items-center gap-4 mb-6">
-             {['Mon', 'Wed', 'Fri', 'Sun'].map(d => <span key={d} className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{d}</span>)}
+             {['6 minggu lalu', '4 minggu', '2 minggu', 'Hari ini'].map(d => <span key={d} className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{d}</span>)}
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {Array.from({ length: 90 }).map((_, i) => (
-              <div
-                key={i}
-                className={`w-4 h-4 rounded-sm ${
-                  i % 7 === 0 ? 'bg-blue-500' :
-                  i % 11 === 0 ? 'bg-blue-400' :
-                  i % 5 === 0 ? 'bg-blue-200' :
-                  isDark ? 'bg-slate-700' : 'bg-gray-100'
-                }`}
-              />
-            ))}
+            {activityCells.map((cell) => {
+              const level = Math.min(4, cell.intensity);
+              const color = level >= 4 ? 'bg-blue-600' : level === 3 ? 'bg-blue-400' : level === 2 ? 'bg-blue-200' : level === 1 ? 'bg-blue-100' : isDark ? 'bg-slate-700' : 'bg-gray-100';
+              return <div key={cell.index} title={`${cell.count} post`} className={`w-4 h-4 rounded-sm ${color}`} />;
+            })}
           </div>
           <div className="mt-4 flex items-center gap-2 text-[10px] text-gray-400">
              <span>Fewer</span>
@@ -638,22 +641,20 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
         </div>
         <div className="flex flex-col items-center justify-center text-center border-l dark:border-slate-700 pl-8">
            <MessageSquareQuote size={48} className="text-gray-200 mb-4" />
-           <h3 className="font-bold text-gray-400">Follower History</h3>
-           <p className="text-xs text-gray-400">Sync is currently processing new data.</p>
+           <h3 className="font-bold text-gray-400">Aktivitas Konten</h3>
+           <p className="text-xs text-gray-400">Heatmap dihitung dari tanggal publish/schedule post nyata.</p>
         </div>
       </section>
 
       {/* Grid Metrics */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Likes', val: aggregate.likes, trend: '+12%', color: 'text-rose-500' },
-          { label: 'Comments', val: aggregate.comments, trend: '+235%', color: 'text-blue-500' },
-          { label: 'Shares', val: aggregate.shares, trend: '-4%', color: 'text-indigo-500' },
-          { label: 'Saves', val: aggregate.saves, trend: '+15%', color: 'text-amber-500' },
-          { label: 'Views', val: aggregate.views, trend: '+20%', color: 'text-emerald-500' },
-          { label: 'Impress.', val: aggregate.views * 1.2, trend: '+33%', color: 'text-cyan-500' },
-          { label: 'Reach', val: aggregate.reach, trend: '+19%', color: 'text-purple-500' },
-          { label: 'Clicks', val: aggregate.views * 0.05, trend: '+2%', color: 'text-orange-500' },
+          { label: 'Likes', val: aggregate.likes, color: 'text-rose-500' },
+          { label: 'Comments', val: aggregate.comments, color: 'text-blue-500' },
+          { label: 'Shares', val: aggregate.shares, color: 'text-indigo-500' },
+          { label: 'Saves', val: aggregate.saves, color: 'text-amber-500' },
+          { label: 'Impressions', val: aggregate.views, color: 'text-emerald-500' },
+          { label: 'Reach', val: aggregate.reach, color: 'text-purple-500' },
         ].map(m => (
           <div key={m.label} className={`rounded-[24px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white border-gray-100 shadow-sm'}`}>
             <div className="flex items-center gap-2 mb-1">
@@ -662,7 +663,7 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
             </div>
             <div className="flex items-baseline gap-2">
                <span className="text-xl font-bold tracking-tight">{m.val >= 1000 ? (m.val / 1000).toFixed(1) + 'K' : m.val}</span>
-               <span className={`text-[10px] font-bold ${m.trend.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>{m.trend}</span>
+               <span className={`text-[10px] font-bold ${m.color}`}>live</span>
             </div>
           </div>
         ))}
@@ -930,34 +931,20 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
 
   const stats = status?.stats;
   const previewMode = !status?.configured || !status?.statsAvailable;
-  const waTrend = previewMode ? neutralReplySpeedTrend : replySpeedTrend;
-  const slaTrend = previewMode ? neutralSlaTrend : slaCompliance;
+  const waTrend = previewMode ? neutralReplySpeedTrend : [];
+  const slaTrend = previewMode ? neutralSlaTrend : [];
 
   const handleWaAnalysis = async () => {
     setAiLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    const openChats = stats?.openChats ?? 0;
-    const pending = stats?.pendingChats ?? 0;
-    const unread = stats?.totalUnread ?? 0;
-    const todayMsg = stats?.todayMessages ?? 0;
-    const backlogLevel = pending > 10 ? 'tinggi' : pending > 3 ? 'sedang' : 'rendah';
-    const unreadLevel = unread > 50 ? 'kritis' : unread > 20 ? 'perlu perhatian' : 'terkontrol';
-    setAiResult(previewMode
-      ? `1. Ringkasan eksekutif: WA Inbox belum aktif penuh, jadi dashboard belum bisa membaca beban chat live. Setelah koneksi aktif, analisis akan memetakan backlog, unread, volume harian, dan prioritas tindakan.
-
-2. Data yang dibutuhkan: API key WA CRM, status workspace, jumlah open chat, pending reply, unread, dan volume pesan harian. Tanpa data ini, sistem tidak boleh menyimpulkan performa agent.
-
-3. Rekomendasi setup: Sambungkan WA Inbox di Connections, pastikan workspace merespons, lalu jalankan analysis lagi untuk membaca SLA dan risiko operasional.`
-      : `1. Ringkasan eksekutif: Inbox WA memiliki ${openChats} chat open, ${pending} pending reply, ${unread} unread, dan ${todayMsg} pesan hari ini. Level backlog saat ini ${backlogLevel}, sedangkan unread ${unreadLevel}.
-
-2. Pembacaan operasional: ${pending > 0 ? `${pending} chat menunggu balasan berarti ada antrean yang perlu diprioritaskan.` : 'Tidak ada pending reply, artinya antrean balasan sedang bersih.'} ${unread > 0 ? `${unread} unread menunjukkan masih ada pesan yang belum disentuh.` : 'Tidak ada unread yang menonjol.'}
-
-3. Risiko utama: ${pending > 5 || unread > 20 ? 'Risiko terbesar adalah calon customer menunggu terlalu lama lalu pindah channel atau batal beli.' : 'Risiko masih rendah, tapi tetap perlu dipantau agar SLA tidak naik mendadak saat traffic masuk.'}
-
-4. Rekomendasi prioritas: ${pending > 5 ? 'Bagi antrean ke agent tambahan dan dahulukan chat dengan intent beli, komplain, atau follow-up pembayaran.' : 'Pertahankan pola respons sekarang dan gunakan template untuk pertanyaan berulang.'} ${unread > 20 ? 'Buat sweep unread setiap 15 menit sampai angka turun.' : 'Cek unread secara berkala agar tidak menumpuk.'}
-
-5. Eksperimen berikutnya: Uji template jawaban cepat untuk 3 pertanyaan paling sering, tandai chat high-intent, lalu bandingkan pending reply sebelum dan sesudah 1 hari operasional.`);
-    setAiLoading(false);
+    try {
+      const prompt = `WA Inbox status=${status?.status || 'unknown'}, reachable=${Boolean(status?.reachable)}, configured=${Boolean(status?.configured)}, openChats=${stats?.openChats ?? 0}, pendingChats=${stats?.pendingChats ?? 0}, totalUnread=${stats?.totalUnread ?? 0}, todayMessages=${stats?.todayMessages ?? 0}, totalCustomers=${stats?.totalCustomers ?? 0}. Beri rekomendasi jika chat sepi, unread tinggi, atau pending reply menumpuk.`;
+      const result = await generateOperationalAnalysis(prompt);
+      setAiResult(result || 'Analisis tidak tersedia dari provider AI.');
+    } catch (error: any) {
+      setAiResult(error?.response?.data?.error?.message || error?.message || 'Gagal membuat analisis AI WA Inbox.');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleExportPdf = () => {
@@ -1045,6 +1032,9 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
             </div>
           </div>
           <div className="h-[320px]">
+            {waTrend.length === 0 ? (
+              <div className={`flex h-full items-center justify-center rounded-2xl border border-dashed text-center text-sm ${isDark ? 'border-slate-700 text-slate-400' : 'border-slate-200 text-slate-500'}`}>Time-series reply speed belum tersedia dari API live.</div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={waTrend}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
@@ -1054,6 +1044,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
                 <Area type="monotone" dataKey="marketplace" stroke="#10b981" fill="#6ee7b7" />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -1066,6 +1057,9 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
             </div>
           </div>
           <div className="h-[320px]">
+            {slaTrend.length === 0 ? (
+              <div className={`flex h-full items-center justify-center rounded-2xl border border-dashed text-center text-sm ${isDark ? 'border-slate-700 text-slate-400' : 'border-slate-200 text-slate-500'}`}>Data SLA compliance live belum tersedia dari API.</div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={slaTrend}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
@@ -1075,6 +1069,7 @@ function WaAnalyticsView({ isDark }: { isDark: boolean }) {
                 <Bar dataKey="compliance" fill="#3b82f6" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>
@@ -1134,36 +1129,24 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
   const previewMode = !status?.configured || channels.length === 0;
   const marketplaceCards = previewMode
     ? neutralMarketplaceCards
-    : channelPerformance
-        .filter((item) => ['Shopee', 'Tokopedia'].includes(item.channel))
-        .map((item) => ({
-          channel: item.channel,
-          conversion: item.conversion,
-          responseRate: item.responseRate,
+    : channels.map((item) => ({
+          channel: item.name,
+          conversion: null as number | null,
+          responseRate: null as number | null,
         }));
 
   const handleMktAnalysis = async () => {
     setAiLoading(true);
-    await new Promise((r) => setTimeout(r, 900));
-    const connectedNames = channels.map((c) => c.name).join(', ') || '-';
-    const bestChannel = marketplaceCards.length ? [...marketplaceCards].sort((a, b) => b.conversion - a.conversion)[0] : null;
-    const weakestResponse = marketplaceCards.length ? [...marketplaceCards].sort((a, b) => a.responseRate - b.responseRate)[0] : null;
-    setAiResult(previewMode
-      ? `1. Ringkasan eksekutif: Marketplace Hub belum tersambung, jadi sistem belum bisa membaca buyer chat dan konversi live. Analisis akan lebih akurat setelah toko marketplace aktif.
-
-2. Data yang dibutuhkan: channel aktif, status workspace, conversion per platform, response rate, volume buyer chat, dan SLA respons. Tanpa data ini, sistem hanya bisa memberi rekomendasi setup.
-
-3. Rekomendasi setup: Hubungkan toko melalui Connections, pastikan channel muncul di inbox, lalu jalankan analysis ulang untuk membaca peluang konversi dan bottleneck follow-up.`
-      : `1. Ringkasan eksekutif: Marketplace Hub membaca ${channels.length} channel aktif: ${connectedNames}. Status workspace saat ini ${status?.reachable ? 'sehat dan merespons' : 'perlu pengecekan koneksi'}.
-
-2. Pembacaan channel: ${bestChannel ? `${bestChannel.channel} terlihat paling kuat dari sisi conversion sekitar ${bestChannel.conversion}%.` : 'Belum ada data conversion yang cukup untuk menentukan channel terbaik.'} ${weakestResponse ? `${weakestResponse.channel} perlu dipantau karena response rate berada di sekitar ${weakestResponse.responseRate}%.` : ''}
-
-3. Risiko utama: Jika response rate turun, buyer chat marketplace berisiko berubah menjadi batal beli karena customer biasanya membandingkan toko dengan cepat. Jika workspace tidak reachable, seluruh funnel buyer chat bisa tampak aktif tapi tidak tertangani.
-
-4. Rekomendasi prioritas: ${channels.length === 0 ? 'Hubungkan toko marketplace terlebih dahulu melalui Connections.' : 'Jaga SLA respons buyer di bawah 5 menit, gunakan template untuk pertanyaan ongkir, stok, variasi, dan pembayaran.'} Pantau toko dengan conversion tertinggi sebagai benchmark script balasan.
-
-5. Eksperimen berikutnya: Buat 3 template follow-up untuk buyer yang tanya harga, tanya stok, dan belum checkout; jalankan 7 hari lalu bandingkan response rate dan conversion per channel.`);
-    setAiLoading(false);
+    try {
+      const connectedNames = channels.map((c) => `${c.name}(${c.source})`).join(', ') || '-';
+      const prompt = `Marketplace status=${status?.status || 'unknown'}, reachable=${Boolean(status?.reachable)}, configured=${Boolean(status?.configured)}, channels=${connectedNames}. Jangan mengarang angka conversion/response rate jika data tidak ada. Beri rekomendasi buyer chat, follow-up order, komplain, ongkir, template fast reply, dan eksperimen 7 hari.`;
+      const result = await generateOperationalAnalysis(prompt);
+      setAiResult(result || 'Analisis tidak tersedia dari provider AI.');
+    } catch (error: any) {
+      setAiResult(error?.response?.data?.error?.message || error?.message || 'Gagal membuat analisis AI Marketplace.');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleExportPdf = () => {
@@ -1284,11 +1267,11 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
                 <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Conversion</p>
-                    <p className="font-bold">{item.conversion}%</p>
+                    <p className="font-bold">{item.conversion == null ? 'Belum ada data' : `${item.conversion}%`}</p>
                   </div>
                   <div>
                     <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Response rate</p>
-                    <p className="font-bold">{item.responseRate}%</p>
+                    <p className="font-bold">{item.responseRate == null ? 'Belum ada data' : `${item.responseRate}%`}</p>
                   </div>
                 </div>
               </div>
@@ -1326,14 +1309,25 @@ function MarketplaceAnalyticsView({ isDark }: { isDark: boolean }) {
   );
 }
 
-function SectionHeader({ exportButton }: {
+function SectionHeader({ isDark, title, description, icon, exportButton }: {
   isDark: boolean;
   title: string;
   description: string;
   icon?: ReactNode;
   exportButton?: ReactNode;
 }) {
-  return exportButton ? <div className="flex justify-end">{exportButton}</div> : null;
+  return (
+    <div className={`flex flex-col gap-3 rounded-[24px] border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${isDark ? 'bg-white/[0.03] border-white/10' : 'bg-white border-slate-100 shadow-sm'}`}>
+      <div className="flex min-w-0 items-center gap-3">
+        {icon ? <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${isDark ? 'bg-blue-500/15 text-blue-300' : 'bg-blue-50 text-blue-600'}`}>{icon}</span> : null}
+        <div className="min-w-0">
+          <h1 className={`truncate text-lg font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-slate-950'}`}>{title}</h1>
+          <p className={`mt-0.5 line-clamp-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{description}</p>
+        </div>
+      </div>
+      {exportButton ? <div className="shrink-0">{exportButton}</div> : null}
+    </div>
+  );
 }
 
 export default function MedsosAnalytics() {

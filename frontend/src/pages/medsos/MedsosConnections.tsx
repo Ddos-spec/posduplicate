@@ -30,7 +30,7 @@ import {
   type WACrmConnectionStatus,
   type ZernioAccount,
 } from '../../services/medsosPostsService';
-import { isZernioAdsAccount, zernioAdsPlatforms, zernioSocialPlatforms } from '../../data/zernioCatalog';
+import { humanizeZernioPlatform, isZernioAdsAccount, zernioAdsPlatforms, zernioSocialPlatforms } from '../../data/zernioCatalog';
 import {
   BadgeCheck,
   ExternalLink,
@@ -269,30 +269,6 @@ function toLocalDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString('id-ID');
 }
 
-function humanizePlatform(platform: string) {
-  const value = platform.toLowerCase();
-  const labels: Record<string, string> = {
-    facebook: 'Facebook',
-    instagram: 'Instagram',
-    tiktok: 'TikTok',
-    youtube: 'YouTube',
-    linkedin: 'LinkedIn',
-    twitter: 'X / Twitter',
-    threads: 'Threads',
-    bluesky: 'Bluesky',
-    pinterest: 'Pinterest',
-    reddit: 'Reddit',
-    googlebusiness: 'Google Business',
-    snapchat: 'Snapchat',
-    metaads: 'Meta Ads',
-    linkedinads: 'LinkedIn Ads',
-    pinterestads: 'Pinterest Ads',
-    tiktokads: 'TikTok Ads',
-    googleads: 'Google Ads',
-    xads: 'X Ads',
-  };
-  return labels[value] || platform;
-}
 
 export default function MedsosConnections() {
   const { isDark } = useThemeStore();
@@ -331,6 +307,8 @@ export default function MedsosConnections() {
   const [zernioLoading, setZernioLoading] = useState(!isDemo);
   const [busyPlatform, setBusyPlatform] = useState<string | null>(null);
   const [showWaKeyEditor, setShowWaKeyEditor] = useState(isDemo);
+  const [disconnectAccountTarget, setDisconnectAccountTarget] = useState<ZernioAccount | null>(null);
+  const [confirmMarketplaceDisconnect, setConfirmMarketplaceDisconnect] = useState(false);
 
   const loadLiveData = async () => {
     setLoading(true);
@@ -402,12 +380,12 @@ export default function MedsosConnections() {
     const adsConnected = params.get('ads_connected');
 
     if (socialConnected) {
-      toast.success(`${humanizePlatform(socialConnected)} berhasil terhubung ke workspace social.`);
+      toast.success(`${humanizeZernioPlatform(socialConnected)} berhasil terhubung ke workspace social.`);
       if (!isDemo) void loadLiveData();
     }
 
     if (adsConnected) {
-      toast.success(`${humanizePlatform(adsConnected)} berhasil diaktifkan di workspace ads.`);
+      toast.success(`${humanizeZernioPlatform(adsConnected)} berhasil diaktifkan di workspace ads.`);
       if (!isDemo) void loadLiveData();
     }
   }, [location.search, isDemo]);
@@ -492,7 +470,7 @@ export default function MedsosConnections() {
       window.location.href = url;
     } catch (error) {
       console.error('Failed to start social connection', error);
-      toast.error(`Gagal memulai koneksi ${humanizePlatform(platform)}.`);
+      toast.error(`Gagal memulai koneksi ${humanizeZernioPlatform(platform)}.`);
       setBusyPlatform(null);
     }
   };
@@ -504,27 +482,29 @@ export default function MedsosConnections() {
       window.location.href = url;
     } catch (error) {
       console.error('Failed to start ads connection', error);
-      toast.error(`Gagal memulai koneksi ${humanizePlatform(platform)}.`);
+      toast.error(`Gagal memulai koneksi ${humanizeZernioPlatform(platform)}.`);
       setBusyPlatform(null);
     }
   };
 
-  const handleDisconnect = async (account: ZernioAccount) => {
-    if (!window.confirm(`Putuskan ${account.displayName || account.username || account.platform} dari workspace ini?`)) {
-      return;
-    }
+  const handleDisconnect = (account: ZernioAccount) => {
+    setDisconnectAccountTarget(account);
+  };
 
+  const confirmDisconnectAccount = async () => {
+    if (!disconnectAccountTarget) return;
+    const account = disconnectAccountTarget;
+    setDisconnectAccountTarget(null);
     try {
       await disconnectZernioAccount(account.id);
-      toast.success(`${humanizePlatform(account.platform)} diputus dari workspace tenant.`);
+      toast.success(`${humanizeZernioPlatform(account.platform)} diputus dari workspace tenant.`);
 
       if (isDemo) {
         setZernioAccounts((current) => current.filter((item) => item.id !== account.id));
       } else {
         await loadLiveData();
       }
-    } catch (error) {
-      console.error('Failed to disconnect account', error);
+    } catch {
       toast.error('Gagal memutuskan account social atau ads.');
     }
   };
@@ -675,11 +655,12 @@ export default function MedsosConnections() {
     }
   };
 
-  const handleDisconnectMarketplace = async () => {
-    if (!window.confirm('Putuskan konfigurasi marketplace chat dari workspace ini?')) {
-      return;
-    }
+  const handleDisconnectMarketplace = () => {
+    setConfirmMarketplaceDisconnect(true);
+  };
 
+  const confirmDisconnectMarketplace = async () => {
+    setConfirmMarketplaceDisconnect(false);
     if (isDemo) {
       setMarketplaceConnector(null);
       setMarketplaceStatus(null);
@@ -793,7 +774,7 @@ export default function MedsosConnections() {
                         <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{platform.hint}</p>
                         {account ? (
                           <p className={`text-xs mt-2 ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
-                            {account.displayName || account.username || humanizePlatform(account.platform)}
+                            {account.displayName || account.username || humanizeZernioPlatform(account.platform)}
                           </p>
                         ) : null}
                       </div>
@@ -862,7 +843,7 @@ export default function MedsosConnections() {
                         ) : null}
                         {account ? (
                           <p className={`text-xs mt-2 ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
-                            {account.displayName || account.username || humanizePlatform(account.platform)}
+                            {account.displayName || account.username || humanizeZernioPlatform(account.platform)}
                           </p>
                         ) : null}
                       </div>
@@ -1230,6 +1211,28 @@ export default function MedsosConnections() {
           </div>
         </section>
       </div>
+
+      {(disconnectAccountTarget || confirmMarketplaceDisconnect) ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className={`w-full max-w-md rounded-[28px] border p-5 shadow-2xl ${isDark ? 'border-white/10 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-950'}`}>
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500"><Unplug size={20} /></span>
+              <div className="min-w-0">
+                <h3 className="text-lg font-extrabold tracking-tight">Konfirmasi pemutusan</h3>
+                <p className={`mt-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {disconnectAccountTarget
+                    ? `Putuskan ${disconnectAccountTarget.displayName || disconnectAccountTarget.username || disconnectAccountTarget.platform} dari workspace ini?`
+                    : 'Putuskan konfigurasi marketplace chat dari workspace ini?'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => { setDisconnectAccountTarget(null); setConfirmMarketplaceDisconnect(false); }} className={`rounded-2xl px-4 py-2 text-sm font-bold ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}>Batal</button>
+              <button type="button" onClick={() => { if (disconnectAccountTarget) void confirmDisconnectAccount(); else void confirmDisconnectMarketplace(); }} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">Putuskan</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

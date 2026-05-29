@@ -186,8 +186,19 @@ export const zernioAdsPlatforms: ZernioPlatformCard[] = [
   },
 ];
 
-const adsAccountPlatforms = new Set(['metaads', 'googleads', 'linkedinads', 'tiktokads', 'pinterestads', 'xads']);
+export const ZERNIO_ADS_PLATFORMS = ['metaads', 'googleads', 'linkedinads', 'tiktokads', 'pinterestads', 'xads'] as const;
+
+const adsAccountPlatforms = new Set<string>(ZERNIO_ADS_PLATFORMS);
 
 export function isZernioAdsAccount(platform: string) {
   return adsAccountPlatforms.has(platform.toLowerCase());
+}
+
+export function humanizeZernioPlatform(platform: string) {
+  const fromCatalog = [...zernioSocialPlatforms, ...zernioAdsPlatforms].find((item) => item.accountPlatforms.includes(platform.toLowerCase()) || item.id === platform.toLowerCase());
+  if (fromCatalog) return fromCatalog.label;
+  return platform
+    .replace(/ads$/i, ' Ads')
+    .replace(/googlebusiness/i, 'Google Business')
+    .replace(/(^|\s)\w/g, (match) => match.toUpperCase());
 }
