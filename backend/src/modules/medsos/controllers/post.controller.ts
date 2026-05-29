@@ -735,6 +735,29 @@ export const generateAiCaption = async (req: Request, res: Response, next: NextF
   }
 };
 
+export const generateOperationalAnalysis = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tenantId = (req as any).tenantId;
+    const { prompt } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'PROMPT_REQUIRED', message: 'Data analisis tidak boleh kosong.' }
+      });
+    }
+
+    const analysis = await generateCaption(tenantId, `Tulis analisis operasional Bahasa Indonesia yang ringkas, tajam, dan actionable. Jangan buat caption promosi. Gunakan format bernomor: 1. Ringkasan, 2. Risiko, 3. Prioritas tindakan, 4. Eksperimen berikutnya. Data:\n${prompt}`);
+
+    res.json({
+      success: true,
+      data: { analysis }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const generateAiReply = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = (req as any).tenantId;
