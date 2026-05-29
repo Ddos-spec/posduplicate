@@ -72,7 +72,7 @@ export default function MarketplaceControl() {
         setConnector(hub.connectors.find((item) => item.slug === 'marketplace-hub') || null);
         setStatus(marketplaceStatus);
       } catch (error) {
-        console.error('Failed to load marketplace chat workspace', error);
+        if (import.meta.env.DEV) console.warn('Failed to load marketplace chat workspace', error);
         setConnector(null);
         setStatus(null);
       } finally {

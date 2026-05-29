@@ -12,6 +12,7 @@ import {
 } from '../../lib/contentStudio';
 import {
   disconnectZernioAccount,
+  invalidateMcsRequestCache,
   getZernioAdAnalytics,
   getZernioAdsByCampaign,
   getZernioAccounts,
@@ -318,7 +319,7 @@ export default function OmnichannelAdsHub() {
       setAccounts(zernioAccounts);
       setSummary(zernioSummary);
     } catch (error) {
-      console.error('Failed to load Zernio ads workspace', error);
+      if (import.meta.env.DEV) console.warn('Failed to load Zernio ads workspace', error);
     } finally {
       if (options?.silent) {
         setRefreshing(false);
@@ -433,7 +434,7 @@ export default function OmnichannelAdsHub() {
       const url = await getZernioAdsConnectUrl(platform, undefined, '/medsos/ads');
       window.location.href = url;
     } catch (error) {
-      console.error('Failed to start Zernio ads connection', error);
+      if (import.meta.env.DEV) console.warn('Failed to start Zernio ads connection', error);
       setBusyPlatform(null);
     }
   };
@@ -454,7 +455,7 @@ export default function OmnichannelAdsHub() {
         await load();
       }
     } catch (error) {
-      console.error('Failed to disconnect ads account', error);
+      if (import.meta.env.DEV) console.warn('Failed to disconnect ads account', error);
     }
   };
 
@@ -485,7 +486,7 @@ export default function OmnichannelAdsHub() {
       });
       setSelectedAdAnalytics(analytics);
     } catch (error) {
-      console.error('Failed to load ad analytics detail', error);
+      if (import.meta.env.DEV) console.warn('Failed to load ad analytics detail', error);
       setSelectedAdAnalytics(null);
     } finally {
       setSelectedAdAnalyticsLoading(false);
@@ -514,7 +515,7 @@ export default function OmnichannelAdsHub() {
         setSelectedAdId(null);
       }
     } catch (error) {
-      console.error('Failed to inspect campaign detail', error);
+      if (import.meta.env.DEV) console.warn('Failed to inspect campaign detail', error);
     } finally {
       setCampaignAdsLoading(false);
     }
@@ -668,7 +669,7 @@ export default function OmnichannelAdsHub() {
           });
       setAdsCopilotOutput(result);
     } catch (error) {
-      console.error('Failed to run ads copilot', error);
+      if (import.meta.env.DEV) console.warn('Failed to run ads copilot', error);
       setAdsCopilotOutput(buildAdsFallbackPlan({
         brief,
         goal: adsCopilotGoal,
@@ -773,9 +774,10 @@ export default function OmnichannelAdsHub() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <label className="flex flex-col gap-1 text-sm">
+                <label htmlFor="ads-from-date" className="flex flex-col gap-1 text-sm">
                   <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Dari</span>
                   <input
+                    id="ads-from-date"
                     type="date"
                     value={fromDate}
                     onChange={(event) => {
@@ -785,9 +787,10 @@ export default function OmnichannelAdsHub() {
                     className={`rounded-xl px-3 py-2 ${isDark ? 'bg-slate-800 border border-slate-700 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-sm">
+                <label htmlFor="ads-to-date" className="flex flex-col gap-1 text-sm">
                   <span className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Sampai</span>
                   <input
+                    id="ads-to-date"
                     type="date"
                     value={toDate}
                     onChange={(event) => {
@@ -839,9 +842,10 @@ export default function OmnichannelAdsHub() {
             />
 
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="space-y-1 text-sm font-semibold">
+              <label htmlFor="ads-copilot-goal" className="space-y-1 text-sm font-semibold">
                 <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Goal iklan</span>
                 <select
+                  id="ads-copilot-goal"
                   value={adsCopilotGoal}
                   onChange={(event) => setAdsCopilotGoal(event.target.value as AdsCopilotGoal)}
                   className={`w-full rounded-2xl px-3 py-2.5 text-sm outline-none ${isDark ? 'bg-slate-950 text-white ring-1 ring-white/10' : 'bg-white text-slate-800 ring-1 ring-slate-200'}`}
@@ -849,9 +853,10 @@ export default function OmnichannelAdsHub() {
                   {(['Leads', 'Sales', 'Awareness', 'Retargeting'] as AdsCopilotGoal[]).map((goal) => <option key={goal} value={goal}>{goal}</option>)}
                 </select>
               </label>
-              <label className="space-y-1 text-sm font-semibold">
+              <label htmlFor="ads-copilot-platform" className="space-y-1 text-sm font-semibold">
                 <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Platform fokus</span>
                 <select
+                  id="ads-copilot-platform"
                   value={adsCopilotPlatform}
                   onChange={(event) => setAdsCopilotPlatform(event.target.value as AdsCopilotPlatform)}
                   className={`w-full rounded-2xl px-3 py-2.5 text-sm outline-none ${isDark ? 'bg-slate-950 text-white ring-1 ring-white/10' : 'bg-white text-slate-800 ring-1 ring-slate-200'}`}

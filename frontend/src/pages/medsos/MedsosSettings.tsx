@@ -340,7 +340,7 @@ export default function MedsosSettings() {
           }
         }
       } catch (error) {
-        console.error('Failed to load MyCommerSocial settings', error);
+        if (import.meta.env.DEV) console.warn('Failed to load MyCommerSocial settings', error);
         if (!isDemo) {
           toast.error('Gagal memuat settings workspace.');
         }
@@ -462,7 +462,7 @@ export default function MedsosSettings() {
       setDirty(false);
       toast.success('Settings berhasil disimpan.');
     } catch (error) {
-      console.error('Failed to save MyCommerSocial settings', error);
+      if (import.meta.env.DEV) console.warn('Failed to save MyCommerSocial settings', error);
       toast.error('Gagal menyimpan settings workspace.');
     } finally {
       setSaving(false);

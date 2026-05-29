@@ -22,6 +22,7 @@ import {
 import {
   getMarketplaceHubStatus,
   disconnectZernioAccount,
+  invalidateMcsRequestCache,
   type MarketplaceHubConnectionStatus,
   getWACrmStatus,
   getZernioAccounts,
@@ -331,12 +332,12 @@ export default function MedsosConnections() {
         setWaStatus(status);
         setMarketplaceStatus(marketplaceProbe);
       } catch (statusError) {
-        console.error('Failed to load live connector status', statusError);
+        if (import.meta.env.DEV) console.warn('Failed to load live connector status', statusError);
         setWaStatus(null);
         setMarketplaceStatus(null);
       }
     } catch (error) {
-      console.error('Failed to load MyCommerSocial connections', error);
+      if (import.meta.env.DEV) console.warn('Failed to load MyCommerSocial connections', error);
       toast.error('Gagal memuat konfigurasi connections.');
     } finally {
       setLoading(false);
@@ -380,11 +381,13 @@ export default function MedsosConnections() {
     const adsConnected = params.get('ads_connected');
 
     if (socialConnected) {
+      invalidateMcsRequestCache('zernio-accounts');
       toast.success(`${humanizeZernioPlatform(socialConnected)} berhasil terhubung ke workspace social.`);
       if (!isDemo) void loadLiveData();
     }
 
     if (adsConnected) {
+      invalidateMcsRequestCache('zernio-accounts');
       toast.success(`${humanizeZernioPlatform(adsConnected)} berhasil diaktifkan di workspace ads.`);
       if (!isDemo) void loadLiveData();
     }
@@ -469,7 +472,7 @@ export default function MedsosConnections() {
       const url = await getZernioConnectUrl(platform, '/medsos/connections');
       window.location.href = url;
     } catch (error) {
-      console.error('Failed to start social connection', error);
+      if (import.meta.env.DEV) console.warn('Failed to start social connection', error);
       toast.error(`Gagal memulai koneksi ${humanizeZernioPlatform(platform)}.`);
       setBusyPlatform(null);
     }
@@ -481,7 +484,7 @@ export default function MedsosConnections() {
       const url = await getZernioAdsConnectUrl(platform, undefined, '/medsos/connections');
       window.location.href = url;
     } catch (error) {
-      console.error('Failed to start ads connection', error);
+      if (import.meta.env.DEV) console.warn('Failed to start ads connection', error);
       toast.error(`Gagal memulai koneksi ${humanizeZernioPlatform(platform)}.`);
       setBusyPlatform(null);
     }
@@ -565,7 +568,7 @@ export default function MedsosConnections() {
       toast.success('WA Inbox berhasil disimpan.');
       await loadLiveData();
     } catch (error) {
-      console.error('Failed to save WA inbox settings', error);
+      if (import.meta.env.DEV) console.warn('Failed to save WA inbox settings', error);
       toast.error('Gagal menyimpan konfigurasi WA Inbox.');
     } finally {
       setSavingWa(false);
@@ -629,7 +632,7 @@ export default function MedsosConnections() {
       toast.success('Permintaan aktivasi marketplace chat berhasil disimpan.');
       await loadLiveData();
     } catch (error) {
-      console.error('Failed to save marketplace chat settings', error);
+      if (import.meta.env.DEV) console.warn('Failed to save marketplace chat settings', error);
       toast.error('Gagal menyimpan konfigurasi marketplace chat.');
     } finally {
       setSavingMarketplace(false);
@@ -648,7 +651,7 @@ export default function MedsosConnections() {
       await loadLiveData();
       toast.success('Status marketplace chat berhasil diperbarui.');
     } catch (error) {
-      console.error('Failed to refresh marketplace chat status', error);
+      if (import.meta.env.DEV) console.warn('Failed to refresh marketplace chat status', error);
       toast.error('Gagal memperbarui status marketplace chat.');
     } finally {
       setSyncingMarketplace(false);
@@ -676,7 +679,7 @@ export default function MedsosConnections() {
       await loadLiveData();
       toast.success('Marketplace chat berhasil diputus.');
     } catch (error) {
-      console.error('Failed to disconnect marketplace chat', error);
+      if (import.meta.env.DEV) console.warn('Failed to disconnect marketplace chat', error);
       toast.error('Gagal memutuskan marketplace chat.');
     } finally {
       setSyncingMarketplace(false);
@@ -913,24 +916,26 @@ export default function MedsosConnections() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <label className="space-y-2">
+            <label htmlFor="wa-workspace-name" className="space-y-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Workspace name
                 <FieldHelp title="Workspace name" description="Nama workspace WA yang akan tampil di dashboard. Biasanya mengikuti nama brand atau tim support." />
               </span>
               <input
+                id="wa-workspace-name"
                 value={crmForm.workspaceName}
                 onChange={(event) => setCrmForm((current) => ({ ...current, workspaceName: event.target.value }))}
                 placeholder="Contoh: Tepat Laser Support Desk"
                 className={`w-full rounded-2xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-4 py-3 text-sm ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-gray-500' : 'bg-white ring-1 ring-slate-900/5 text-gray-900 placeholder:text-gray-400'}`}
               />
             </label>
-            <label className="space-y-2">
+            <label htmlFor="wa-workspace-email" className="space-y-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Workspace email
                 <FieldHelp title="Workspace email" description="Email operasional untuk workspace WA. Gunakan email admin atau PIC yang mengelola inbox." />
               </span>
               <input
+                id="wa-workspace-email"
                 value={crmForm.vendorWorkspaceEmail}
                 onChange={(event) => setCrmForm((current) => ({ ...current, vendorWorkspaceEmail: event.target.value }))}
                 placeholder="ops@brandanda.com"
@@ -952,12 +957,13 @@ export default function MedsosConnections() {
               </div>
             </div>
             {showWaKeyEditor ? (
-              <label className="space-y-2 md:col-span-2">
+              <label htmlFor="wa-connection-reference" className="space-y-2 md:col-span-2">
                 <span className="text-sm font-semibold inline-flex items-center gap-2">
                   API key / connection reference
                   <FieldHelp title="API key / connection reference" description="Cukup isi API key atau connection reference workspace chat. Sistem akan memakai URL yang sudah dikonfigurasi." />
                 </span>
                 <input
+                  id="wa-connection-reference"
                   value={crmForm.connectionId}
                   onChange={(event) => setCrmForm((current) => ({ ...current, connectionId: event.target.value }))}
                   placeholder="API key tenant untuk workspace chat"
@@ -986,12 +992,13 @@ export default function MedsosConnections() {
                 </div>
               </div>
             )}
-            <label className="space-y-2 md:col-span-2">
+            <label htmlFor="wa-operator-notes" className="space-y-2 md:col-span-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Catatan operator
                 <FieldHelp title="Catatan operator" description="Catatan internal seperti PIC, nomor utama, aturan eskalasi, atau informasi teknis lain untuk tim." />
               </span>
               <textarea
+                id="wa-operator-notes"
                 value={crmForm.notes}
                 onChange={(event) => setCrmForm((current) => ({ ...current, notes: event.target.value }))}
                 placeholder="Catatan internal untuk operator, misalnya nomor live, PIC, atau rule eskalasi"
@@ -1064,12 +1071,13 @@ export default function MedsosConnections() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <label className="space-y-2">
+            <label htmlFor="marketplace-workspace-name" className="space-y-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Workspace marketplace
                 <FieldHelp title="Workspace marketplace" description="Nama workspace untuk operasional chat marketplace. Biasanya mengikuti nama brand utama atau nama bisnis yang mengelola semua toko." />
               </span>
               <input
+                id="marketplace-workspace-name"
                 value={marketplaceForm.workspaceName}
                 onChange={(event) => setMarketplaceForm((current) => ({ ...current, workspaceName: event.target.value }))}
                 placeholder="Contoh: Tepat Laser Marketplace"
@@ -1129,12 +1137,13 @@ export default function MedsosConnections() {
               </div>
             </div>
 
-            <label className="space-y-2 md:col-span-2">
+            <label htmlFor="marketplace-activation-notes" className="space-y-2 md:col-span-2">
               <span className="text-sm font-semibold inline-flex items-center gap-2">
                 Catatan aktivasi
                 <FieldHelp title="Catatan aktivasi" description="Gunakan untuk mencatat toko prioritas, PIC, jam operasional, atau detail khusus yang perlu diketahui saat tim onboarding mengaktifkan marketplace chat." />
               </span>
               <textarea
+                id="marketplace-activation-notes"
                 value={marketplaceForm.notes}
                 onChange={(event) => setMarketplaceForm((current) => ({ ...current, notes: event.target.value }))}
                 placeholder="Contoh: prioritaskan Shopee utama dulu, AI hanya aktif di jam kerja, fallback ke human untuk komplain refund."
