@@ -53,6 +53,14 @@ import {
 import { isZernioAdsAccount } from '../../data/zernioCatalog';
 
 type InboxChannel = 'wa' | 'social' | 'marketplace';
+type ConversationSortOrder = 'newest' | 'oldest' | 'unread';
+
+const QUICK_EMOJIS = ['😊', '🙏', '👍', '🔥', '❤️', '👌', '🙌', '✅', '🤝', '📌', '🚚', '💬'];
+
+function appendQuickEmoji(current: string, emoji: string) {
+  const separator = current && !current.endsWith(' ') ? ' ' : '';
+  return `${current}${separator}${emoji}`;
+}
 
 const demoWaThreads: PriorityThread[] = [
   {
@@ -298,6 +306,8 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
   const [sending, setSending] = useState(false);
   const [platform, setPlatform] = useState('all');
   const [accountId, setAccountId] = useState('all');
+  const [sortOrder, setSortOrder] = useState<ConversationSortOrder>('newest');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
 
   // Setup Socket.io
@@ -360,11 +370,40 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
     return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
   }, [conversations]);
 
-  const filtered = conversations.filter((c) => {
-    const platformMatch = platform === 'all' || c.platform.toLowerCase() === platform;
-    const accountMatch = accountId === 'all' || c.accountId === accountId;
-    return platformMatch && accountMatch;
-  });
+  const filtered = useMemo(() => {
+    const visible = conversations.filter((c) => {
+      const platformMatch = platform === 'all' || c.platform.toLowerCase() === platform;
+      const accountMatch = accountId === 'all' || c.accountId === accountId;
+      return platformMatch && accountMatch;
+    });
+
+    return visible.sort((a, b) => {
+      if (sortOrder === 'unread') {
+        const unreadDiff = (b.unreadCount || 0) - (a.unreadCount || 0);
+        if (unreadDiff !== 0) return unreadDiff;
+      }
+
+      const aTime = new Date(a.updatedTime).getTime() || 0;
+      const bTime = new Date(b.updatedTime).getTime() || 0;
+      return sortOrder === 'oldest' ? aTime - bTime : bTime - aTime;
+    });
+  }, [accountId, conversations, platform, sortOrder]);
+
+  useEffect(() => {
+    if (!filtered.length) {
+      setSelected(null);
+      return;
+    }
+
+    if (!selected || !filtered.some((conversation) => conversation.id === selected.id)) {
+      setSelected(filtered[0]);
+    }
+  }, [filtered, selected]);
+
+  const handleAddEmoji = (emoji: string) => {
+    setReply((current) => appendQuickEmoji(current, emoji));
+    setShowEmojiPicker(false);
+  };
 
   const handleAiReply = async () => {
     if (!selected || messages.length === 0) return;
@@ -454,8 +493,15 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
           <div className="px-3 pb-4">
             <div className="flex items-center justify-between px-2 mb-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Percakapan</span>
-              <select aria-label="Urutkan percakapan" className="text-[10px] font-bold bg-transparent border-none outline-none text-gray-400">
-                <option>Terbaru dulu</option>
+              <select
+                aria-label="Urutkan percakapan"
+                value={sortOrder}
+                onChange={(event) => setSortOrder(event.target.value as ConversationSortOrder)}
+                className="text-[10px] font-bold bg-transparent border-none outline-none text-gray-400"
+              >
+                <option value="newest">Terbaru dulu</option>
+                <option value="oldest">Terlama dulu</option>
+                <option value="unread">Unread terbanyak</option>
               </select>
             </div>
 
@@ -644,15 +690,38 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                   >
                     <Sparkles size={20} />
                   </button>
-                  <button
-                    type="button"
-                    aria-label="Tambah emoji"
-                    title="Tambah emoji"
-                    onClick={() => setReply((current) => `${current}${current ? ' ' : ''}😊`)}
-                    className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-white text-gray-400 hover:text-gray-600 shadow-sm'}`}
-                  >
-                    <Smile size={20} />
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      aria-label="Buka pilihan emoji cepat"
+                      aria-expanded={showEmojiPicker}
+                      title="Pilih emoji cepat"
+                      onClick={() => setShowEmojiPicker((open) => !open)}
+                      className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-white text-gray-400 hover:text-gray-600 shadow-sm'}`}
+                    >
+                      <Smile size={20} />
+                    </button>
+                    {showEmojiPicker ? (
+                      <div
+                        role="menu"
+                        aria-label="Pilihan emoji cepat"
+                        className={`absolute bottom-full right-0 z-30 mb-2 grid w-48 grid-cols-6 gap-1 rounded-2xl p-2 shadow-2xl ${isDark ? 'bg-slate-800 ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200'}`}
+                      >
+                        {QUICK_EMOJIS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            role="menuitem"
+                            aria-label={`Tambahkan emoji ${emoji}`}
+                            onClick={() => handleAddEmoji(emoji)}
+                            className={`rounded-xl p-1.5 text-lg transition-transform hover:scale-110 ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                   <button
                     type="button"
                     aria-label="Kirim pesan"
@@ -828,6 +897,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
   const allMessages = useMemo<Record<number, ConversationMessage[]>>(() => ({ ...conversationMessages, ...demoWaMessages }), []);
   const [selectedThreadId, setSelectedThreadId] = useState<number>(dataThreads[0]?.id ?? 0);
   const [reply, setReply] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState(channel === 'marketplace' ? 'marketplace' : channel === 'social' ? 'social' : 'all');
 
@@ -854,6 +924,10 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
   const selectedChat = filteredThreads.find((item) => item.id === selectedThreadId) ?? filteredThreads[0] ?? dataThreads[0];
   const selectedDetail = selectedChat ? allDetails[selectedChat.id] : null;
   const selectedMessages = selectedChat ? allMessages[selectedChat.id] ?? [] : [];
+  const handleAddEmoji = (emoji: string) => {
+    setReply((current) => appendQuickEmoji(current, emoji));
+    setShowEmojiPicker(false);
+  };
   const assignedSeat = selectedChat ? teamSeats.find((member) => member.name === selectedChat.assignee) : null;
 
   const filterTabs = useMemo(() => {
@@ -1089,9 +1163,38 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
               onChange={(event) => setReply(event.target.value)}
               className={`flex-1 bg-transparent outline-none text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}
             />
-            <button type="button" aria-label="Tambah emoji" title="Emoji" onClick={() => setReply((current) => `${current}${current ? ' ' : ''}😊`)} className="p-2 text-gray-400 hover:text-gray-600">
-              <Smile size={20} />
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="Buka pilihan emoji cepat"
+                aria-expanded={showEmojiPicker}
+                title="Pilih emoji cepat"
+                onClick={() => setShowEmojiPicker((open) => !open)}
+                className="p-2 text-gray-400 hover:text-gray-600"
+              >
+                <Smile size={20} />
+              </button>
+              {showEmojiPicker ? (
+                <div
+                  role="menu"
+                  aria-label="Pilihan emoji cepat"
+                  className={`absolute bottom-full right-0 z-30 mb-2 grid w-48 grid-cols-6 gap-1 rounded-2xl p-2 shadow-2xl ${isDark ? 'bg-slate-800 ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200'}`}
+                >
+                  {QUICK_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      role="menuitem"
+                      aria-label={`Tambahkan emoji ${emoji}`}
+                      onClick={() => handleAddEmoji(emoji)}
+                      className={`rounded-xl p-1.5 text-lg transition-transform hover:scale-110 ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-100'}`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <button type="button" aria-label="Kirim pesan" title="Kirim" className="rounded-xl bg-blue-600 p-2 text-white hover:bg-blue-700 active:scale-95 transition-all">
               <Send size={18} />
             </button>
