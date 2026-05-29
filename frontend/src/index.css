@@ -324,12 +324,14 @@ button, [role="button"] {
 
   .mcs-page-shell .mb-8,
   .mcs-page-shell .mb-7,
-  .mcs-page-shell .mb-6,
+  .mcs-page-shell .mb-6 {
+    margin-bottom: 0.85rem !important;
+  }
+
   .mcs-page-shell .mt-8,
   .mcs-page-shell .mt-7,
   .mcs-page-shell .mt-6 {
     margin-top: 0.85rem !important;
-    margin-bottom: 0.85rem !important;
   }
 
   .mcs-page-shell input,
@@ -455,6 +457,35 @@ button, [role="button"] {
   .mcs-page-shell .\32xl\:sticky {
     position: static !important;
     max-height: none !important;
+  }
+}
+
+/* MyCommerSocial final clarity pass: less decoration, more working area */
+@media (min-width: 1024px) {
+  .mcs-page-shell p {
+    text-wrap: pretty;
+  }
+
+  .mcs-page-shell textarea,
+  .mcs-page-shell input,
+  .mcs-page-shell select {
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  }
+
+  .mcs-page-shell button,
+  .mcs-page-shell a {
+    transition: transform 120ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+  }
+
+  .mcs-page-shell button:active,
+  .mcs-page-shell a:active {
+    transform: translateY(1px);
+  }
+
+  .mcs-page-shell .shadow-2xl,
+  .mcs-page-shell .shadow-xl,
+  .mcs-page-shell .shadow-lg {
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.10) !important;
   }
 }
 

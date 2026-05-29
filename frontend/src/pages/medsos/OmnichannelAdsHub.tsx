@@ -799,9 +799,9 @@ export default function OmnichannelAdsHub() {
         </div>
       </div>
 
-      <section className={`rounded-[32px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <div className="space-y-4">
+      <section className={`rounded-[28px] p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-[0_2px_8px_rgb(0,0,0,0.04)] ring-1 ring-slate-900/5'}`}>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div className="space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -829,9 +829,9 @@ export default function OmnichannelAdsHub() {
             <textarea
               value={adsCopilotBrief}
               onChange={(event) => setAdsCopilotBrief(event.target.value)}
-              rows={5}
+              rows={3}
               placeholder="Contoh: produk parfum premium, target wanita aktif 20-35, promo bundling, goal leads WhatsApp, butuh creative yang elegan tapi tetap natural..."
-              className={`w-full min-h-[140px] resize-y rounded-3xl px-4 py-3 text-sm leading-6 outline-none transition ${isDark ? 'bg-slate-950 text-white placeholder:text-slate-500 ring-1 ring-white/10 focus:ring-blue-400/40' : 'bg-slate-50 text-slate-900 placeholder:text-slate-400 ring-1 ring-slate-200 focus:ring-blue-300'}`}
+              className={`w-full min-h-[96px] resize-y rounded-2xl px-4 py-3 text-sm leading-6 outline-none transition ${isDark ? 'bg-slate-950 text-white placeholder:text-slate-500 ring-1 ring-white/10 focus:ring-blue-400/40' : 'bg-slate-50 text-slate-900 placeholder:text-slate-400 ring-1 ring-slate-200 focus:ring-blue-300'}`}
             />
 
             <div className="grid gap-3 md:grid-cols-2">
@@ -858,7 +858,7 @@ export default function OmnichannelAdsHub() {
             </div>
           </div>
 
-          <div className={`rounded-[28px] p-4 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50 ring-1 ring-blue-100'}`}>
+          <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50 ring-1 ring-blue-100'}`}>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Wand2 className="text-blue-500" size={17} />
@@ -876,9 +876,9 @@ export default function OmnichannelAdsHub() {
               </div>
             </div>
             {adsCopilotOutput ? (
-              <pre className={`max-h-[360px] overflow-y-auto whitespace-pre-wrap rounded-2xl p-4 text-sm leading-6 font-sans ${isDark ? 'bg-slate-900 text-slate-200' : 'bg-white/85 text-slate-800 ring-1 ring-slate-100'}`}>{adsCopilotOutput}</pre>
+              <pre className={`max-h-[300px] overflow-y-auto whitespace-pre-wrap rounded-2xl p-4 text-sm leading-6 font-sans ${isDark ? 'bg-slate-900 text-slate-200' : 'bg-white/85 text-slate-800 ring-1 ring-slate-100'}`}>{adsCopilotOutput}</pre>
             ) : (
-              <div className={`flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
+              <div className={`flex min-h-[210px] flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
                 <Sparkles size={30} className="mb-3 text-purple-500" />
                 <p className="font-semibold">Belum ada plan.</p>
                 <p className="mt-1 text-sm">Tulis brief kasar, nanti AI susun campaign plan dan prompt creative.</p>

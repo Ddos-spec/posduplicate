@@ -600,18 +600,18 @@ export default function MedsosLayout() {
           </button>
 
           <div className="ml-auto flex items-center gap-2">
-            <div className={`hidden items-center gap-3 rounded-2xl border px-4 py-2 md:flex ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5 shadow-sm'}`}>
+            <div className={`hidden items-center gap-3 rounded-2xl border px-3 py-1.5 2xl:flex ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5 shadow-sm'}`}>
               <div className="mr-1 flex -space-x-2">
-                <BrandLogo brand="whatsapp" size={28} className="rounded-xl border-2 border-white" />
-                <BrandLogo brand="instagram" size={28} className="rounded-xl border-2 border-white" />
-                <BrandLogo brand="facebook" size={28} className="rounded-xl border-2 border-white" />
-                <BrandLogo brand="metaads" size={28} className="rounded-xl border-2 border-white" withRing />
+                <BrandLogo brand="whatsapp" size={24} className="rounded-xl border-2 border-white" />
+                <BrandLogo brand="instagram" size={24} className="rounded-xl border-2 border-white" />
+                <BrandLogo brand="facebook" size={24} className="rounded-xl border-2 border-white" />
+                <BrandLogo brand="metaads" size={24} className="rounded-xl border-2 border-white" withRing />
               </div>
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Mode</p>
                 <p className="text-sm font-semibold">MyCommerSocial</p>
               </div>
-              <div className={`h-8 w-px ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+              <div className={`h-7 w-px ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Focus</p>
                 <p className="max-w-[220px] truncate text-sm font-semibold">Inbox, analytics, dan AI workspace</p>
