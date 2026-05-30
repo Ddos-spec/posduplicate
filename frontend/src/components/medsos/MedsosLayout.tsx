@@ -1,11 +1,11 @@
-import { type ComponentType, useEffect, useMemo, useState } from 'react';
+import { type ComponentType, useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
 import { useDemoUser } from '../../pages/demo/demoRoleStore';
 import { useAuthStore } from '../../store/authStore';
 import { channelConnections, priorityThreads } from '../../data/omnichannelMock';
 import { getMyCommerSocialIntegrationHub } from '../../services/myCommerSocialIntegrations';
-import { getZernioAccounts } from '../../services/medsosPostsService';
+import { getWACrmStats, getZernioAccounts } from '../../services/medsosPostsService';
 import { BrandLogo } from './BrandLogo';
 import MyCommerSocialLogo from './MyCommerSocialLogo';
 import {
@@ -41,6 +41,27 @@ type BaseMenu = {
   label: string;
   roles: string[];
 };
+
+function getMcsPageTitle(pathname: string) {
+  if (pathname.includes('/inbox/wa')) return { title: 'Inbox WA', subtitle: 'Antrean WhatsApp live' };
+  if (pathname.includes('/inbox/social')) return { title: 'Inbox Medsos', subtitle: 'DM dan komentar social' };
+  if (pathname.includes('/inbox/marketplace')) return { title: 'Inbox Marketplace', subtitle: 'Buyer chat marketplace' };
+  if (pathname.includes('/analytics/wa')) return { title: 'Analytics WA', subtitle: 'Kinerja inbox WhatsApp' };
+  if (pathname.includes('/analytics/social')) return { title: 'Analytics Medsos', subtitle: 'Performa konten social' };
+  if (pathname.includes('/analytics/marketplace')) return { title: 'Analytics Marketplace', subtitle: 'Kinerja buyer chat' };
+  if (pathname.includes('/crm/content/video')) return { title: 'Video Studio', subtitle: 'Generate video campaign' };
+  if (pathname.includes('/crm/content/photo')) return { title: 'Photo Studio', subtitle: 'Generate visual campaign' };
+  if (pathname.includes('/crm/planner')) return { title: 'Planner', subtitle: 'Campaign schedule dan approval' };
+  if (pathname.includes('/broadcasts')) return { title: 'Broadcasts', subtitle: 'Kirim pesan massal' };
+  if (pathname.includes('/automations')) return { title: 'Automations', subtitle: 'Bot comment-to-DM' };
+  if (pathname.includes('/crm')) return { title: 'Contacts', subtitle: 'Database kontak terpadu' };
+  if (pathname.includes('/connections')) return { title: 'Connections', subtitle: 'Hubungkan channel' };
+  if (pathname.includes('/marketplace')) return { title: 'Marketplace', subtitle: 'Workspace buyer chat' };
+  if (pathname.includes('/ads')) return { title: 'Ads Workspace', subtitle: 'Iklan dan rekomendasi AI' };
+  if (pathname.includes('/team')) return { title: 'Tim MCS', subtitle: 'Akses operator' };
+  if (pathname.includes('/settings')) return { title: 'Settings', subtitle: 'Konfigurasi workspace' };
+  return { title: 'Overview', subtitle: 'Command center' };
+}
 
 type LinkMenu = BaseMenu & {
   type: 'link';
@@ -113,6 +134,7 @@ export default function MedsosLayout() {
   const mcsPerms = user?.dashboard_preferences?.mcs;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const scrollRootRef = useRef<HTMLDivElement | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const expandedByDefault = !isMobileViewport();
     return {
@@ -126,18 +148,28 @@ export default function MedsosLayout() {
   const isDemo = location.pathname.startsWith('/demo');
   const basePath = isDemo ? '/demo/medsos' : '/medsos';
   const [liveActiveChannels, setLiveActiveChannels] = useState<number | null>(null);
+  const [liveInboxUnread, setLiveInboxUnread] = useState<number | null>(null);
+  const currentPage = getMcsPageTitle(location.pathname);
 
   useEffect(() => {
     if (!isDemo) {
-      Promise.all([getMyCommerSocialIntegrationHub(), getZernioAccounts()])
-        .then(([hub, accounts]) => {
+      Promise.all([getMyCommerSocialIntegrationHub(), getZernioAccounts(), getWACrmStats().catch(() => null)])
+        .then(([hub, accounts, stats]) => {
           const waConnector = hub.connectors.find((connector) => connector.slug === 'social-hub');
           const waCount = waConnector?.vendorWorkspaceUrl || waConnector?.connectionRefMasked || waConnector?.status === 'connected' ? 1 : 0;
           setLiveActiveChannels(accounts.length + waCount);
+          setLiveInboxUnread(stats?.totalUnread ?? 0);
         })
-        .catch(() => setLiveActiveChannels(0));
+        .catch(() => {
+          setLiveActiveChannels(0);
+          setLiveInboxUnread(0);
+        });
     }
   }, [isDemo]);
+
+  useEffect(() => {
+    scrollRootRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname]);
 
   useEffect(() => {
     if (isMobileViewport()) {
@@ -306,8 +338,8 @@ export default function MedsosLayout() {
   }, [location.pathname, menuItems]);
 
   const inboxCount = useMemo(
-    () => (isDemo ? priorityThreads.reduce((total, item) => total + item.unread, 0) : 0),
-    [isDemo],
+    () => (isDemo ? priorityThreads.reduce((total, item) => total + item.unread, 0) : liveInboxUnread ?? 0),
+    [isDemo, liveInboxUnread],
   );
 
   const activeChannels = useMemo(
@@ -468,11 +500,19 @@ export default function MedsosLayout() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
                   <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs`}>Active Channels</p>
-                  <p className="text-lg font-bold">{activeChannels}</p>
+                  {activeChannels === '…' ? (
+                    <span className={`mt-1 block h-6 w-10 animate-pulse rounded-lg ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+                  ) : (
+                    <p className="text-lg font-bold">{activeChannels}</p>
+                  )}
                 </div>
                 <div className={`rounded-xl p-3 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
                   <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} text-xs`}>Unread</p>
-                  <p className="text-lg font-bold">{inboxCount}</p>
+                  {!isDemo && liveInboxUnread === null ? (
+                    <span className={`mt-1 block h-6 w-10 animate-pulse rounded-lg ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+                  ) : (
+                    <p className={`text-lg font-bold ${inboxCount > 0 ? 'text-rose-500' : ''}`}>{inboxCount}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -584,17 +624,23 @@ export default function MedsosLayout() {
         </div>
       </aside>
 
-      <div className={`mcs-scroll-root h-[100dvh] overflow-y-auto overflow-x-hidden overscroll-y-auto p-2 md:p-3 lg:p-3 transition-[margin] duration-300 ${contentOffsetClass}`}>
+      <div ref={scrollRootRef} className={`mcs-scroll-root h-[100dvh] overflow-y-auto overflow-x-hidden overscroll-y-auto p-2 md:p-3 lg:p-3 transition-[margin] duration-300 ${contentOffsetClass}`}>
         <div className={`mcs-topbar mb-2 flex items-center justify-between gap-3`}>
-          <button
-            type="button"
-            title={sidebarCollapsed || !sidebarOpen ? 'Buka navigasi MyCommerSocial' : 'Tutup navigasi MyCommerSocial'}
-            onClick={handleSidebarToggle}
-            className={`inline-flex items-center gap-2 rounded-xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-3 py-2 transition ${isDark ? 'bg-[#111318] ring-1 ring-white/10 hover:bg-slate-700' : 'bg-white ring-1 ring-slate-900/5 hover:bg-gray-100'}`}
-          >
-            {sidebarCollapsed ? <PanelLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            <span className="hidden md:inline text-sm font-semibold">{sidebarCollapsed ? 'Buka sidebar' : 'Ringkas sidebar'}</span>
-          </button>
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              title={sidebarCollapsed || !sidebarOpen ? 'Buka navigasi MyCommerSocial' : 'Tutup navigasi MyCommerSocial'}
+              onClick={handleSidebarToggle}
+              className={`inline-flex shrink-0 items-center gap-2 rounded-xl border-0 ring-1 ring-inset ring-gray-200 dark:ring-white/10 px-3 py-2 transition ${isDark ? 'bg-[#111318] ring-1 ring-white/10 hover:bg-slate-700' : 'bg-white ring-1 ring-slate-900/5 hover:bg-gray-100'}`}
+            >
+              {sidebarCollapsed ? <PanelLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              <span className="hidden md:inline text-sm font-semibold">{sidebarCollapsed ? 'Buka sidebar' : 'Ringkas sidebar'}</span>
+            </button>
+            <div className="hidden min-w-0 sm:block">
+              <p className={`truncate text-sm font-bold ${isDark ? 'text-white' : 'text-slate-950'}`}>{currentPage.title}</p>
+              <p className={`truncate text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{currentPage.subtitle}</p>
+            </div>
+          </div>
 
           <div className="ml-auto flex items-center gap-2">
             <div className={`hidden items-center gap-3 rounded-2xl border px-3 py-1.5 2xl:flex ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-900/5 shadow-sm'}`}>

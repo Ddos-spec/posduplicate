@@ -644,6 +644,7 @@ export interface ZernioConversation {
   participantPicture: string | null;
   participantVerifiedType: string | null;
   lastMessage: string;
+  lastAttachment?: { type: string; url: string } | null;
   updatedTime: string;
   status: 'active' | 'archived';
   unreadCount: number;

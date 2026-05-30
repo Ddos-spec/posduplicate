@@ -496,6 +496,7 @@ export interface ZernioConversation {
   participantPicture: string | null;
   participantVerifiedType: string | null;
   lastMessage: string;
+  lastAttachment?: { type: string; url: string } | null;
   updatedTime: string;
   status: 'active' | 'archived';
   unreadCount: number;
@@ -546,6 +547,7 @@ export async function getZernioConversations(
           participantPicture: c.participantPicture ?? null,
           participantVerifiedType: c.participantVerifiedType ?? null,
           lastMessage: c.lastMessage ?? '',
+          lastAttachment: c.lastAttachment ?? c.lastMessageAttachment ?? c.attachment ?? c.attachments?.[0] ?? null,
           updatedTime: c.updatedTime ?? new Date().toISOString(),
           status: (c.status === 'archived' ? 'archived' : 'active') as 'active' | 'archived',
           unreadCount: toNum(c.unreadCount),

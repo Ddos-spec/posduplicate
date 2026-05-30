@@ -62,6 +62,20 @@ function appendQuickEmoji(current: string, emoji: string) {
   return `${current}${separator}${emoji}`;
 }
 
+function formatConversationPreview(conversation: ZernioConversation) {
+  const text = (conversation.lastMessage || '').trim();
+  if (text && !/^\[?(attachment|image|video|photo|media)\]?$/i.test(text)) {
+    return text;
+  }
+
+  const attachmentType = conversation.lastAttachment?.type?.toLowerCase() || '';
+  if (attachmentType.includes('image')) return '📷 Gambar masuk — buka thread untuk melihat preview';
+  if (attachmentType.includes('video')) return '🎬 Video masuk — buka thread untuk melihat preview';
+  if (attachmentType.includes('audio')) return '🎧 Audio masuk — buka thread untuk mendengar';
+  if (attachmentType) return '📎 Lampiran masuk — buka thread untuk melihat detail';
+  return '📎 Lampiran / media masuk — buka thread untuk melihat detail';
+}
+
 const demoWaThreads: PriorityThread[] = [
   {
     id: 901,
@@ -309,6 +323,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
   const [sortOrder, setSortOrder] = useState<ConversationSortOrder>('newest');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null);
 
   // Setup Socket.io
   const socketRef = useRef<Socket | null>(null);
@@ -356,6 +371,17 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
       .catch(() => setMessages([]))
       .finally(() => setMsgLoading(false));
   }, [selected, refreshTick]); // Also refresh messages on tick
+
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!emojiPickerRef.current?.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [showEmojiPicker]);
 
   const availablePlatforms = useMemo(() => {
     const set = new Set(conversations.map((c) => c.platform.toLowerCase()));
@@ -545,8 +571,8 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                             {new Date(conv.updatedTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <p className={`text-xs mt-0.5 line-clamp-1 ${isActive ? (isDark ? 'text-blue-200/70' : 'text-blue-500') : 'text-gray-400'}`}>
-                          {conv.lastMessage || 'Mengirim lampiran'}
+                        <p className={`text-xs mt-0.5 line-clamp-2 ${isActive ? (isDark ? 'text-blue-200/70' : 'text-blue-500') : 'text-gray-400'}`}>
+                          {formatConversationPreview(conv)}
                         </p>
                         {conv.unreadCount > 0 && !isActive && (
                           <div className="mt-1 flex justify-end">
@@ -690,7 +716,7 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
                   >
                     <Sparkles size={20} />
                   </button>
-                  <div className="relative">
+                  <div ref={emojiPickerRef} className="relative">
                     <button
                       type="button"
                       aria-label="Buka pilihan emoji cepat"
@@ -751,6 +777,65 @@ function ZernioConversationPanel({ isDark }: { isDark: boolean }) {
           </>
         )}
       </div>
+
+      <aside className={`hidden 2xl:flex w-80 shrink-0 flex-col border-l ${isDark ? 'border-slate-700 bg-slate-950/80' : 'border-gray-100 bg-gray-50/70'}`}>
+        <div className={`p-5 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+          <h3 className="font-bold text-lg">Customer Context</h3>
+          <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            Ringkasan cepat agar operator tidak perlu buka thread satu-satu.
+          </p>
+        </div>
+        {selected ? (
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900 ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200 shadow-sm'}`}>
+              <div className="flex items-center gap-3">
+                {selected.participantPicture ? (
+                  <img src={selected.participantPicture} alt="" className="h-11 w-11 rounded-2xl object-cover" />
+                ) : (
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 font-bold text-emerald-700">
+                    {(selected.participantName || selected.participantId || '?').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-bold">{selected.participantName || selected.participantId}</p>
+                  <p className={`truncate text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>@{selected.accountUsername}</p>
+                </div>
+              </div>
+              <div className="mt-4 space-y-2 text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Platform</span>
+                  <span className="font-semibold capitalize">{selected.platform}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Unread</span>
+                  <span className="font-semibold">{selected.unreadCount}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Update</span>
+                  <span className="font-semibold">{new Date(selected.updatedTime).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                </div>
+              </div>
+            </div>
+            <div className={`rounded-2xl p-4 ${isDark ? 'bg-slate-900 ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200 shadow-sm'}`}>
+              <p className="mb-2 text-sm font-bold">Preview terakhir</p>
+              <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{formatConversationPreview(selected)}</p>
+              {selected.lastAttachment?.url ? (
+                <a href={selected.lastAttachment.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-sm font-semibold text-blue-600 hover:underline">
+                  Buka lampiran
+                </a>
+              ) : null}
+            </div>
+            <div className={`rounded-2xl p-4 ${isDark ? 'bg-blue-500/10 text-blue-100 ring-1 ring-blue-500/20' : 'bg-blue-50 text-blue-800 border border-blue-100'}`}>
+              <p className="text-sm font-bold">Saran aksi</p>
+              <p className="mt-2 text-sm leading-relaxed">Gunakan AI Draft untuk membuat balasan awal, lalu cek media/thread sebelum dikirim.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-gray-400">
+            Pilih percakapan untuk melihat konteks.
+          </div>
+        )}
+      </aside>
     </div>
   );
 }
@@ -898,6 +983,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
   const [selectedThreadId, setSelectedThreadId] = useState<number>(dataThreads[0]?.id ?? 0);
   const [reply, setReply] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState(channel === 'marketplace' ? 'marketplace' : channel === 'social' ? 'social' : 'all');
 
@@ -907,6 +993,17 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
     setSearchTerm('');
     setActiveFilter(channel === 'marketplace' ? 'marketplace' : channel === 'social' ? 'social' : 'all');
   }, [channel, dataThreads]);
+
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!emojiPickerRef.current?.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [showEmojiPicker]);
 
   const filteredThreads = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -1163,7 +1260,7 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
               onChange={(event) => setReply(event.target.value)}
               className={`flex-1 bg-transparent outline-none text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}
             />
-            <div className="relative">
+            <div ref={emojiPickerRef} className="relative">
               <button
                 type="button"
                 aria-label="Buka pilihan emoji cepat"
