@@ -722,15 +722,15 @@ export default function WaInboxWorkspace({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 2xl:grid-cols-4 gap-3">
         {topStats.map((card) => (
-          <div key={card.label} className={`rounded-[22px] p-3.5 md:p-4 bg-gradient-to-br ${card.tone} ${isDark ? 'ring-1 ring-white/10 shadow-[0_16px_30px_rgba(15,23,42,0.18)]' : 'border border-gray-100 shadow-[0_12px_32px_rgba(15,23,42,0.05)]'}`}>
+          <div key={card.label} className={`min-w-0 rounded-[22px] p-3 md:p-4 bg-gradient-to-br ${card.tone} ${isDark ? 'ring-1 ring-white/10 shadow-[0_16px_30px_rgba(15,23,42,0.18)]' : 'border border-gray-100 shadow-[0_12px_32px_rgba(15,23,42,0.05)]'}`}>
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{card.label}</p>
-                <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{card.value}</p>
+                <p className="mt-2 truncate text-xl md:text-2xl font-bold tracking-tight">{card.value}</p>
               </div>
-              <div className={`rounded-2xl p-2 ${isDark ? 'bg-white/5' : 'bg-white shadow-sm'}`}>
+              <div className={`shrink-0 rounded-2xl p-2 ${isDark ? 'bg-white/5' : 'bg-white shadow-sm'}`}>
                 <card.icon size={16} />
               </div>
             </div>

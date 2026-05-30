@@ -84,6 +84,7 @@ export default function MedsosDashboard() {
 
   const [loading, setLoading] = useState(!isDemo);
   const [waConnector, setWaConnector] = useState<ManagedIntegrationConnector | null>(null);
+  const [marketplaceConnector, setMarketplaceConnector] = useState<ManagedIntegrationConnector | null>(null);
   const [waStatus, setWaStatus] = useState<WACrmConnectionStatus | null>(null);
   const [marketplaceStatus, setMarketplaceStatus] = useState<MarketplaceHubConnectionStatus | null>(null);
   const [accounts, setAccounts] = useState<ZernioAccount[]>(isDemo ? demoAccounts : []);
@@ -95,6 +96,7 @@ export default function MedsosDashboard() {
       try {
         const [hub, zernioAccounts] = await Promise.all([getMyCommerSocialIntegrationHub(), getZernioAccounts()]);
         setWaConnector(hub.connectors.find((c) => c.slug === 'social-hub') || null);
+        setMarketplaceConnector(hub.connectors.find((c) => c.slug === 'marketplace-hub') || null);
         setAccounts(zernioAccounts);
         try {
           const [waSt, mktSt] = await Promise.all([getWACrmStatus(), getMarketplaceHubStatus()]);
@@ -119,7 +121,8 @@ export default function MedsosDashboard() {
   const displayAccounts = previewMode ? previewAccounts : accounts;
 
   const waLevel: StatusLevel = isDemo || waStatus?.reachable ? 'ok' : waStatus?.configured ? 'warn' : previewMode ? 'preview' : 'idle';
-  const mktLevel: StatusLevel = isDemo ? 'ok' : marketplaceStatus?.reachable ? 'ok' : marketplaceStatus?.configured ? 'warn' : previewMode ? 'preview' : 'idle';
+  const marketplaceSaved = Boolean(marketplaceStatus?.configured || marketplaceConnector?.connectionRefMasked || marketplaceConnector?.workspaceName);
+  const mktLevel: StatusLevel = isDemo ? 'ok' : marketplaceStatus?.reachable ? 'ok' : marketplaceSaved ? 'warn' : previewMode ? 'preview' : 'idle';
   const socialLevel: StatusLevel = previewMode ? 'preview' : socialAccounts.length > 0 ? 'ok' : 'idle';
   const adsLevel: StatusLevel = previewMode ? 'preview' : adsAccounts.length > 0 ? 'ok' : 'idle';
 
@@ -155,8 +158,8 @@ export default function MedsosDashboard() {
       level: mktLevel,
       label: 'Marketplace',
       icon: McsMarketplaceIcon,
-      value: isDemo ? 'Active' : marketplaceStatus?.reachable ? String(marketplaceStatus.channels.length || 'Active') : marketplaceStatus?.configured ? 'Check' : 'Setup',
-      helper: isDemo ? 'Marketplace preview aktif' : marketplaceStatus?.message || 'Marketplace chat belum aktif',
+      value: isDemo ? 'Active' : marketplaceStatus?.reachable ? String(marketplaceStatus.channels.length || 'Active') : marketplaceSaved ? 'Saved' : 'Setup',
+      helper: isDemo ? 'Marketplace preview aktif' : marketplaceStatus?.message || (marketplaceSaved ? 'Konfigurasi tersimpan, menunggu validasi channel aktif' : 'Marketplace chat belum aktif'),
       action: () => navigate(`${base}/marketplace`),
       actionLabel: 'Marketplace Hub',
     },
@@ -282,7 +285,7 @@ export default function MedsosDashboard() {
               { label: 'WA Inbox', ok: isDemo || Boolean(waStatus?.reachable), note: isDemo ? 'Live' : waStatus?.reachable ? 'Responding' : waStatus?.configured ? 'Needs check' : 'Not configured' },
               { label: 'Social accounts', ok: isDemo || socialAccounts.length > 0, note: previewMode ? 'None yet' : `${socialAccounts.length} connected` },
               { label: 'Ads accounts', ok: isDemo || adsAccounts.length > 0, note: previewMode ? 'None yet' : `${adsAccounts.length} connected` },
-              { label: 'Marketplace hub', ok: isDemo || Boolean(marketplaceStatus?.reachable), note: isDemo ? 'Active' : marketplaceStatus?.reachable ? 'Healthy' : marketplaceStatus?.configured ? 'Needs check' : 'Not configured' },
+              { label: 'Marketplace hub', ok: isDemo || Boolean(marketplaceStatus?.reachable), note: isDemo ? 'Active' : marketplaceStatus?.reachable ? 'Healthy' : marketplaceSaved ? 'Saved, needs validation' : 'Not configured' },
             ].map((item) => (
               <div key={item.label} className={`flex items-center justify-between rounded-2xl p-3.5 transition-colors ${
                 isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-50 hover:bg-slate-100'

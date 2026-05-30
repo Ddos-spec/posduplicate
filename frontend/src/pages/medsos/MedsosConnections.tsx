@@ -423,7 +423,7 @@ export default function MedsosConnections() {
       return { card: 'Check', label: 'Perlu dicek', helper: waStatus.message || 'Konfigurasi WA ada, tetapi layanan inbox belum merespons' };
     }
     if (waReady) {
-      return { card: 'Saved', label: 'Tersimpan', helper: 'API key sudah ada, menunggu validasi live' };
+      return { card: 'Active', label: 'Tersimpan & siap dipakai', helper: 'API key sudah tersimpan; inbox live akan dipakai dashboard dan WA workspace' };
     }
     return { card: 'Setup', label: 'Belum dikonfigurasi', helper: 'Simpan API key workspace untuk menyalakan WA Inbox' };
   }, [isDemo, waStatus, waReady]);
@@ -706,13 +706,21 @@ export default function MedsosConnections() {
         <div className={`rounded-2xl p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200 shadow-sm'}`}>
           <McsIconBadge icon={McsSocialIcon} size={38} iconSize={16} tone="blue" className="mb-3" />
           <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Social connected</p>
-          <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{zernioLoading ? '...' : socialAccounts.length}</p>
+          {zernioLoading ? (
+            <span className={`mt-2 block h-8 w-14 animate-pulse rounded-xl ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+          ) : (
+            <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{socialAccounts.length}</p>
+          )}
           <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Akun organik aktif</p>
         </div>
         <div className={`rounded-2xl p-4 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white ring-1 ring-slate-200 shadow-sm'}`}>
           <McsIconBadge icon={McsAdsIcon} size={38} iconSize={16} tone="amber" className="mb-3" />
           <p className={`text-xs uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Ads connected</p>
-          <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{zernioLoading ? '...' : adsAccounts.length}</p>
+          {zernioLoading ? (
+            <span className={`mt-2 block h-8 w-14 animate-pulse rounded-xl ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
+          ) : (
+            <p className="mt-2 text-xl md:text-2xl font-bold tracking-tight">{adsAccounts.length}</p>
+          )}
           <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Network ads aktif</p>
         </div>
       </div>
