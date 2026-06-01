@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.use(authMiddleware);
 router.use(tenantMiddleware);
+router.get('/', dashboardController.getStats);
 
 /**
  * @swagger

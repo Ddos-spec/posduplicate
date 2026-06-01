@@ -19,6 +19,7 @@ const router = Router();
 
 // All routes require authentication and tenant context
 router.use(authMiddleware, tenantMiddleware);
+router.get('/', getDashboardSummary);
 
 /**
  * GET /api/dashboard/summary

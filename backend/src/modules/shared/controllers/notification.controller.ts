@@ -276,7 +276,7 @@ const formatOperationalChangeNotification = (tenantId: number, request: any) => 
   return {
     id: `change-request-${request.id}`,
     type: 'approval_request',
-    message: `${actorName} ${actionMap[request.actionType] || 'mengajukan perubahan operasional'}`,
+    message: `approval menunggu: ${actorName} ${actionMap[request.actionType] || 'mengajukan perubahan operasional'}`,
     details: `Alasan: ${request.reason}`,
     tenantId,
     createdAt: request.createdAt,
