@@ -223,6 +223,11 @@ export interface SocialPostAnalysisResult {
   analysis: string;
   generatedAt: string;
   model: string;
+  usage?: {
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+  };
 }
 
 export async function generateSocialPostAnalysis(post: number | SocialPost): Promise<SocialPostAnalysisResult> {

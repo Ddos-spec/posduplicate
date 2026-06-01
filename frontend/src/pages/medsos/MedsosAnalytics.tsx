@@ -882,6 +882,22 @@ function SocialAnalyticsView({ isDemo, isDark }: { isDemo: boolean; isDark: bool
                            <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 rounded text-[9px] font-bold uppercase tracking-widest">{analysisResult.model}</span>
                            <span className="text-[9px] text-gray-400 font-bold">{new Date(analysisResult.generatedAt).toLocaleTimeString()}</span>
                         </div>
+                        {analysisResult.usage ? (
+                          <div className={`grid grid-cols-3 gap-2 rounded-2xl p-2 text-center text-[10px] ${isDark ? 'bg-slate-900/70 text-gray-300 ring-1 ring-white/10' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
+                            <div>
+                              <p className="font-bold">{analysisResult.usage.promptTokens ?? '—'}</p>
+                              <p className="uppercase tracking-wide opacity-70">input token</p>
+                            </div>
+                            <div>
+                              <p className="font-bold">{analysisResult.usage.completionTokens ?? '—'}</p>
+                              <p className="uppercase tracking-wide opacity-70">output token</p>
+                            </div>
+                            <div>
+                              <p className="font-bold">{analysisResult.usage.totalTokens ?? '—'}</p>
+                              <p className="uppercase tracking-wide opacity-70">total token</p>
+                            </div>
+                          </div>
+                        ) : null}
                         <div className={`text-sm leading-relaxed whitespace-pre-wrap ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                            {analysisResult.analysis}
                         </div>
