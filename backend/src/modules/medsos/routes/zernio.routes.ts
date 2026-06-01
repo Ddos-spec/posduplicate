@@ -27,6 +27,11 @@ import {
   buildAutomationToolDescriptor,
   normalizeLogisticsAssistantSettings,
 } from '../services/logisticsAssistant.service';
+import {
+  createAdsAgentRun,
+  decideAdsAgentAction,
+  listAdsAgentRuns,
+} from '../services/adsAgent.service';
 
 const router = Router();
 
@@ -208,6 +213,56 @@ router.get('/ads/:adId/analytics', async (req, res, next) => {
     });
 
     return res.json({ success: true, data: analytics });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/medsos/zernio/ads/agent-actions
+router.get('/ads/agent-actions', async (req, res, next) => {
+  try {
+    const data = await listAdsAgentRuns(req.tenantId!);
+    return res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/medsos/zernio/ads/agent-actions
+router.post('/ads/agent-actions', async (req, res, next) => {
+  try {
+    const body = req.body || {};
+    const run = await createAdsAgentRun(req.tenantId!, req.userId, {
+      brief: String(body.brief || ''),
+      goal: String(body.goal || ''),
+      platform: String(body.platform || ''),
+      agentMode: String(body.agentMode || ''),
+      budgetGuardrail: String(body.budgetGuardrail || ''),
+      output: String(body.output || ''),
+      actions: Array.isArray(body.actions) ? body.actions : [],
+    });
+    return res.json({ success: true, data: { run } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/medsos/zernio/ads/agent-actions/:actionId/decision
+router.patch('/ads/agent-actions/:actionId/decision', async (req, res, next) => {
+  try {
+    const decision = String(req.body?.decision || '');
+    if (!['approve', 'revise', 'defer'].includes(decision)) {
+      return res.status(400).json({ success: false, message: 'decision must be approve, revise, or defer' });
+    }
+
+    const action = await decideAdsAgentAction(
+      req.tenantId!,
+      req.userId,
+      req.params.actionId,
+      decision as 'approve' | 'revise' | 'defer',
+      typeof req.body?.note === 'string' ? req.body.note : undefined
+    );
+    return res.json({ success: true, data: { action } });
   } catch (err) {
     next(err);
   }

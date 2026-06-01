@@ -11,7 +11,10 @@ import {
   type ProviderRuntimeConfig,
 } from '../../lib/contentStudio';
 import {
+  createZernioAdsAgentActions,
+  decideZernioAdsAgentAction,
   disconnectZernioAccount,
+  getZernioAdsAgentActions,
   invalidateMcsRequestCache,
   getZernioAdAnalytics,
   getZernioAdsByCampaign,
@@ -20,6 +23,8 @@ import {
   getZernioAdsSummary,
   type ZernioAdAnalyticsSummary,
   type ZernioAdListItem,
+  type ZernioAdsAgentAction,
+  type ZernioAdsAgentActionInput,
   type ZernioAdsCampaignSummary,
   type ZernioAdsSummary,
   type ZernioAccount,
@@ -299,6 +304,96 @@ function buildAdsFallbackPlan(input: {
   ].join('\n');
 }
 
+function buildAdsAgentActionDrafts(input: {
+  brief: string;
+  goal: AdsCopilotGoal;
+  platform: AdsCopilotPlatform;
+  agentMode: AdsAgentMode;
+  budgetGuardrail: string;
+  campaigns: ZernioAdsCampaignSummary[];
+  connectedPlatforms: string;
+}): ZernioAdsAgentActionInput[] {
+  const actions: ZernioAdsAgentActionInput[] = [];
+  const campaigns = input.campaigns.slice(0, 8);
+  const lowCtr = campaigns.find((campaign) => Number(campaign.metrics.ctr || 0) > 0 && Number(campaign.metrics.ctr || 0) < 0.8);
+  const bestConverter = campaigns.find((campaign) => Number(campaign.metrics.conversions || 0) > 0);
+  const spendingNoConversion = campaigns.find((campaign) => Number(campaign.metrics.spend || 0) > 0 && Number(campaign.metrics.conversions || 0) === 0);
+
+  actions.push({
+    title: 'Generate 3 creative test baru',
+    detail: `Buat 3 variasi hook dan visual untuk brief "${input.brief}" sesuai goal ${input.goal}. Creative diarahkan ke ${input.platform}.`,
+    actionType: 'create_creative_test',
+    platform: input.platform,
+    riskLevel: 'low',
+    budgetImpact: 'Belum menyentuh budget, aman untuk disiapkan sebagai draft.',
+    approvalQuestion: 'Setujui AI membuat blueprint creative test dan prompt iklannya?',
+  });
+
+  actions.push({
+    title: 'Siapkan struktur budget testing',
+    detail: `Gunakan guardrail: ${input.budgetGuardrail || 'testing kecil dulu'}. AI membagi budget ke campaign/creative test tanpa eksekusi langsung.`,
+    actionType: 'rebalance_budget',
+    platform: input.platform,
+    riskLevel: input.agentMode === 'Guarded autopilot' ? 'medium' : 'low',
+    budgetImpact: input.budgetGuardrail || 'Budget wajib dikonfirmasi user sebelum berubah.',
+    approvalQuestion: 'Setujui struktur split budget ini masuk pending eksekusi?',
+  });
+
+  if (bestConverter) {
+    actions.push({
+      title: `Scale kandidat terbaik: ${bestConverter.name}`,
+      detail: `Campaign ini punya ${formatNumber(bestConverter.metrics.conversions)} conversion, CTR ${formatMetricValue(bestConverter.metrics.ctr)}%, spend ${bestConverter.currency ? formatCurrencyValue(bestConverter.currency, bestConverter.metrics.spend) : formatMetricValue(bestConverter.metrics.spend)}. AI menyarankan scale bertahap sesuai guardrail.`,
+      actionType: 'scale_campaign',
+      platform: bestConverter.networkLabel,
+      targetId: bestConverter.id,
+      targetName: bestConverter.name,
+      riskLevel: 'medium',
+      budgetImpact: 'Potensi menaikkan spend; butuh approval owner sebelum eksekusi.',
+      approvalQuestion: 'Setujui kandidat scale ini untuk masuk antrian eksekusi?',
+    });
+  }
+
+  if (lowCtr) {
+    actions.push({
+      title: `Review / pause creative CTR rendah: ${lowCtr.name}`,
+      detail: `CTR ${formatMetricValue(lowCtr.metrics.ctr)}% terdeteksi rendah. AI menyarankan review creative, audience, dan kemungkinan pause setelah data cukup.`,
+      actionType: 'pause_campaign',
+      platform: lowCtr.networkLabel,
+      targetId: lowCtr.id,
+      targetName: lowCtr.name,
+      riskLevel: 'medium',
+      budgetImpact: 'Bisa menahan spend buruk, tapi tetap perlu approval agar tidak mematikan campaign penting.',
+      approvalQuestion: 'Setujui action review/pause ini masuk pending approval?',
+    });
+  }
+
+  if (spendingNoConversion) {
+    actions.push({
+      title: `Audit spend tanpa conversion: ${spendingNoConversion.name}`,
+      detail: `Campaign sudah spend ${spendingNoConversion.currency ? formatCurrencyValue(spendingNoConversion.currency, spendingNoConversion.metrics.spend) : formatMetricValue(spendingNoConversion.metrics.spend)} tanpa conversion terbaca. Cek tracking, landing, audience, dan offer.`,
+      actionType: 'audit_tracking',
+      platform: spendingNoConversion.networkLabel,
+      targetId: spendingNoConversion.id,
+      targetName: spendingNoConversion.name,
+      riskLevel: 'high',
+      budgetImpact: 'Tidak langsung ubah budget; audit dulu supaya tidak salah matikan campaign.',
+      approvalQuestion: 'Setujui audit tracking dan funnel untuk campaign ini?',
+    });
+  }
+
+  actions.push({
+    title: 'Set daily monitoring rule',
+    detail: `Pantau campaign aktif lintas ${input.connectedPlatforms || input.platform}. Trigger alert jika CTR turun, CPL naik, atau spend keluar guardrail.`,
+    actionType: 'set_monitoring_rule',
+    platform: input.platform,
+    riskLevel: 'low',
+    budgetImpact: 'Tidak mengubah budget; hanya aturan pantau dan reminder.',
+    approvalQuestion: 'Aktifkan rule monitoring ini sebagai SOP operator?',
+  });
+
+  return actions.slice(0, 6);
+}
+
 function slugifyFilenamePart(value: string) {
   return value
     .toLowerCase()
@@ -365,6 +460,8 @@ export default function OmnichannelAdsHub() {
   const [adsBudgetGuardrail, setAdsBudgetGuardrail] = useState('Mulai kecil, maksimal 10-20% budget harian untuk testing.');
   const [adsCopilotOutput, setAdsCopilotOutput] = useState('');
   const [adsCopilotLoading, setAdsCopilotLoading] = useState(false);
+  const [adsAgentActions, setAdsAgentActions] = useState<ZernioAdsAgentAction[]>([]);
+  const [adsAgentDecisionBusyId, setAdsAgentDecisionBusyId] = useState<string | null>(null);
   const [disconnectTarget, setDisconnectTarget] = useState<ZernioAccount | null>(null);
 
   const load = async (options?: { refresh?: boolean; silent?: boolean }) => {
@@ -374,12 +471,14 @@ export default function OmnichannelAdsHub() {
       setLoading(true);
     }
     try {
-      const [zernioAccounts, zernioSummary] = await Promise.all([
+      const [zernioAccounts, zernioSummary, agentQueue] = await Promise.all([
         getZernioAccounts(),
         getZernioAdsSummary({ fromDate, toDate, refresh: options?.refresh }),
+        getZernioAdsAgentActions().catch(() => ({ runs: [], actions: [] })),
       ]);
       setAccounts(zernioAccounts);
       setSummary(zernioSummary);
+      setAdsAgentActions(agentQueue.actions);
     } catch (error) {
       if (import.meta.env.DEV) console.warn('Failed to load Zernio ads workspace', error);
     } finally {
@@ -739,6 +838,39 @@ export default function OmnichannelAdsHub() {
               },
             ],
           });
+      const actionDrafts = buildAdsAgentActionDrafts({
+        brief,
+        goal: adsCopilotGoal,
+        platform: adsCopilotPlatform,
+        agentMode: adsAgentMode,
+        budgetGuardrail: adsBudgetGuardrail,
+        campaigns: topCampaigns,
+        connectedPlatforms,
+      });
+
+      if (!isDemo) {
+        const run = await createZernioAdsAgentActions({
+          brief,
+          goal: adsCopilotGoal,
+          platform: adsCopilotPlatform,
+          agentMode: adsAgentMode,
+          budgetGuardrail: adsBudgetGuardrail,
+          output: result,
+          actions: actionDrafts,
+        });
+        setAdsAgentActions((current) => [...run.actions, ...current].slice(0, 100));
+      } else {
+        const now = new Date().toISOString();
+        setAdsAgentActions(actionDrafts.map((action, index) => ({
+          ...action,
+          id: `demo-action-${Date.now()}-${index}`,
+          runId: 'demo-run',
+          status: 'pending',
+          executionStatus: 'proposal_only',
+          createdAt: now,
+        })));
+      }
+
       setAdsCopilotOutput(result);
     } catch (error) {
       if (import.meta.env.DEV) console.warn('Failed to run ads copilot', error);
@@ -770,6 +902,31 @@ export default function OmnichannelAdsHub() {
       return `${base}\n\n---\nKeputusan approval: ${decision}\n${decisionText[decision]}`;
     });
   };
+
+  const handleAdsAgentActionDecision = async (action: ZernioAdsAgentAction, decision: 'approve' | 'revise' | 'defer') => {
+    setAdsAgentDecisionBusyId(action.id);
+    try {
+      if (isDemo || action.id.startsWith('demo-action-')) {
+        const nextStatus = decision === 'approve' ? 'approved' : decision === 'revise' ? 'revision_requested' : 'deferred';
+        setAdsAgentActions((current) => current.map((item) => item.id === action.id ? {
+          ...item,
+          status: nextStatus,
+          executionStatus: decision === 'approve' ? 'ready_for_manual_execution' : nextStatus,
+          decidedAt: new Date().toISOString(),
+        } : item));
+        return;
+      }
+
+      const updated = await decideZernioAdsAgentAction(action.id, decision);
+      setAdsAgentActions((current) => current.map((item) => item.id === action.id ? updated : item));
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn('Failed to decide ads agent action', error);
+      setAdsCopilotOutput((current) => `${current.trim()}\n\nCatatan: keputusan action gagal disimpan. Coba refresh lalu ulangi.`);
+    } finally {
+      setAdsAgentDecisionBusyId(null);
+    }
+  };
+
   const copyAdsCopilotOutput = async () => {
     if (!adsCopilotOutput.trim()) return;
     try {
@@ -1049,6 +1206,73 @@ export default function OmnichannelAdsHub() {
                 <p className="mt-1 text-sm">Tulis brief kasar, nanti AI susun campaign plan dan prompt creative.</p>
               </div>
             )}
+
+            {adsAgentActions.length > 0 ? (
+              <div className={`mt-3 rounded-2xl p-3 ${isDark ? 'bg-slate-900/80 ring-1 ring-white/10' : 'bg-white/90 ring-1 ring-blue-100'}`}>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-bold">Agent action queue</p>
+                    <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Ini bukan teks doang: tiap rekomendasi masuk antrian approval dan tersimpan.</p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${isDark ? 'bg-purple-500/15 text-purple-200' : 'bg-purple-50 text-purple-700'}`}>
+                    {adsAgentActions.filter((action) => action.status === 'pending').length} pending
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {adsAgentActions.slice(0, 5).map((action) => {
+                    const busy = adsAgentDecisionBusyId === action.id;
+                    return (
+                      <div key={action.id} className={`rounded-2xl p-3 ${isDark ? 'bg-slate-950 ring-1 ring-white/10' : 'bg-slate-50 ring-1 ring-slate-200'}`}>
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-semibold text-sm">{action.title}</p>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                action.status === 'approved'
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : action.status === 'revision_requested'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : action.status === 'deferred'
+                                      ? 'bg-slate-200 text-slate-600'
+                                      : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {action.status === 'revision_requested' ? 'revisi' : action.status}
+                              </span>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                action.riskLevel === 'high'
+                                  ? 'bg-rose-100 text-rose-700'
+                                  : action.riskLevel === 'medium'
+                                    ? 'bg-orange-100 text-orange-700'
+                                    : 'bg-emerald-100 text-emerald-700'
+                              }`}>
+                                risk {action.riskLevel || 'low'}
+                              </span>
+                            </div>
+                            <p className={`mt-1 line-clamp-2 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{action.detail}</p>
+                            <p className={`mt-1 text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{action.budgetImpact}</p>
+                          </div>
+                        </div>
+                        {action.status === 'pending' ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button type="button" disabled={busy} onClick={() => void handleAdsAgentActionDecision(action, 'approve')} className="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60">
+                              {busy ? '...' : 'Setujui'}
+                            </button>
+                            <button type="button" disabled={busy} onClick={() => void handleAdsAgentActionDecision(action, 'revise')} className="rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-600 disabled:opacity-60">
+                              Revisi
+                            </button>
+                            <button type="button" disabled={busy} onClick={() => void handleAdsAgentActionDecision(action, 'defer')} className={`rounded-xl px-3 py-1.5 text-xs font-bold disabled:opacity-60 ${isDark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}>
+                              Tunda
+                            </button>
+                          </div>
+                        ) : (
+                          <p className={`mt-2 text-[11px] font-semibold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Execution: {action.executionStatus.replace(/_/g, ' ')}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
