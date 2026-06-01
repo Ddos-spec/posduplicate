@@ -297,6 +297,51 @@ function buildPromptHelperFallback(seed: string, lane: 'image' | 'video') {
   ].join('\n');
 }
 
+function buildPromptRefinementFallback(seed: string, lane: 'image' | 'video', presetLabel: string, style: string, ratio: string) {
+  const cleaned = seed.trim();
+  if (lane === 'video') {
+    return [
+      `Buat video short-form ads yang sangat detail berdasarkan brief: ${cleaned}.`,
+      `Preset kreatif: ${presetLabel}. Format rasio: ${ratio}. Gaya visual: ${style}.`,
+      '',
+      'Instruksi visual:',
+      'Mulai dengan hook visual kuat dalam 1-2 detik pertama, tampilkan produk/objek utama secara jelas, gunakan lighting premium, komposisi rapi, warna bersih, dan pacing cepat namun tetap natural.',
+      '',
+      'Alur scene:',
+      'Scene 1: close-up produk/masalah utama yang langsung menarik perhatian.',
+      'Scene 2: tunjukkan benefit paling bernilai dengan visual demonstratif.',
+      'Scene 3: tampilkan bukti, tekstur, hasil, atau situasi pemakaian agar terasa nyata.',
+      'Scene 4: akhiri dengan CTA jelas, brand recall kuat, dan ruang aman untuk teks overlay.',
+      '',
+      'Camera & motion:',
+      'Gunakan camera movement sinematik, transisi halus, focus pull, product reveal, dan framing yang menjaga objek utama tetap dominan.',
+      '',
+      'Negative prompt:',
+      'hindari visual ramai, blur, wajah/produk berubah bentuk, teks kecil tidak terbaca, watermark, logo palsu, tangan aneh, pacing lambat, lighting gelap, dan klaim berlebihan.',
+    ].join('\n');
+  }
+
+  return [
+    `Buat prompt foto/key visual yang sangat detail berdasarkan brief: ${cleaned}.`,
+    `Preset visual: ${presetLabel}. Style utama: ${style}. Rasio: ${ratio}.`,
+    '',
+    'Instruksi visual utama:',
+    'Produk/objek utama harus menjadi fokus paling dominan, terlihat premium, tajam, bersih, dan mudah dipahami dalam 1 detik pertama.',
+    '',
+    'Komposisi:',
+    'Gunakan layout clean dengan ruang negatif yang cukup untuk headline/CTA, background rapi, tidak ramai, depth of field halus, dan pencahayaan studio profesional.',
+    '',
+    'Detail estetika:',
+    'Tampilkan tekstur, material, warna brand, bayangan natural, highlight produk, dan value paling mahal dari penawaran. Hasil harus terasa siap dipakai untuk iklan, landing page, feed Instagram, dan katalog premium.',
+    '',
+    'Mood & target:',
+    'Visual harus modern, trusted, high-converting, tidak terlalu template AI, dan terasa seperti campaign brand asli.',
+    '',
+    'Negative prompt:',
+    'blur, low contrast, cluttered frame, messy background, watermark, logo palsu, teks rusak, anatomy error, tangan aneh, objek melengkung, noise, overexposed, underexposed, murahan, terlalu ramai.',
+  ].join('\n');
+}
+
 function buildVideoPrompt(input: {
   idea: string;
   platform: string;
@@ -453,7 +498,7 @@ export default function AdvancedContentStudio({
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState('');
   const [videoJob, setVideoJob] = useState<GenerateVideoResponse['job'] | null>(null);
 
-  const [loadingKey, setLoadingKey] = useState<null | 'copy' | 'image' | 'video' | 'campaign' | 'copilot' | 'prompt' | 'models' | 'video-status'>(null);
+  const [loadingKey, setLoadingKey] = useState<null | 'copy' | 'image' | 'video' | 'campaign' | 'copilot' | 'prompt' | 'refine-prompt' | 'models' | 'video-status'>(null);
   const fieldClass = isDark
     ? 'w-full rounded-2xl border border-slate-700/80 bg-slate-950/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/15'
     : 'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10';
@@ -708,6 +753,67 @@ export default function AdvancedContentStudio({
       setImagePrompt(promptHelperOutput);
     }
     toast.success(isVideoLane ? 'Prompt masuk ke video.' : 'Prompt masuk ke foto.');
+  };
+
+  const runRefineMainPrompt = async () => {
+    const lane = isVideoLane ? 'video' : 'image';
+    const currentPrompt = (isVideoLane ? videoIdea : imagePrompt).trim();
+    if (!currentPrompt) {
+      toast.error(isVideoLane ? 'Isi prompt video dulu, nanti AI yang sempurnakan.' : 'Isi prompt foto dulu, nanti AI yang sempurnakan.');
+      return;
+    }
+
+    setLoadingKey('refine-prompt');
+    try {
+      const result = !hasOpenRouterKey
+        ? buildPromptRefinementFallback(currentPrompt, lane, currentPresetLabel, isVideoLane ? videoMotion : artStyle, isVideoLane ? videoPlatform : aspectRatio)
+        : await requestProviderText({
+            providerId: 'openrouter',
+            config: providerConfig,
+            messages: [
+              {
+                role: 'system',
+                content: [
+                  'Anda adalah prompt engineer kelas dunia untuk AI image/video generation dan iklan social commerce.',
+                  'Tugas Anda menyempurnakan prompt pendek user menjadi prompt final yang jauh lebih detail, visual, spesifik, dan siap dipakai generator.',
+                  'JANGAN meringkas. JANGAN membuat prompt lebih pendek. JANGAN memberi penjelasan panjang di luar prompt.',
+                  'Output harus Bahasa Indonesia, rapi, langsung bisa ditempel ke generator, dan terasa production-grade.',
+                  'Wajib tambahkan detail tentang subjek utama, komposisi, lighting, camera angle/motion, mood, texture, background, brand feel, CTA/ruang teks, dan negative prompt.',
+                  'Jika input user terlalu pendek, interpretasikan secara realistis untuk bisnis kecil dan buat prompt yang paling aman untuk menghasilkan visual/video komersial yang bagus.',
+                ].join('\n'),
+              },
+              {
+                role: 'user',
+                content: [
+                  `Mode: ${lane === 'video' ? 'VIDEO short-form ads/reels' : 'FOTO/key visual ads'}.`,
+                  `Preset aktif: ${currentPresetLabel}.`,
+                  `Style/motion: ${lane === 'video' ? videoMotion : artStyle}.`,
+                  `Rasio/platform: ${lane === 'video' ? videoPlatform : aspectRatio}.`,
+                  '',
+                  `Prompt pendek user: ${currentPrompt}`,
+                  '',
+                  'Sempurnakan menjadi prompt final yang lebih panjang, detail, dan kuat. Format output:',
+                  '1. Prompt final:',
+                  '2. Detail visual wajib:',
+                  '3. Camera / composition direction:',
+                  '4. Negative prompt:',
+                  '5. Catatan produksi singkat:',
+                ].join('\n'),
+              },
+            ],
+          });
+
+      if (lane === 'video') {
+        setVideoIdea(result);
+      } else {
+        setImagePrompt(result);
+      }
+      toast.success('Prompt utama sudah disempurnakan AI.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Gagal menyempurnakan prompt.');
+    } finally {
+      setLoadingKey(null);
+    }
   };
 
   const runCopy = async () => {
@@ -1121,17 +1227,30 @@ export default function AdvancedContentStudio({
                   ) : null}
                 </div>
 
-                <label className="block space-y-2">
-                  <span className="flex items-center gap-2 text-sm font-bold">
-                    {isVideoLane ? 'Prompt Utama Video' : 'Prompt Utama Foto'}
-                    <FieldHelp
-                      title={isVideoLane ? 'Prompt Utama Video' : 'Prompt Utama Foto'}
-                      description={isVideoLane ? 'Kolom final yang dipakai saat generate storyboard/video. Bisa berasal dari preset, prompt helper, atau ditulis manual.' : 'Kolom final yang dipakai saat generate visual brief/foto. Bisa berasal dari preset, prompt helper, atau ditulis manual.'}
-                      howToUse="Edit teks ini sampai instruksinya jelas: objek utama, style, suasana, target audience, hal yang wajib tampil, dan hal yang harus dihindari. Setelah itu klik tombol generate di bawah."
-                    />
-                  </span>
+                <div className="block space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-sm font-bold">
+                      {isVideoLane ? 'Prompt Utama Video' : 'Prompt Utama Foto'}
+                      <FieldHelp
+                        title={isVideoLane ? 'Prompt Utama Video' : 'Prompt Utama Foto'}
+                        description={isVideoLane ? 'Kolom final yang dipakai saat generate storyboard/video. Bisa berasal dari preset, prompt helper, atau ditulis manual.' : 'Kolom final yang dipakai saat generate visual brief/foto. Bisa berasal dari preset, prompt helper, atau ditulis manual.'}
+                        howToUse="Edit teks ini sampai instruksinya jelas: objek utama, style, suasana, target audience, hal yang wajib tampil, dan hal yang harus dihindari. Setelah itu klik tombol generate di bawah."
+                      />
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void runRefineMainPrompt()}
+                      disabled={loadingKey !== null}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${
+                        isDark ? 'bg-blue-500/15 text-blue-100 ring-1 ring-blue-400/30 hover:bg-blue-500/20' : 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100'
+                      }`}
+                    >
+                      {loadingKey === 'refine-prompt' ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                      Sempurnakan dengan AI
+                    </button>
+                  </div>
                   <p className={`text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Ini prompt final yang benar-benar dipakai generator. Teks dari Preset Visual atau Prompt Otomatis akan masuk ke sini, lalu boleh diedit bebas.
+                    Ini prompt final yang benar-benar dipakai generator. Kalau masih pendek, klik <strong>Sempurnakan dengan AI</strong> agar prompt dibuat lebih detail, visual, dan siap generate — bukan diringkas.
                   </p>
                   <textarea
                     value={isVideoLane ? videoIdea : imagePrompt}
@@ -1143,7 +1262,7 @@ export default function AdvancedContentStudio({
                       : 'Tulis prompt final foto: produk utama, style visual, suasana, angle kamera, warna, dan hasil akhir...'}
                     className={`${fieldClass} min-h-[132px] resize-y leading-6`}
                   />
-                </label>
+                </div>
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
