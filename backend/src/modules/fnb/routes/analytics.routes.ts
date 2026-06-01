@@ -16,6 +16,7 @@ router.use(authMiddleware);
 router.use(tenantMiddleware);
 
 // Dashboard stats
+router.get('/', getDashboardStats);
 /**
  * @swagger
  * /api/analytics/dashboard:

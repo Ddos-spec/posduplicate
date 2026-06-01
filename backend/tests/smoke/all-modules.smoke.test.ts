@@ -133,6 +133,15 @@ describeWithDatabase('🔥 Smoke Tests - All Modules', () => {
       }
     });
 
+    await prisma.activity_logs.deleteMany({
+      where: {
+        OR: [
+          { user_id: testUserId },
+          { user_id: cashierUserId }
+        ]
+      }
+    });
+
     await prisma.users.deleteMany({ where: { email: { in: ['smoke@test.com', 'smoke-cashier@test.com'] } } });
     if (testOutletId) {
       await prisma.outlets.deleteMany({ where: { id: testOutletId } });
