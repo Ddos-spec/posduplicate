@@ -119,7 +119,7 @@ jobs:
     - name: Setup Test Database
       run: |
         npx prisma generate
-        npx prisma migrate deploy
+        npx prisma db push --accept-data-loss
       env:
         DATABASE_URL: postgresql://test_user:test_password@localhost:5432/mypos_test
 
@@ -211,7 +211,7 @@ jobs:
     - name: Setup Smoke Test Database
       run: |
         npx prisma generate
-        npx prisma migrate deploy
+        npx prisma db push --accept-data-loss
       env:
         DATABASE_URL: postgresql://smoke_user:smoke_password@localhost:5432/mypos_smoke
 
@@ -269,3 +269,4 @@ jobs:
         echo "✓ Security Audit"
         echo ""
         echo "🚀 Ready to deploy!"
+
