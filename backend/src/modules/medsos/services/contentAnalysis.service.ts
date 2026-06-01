@@ -33,6 +33,11 @@ type PostAnalysisResult = {
   analysis: string;
   generatedAt: string;
   model: string;
+  usage?: {
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+  };
 };
 
 type PromptAnalyticsShape = {
@@ -76,6 +81,14 @@ type ChatCompletionResponse = {
     }>;
   }>;
   error?: { message?: string } | string;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+  };
   choices?: Array<{
     text?: string;
     message?: {
@@ -222,6 +235,21 @@ function buildDeterministicPostAnalysis(post: PromptPostShape) {
     `6. Rekomendasi prioritas: Prioritaskan perbaikan hook, CTA, dan alasan orang harus komentar, save, atau share. Buat caption yang meminta tindakan spesifik, misalnya pilih opsi, tag teman, simpan tips, atau tanya pengalaman audiens.`,
     `7. Eksperimen berikutnya: Jalankan 3 variasi konten dengan angle berbeda: problem-solution, social proof, dan offer langsung. Bandingkan comments, shares, saves, dan engagement rate dalam 24-72 jam agar keputusan berikutnya berbasis data.`
   ].join('\n\n');
+}
+
+function normalizeUsage(data: ChatCompletionResponse['usage']): PostAnalysisResult['usage'] {
+  if (!data) return undefined;
+  const promptTokens = Number(data.prompt_tokens ?? data.promptTokens);
+  const completionTokens = Number(data.completion_tokens ?? data.completionTokens);
+  const totalTokens = Number(data.total_tokens ?? data.totalTokens);
+  const usage: NonNullable<PostAnalysisResult['usage']> = {};
+  if (Number.isFinite(promptTokens)) usage.promptTokens = promptTokens;
+  if (Number.isFinite(completionTokens)) usage.completionTokens = completionTokens;
+  if (Number.isFinite(totalTokens)) usage.totalTokens = totalTokens;
+  if (!usage.totalTokens && (usage.promptTokens || usage.completionTokens)) {
+    usage.totalTokens = (usage.promptTokens || 0) + (usage.completionTokens || 0);
+  }
+  return Object.keys(usage).length ? usage : undefined;
 }
 
 function extractAnalysisText(data: ChatCompletionResponse) {
@@ -464,6 +492,7 @@ ${systemMsg}`,
   let completion = await requestAnalysisCompletion(apiKey, requestBody, frontendBase);
   let analysis = completion.analysis;
   let resolvedModel = completion.data.model || String(requestBody.model);
+  let usage = normalizeUsage(completion.data.usage);
 
   if (!analysis && requestBody.model !== DEFAULT_MODEL) {
     completion = await requestAnalysisCompletion(apiKey, {
@@ -472,6 +501,7 @@ ${systemMsg}`,
     }, frontendBase);
     analysis = completion.analysis;
     resolvedModel = completion.data.model || DEFAULT_MODEL;
+    usage = normalizeUsage(completion.data.usage);
   }
 
   if (analysis && !isCompliantPostAnalysis(analysis)) {
@@ -489,6 +519,7 @@ ${systemMsg}`,
       if (repairCompletion.analysis) {
         analysis = repairCompletion.analysis;
         resolvedModel = repairCompletion.data.model || resolvedModel;
+        usage = normalizeUsage(repairCompletion.data.usage) || usage;
       }
     } catch {
       // If the repair call fails, still never return a malformed dashboard answer.
@@ -508,6 +539,7 @@ ${systemMsg}`,
     analysis,
     generatedAt: new Date().toISOString(),
     model: resolvedModel,
+    usage,
   };
 }
 

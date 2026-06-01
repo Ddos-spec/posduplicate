@@ -212,6 +212,57 @@ function getModelLabel(model: ContentStudioModelOption) {
   return model.name && model.name !== model.id ? `${model.name} — ${model.id}` : model.id;
 }
 
+function formatTokenCount(value?: number | null) {
+  if (!value || !Number.isFinite(value)) return 'token context n/a';
+  if (value >= 1_000_000) return `${Number((value / 1_000_000).toFixed(1))}M token ctx`;
+  if (value >= 1_000) return `${Math.round(value / 1_000)}K token ctx`;
+  return `${value} token ctx`;
+}
+
+function readPricingNumber(pricing: Record<string, unknown> | null | undefined, keys: string[]) {
+  if (!pricing) return null;
+  for (const key of keys) {
+    const raw = pricing[key];
+    const parsed = typeof raw === 'number' ? raw : Number(raw);
+    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+  }
+  return null;
+}
+
+function formatUsd(value: number, digits = 2) {
+  if (value === 0) return '$0';
+  if (value < 0.01) return `$${value.toFixed(4)}`;
+  return `$${value.toFixed(digits)}`;
+}
+
+function getModelPricingSummary(model?: ContentStudioModelOption | null) {
+  if (!model) return 'Pilih model untuk melihat estimasi biaya.';
+  const pricing = model.pricing;
+  const prompt = readPricingNumber(pricing, ['prompt', 'input', 'input_tokens', 'prompt_tokens']);
+  const completion = readPricingNumber(pricing, ['completion', 'output', 'output_tokens', 'completion_tokens']);
+  const image = readPricingNumber(pricing, ['image', 'image_output', 'images', 'generation']);
+  const request = readPricingNumber(pricing, ['request', 'requests', 'unit']);
+  const knownParts: string[] = [];
+
+  if (prompt !== null) knownParts.push(`input ${formatUsd(prompt * 1_000_000)}/1M token`);
+  if (completion !== null) knownParts.push(`output ${formatUsd(completion * 1_000_000)}/1M token`);
+  if (image !== null) knownParts.push(`image ${formatUsd(image)}/generate`);
+  if (request !== null) knownParts.push(`request ${formatUsd(request)}/generate`);
+
+  if (knownParts.length) return knownParts.join(' · ');
+  if (pricing && Object.keys(pricing).length) return 'Pricing tersedia dari OpenRouter, format non-token/provider khusus.';
+  return 'Harga/token belum tersedia dari provider. Cek OpenRouter sebelum produksi.';
+}
+
+function getModelUsageSummary(model?: ContentStudioModelOption | null) {
+  if (!model) return 'Estimasi token belum tersedia.';
+  return `${formatTokenCount(model.contextLength)} · ${getModelPricingSummary(model)}`;
+}
+
+function getModelSelectLabel(model: ContentStudioModelOption) {
+  return `${getModelLabel(model)} — ${getModelUsageSummary(model)}`;
+}
+
 function getOpenRouterKey(config: ProviderConfigMap[ProviderId]) {
   return (config.apiKey || import.meta.env.VITE_OPENROUTER_API_KEY || '').trim();
 }
@@ -514,6 +565,7 @@ export default function AdvancedContentStudio({
   const selectedModel = isVideoLane
     ? (providerConfig.videoModel || videoModelOptions[0]?.id || providerConfig.model)
     : (providerConfig.imageModel || imageModelOptions[0]?.id || providerConfig.model);
+  const selectedModelInfo = availableModels.find((model) => model.id === selectedModel) || null;
   const imagePreview = useMemo(
     () => buildPreviewSvg(imagePrompt || 'Visual direction', `${artStyle} · ${aspectRatio}`, 'Image Brief', `${imagePrompt}-${artStyle}-${aspectRatio}`),
     [imagePrompt, artStyle, aspectRatio],
@@ -996,13 +1048,17 @@ export default function AdvancedContentStudio({
                       className={`${fieldClass} min-w-[240px] py-2.5`}
                     >
                       {availableModels.map((model) => (
-                        <option key={model.id} value={model.id}>{getModelLabel(model)}</option>
+                        <option key={model.id} value={model.id}>{getModelSelectLabel(model)}</option>
                       ))}
                     </select>
                   </label>
                   <div className={`rounded-2xl px-3 py-2 text-xs ${isDark ? 'bg-slate-900 text-slate-300 ring-1 ring-white/10' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
                     {loadingKey === 'models' ? 'Membaca model...' : hasOpenRouterKey ? 'OpenRouter aktif' : 'Fallback aktif'}
                   </div>
+                </div>
+                <div className={`mb-3 rounded-2xl px-3 py-2 text-xs leading-5 ${isDark ? 'bg-slate-950/80 text-slate-300 ring-1 ring-white/10' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}>
+                  <strong>Estimasi model:</strong> {selectedModelInfo ? getModelUsageSummary(selectedModelInfo) : 'Model custom/manual; estimasi token belum tersedia.'}
+                  <span className="block opacity-75">Token context = batas memori model. Harga adalah estimasi dari metadata OpenRouter dan bisa berubah mengikuti provider.</span>
                 </div>
                 <p className={`mb-3 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{modelSourceNote}</p>
 
@@ -1426,9 +1482,9 @@ export default function AdvancedContentStudio({
                       Model foto
                     </span>
                     <select value={providerConfig.imageModel || imageModelOptions[0]?.id || ''} onChange={(e) => updateProviderConfig({ imageModel: e.target.value })} className={fieldClass}>
-                      {imageModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelLabel(model)}</option>)}
+                      {imageModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelSelectLabel(model)}</option>)}
                     </select>
-                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Khusus untuk Visual Brief / lane foto.</p>
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Khusus lane foto. {getModelUsageSummary(imageModelOptions.find((model) => model.id === (providerConfig.imageModel || imageModelOptions[0]?.id)) || imageModelOptions[0])}</p>
                   </label>
                   <label className="space-y-2">
                     <span className="flex items-center gap-2 text-sm font-semibold">
@@ -1436,9 +1492,9 @@ export default function AdvancedContentStudio({
                       Model video
                     </span>
                     <select value={providerConfig.videoModel || videoModelOptions[0]?.id || ''} onChange={(e) => updateProviderConfig({ videoModel: e.target.value })} className={fieldClass}>
-                      {videoModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelLabel(model)}</option>)}
+                      {videoModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelSelectLabel(model)}</option>)}
                     </select>
-                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Khusus untuk lane video.</p>
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Khusus lane video. {getModelUsageSummary(videoModelOptions.find((model) => model.id === (providerConfig.videoModel || videoModelOptions[0]?.id)) || videoModelOptions[0])}</p>
                   </label>
                   <label className="space-y-2">
                     <span className="flex items-center gap-2 text-sm font-semibold">
@@ -1518,13 +1574,13 @@ export default function AdvancedContentStudio({
                   <label className="space-y-2">
                     <span className="text-sm font-semibold">Model foto</span>
                     <select value={providerConfig.imageModel || imageModelOptions[0]?.id || ''} onChange={(e) => updateProviderConfig({ imageModel: e.target.value })} className={fieldClass}>
-                      {imageModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelLabel(model)}</option>)}
+                      {imageModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelSelectLabel(model)}</option>)}
                     </select>
                   </label>
                   <label className="space-y-2 md:col-span-2">
                     <span className="text-sm font-semibold">Model video</span>
                     <select value={providerConfig.videoModel || videoModelOptions[0]?.id || ''} onChange={(e) => updateProviderConfig({ videoModel: e.target.value })} className={fieldClass}>
-                      {videoModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelLabel(model)}</option>)}
+                      {videoModelOptions.map((model) => <option key={model.id} value={model.id}>{getModelSelectLabel(model)}</option>)}
                     </select>
                   </label>
                 </div>

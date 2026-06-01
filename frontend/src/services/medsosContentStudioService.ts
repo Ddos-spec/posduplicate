@@ -7,6 +7,7 @@ export interface ContentStudioModelOption {
   canonicalSlug?: string;
   outputModalities?: string[];
   inputModalities?: string[];
+  contextLength?: number | null;
   pricing?: Record<string, unknown> | null;
   supportedParameters?: string[];
   supportedAspectRatios?: string[];

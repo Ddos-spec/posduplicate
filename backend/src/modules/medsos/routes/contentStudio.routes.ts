@@ -12,6 +12,7 @@ interface StudioModelOption {
   canonicalSlug?: string;
   outputModalities?: string[];
   inputModalities?: string[];
+  contextLength?: number | null;
   pricing?: Record<string, unknown> | null;
   supportedParameters?: string[];
   supportedAspectRatios?: string[];
@@ -230,6 +231,7 @@ const mapImageModel = (model: any): StudioModelOption => ({
   canonicalSlug: typeof model?.canonical_slug === 'string' ? model.canonical_slug : undefined,
   inputModalities: Array.isArray(model?.architecture?.input_modalities) ? model.architecture.input_modalities : undefined,
   outputModalities: Array.isArray(model?.architecture?.output_modalities) ? model.architecture.output_modalities : undefined,
+  contextLength: Number.isFinite(Number(model?.context_length)) ? Number(model.context_length) : null,
   pricing: model?.pricing ?? null,
   supportedParameters: Array.isArray(model?.supported_parameters) ? model.supported_parameters : undefined,
 });
@@ -239,11 +241,12 @@ const mapVideoModel = (model: any): StudioModelOption => ({
   name: String(model?.name || model?.id || 'OpenRouter video model'),
   description: typeof model?.description === 'string' ? model.description : undefined,
   canonicalSlug: typeof model?.canonical_slug === 'string' ? model.canonical_slug : undefined,
+  contextLength: Number.isFinite(Number(model?.context_length)) ? Number(model.context_length) : null,
   supportedAspectRatios: Array.isArray(model?.supported_aspect_ratios) ? model.supported_aspect_ratios : undefined,
   supportedDurations: Array.isArray(model?.supported_durations) ? model.supported_durations : undefined,
   supportedResolutions: Array.isArray(model?.supported_resolutions) ? model.supported_resolutions : undefined,
   generateAudio: typeof model?.generate_audio === 'boolean' ? model.generate_audio : undefined,
-  pricing: model?.pricing_skus ?? null,
+  pricing: model?.pricing_skus ?? model?.pricing ?? null,
 });
 
 const buildPromptWithContext = (parts: Array<string | undefined | null>) =>

@@ -154,36 +154,48 @@ const MODEL_PRESET_OPTIONS: Array<{
   label: string;
   helper: string;
   detail: string;
+  tokenHint: string;
+  costHint: string;
 }> = [
   {
     id: 'auto',
     label: 'Auto',
     helper: 'Paling aman untuk mulai',
     detail: 'OpenRouter memilih model terbaik otomatis berdasarkan isi prompt.',
+    tokenHint: 'Context & token mengikuti model yang dipilih OpenRouter',
+    costHint: 'Biaya dinamis; cocok untuk mulai tanpa mikir model',
   },
   {
     id: 'fast',
     label: 'Fast',
     helper: 'Cepat dan ringan',
     detail: 'Cocok untuk analisis singkat saat butuh respons paling cepat.',
+    tokenHint: 'Output dashboard dibatasi ±1.800 token; context model besar',
+    costHint: 'Relatif hemat untuk analisis rutin',
   },
   {
     id: 'balanced',
     label: 'Balanced',
     helper: 'Seimbang',
     detail: 'Cocok untuk kualitas stabil tanpa terlalu berat.',
+    tokenHint: 'Output dashboard dibatasi ±1.800 token; context menengah-besar',
+    costHint: 'Biaya sedang untuk kualitas lebih stabil',
   },
   {
     id: 'deep',
     label: 'Deep',
     helper: 'Lebih mendalam',
     detail: 'Cocok untuk insight yang lebih tajam dan lebih lengkap.',
+    tokenHint: 'Output dashboard dibatasi ±1.800 token; reasoning lebih berat',
+    costHint: 'Relatif lebih mahal, pakai untuk audit penting',
   },
   {
     id: 'custom',
     label: 'Custom',
     helper: 'Isi model sendiri',
     detail: 'Pakai slug model OpenRouter Anda sendiri. Jika gagal, sistem akan fallback ke Auto.',
+    tokenHint: 'Context, token, dan limit mengikuti slug model custom',
+    costHint: 'Cek harga model di OpenRouter sebelum dipakai produksi',
   },
 ];
 
@@ -1006,12 +1018,24 @@ export default function MedsosSettings() {
                       <p className="mt-2 text-xs leading-5 opacity-90">
                         {option.detail}
                       </p>
+                      <div className={`mt-3 rounded-xl px-3 py-2 text-[11px] leading-5 ${
+                        active
+                          ? isDark
+                            ? 'bg-blue-500/10 text-blue-100'
+                            : 'bg-white/75 text-blue-800'
+                          : isDark
+                            ? 'bg-slate-950/70 text-gray-400'
+                            : 'bg-slate-50 text-slate-500'
+                      }`}>
+                        <p><strong>Token:</strong> {option.tokenHint}</p>
+                        <p><strong>Biaya:</strong> {option.costHint}</p>
+                      </div>
                     </button>
                   );
                 })}
               </div>
               <div className={`rounded-2xl p-4 text-xs leading-5 ${isDark ? 'bg-slate-900 text-gray-300 ring-1 ring-white/10' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
-                <strong>Catatan:</strong> preset Auto memakai <code className="font-mono">openrouter/auto</code>, jadi model aktual dipilih otomatis oleh OpenRouter dan nama model final akan tampil di hasil analisis.
+                <strong>Catatan:</strong> preset Auto memakai <code className="font-mono">openrouter/auto</code>. Output analisis dibatasi sekitar <strong>{settings.aiAnalysis.maxTokens} token</strong>, sementara input/context tergantung model OpenRouter yang aktif. Nama model final dan usage token akan tampil di hasil analisis jika provider mengirim metadata usage.
               </div>
             </div>
 
