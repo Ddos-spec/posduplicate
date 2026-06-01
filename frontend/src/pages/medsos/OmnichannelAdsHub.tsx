@@ -179,8 +179,61 @@ function downloadCsv(filename: string, rows: Array<Array<string | number | null 
 }
 
 
-type AdsCopilotGoal = 'Leads' | 'Sales' | 'Awareness' | 'Retargeting';
-type AdsCopilotPlatform = 'Meta Ads' | 'TikTok Ads' | 'Google Ads' | 'Omnichannel';
+type AdsCopilotGoal =
+  | 'Leads'
+  | 'Sales'
+  | 'Awareness'
+  | 'Retargeting'
+  | 'Traffic'
+  | 'Engagement'
+  | 'App Install'
+  | 'Catalog Sales'
+  | 'Store Visit'
+  | 'ROAS Efficiency'
+  | 'Creative Testing'
+  | 'Budget Optimization';
+type AdsCopilotPlatform =
+  | 'Semua Platform'
+  | 'Omnichannel'
+  | 'Meta Ads'
+  | 'TikTok Ads'
+  | 'Google Ads'
+  | 'LinkedIn Ads'
+  | 'Pinterest Ads'
+  | 'X Ads';
+type AdsAgentMode = 'Advisor' | 'Approval-first' | 'Guarded autopilot';
+
+const ADS_COPILOT_GOALS: Array<{ value: AdsCopilotGoal; label: string; helper: string }> = [
+  { value: 'Leads', label: 'Leads / WA masuk', helper: 'Cari chat, form, dan prospek baru.' },
+  { value: 'Sales', label: 'Sales / pembelian', helper: 'Fokus transaksi dan closing.' },
+  { value: 'Awareness', label: 'Awareness', helper: 'Bangun reach dan ingatan brand.' },
+  { value: 'Retargeting', label: 'Retargeting', helper: 'Kejar orang yang sudah pernah interaksi.' },
+  { value: 'Traffic', label: 'Traffic', helper: 'Dorong klik ke landing page atau katalog.' },
+  { value: 'Engagement', label: 'Engagement', helper: 'Naikkan komen, DM, save, dan share.' },
+  { value: 'App Install', label: 'App install', helper: 'Untuk aplikasi/mobile funnel.' },
+  { value: 'Catalog Sales', label: 'Catalog sales', helper: 'Cocok untuk produk banyak SKU.' },
+  { value: 'Store Visit', label: 'Store visit', helper: 'Dorong kunjungan toko/offline.' },
+  { value: 'ROAS Efficiency', label: 'ROAS efficiency', helper: 'Optimasi efisiensi belanja iklan.' },
+  { value: 'Creative Testing', label: 'Creative testing', helper: 'Tes hook, angle, dan visual.' },
+  { value: 'Budget Optimization', label: 'Budget optimization', helper: 'Bantu alokasi, scale, pause, dan rebalance.' },
+];
+
+const ADS_COPILOT_PLATFORMS: Array<{ value: AdsCopilotPlatform; label: string; helper: string }> = [
+  { value: 'Semua Platform', label: 'Semua platform', helper: 'AI pilih kombinasi paling masuk akal.' },
+  { value: 'Omnichannel', label: 'Omnichannel', helper: 'Gabungan paid + organic + WA follow-up.' },
+  { value: 'Meta Ads', label: 'Meta Ads', helper: 'Facebook, Instagram, Reels, katalog.' },
+  { value: 'TikTok Ads', label: 'TikTok Ads', helper: 'UGC, Spark Ads, short video.' },
+  { value: 'Google Ads', label: 'Google Ads', helper: 'Search, Display, YouTube, Performance Max.' },
+  { value: 'LinkedIn Ads', label: 'LinkedIn Ads', helper: 'B2B, lead gen, professional audience.' },
+  { value: 'Pinterest Ads', label: 'Pinterest Ads', helper: 'Inspirasi visual, lifestyle, discovery.' },
+  { value: 'X Ads', label: 'X Ads', helper: 'Trend, conversation, dan awareness cepat.' },
+];
+
+const ADS_AGENT_MODES: Array<{ value: AdsAgentMode; label: string; helper: string }> = [
+  { value: 'Approval-first', label: 'Approval-first', helper: 'AI boleh menyarankan aksi, eksekusi tetap perlu Ya/Tidak dari user.' },
+  { value: 'Advisor', label: 'Advisor only', helper: 'AI hanya memberi saran, tanpa lane persetujuan budget.' },
+  { value: 'Guarded autopilot', label: 'Guarded autopilot', helper: 'AI susun rencana scale/pause, tapi budget besar tetap minta approval.' },
+];
 
 function getStoredOpenRouterRuntimeConfig(): ProviderRuntimeConfig {
   const defaults = createDefaultProviderConfigs().openrouter;
@@ -205,6 +258,8 @@ function buildAdsFallbackPlan(input: {
   connectedPlatforms: string;
   activeCampaigns: number;
   alerts: Array<{ title: string; detail: string }>;
+  agentMode: AdsAgentMode;
+  budgetGuardrail: string;
 }) {
   const alertLine = input.alerts.length
     ? input.alerts.map((item, index) => `${index + 1}. ${item.title}: ${item.detail}`).join('\n')
@@ -213,7 +268,7 @@ function buildAdsFallbackPlan(input: {
   return [
     '1. Ringkasan situasi',
     `Brief: ${input.brief}`,
-    `Goal: ${input.goal}. Platform prioritas: ${input.platform}. Platform tersambung: ${input.connectedPlatforms || 'belum ada / preview'}. Active campaign: ${input.activeCampaigns}.`,
+    `Goal: ${input.goal}. Platform prioritas: ${input.platform}. Platform tersambung: ${input.connectedPlatforms || 'belum ada / preview'}. Active campaign: ${input.activeCampaigns}. Mode AI: ${input.agentMode}. Guardrail budget: ${input.budgetGuardrail || 'belum diisi user'}.`,
     '',
     '2. Angle campaign yang disarankan',
     '- Angle problem-solution: buka dengan masalah paling nyata customer, lalu tampilkan solusi dan bukti sederhana.',
@@ -234,7 +289,12 @@ function buildAdsFallbackPlan(input: {
     '- Test 2 visual: UGC natural vs produk premium.',
     '- Matikan asset CTR rendah setelah data cukup, pindahkan budget ke hook terbaik.',
     '',
-    '6. Alert dari data saat ini',
+    '6. Pending approval untuk user',
+    '- YA: Jalankan struktur testing kecil dengan guardrail budget di atas.',
+    '- REVISI: Minta AI ubah audience, copy, atau split budget.',
+    '- TUNDA: Simpan sebagai draft tanpa eksekusi.',
+    '',
+    '7. Alert dari data saat ini',
     alertLine,
   ].join('\n');
 }
@@ -300,7 +360,9 @@ export default function OmnichannelAdsHub() {
   const [toDate, setToDate] = useState<string>(() => buildPresetRange('30d').toDate);
   const [adsCopilotBrief, setAdsCopilotBrief] = useState('');
   const [adsCopilotGoal, setAdsCopilotGoal] = useState<AdsCopilotGoal>('Leads');
-  const [adsCopilotPlatform, setAdsCopilotPlatform] = useState<AdsCopilotPlatform>('Omnichannel');
+  const [adsCopilotPlatform, setAdsCopilotPlatform] = useState<AdsCopilotPlatform>('Semua Platform');
+  const [adsAgentMode, setAdsAgentMode] = useState<AdsAgentMode>('Approval-first');
+  const [adsBudgetGuardrail, setAdsBudgetGuardrail] = useState('Mulai kecil, maksimal 10-20% budget harian untuk testing.');
   const [adsCopilotOutput, setAdsCopilotOutput] = useState('');
   const [adsCopilotLoading, setAdsCopilotLoading] = useState(false);
   const [disconnectTarget, setDisconnectTarget] = useState<ZernioAccount | null>(null);
@@ -637,6 +699,8 @@ export default function OmnichannelAdsHub() {
         connectedPlatforms,
         activeCampaigns: summary?.totals.activeCampaigns ?? 0,
         alerts,
+        agentMode: adsAgentMode,
+        budgetGuardrail: adsBudgetGuardrail,
       });
 
       const result = !hasKey
@@ -647,7 +711,12 @@ export default function OmnichannelAdsHub() {
             messages: [
               {
                 role: 'system',
-                content: 'Anda adalah AI Ads Strategist senior untuk bisnis Indonesia. Jawab ringkas, actionable, tanpa jargon. Bantu operator membuat campaign plan, copy, prompt creative, dan eksperimen berikutnya berdasarkan data dashboard jika ada.',
+                content: [
+                  'Anda adalah AI Ads Strategist senior sekaligus agentic ads copilot untuk bisnis Indonesia.',
+                  'Jawab ringkas, actionable, tanpa jargon. Bantu operator membuat campaign plan, copy, prompt creative, eksperimen, dan usulan budget berdasarkan data dashboard jika ada.',
+                  'Anda boleh menyarankan pause, scale, rebalance budget, dan prioritas campaign, tetapi WAJIB meminta persetujuan user dulu.',
+                  'Jangan pernah mengaku sudah mengeksekusi perubahan iklan. Semua aksi yang menyentuh budget/status campaign harus ditulis sebagai Pending approval dengan pilihan YA / REVISI / TUNDA.',
+                ].join('\n'),
               },
               {
                 role: 'user',
@@ -655,6 +724,8 @@ export default function OmnichannelAdsHub() {
                   `Brief kasar user: ${brief}`,
                   `Goal: ${adsCopilotGoal}`,
                   `Platform prioritas: ${adsCopilotPlatform}`,
+                  `Mode agentic: ${adsAgentMode}`,
+                  `Guardrail budget: ${adsBudgetGuardrail || 'belum diisi user'}`,
                   `Platform tersambung: ${connectedPlatforms || 'belum ada / preview'}`,
                   `Total campaign aktif: ${summary?.totals.activeCampaigns ?? 0}`,
                   'Alert dashboard:',
@@ -662,7 +733,8 @@ export default function OmnichannelAdsHub() {
                   'Campaign sample:',
                   topCampaignContext,
                   '',
-                  'Format wajib: 1) Ringkasan situasi, 2) Rekomendasi objective & audience, 3) Draft copy iklan, 4) Prompt creative foto/video siap generate, 5) Budget split eksperimen, 6) Next action 7 hari, 7) Risiko yang harus dicek.',
+                  'Format wajib: 1) Ringkasan situasi, 2) Rekomendasi objective & audience, 3) Draft copy iklan, 4) Prompt creative foto/video siap generate, 5) Budget split eksperimen, 6) Pending approval dengan pilihan YA / REVISI / TUNDA, 7) Next action 7 hari, 8) Risiko yang harus dicek.',
+                  'Penting: boleh mengusulkan scale/pause/rebalance budget, tapi jangan pernah mengaku sudah mengeksekusi. Semua perubahan budget/status campaign harus ditulis sebagai permintaan persetujuan user dulu.',
                 ].join('\n'),
               },
             ],
@@ -677,12 +749,27 @@ export default function OmnichannelAdsHub() {
         connectedPlatforms: adAccounts.map((account) => account.platform).join(', '),
         activeCampaigns: summary?.totals.activeCampaigns ?? 0,
         alerts,
+        agentMode: adsAgentMode,
+        budgetGuardrail: adsBudgetGuardrail,
       }));
     } finally {
       setAdsCopilotLoading(false);
     }
   };
 
+
+  const appendAdsAgentDecision = (decision: 'YA' | 'REVISI' | 'TUNDA' | 'ALTERNATIF') => {
+    const decisionText: Record<typeof decision, string> = {
+      YA: 'User menyetujui rencana awal. Siapkan checklist eksekusi kecil, tetap jangan klaim campaign sudah berubah sampai API eksekusi tersedia.',
+      REVISI: 'User minta revisi. Buat opsi yang lebih aman: budget lebih kecil, audience lebih sempit, dan creative test lebih sederhana.',
+      TUNDA: 'User menunda. Simpan sebagai draft dan beri daftar data yang perlu dikumpulkan sebelum jalan.',
+      ALTERNATIF: 'User minta alternatif. Buat 3 opsi: hemat, standar, agresif, lengkap dengan risiko dan approval point.',
+    };
+    setAdsCopilotOutput((current) => {
+      const base = current.trim() || 'Belum ada output AI. Generate ads plan dulu, lalu pilih keputusan.';
+      return `${base}\n\n---\nKeputusan approval: ${decision}\n${decisionText[decision]}`;
+    });
+  };
   const copyAdsCopilotOutput = async () => {
     if (!adsCopilotOutput.trim()) return;
     try {
@@ -841,7 +928,7 @@ export default function OmnichannelAdsHub() {
               className={`w-full min-h-[96px] resize-y rounded-2xl px-4 py-3 text-sm leading-6 outline-none transition ${isDark ? 'bg-slate-950 text-white placeholder:text-slate-500 ring-1 ring-white/10 focus:ring-blue-400/40' : 'bg-slate-50 text-slate-900 placeholder:text-slate-400 ring-1 ring-slate-200 focus:ring-blue-300'}`}
             />
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 lg:grid-cols-3">
               <label htmlFor="ads-copilot-goal" className="space-y-1 text-sm font-semibold">
                 <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Goal iklan</span>
                 <select
@@ -850,8 +937,11 @@ export default function OmnichannelAdsHub() {
                   onChange={(event) => setAdsCopilotGoal(event.target.value as AdsCopilotGoal)}
                   className={`w-full rounded-2xl px-3 py-2.5 text-sm outline-none ${isDark ? 'bg-slate-950 text-white ring-1 ring-white/10' : 'bg-white text-slate-800 ring-1 ring-slate-200'}`}
                 >
-                  {(['Leads', 'Sales', 'Awareness', 'Retargeting'] as AdsCopilotGoal[]).map((goal) => <option key={goal} value={goal}>{goal}</option>)}
+                  {ADS_COPILOT_GOALS.map((goal) => <option key={goal.value} value={goal.value}>{goal.label}</option>)}
                 </select>
+                <p className={`text-[11px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {ADS_COPILOT_GOALS.find((item) => item.value === adsCopilotGoal)?.helper}
+                </p>
               </label>
               <label htmlFor="ads-copilot-platform" className="space-y-1 text-sm font-semibold">
                 <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Platform fokus</span>
@@ -861,10 +951,41 @@ export default function OmnichannelAdsHub() {
                   onChange={(event) => setAdsCopilotPlatform(event.target.value as AdsCopilotPlatform)}
                   className={`w-full rounded-2xl px-3 py-2.5 text-sm outline-none ${isDark ? 'bg-slate-950 text-white ring-1 ring-white/10' : 'bg-white text-slate-800 ring-1 ring-slate-200'}`}
                 >
-                  {(['Omnichannel', 'Meta Ads', 'TikTok Ads', 'Google Ads'] as AdsCopilotPlatform[]).map((platform) => <option key={platform} value={platform}>{platform}</option>)}
+                  {ADS_COPILOT_PLATFORMS.map((platform) => <option key={platform.value} value={platform.value}>{platform.label}</option>)}
                 </select>
+                <p className={`text-[11px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {ADS_COPILOT_PLATFORMS.find((item) => item.value === adsCopilotPlatform)?.helper}
+                </p>
+              </label>
+              <label htmlFor="ads-agent-mode" className="space-y-1 text-sm font-semibold">
+                <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Mode AI agent</span>
+                <select
+                  id="ads-agent-mode"
+                  value={adsAgentMode}
+                  onChange={(event) => setAdsAgentMode(event.target.value as AdsAgentMode)}
+                  className={`w-full rounded-2xl px-3 py-2.5 text-sm outline-none ${isDark ? 'bg-slate-950 text-white ring-1 ring-white/10' : 'bg-white text-slate-800 ring-1 ring-slate-200'}`}
+                >
+                  {ADS_AGENT_MODES.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
+                </select>
+                <p className={`text-[11px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  {ADS_AGENT_MODES.find((item) => item.value === adsAgentMode)?.helper}
+                </p>
               </label>
             </div>
+
+            <label htmlFor="ads-budget-guardrail" className="block space-y-1 text-sm font-semibold">
+              <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Batas budget & approval</span>
+              <input
+                id="ads-budget-guardrail"
+                value={adsBudgetGuardrail}
+                onChange={(event) => setAdsBudgetGuardrail(event.target.value)}
+                placeholder="Contoh: testing Rp50.000/hari, scale hanya kalau CPL turun 20%, semua perubahan budget harus minta approval."
+                className={`w-full rounded-2xl px-3 py-2.5 text-sm outline-none ${isDark ? 'bg-slate-950 text-white placeholder:text-slate-500 ring-1 ring-white/10' : 'bg-white text-slate-800 placeholder:text-slate-400 ring-1 ring-slate-200'}`}
+              />
+              <p className={`text-xs font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                Ini bikin AI bergaya seperti copilot: bisa kasih rekomendasi budget, tapi tetap berhenti di tahap minta persetujuan.
+              </p>
+            </label>
           </div>
 
           <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50 ring-1 ring-blue-100'}`}>
@@ -885,7 +1006,42 @@ export default function OmnichannelAdsHub() {
               </div>
             </div>
             {adsCopilotOutput ? (
-              <pre className={`max-h-[300px] overflow-y-auto whitespace-pre-wrap rounded-2xl p-4 text-sm leading-6 font-sans ${isDark ? 'bg-slate-900 text-slate-200' : 'bg-white/85 text-slate-800 ring-1 ring-slate-100'}`}>{adsCopilotOutput}</pre>
+              <div className="space-y-3">
+                <pre className={`max-h-[300px] overflow-y-auto whitespace-pre-wrap rounded-2xl p-4 text-sm leading-6 font-sans ${isDark ? 'bg-slate-900 text-slate-200' : 'bg-white/85 text-slate-800 ring-1 ring-slate-100'}`}>{adsCopilotOutput}</pre>
+                <div className={`rounded-2xl p-3 ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'bg-white/80 ring-1 ring-purple-100'}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-bold">Approval lane</p>
+                      <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Simulasi alur agentic: AI menyarankan, user pilih Ya/Revisi/Tunda sebelum eksekusi.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        ['YA', 'Setujui'] as const,
+                        ['REVISI', 'Revisi'] as const,
+                        ['TUNDA', 'Tunda'] as const,
+                        ['ALTERNATIF', 'Opsi lain'] as const,
+                      ]).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => appendAdsAgentDecision(value)}
+                          className={`rounded-xl px-3 py-2 text-xs font-bold ${
+                            value === 'YA'
+                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                              : value === 'REVISI'
+                                ? 'bg-amber-500 text-white hover:bg-amber-600'
+                                : isDark
+                                  ? 'bg-slate-800 text-slate-100 hover:bg-slate-700'
+                                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className={`flex min-h-[210px] flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
                 <Sparkles size={30} className="mb-3 text-purple-500" />
@@ -1763,3 +1919,4 @@ export default function OmnichannelAdsHub() {
     </div>
   );
 }
+
