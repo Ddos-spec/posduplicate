@@ -1013,6 +1013,19 @@ export default function AdvancedContentStudio({
 
               <div className={`rounded-[24px] p-3 ${isDark ? 'bg-slate-950/80 ring-1 ring-white/10' : 'bg-white border border-slate-200 shadow-sm'}`}>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="w-full">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold">Preset Visual</p>
+                      <FieldHelp
+                        title="Preset Visual"
+                        description="Pilihan cepat untuk menentukan arah gaya hasil. Ini bukan prompt utama, tapi template awal agar hasil foto/video langsung punya karakter."
+                        howToUse="Pilih preset yang paling dekat dengan kebutuhan. Contoh: Hero Produk untuk visual utama produk, Konten Sosial untuk feed/reels santai, atau Katalog Premium untuk tampilan katalog rapi. Setelah preset dipilih, teks prompt utama di bawah tetap bisa diedit."
+                      />
+                    </div>
+                    <p className={`mt-1 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Pilih dulu gaya dasar output. Tombol di bawah akan mengisi arah visual seperti “Hero visual produk utama…” ke kolom prompt utama.
+                    </p>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {(isVideoLane ? VIDEO_PRESETS : IMAGE_PRESETS).map((preset) => {
                       const active = isVideoLane ? videoPresetId === preset.id : imagePresetId === preset.id;
@@ -1083,11 +1096,15 @@ export default function AdvancedContentStudio({
                       Buat prompt
                     </button>
                   </div>
+                  <p className={`mb-2 text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <strong>Kolom ide mentah:</strong> isi dengan bahan kasar seperti produk, target customer, promo, tone, masalah customer, atau angle jualan. AI akan merapikannya menjadi prompt siap pakai.
+                  </p>
                   <textarea
                     value={promptSeed}
                     onChange={(e) => setPromptSeed(e.target.value)}
                     rows={2}
-                    placeholder="Contoh: promo paket parfum untuk wanita aktif, mau terlihat premium tapi tetap natural..."
+                    aria-label="Ide mentah untuk dibuat menjadi prompt otomatis"
+                    placeholder="Contoh ide mentah: promo paket parfum untuk wanita aktif, target 20-35 tahun, visual premium tapi tetap natural, CTA ke WhatsApp..."
                     className={`${fieldClass} min-h-[78px] resize-y leading-5`}
                   />
                   {promptHelperOutput ? (
@@ -1104,15 +1121,29 @@ export default function AdvancedContentStudio({
                   ) : null}
                 </div>
 
-                <textarea
-                  value={isVideoLane ? videoIdea : imagePrompt}
-                  onChange={(e) => isVideoLane ? setVideoIdea(e.target.value) : setImagePrompt(e.target.value)}
-                  rows={4}
-                  placeholder={isVideoLane
-                    ? 'Tulis ide video, hook utama, tone, CTA, atau jalannya video di sini...'
-                    : 'Tulis ide foto, visual utama, suasana, angle, dan hasil akhir yang diinginkan di sini...'}
-                  className={`${fieldClass} min-h-[132px] resize-y leading-6`}
-                />
+                <label className="block space-y-2">
+                  <span className="flex items-center gap-2 text-sm font-bold">
+                    {isVideoLane ? 'Prompt Utama Video' : 'Prompt Utama Foto'}
+                    <FieldHelp
+                      title={isVideoLane ? 'Prompt Utama Video' : 'Prompt Utama Foto'}
+                      description={isVideoLane ? 'Kolom final yang dipakai saat generate storyboard/video. Bisa berasal dari preset, prompt helper, atau ditulis manual.' : 'Kolom final yang dipakai saat generate visual brief/foto. Bisa berasal dari preset, prompt helper, atau ditulis manual.'}
+                      howToUse="Edit teks ini sampai instruksinya jelas: objek utama, style, suasana, target audience, hal yang wajib tampil, dan hal yang harus dihindari. Setelah itu klik tombol generate di bawah."
+                    />
+                  </span>
+                  <p className={`text-xs leading-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Ini prompt final yang benar-benar dipakai generator. Teks dari Preset Visual atau Prompt Otomatis akan masuk ke sini, lalu boleh diedit bebas.
+                  </p>
+                  <textarea
+                    value={isVideoLane ? videoIdea : imagePrompt}
+                    onChange={(e) => isVideoLane ? setVideoIdea(e.target.value) : setImagePrompt(e.target.value)}
+                    rows={4}
+                    aria-label={isVideoLane ? 'Prompt utama video' : 'Prompt utama foto'}
+                    placeholder={isVideoLane
+                      ? 'Tulis prompt final video: hook utama, urutan scene, tone, CTA, camera motion, dan durasi...'
+                      : 'Tulis prompt final foto: produk utama, style visual, suasana, angle kamera, warna, dan hasil akhir...'}
+                    className={`${fieldClass} min-h-[132px] resize-y leading-6`}
+                  />
+                </label>
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
