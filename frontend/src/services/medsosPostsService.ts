@@ -461,6 +461,50 @@ export interface ZernioAdAnalyticsSummary {
   breakdowns: Record<string, Array<Record<string, any>>>;
 }
 
+export type ZernioAdsAgentActionStatus = 'pending' | 'approved' | 'revision_requested' | 'deferred';
+export type ZernioAdsAgentExecutionStatus =
+  | 'proposal_only'
+  | 'ready_for_manual_execution'
+  | 'awaiting_platform_executor'
+  | 'deferred'
+  | 'revision_requested';
+
+export interface ZernioAdsAgentActionInput {
+  title: string;
+  detail: string;
+  actionType: string;
+  platform?: string | null;
+  targetId?: string | null;
+  targetName?: string | null;
+  riskLevel?: 'low' | 'medium' | 'high';
+  budgetImpact?: string | null;
+  approvalQuestion?: string | null;
+}
+
+export interface ZernioAdsAgentAction extends ZernioAdsAgentActionInput {
+  id: string;
+  runId: string;
+  status: ZernioAdsAgentActionStatus;
+  executionStatus: ZernioAdsAgentExecutionStatus;
+  decisionNote?: string | null;
+  decidedBy?: number | null;
+  decidedAt?: string | null;
+  createdAt: string;
+}
+
+export interface ZernioAdsAgentRun {
+  id: string;
+  brief: string;
+  goal: string;
+  platform: string;
+  agentMode: string;
+  budgetGuardrail: string;
+  output: string;
+  createdBy?: number | null;
+  createdAt: string;
+  actions: ZernioAdsAgentAction[];
+}
+
 export async function getMetaOAuthStartUrl(): Promise<string> {
   const { data } = await api.get('/medsos/meta-oauth/start-url', {
     params: { returnPath: '/medsos/meta-ads' },
@@ -773,6 +817,32 @@ export async function getZernioAdAnalytics(params: {
     },
   });
   return (data.data ?? null) as ZernioAdAnalyticsSummary | null;
+}
+
+export async function getZernioAdsAgentActions(): Promise<{ runs: ZernioAdsAgentRun[]; actions: ZernioAdsAgentAction[] }> {
+  const { data } = await api.get('/medsos/zernio/ads/agent-actions');
+  return {
+    runs: (data.data?.runs ?? []) as ZernioAdsAgentRun[],
+    actions: (data.data?.actions ?? []) as ZernioAdsAgentAction[],
+  };
+}
+
+export async function createZernioAdsAgentActions(payload: {
+  brief: string;
+  goal: string;
+  platform: string;
+  agentMode: string;
+  budgetGuardrail: string;
+  output: string;
+  actions: ZernioAdsAgentActionInput[];
+}): Promise<ZernioAdsAgentRun> {
+  const { data } = await api.post('/medsos/zernio/ads/agent-actions', payload);
+  return data.data.run as ZernioAdsAgentRun;
+}
+
+export async function decideZernioAdsAgentAction(actionId: string, decision: 'approve' | 'revise' | 'defer', note?: string): Promise<ZernioAdsAgentAction> {
+  const { data } = await api.patch(`/medsos/zernio/ads/agent-actions/${actionId}/decision`, { decision, note });
+  return data.data.action as ZernioAdsAgentAction;
 }
 
 export async function generateAiCaption(prompt: string): Promise<string> {
