@@ -32,6 +32,10 @@ import {
   decideAdsAgentAction,
   listAdsAgentRuns,
 } from '../services/adsAgent.service';
+import {
+  disconnectTikTokAdsIntegration,
+  listTikTokAdsConnectedAccounts,
+} from '../services/tiktokAdsOAuth.service';
 
 const router = Router();
 
@@ -144,7 +148,15 @@ router.get('/ads/connect-url', async (req, res, next) => {
 // GET /api/medsos/zernio/accounts
 router.get('/accounts', async (req, res, next) => {
   try {
-    const accounts = await listZernioAccounts(req.tenantId!);
+    const [zernioAccounts, directTikTokAdsAccounts] = await Promise.all([
+      listZernioAccounts(req.tenantId!),
+      listTikTokAdsConnectedAccounts(req.tenantId!),
+    ]);
+    const zernioAccountIds = new Set(zernioAccounts.map((account) => account.id));
+    const accounts = [
+      ...zernioAccounts,
+      ...directTikTokAdsAccounts.filter((account) => !zernioAccountIds.has(account.id)),
+    ];
     return res.json({ success: true, data: { accounts } });
   } catch (err) {
     next(err);
@@ -154,6 +166,11 @@ router.get('/accounts', async (req, res, next) => {
 // DELETE /api/medsos/zernio/accounts/:accountId
 router.delete('/accounts/:accountId', async (req, res, next) => {
   try {
+    if (req.params.accountId.startsWith('tiktok-direct:')) {
+      await disconnectTikTokAdsIntegration(req.tenantId!);
+      return res.json({ success: true, data: null });
+    }
+
     await disconnectZernioAccount(req.params.accountId, req.tenantId);
     return res.json({ success: true, data: null });
   } catch (err) {

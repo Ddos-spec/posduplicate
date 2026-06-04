@@ -544,6 +544,11 @@ export async function getZernioAdsConnectUrl(
   return (data.data as { authUrl: string }).authUrl;
 }
 
+export async function getTikTokAdsConnectUrl(returnPath = '/medsos/connections'): Promise<string> {
+  const { data } = await api.get('/medsos/tiktok/start-url', { params: { returnPath } });
+  return (data.data as { oauthUrl: string }).oauthUrl;
+}
+
 export async function getZernioAccounts(): Promise<ZernioAccount[]> {
   return cachedRequest('zernio-accounts', async () => {
     const { data } = await api.get('/medsos/zernio/accounts');
