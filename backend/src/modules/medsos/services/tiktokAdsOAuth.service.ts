@@ -49,6 +49,13 @@ interface TikTokAdvertiserResponse {
   request_id?: string;
 }
 
+interface TikTokAppCredential {
+  appId: string;
+  appSecret: string;
+  redirectUri: string;
+  source: 'database' | 'environment';
+}
+
 function getBackendPublicUrl(): string {
   return (process.env.PUBLIC_URL || 'http://localhost:3000').replace(/\/$/, '');
 }
@@ -60,16 +67,59 @@ function getFrontendBaseUrl(): string {
     .replace(/\/$/, '');
 }
 
-function getAppId(): string {
+function getEnvAppId(): string {
   return process.env.TIKTOK_BUSINESS_APP_ID || process.env.TIKTOK_ADS_APP_ID || '';
 }
 
-function getAppSecret(): string {
+function getEnvAppSecret(): string {
   return process.env.TIKTOK_BUSINESS_APP_SECRET || process.env.TIKTOK_ADS_APP_SECRET || '';
 }
 
 function getRedirectUri(): string {
   return process.env.TIKTOK_BUSINESS_REDIRECT_URI || `${getBackendPublicUrl()}/api/medsos/tiktok/callback`;
+}
+
+async function resolveTikTokAppCredential(tenantId?: number): Promise<TikTokAppCredential> {
+  const redirectUri = getRedirectUri();
+
+  if (tenantId) {
+    const row = await prisma.integrations.findUnique({
+      where: {
+        tenant_id_integration_type: {
+          tenant_id: tenantId,
+          integration_type: INTEGRATION_TYPE,
+        },
+      },
+      select: { credentials: true, configuration: true },
+    });
+
+    if (row?.credentials) {
+      try {
+        const credentials = typeof row.credentials === 'string'
+          ? asRecord(decrypt(row.credentials))
+          : asRecord(row.credentials);
+        const appId = getString(credentials.appId);
+        const appSecret = getString(credentials.appSecret);
+        if (appId && appSecret) {
+          return {
+            appId,
+            appSecret,
+            redirectUri: getString(asRecord(row.configuration).callbackUrl, redirectUri),
+            source: 'database',
+          };
+        }
+      } catch {
+        // Fall through to env credentials. The OAuth attempt will show a clear error if env is also missing.
+      }
+    }
+  }
+
+  return {
+    appId: getEnvAppId(),
+    appSecret: getEnvAppSecret(),
+    redirectUri,
+    source: 'environment',
+  };
 }
 
 function buildStateToken(payload: TikTokStatePayload): string {
@@ -104,10 +154,10 @@ export function getTikTokAdsCallbackUrl(): string {
   return getRedirectUri();
 }
 
-export function buildTikTokAdsOAuthStartUrl(tenantId: number, userId: number, returnPath?: string): string {
-  const appId = getAppId();
-  if (!appId) {
-    throw new Error('TIKTOK_BUSINESS_APP_ID belum diset di environment');
+export async function buildTikTokAdsOAuthStartUrl(tenantId: number, userId: number, returnPath?: string): Promise<string> {
+  const appCredential = await resolveTikTokAppCredential(tenantId);
+  if (!appCredential.appId) {
+    throw new Error('TikTok Business App ID belum diset untuk tenant ini');
   }
 
   const state = buildStateToken({
@@ -118,27 +168,28 @@ export function buildTikTokAdsOAuthStartUrl(tenantId: number, userId: number, re
   });
 
   const params = new URLSearchParams({
-    app_id: appId,
+    app_id: appCredential.appId,
     state,
-    redirect_uri: getRedirectUri(),
+    redirect_uri: appCredential.redirectUri,
   });
 
   return `https://business-api.tiktok.com/portal/auth?${params.toString()}`;
 }
 
-async function exchangeAuthCode(authCode: string): Promise<Required<TikTokTokenResponse>['data']> {
-  const appId = getAppId();
-  const secret = getAppSecret();
-  if (!appId || !secret) {
-    throw new Error('Credential TikTok Business API belum lengkap di environment');
+async function exchangeAuthCode(
+  authCode: string,
+  appCredential: TikTokAppCredential,
+): Promise<Required<TikTokTokenResponse>['data']> {
+  if (!appCredential.appId || !appCredential.appSecret) {
+    throw new Error('Credential TikTok Business API belum lengkap untuk tenant ini');
   }
 
   const response = await fetch(`${TIKTOK_BUSINESS_BASE}/oauth2/access_token/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      app_id: appId,
-      secret,
+      app_id: appCredential.appId,
+      secret: appCredential.appSecret,
       auth_code: authCode,
     }),
     signal: AbortSignal.timeout(12000),
@@ -180,7 +231,8 @@ export async function handleTikTokAdsCallback(
     throw new Error('State TikTok tidak valid. Mulai koneksi dari tombol Connect di dashboard, bukan dari URL statis portal.');
   }
 
-  const token = await exchangeAuthCode(authCode);
+  const appCredential = await resolveTikTokAppCredential(tenantId);
+  const token = await exchangeAuthCode(authCode, appCredential);
   const advertisers = await fetchAdvertisers(token.access_token!);
   const primaryAdvertiser = advertisers[0] || null;
   const expiresAt = token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : null;
@@ -199,6 +251,9 @@ export async function handleTikTokAdsCallback(
       status: 'connected',
       is_active: true,
       credentials: encrypt({
+        appId: appCredential.appId,
+        appSecret: appCredential.appSecret,
+        credentialSource: appCredential.source,
         accessToken: token.access_token,
         refreshToken: token.refresh_token || null,
         expiresAt,
@@ -206,7 +261,7 @@ export async function handleTikTokAdsCallback(
       }),
       configuration: {
         workspaceName: getString(primaryAdvertiser?.advertiser_name, 'TikTok Ads'),
-        callbackUrl: getRedirectUri(),
+        callbackUrl: appCredential.redirectUri,
       },
       metadata: {
         connectedViaOAuth: true,
@@ -234,6 +289,9 @@ export async function handleTikTokAdsCallback(
       status: 'connected',
       is_active: true,
       credentials: encrypt({
+        appId: appCredential.appId,
+        appSecret: appCredential.appSecret,
+        credentialSource: appCredential.source,
         accessToken: token.access_token,
         refreshToken: token.refresh_token || null,
         expiresAt,
@@ -241,7 +299,7 @@ export async function handleTikTokAdsCallback(
       }),
       configuration: {
         workspaceName: getString(primaryAdvertiser?.advertiser_name, 'TikTok Ads'),
-        callbackUrl: getRedirectUri(),
+        callbackUrl: appCredential.redirectUri,
       },
       metadata: {
         connectedViaOAuth: true,

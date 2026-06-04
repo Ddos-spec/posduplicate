@@ -43,14 +43,14 @@ router.get('/callback', async (req, res, next) => {
 router.use(authMiddleware);
 router.use(tenantMiddleware);
 
-router.get('/start-url', (req, res, next) => {
+router.get('/start-url', async (req, res, next) => {
   try {
     if (!req.tenantId || !req.userId) {
       return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Auth required' } });
     }
 
     const returnPath = typeof req.query.returnPath === 'string' ? req.query.returnPath : '/medsos/connections';
-    const oauthUrl = buildTikTokAdsOAuthStartUrl(req.tenantId, req.userId, returnPath);
+    const oauthUrl = await buildTikTokAdsOAuthStartUrl(req.tenantId, req.userId, returnPath);
     return res.json({
       success: true,
       data: {
