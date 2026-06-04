@@ -28,6 +28,7 @@ import {
   getZernioAccounts,
   getZernioAdsConnectUrl,
   getZernioConnectUrl,
+  getTikTokAdsConnectUrl,
   type WACrmConnectionStatus,
   type ZernioAccount,
 } from '../../services/medsosPostsService';
@@ -377,8 +378,8 @@ export default function MedsosConnections() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const socialConnected = params.get('channel_connected');
-    const adsConnected = params.get('ads_connected');
+    const socialConnected = params.get('channel_connected') || params.get('zernio_connected');
+    const adsConnected = params.get('ads_connected') || params.get('zernio_ads_connected');
 
     if (socialConnected) {
       invalidateMcsRequestCache('zernio-accounts');
@@ -481,7 +482,9 @@ export default function MedsosConnections() {
   const handleAdsConnect = async (platform: string) => {
     setBusyPlatform(`ads:${platform}`);
     try {
-      const url = await getZernioAdsConnectUrl(platform, undefined, '/medsos/connections');
+      const url = platform === 'tiktok'
+        ? await getTikTokAdsConnectUrl('/medsos/connections')
+        : await getZernioAdsConnectUrl(platform, undefined, '/medsos/connections');
       window.location.href = url;
     } catch (error) {
       if (import.meta.env.DEV) console.warn('Failed to start ads connection', error);

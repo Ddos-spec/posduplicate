@@ -162,8 +162,8 @@ export const zernioAdsPlatforms: ZernioPlatformCard[] = [
     connectPlatform: 'tiktok',
     accountPlatforms: ['tiktokads'],
     brand: 'tiktok',
-    hint: 'Bisa dipakai untuk ads-only atau dilink ke akun TikTok organik tenant.',
-    requirement: 'Jika ingin Spark Ads, sambungkan akun TikTok organik tenant lebih dulu.',
+    hint: 'Koneksi TikTok Marketing API langsung untuk ads reporting dan agentic ads.',
+    requirement: 'Posting TikTok tetap lewat Zernio; koneksi ini khusus Ads + analytics iklan.',
   },
   {
     id: 'googleads',
