@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useThemeStore } from '../store/themeStore';
 import {
@@ -81,6 +81,21 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useThemeStore();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // index.css locks html/body/#root to overflow:hidden in standalone/fullscreen
+  // display-mode for the POS app's own fixed-viewport screens. This page is a
+  // normal scrolling document, so force scroll back on while it's mounted.
+  useEffect(() => {
+    const html = document.documentElement;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    html.style.overflow = 'auto';
+    document.body.style.overflow = 'auto';
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+    };
+  }, []);
 
   const surface = isDark ? 'bg-slate-950 text-white' : 'bg-white text-slate-900';
   const subtext = isDark ? 'text-slate-400' : 'text-slate-500';
