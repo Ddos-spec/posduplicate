@@ -182,10 +182,12 @@ apiRouter.use((req: Request, res: Response) => {
   });
 });
 
-// Mount the router at root (subdomain access) and under /mypos (path-based
-// access via my-aicustom.com/mypos, whose prefix Traefik forwards verbatim).
-app.use('/', apiRouter);
+// Mount the router under /mypos (path-based access via my-aicustom.com/mypos,
+// whose prefix Traefik forwards verbatim) before mounting it at root
+// (subdomain access) — the root mount's "/" prefix matches every path, so it
+// must come second or it swallows /mypos/* requests before they get there.
 app.use('/mypos', apiRouter);
+app.use('/', apiRouter);
 
 // Error Handler
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
