@@ -82,28 +82,42 @@ export default function LandingPage() {
   const { isDark, toggleTheme } = useThemeStore();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // index.css locks html/body/#root to overflow:hidden in standalone/fullscreen
-  // display-mode for the POS app's own fixed-viewport screens. This page is a
-  // normal scrolling document, so force scroll back on while it's mounted.
+  // index.css pins html/body/#root into a fixed, non-scrolling app-shell
+  // layout (overflow:hidden in standalone/fullscreen display-mode, plus an
+  // iOS-only @supports block that sets body{position:fixed} so #root alone
+  // scrolls) for the POS app's own fixed-viewport screens. This page is a
+  // normal scrolling document, so undo all of that while it's mounted.
   useEffect(() => {
     const html = document.documentElement;
+    const body = document.body;
     const root = document.getElementById('root');
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevRootOverflow = root?.style.overflow ?? '';
-    const prevRootHeight = root?.style.height ?? '';
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyWidth: body.style.width,
+      bodyHeight: body.style.height,
+      rootOverflow: root?.style.overflow ?? '',
+      rootHeight: root?.style.height ?? '',
+    };
     html.style.overflow = 'auto';
-    document.body.style.overflow = 'auto';
+    body.style.overflow = 'auto';
+    body.style.position = 'static';
+    body.style.width = 'auto';
+    body.style.height = 'auto';
     if (root) {
       root.style.overflow = 'visible';
       root.style.height = 'auto';
     }
     return () => {
-      html.style.overflow = prevHtmlOverflow;
-      document.body.style.overflow = prevBodyOverflow;
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overflow = prev.bodyOverflow;
+      body.style.position = prev.bodyPosition;
+      body.style.width = prev.bodyWidth;
+      body.style.height = prev.bodyHeight;
       if (root) {
-        root.style.overflow = prevRootOverflow;
-        root.style.height = prevRootHeight;
+        root.style.overflow = prev.rootOverflow;
+        root.style.height = prev.rootHeight;
       }
     };
   }, []);
