@@ -13,6 +13,10 @@
       "destination": "https://filter-bot-mypos-backend.qk6yxt.easypanel.host/uploads/$1"
     },
     {
+      "source": "/myerp/(.*\\..*)",
+      "destination": "/$1"
+    },
+    {
       "source": "/((?!.*\\.).*)",
       "destination": "/index.html"
     }
