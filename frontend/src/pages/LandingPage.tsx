@@ -87,13 +87,24 @@ export default function LandingPage() {
   // normal scrolling document, so force scroll back on while it's mounted.
   useEffect(() => {
     const html = document.documentElement;
+    const root = document.getElementById('root');
     const prevHtmlOverflow = html.style.overflow;
     const prevBodyOverflow = document.body.style.overflow;
+    const prevRootOverflow = root?.style.overflow ?? '';
+    const prevRootHeight = root?.style.height ?? '';
     html.style.overflow = 'auto';
     document.body.style.overflow = 'auto';
+    if (root) {
+      root.style.overflow = 'visible';
+      root.style.height = 'auto';
+    }
     return () => {
       html.style.overflow = prevHtmlOverflow;
       document.body.style.overflow = prevBodyOverflow;
+      if (root) {
+        root.style.overflow = prevRootOverflow;
+        root.style.height = prevRootHeight;
+      }
     };
   }, []);
 
