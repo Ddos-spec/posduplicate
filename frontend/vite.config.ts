@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // Relative asset paths so the same build works both at the domain root
+  // (myerp.my-aicustom.com) and proxied under a path prefix
+  // (my-aicustom.com/myerp).
+  base: './',
   plugins: [
     react(),
     VitePWA({

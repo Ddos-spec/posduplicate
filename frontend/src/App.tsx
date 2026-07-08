@@ -232,9 +232,14 @@ function TenantModuleRoute({
   return <>{children}</>;
 }
 
+// Lets the same build serve two hosts: on the myerp.my-aicustom.com
+// subdomain the app lives at "/", but proxied through my-aicustom.com/myerp
+// (path prefix not stripped by the reverse proxy) it lives at "/myerp".
+const routerBasename = window.location.pathname.startsWith('/myerp') ? '/myerp' : '/';
+
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBasename}>
       <Toaster
         position="top-right"
         toastOptions={{
