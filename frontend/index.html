@@ -10,12 +10,18 @@
       // before any other resource tag is parsed so every relative
       // reference below resolves correctly no matter which of the two
       // hosts served this page.
+      //
+      // This MUST use document.write (not createElement+appendChild).
+      // Chrome's preload scanner speculatively fetches <script src>/<link
+      // href> by scanning the raw HTML bytes ahead of script execution,
+      // and it only "sees" markup produced through the parser's own
+      // token stream (which document.write feeds into) — a <base> added
+      // via plain DOM mutation is invisible to it, so the scanner still
+      // preloads assets against the wrong (default) base and 404s.
       (function () {
         var p = window.location.pathname;
         var base = p === '/myerp' || p.indexOf('/myerp/') === 0 ? '/myerp/' : '/';
-        var baseEl = document.createElement('base');
-        baseEl.href = base;
-        document.head.appendChild(baseEl);
+        document.write('<base href="' + base + '">');
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/branding/omnipilot-mark.svg" />
