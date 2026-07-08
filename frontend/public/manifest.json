@@ -2,27 +2,27 @@
   "name": "OmniPilot AI - Point of Sale System",
   "short_name": "OmniPilot AI",
   "description": "AI-powered retail, commerce, and operations suite",
-  "start_url": "/cashier",
+  "start_url": "./cashier",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
-  "scope": "/",
+  "scope": "./",
   "icons": [
     {
-      "src": "/branding/omnipilot-mark.svg",
+      "src": "branding/omnipilot-mark.svg",
       "sizes": "256x256",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-192.svg",
+      "src": "icon-192.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.svg",
+      "src": "icon-512.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"

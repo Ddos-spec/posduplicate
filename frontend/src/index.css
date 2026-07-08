@@ -9,8 +9,10 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent pull-to-refresh on mobile/tablet */
-  overscroll-behavior-y: contain;
+  /* Keep document-level wheel/touch scrolling native.
+     `contain` here traps wheel scrolling on the public /myerp landing page;
+     apply overscroll containment only inside fixed app shells that need it. */
+  overscroll-behavior-y: auto;
 }
 
 code {

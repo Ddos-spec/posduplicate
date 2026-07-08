@@ -24,7 +24,7 @@
         document.write('<base href="' + base + '">');
       })();
     </script>
-    <link rel="icon" type="image/svg+xml" href="/branding/omnipilot-mark.svg" />
+    <link rel="icon" type="image/svg+xml" href="branding/omnipilot-mark.svg" />
 
     <!-- Viewport optimized for tablets -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -32,7 +32,7 @@
     <title>OmniPilot AI - Point of Sale System</title>
 
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="manifest.json" />
 
     <!-- Theme Color -->
     <meta name="theme-color" content="#2563eb" />
@@ -52,18 +52,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('SW registered: ', registration);
-            })
-            .catch(registrationError => {
-              console.log('SW registration failed: ', registrationError);
-            });
-        });
-      }
-    </script>
   </body>
 </html>

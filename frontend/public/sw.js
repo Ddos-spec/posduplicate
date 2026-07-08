@@ -1,12 +1,14 @@
-const CACHE_NAME = 'omnipilot-ai-v3';
+const CACHE_NAME = 'omnipilot-ai-v4';
+const scopeUrl = new URL(self.registration.scope);
+const scopedUrl = (path) => new URL(path, scopeUrl).toString();
 const URLS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/branding/omnipilot-mark.svg',
-  '/icon-192.svg',
-  '/icon-512.svg'
-];
+  '',
+  'index.html',
+  'manifest.json',
+  'branding/omnipilot-mark.svg',
+  'icon-192.svg',
+  'icon-512.svg'
+].map(scopedUrl);
 
 // Install Service Worker
 self.addEventListener('install', (event) => {
@@ -74,7 +76,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .catch(() => {
-          return caches.match('/index.html');
+          return caches.match(scopedUrl('index.html'));
         })
     );
     return;
