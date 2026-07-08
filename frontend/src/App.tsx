@@ -13,6 +13,7 @@ import SuperAdminTenantBar from './components/admin/SuperAdminTenantBar';
 import LoginPage from './pages/LoginPage';
 
 // Lazy load everything else
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const CashierPage = lazy(() => import('./pages/CashierPage'));
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
@@ -590,7 +591,7 @@ function App() {
         <Route path="/dashboard" element={<Navigate to="/owner/dashboard" />} />
 
         {/* Default Route */}
-        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </Suspense>
