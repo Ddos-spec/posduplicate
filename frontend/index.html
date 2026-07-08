@@ -2,6 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Reverse-proxied access via my-aicustom.com/myerp forwards the full
+      // "/myerp" prefix without stripping it and without a trailing slash,
+      // so the browser's default relative-URL resolution (against "/")
+      // would request assets from the wrong place. Pin an explicit <base>
+      // before any other resource tag is parsed so every relative
+      // reference below resolves correctly no matter which of the two
+      // hosts served this page.
+      (function () {
+        var p = window.location.pathname;
+        var base = p === '/myerp' || p.indexOf('/myerp/') === 0 ? '/myerp/' : '/';
+        document.write('<base href="' + base + '">');
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/branding/omnipilot-mark.svg" />
 
     <!-- Viewport optimized for tablets -->
