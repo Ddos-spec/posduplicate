@@ -186,8 +186,11 @@ button, a, [role="button"] {
   -webkit-backface-visibility: hidden;
 }
 
-/* Smooth scrolling */
-* {
+/* Smooth scrolling for anchor-link navigation. Scoped to html only —
+   applying this to every element (`*`) makes mouse-wheel/touch scrolling
+   feel stuck in Chrome while scrollbar-drag still works, since each
+   scrollable element fights to animate its own smooth-scroll. */
+html {
   scroll-behavior: smooth;
 }
 
