@@ -13,7 +13,9 @@
       (function () {
         var p = window.location.pathname;
         var base = p === '/myerp' || p.indexOf('/myerp/') === 0 ? '/myerp/' : '/';
-        document.write('<base href="' + base + '">');
+        var baseEl = document.createElement('base');
+        baseEl.href = base;
+        document.head.appendChild(baseEl);
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/branding/omnipilot-mark.svg" />
