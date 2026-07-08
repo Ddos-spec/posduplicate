@@ -1,4 +1,4 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
+import express, { Express, Request, Response, NextFunction, Router } from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
@@ -99,8 +99,13 @@ app.use(morgan('dev'));
 // Use process.cwd() to match the upload middleware path
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+// All routes live on this router so it can be mounted both at "/" (the
+// mypos.my-aicustom.com subdomain) and at "/mypos" (the my-aicustom.com/mypos
+// reverse-proxy path, whose prefix is NOT stripped before reaching this app).
+const apiRouter: Router = Router();
+
 // Root route
-app.get('/', (_req: Request, res: Response) => {
+apiRouter.get('/', (_req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'OmniPilot AI API Server',
@@ -130,7 +135,7 @@ app.get('/', (_req: Request, res: Response) => {
 });
 
 // Health check
-app.get('/health', (_req: Request, res: Response) => {
+apiRouter.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'OK',
     message: 'OmniPilot AI API is running',
@@ -139,35 +144,35 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // API Documentation (Swagger)
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+apiRouter.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'OmniPilot AI API Documentation'
 }));
 
 // Swagger JSON endpoint
-app.get('/api-docs.json', (_req: Request, res: Response) => {
+apiRouter.get('/api-docs.json', (_req: Request, res: Response) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
 
 // API Routes - Organized by Module
 // Shared/Common Routes (Auth, Users, Tenants, Settings, etc.)
-app.use('/api', sharedRoutes);
+apiRouter.use('/api', sharedRoutes);
 
 // FnB/POS Module Routes
-app.use('/api', fnbRoutes);
+apiRouter.use('/api', fnbRoutes);
 
 // Accounting Module Routes
-app.use('/api/accounting', accountingRoutes);
+apiRouter.use('/api/accounting', accountingRoutes);
 
 // Admin Module Routes
-app.use('/api/admin', adminRoutes);
+apiRouter.use('/api/admin', adminRoutes);
 
 // Medsos Module Routes
-app.use('/api/medsos', medsosRoutes);
+apiRouter.use('/api/medsos', medsosRoutes);
 
 // 404 Handler
-app.use((req: Request, res: Response) => {
+apiRouter.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: {
@@ -176,6 +181,11 @@ app.use((req: Request, res: Response) => {
     }
   });
 });
+
+// Mount the router at root (subdomain access) and under /mypos (path-based
+// access via my-aicustom.com/mypos, whose prefix Traefik forwards verbatim).
+app.use('/', apiRouter);
+app.use('/mypos', apiRouter);
 
 // Error Handler
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
