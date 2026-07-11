@@ -54,3 +54,4 @@ coverage/
 .claude/
 .gemini/
 CLAUDE.md
+.vercel
