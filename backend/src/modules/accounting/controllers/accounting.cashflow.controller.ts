@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -48,10 +49,20 @@ export const getCashFlowIndirect = async (req: Request, res: Response, next: Nex
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const normalizedOutletId = outletId ? Number(outletId) : null;
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      (normalizedOutletId !== null && (!Number.isInteger(normalizedOutletId) || normalizedOutletId <= 0))
+    ) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Date range or outlet ID is invalid' } });
+    }
+    const whereOutlet = normalizedOutletId
+      ? Prisma.sql`AND gl.outlet_id = ${normalizedOutletId}`
+      : Prisma.empty;
 
     // 1. Calculate Net Income
-    const incomeData: any[] = await prisma.$queryRawUnsafe(`
+    const incomeData: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         coa.account_type,
         SUM(CASE WHEN coa.normal_balance = 'CREDIT' THEN gl.credit_amount - gl.debit_amount
@@ -60,8 +71,8 @@ export const getCashFlowIndirect = async (req: Request, res: Response, next: Nex
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${start.toISOString()}'
-      AND gl.transaction_date <= '${end.toISOString()}'
+      AND gl.transaction_date >= ${start.toISOString()}
+      AND gl.transaction_date <= ${end.toISOString()}
       AND coa.account_type IN ('REVENUE', 'EXPENSE', 'COGS')
       GROUP BY coa.account_type
     `);
@@ -74,24 +85,24 @@ export const getCashFlowIndirect = async (req: Request, res: Response, next: Nex
     const netIncome = revenue - expenses;
 
     // 2. Get Depreciation (non-cash expense - add back)
-    const depreciation: any[] = await prisma.$queryRawUnsafe(`
+    const depreciation: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT COALESCE(SUM(gl.debit_amount), 0) as total
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${start.toISOString()}'
-      AND gl.transaction_date <= '${end.toISOString()}'
+      AND gl.transaction_date >= ${start.toISOString()}
+      AND gl.transaction_date <= ${end.toISOString()}
       AND coa.category ILIKE '%depreciation%'
     `);
     const depreciationAmount = Number(depreciation[0]?.total || 0);
 
     // 3. Changes in Working Capital
     // A/R Change (decrease = cash inflow)
-    const arChange: any[] = await prisma.$queryRawUnsafe(`
+    const arChange: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
-        COALESCE(SUM(CASE WHEN gl.transaction_date < '${start.toISOString()}' THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as opening,
-        COALESCE(SUM(CASE WHEN gl.transaction_date <= '${end.toISOString()}' THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as closing
+        COALESCE(SUM(CASE WHEN gl.transaction_date < ${start.toISOString()} THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as opening,
+        COALESCE(SUM(CASE WHEN gl.transaction_date <= ${end.toISOString()} THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as closing
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
@@ -101,10 +112,10 @@ export const getCashFlowIndirect = async (req: Request, res: Response, next: Nex
     const arChangeAmount = Number(arChange[0]?.opening || 0) - Number(arChange[0]?.closing || 0);
 
     // A/P Change (increase = cash inflow)
-    const apChange: any[] = await prisma.$queryRawUnsafe(`
+    const apChange: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
-        COALESCE(SUM(CASE WHEN gl.transaction_date < '${start.toISOString()}' THEN gl.credit_amount - gl.debit_amount ELSE 0 END), 0) as opening,
-        COALESCE(SUM(CASE WHEN gl.transaction_date <= '${end.toISOString()}' THEN gl.credit_amount - gl.debit_amount ELSE 0 END), 0) as closing
+        COALESCE(SUM(CASE WHEN gl.transaction_date < ${start.toISOString()} THEN gl.credit_amount - gl.debit_amount ELSE 0 END), 0) as opening,
+        COALESCE(SUM(CASE WHEN gl.transaction_date <= ${end.toISOString()} THEN gl.credit_amount - gl.debit_amount ELSE 0 END), 0) as closing
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
@@ -114,10 +125,10 @@ export const getCashFlowIndirect = async (req: Request, res: Response, next: Nex
     const apChangeAmount = Number(apChange[0]?.closing || 0) - Number(apChange[0]?.opening || 0);
 
     // Inventory Change (decrease = cash inflow)
-    const invChange: any[] = await prisma.$queryRawUnsafe(`
+    const invChange: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
-        COALESCE(SUM(CASE WHEN gl.transaction_date < '${start.toISOString()}' THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as opening,
-        COALESCE(SUM(CASE WHEN gl.transaction_date <= '${end.toISOString()}' THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as closing
+        COALESCE(SUM(CASE WHEN gl.transaction_date < ${start.toISOString()} THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as opening,
+        COALESCE(SUM(CASE WHEN gl.transaction_date <= ${end.toISOString()} THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as closing
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
@@ -127,7 +138,7 @@ export const getCashFlowIndirect = async (req: Request, res: Response, next: Nex
     const invChangeAmount = Number(invChange[0]?.opening || 0) - Number(invChange[0]?.closing || 0);
 
     // 4. Investing Activities (Fixed Assets purchases/sales)
-    const investing: any[] = await prisma.$queryRawUnsafe(`
+    const investing: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         COALESCE(SUM(gl.debit_amount), 0) as purchases,
         COALESCE(SUM(gl.credit_amount), 0) as sales
@@ -135,15 +146,15 @@ export const getCashFlowIndirect = async (req: Request, res: Response, next: Nex
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${start.toISOString()}'
-      AND gl.transaction_date <= '${end.toISOString()}'
+      AND gl.transaction_date >= ${start.toISOString()}
+      AND gl.transaction_date <= ${end.toISOString()}
       AND coa.account_type = 'FIXED_ASSET'
     `);
     const assetPurchases = -Number(investing[0]?.purchases || 0);
     const assetSales = Number(investing[0]?.sales || 0);
 
     // 5. Financing Activities (Equity, Loans)
-    const financing: any[] = await prisma.$queryRawUnsafe(`
+    const financing: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         coa.account_type,
         SUM(gl.credit_amount - gl.debit_amount) as net_amount
@@ -151,8 +162,8 @@ export const getCashFlowIndirect = async (req: Request, res: Response, next: Nex
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${start.toISOString()}'
-      AND gl.transaction_date <= '${end.toISOString()}'
+      AND gl.transaction_date >= ${start.toISOString()}
+      AND gl.transaction_date <= ${end.toISOString()}
       AND coa.account_type IN ('EQUITY', 'LIABILITY')
       AND coa.category NOT ILIKE '%payable%'
       GROUP BY coa.account_type
@@ -164,10 +175,10 @@ export const getCashFlowIndirect = async (req: Request, res: Response, next: Nex
     });
 
     // 6. Beginning and Ending Cash
-    const cashBalances: any[] = await prisma.$queryRawUnsafe(`
+    const cashBalances: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
-        COALESCE(SUM(CASE WHEN gl.transaction_date < '${start.toISOString()}' THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as beginning,
-        COALESCE(SUM(CASE WHEN gl.transaction_date <= '${end.toISOString()}' THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as ending
+        COALESCE(SUM(CASE WHEN gl.transaction_date < ${start.toISOString()} THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as beginning,
+        COALESCE(SUM(CASE WHEN gl.transaction_date <= ${end.toISOString()} THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as ending
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
@@ -260,54 +271,64 @@ export const getCashFlowDirect = async (req: Request, res: Response, next: NextF
 
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const normalizedOutletId = outletId ? Number(outletId) : null;
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      (normalizedOutletId !== null && (!Number.isInteger(normalizedOutletId) || normalizedOutletId <= 0))
+    ) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Date range or outlet ID is invalid' } });
+    }
+    const whereOutlet = normalizedOutletId
+      ? Prisma.sql`AND gl.outlet_id = ${normalizedOutletId}`
+      : Prisma.empty;
 
     // Direct method: Track actual cash movements
     // Cash Receipts from Customers (Debit to Cash from Revenue-related journals)
-    const cashReceipts: any[] = await prisma.$queryRawUnsafe(`
+    const cashReceipts: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT COALESCE(SUM(gl.debit_amount), 0) as total
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       JOIN "accounting"."journal_entries" je ON gl.journal_entry_id = je.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${start.toISOString()}'
-      AND gl.transaction_date <= '${end.toISOString()}'
+      AND gl.transaction_date >= ${start.toISOString()}
+      AND gl.transaction_date <= ${end.toISOString()}
       AND coa.account_type = 'CASH_BANK'
       AND je.journal_type IN ('sales', 'receipt', 'collection')
     `);
 
     // Cash Payments to Suppliers
-    const cashPaymentsSuppliers: any[] = await prisma.$queryRawUnsafe(`
+    const cashPaymentsSuppliers: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT COALESCE(SUM(gl.credit_amount), 0) as total
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       JOIN "accounting"."journal_entries" je ON gl.journal_entry_id = je.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${start.toISOString()}'
-      AND gl.transaction_date <= '${end.toISOString()}'
+      AND gl.transaction_date >= ${start.toISOString()}
+      AND gl.transaction_date <= ${end.toISOString()}
       AND coa.account_type = 'CASH_BANK'
       AND je.journal_type IN ('purchase', 'payment', 'expense')
     `);
 
     // Cash Payments for Operating Expenses
-    const cashPaymentsExpenses: any[] = await prisma.$queryRawUnsafe(`
+    const cashPaymentsExpenses: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT COALESCE(SUM(gl.credit_amount), 0) as total
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       JOIN "accounting"."journal_entries" je ON gl.journal_entry_id = je.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${start.toISOString()}'
-      AND gl.transaction_date <= '${end.toISOString()}'
+      AND gl.transaction_date >= ${start.toISOString()}
+      AND gl.transaction_date <= ${end.toISOString()}
       AND coa.account_type = 'CASH_BANK'
       AND je.journal_type IN ('expense', 'general')
       AND je.description ILIKE '%expense%' OR je.description ILIKE '%beban%'
     `);
 
     // Cash from Investing (Asset transactions)
-    const investingCash: any[] = await prisma.$queryRawUnsafe(`
+    const investingCash: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         COALESCE(SUM(gl.debit_amount), 0) as receipts,
         COALESCE(SUM(gl.credit_amount), 0) as payments
@@ -316,14 +337,14 @@ export const getCashFlowDirect = async (req: Request, res: Response, next: NextF
       JOIN "accounting"."journal_entries" je ON gl.journal_entry_id = je.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${start.toISOString()}'
-      AND gl.transaction_date <= '${end.toISOString()}'
+      AND gl.transaction_date >= ${start.toISOString()}
+      AND gl.transaction_date <= ${end.toISOString()}
       AND coa.account_type = 'CASH_BANK'
       AND (je.reference_type = 'fixed_asset' OR je.journal_type = 'depreciation')
     `);
 
     // Cash from Financing
-    const financingCash: any[] = await prisma.$queryRawUnsafe(`
+    const financingCash: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         COALESCE(SUM(gl.debit_amount), 0) as receipts,
         COALESCE(SUM(gl.credit_amount), 0) as payments
@@ -332,17 +353,17 @@ export const getCashFlowDirect = async (req: Request, res: Response, next: NextF
       JOIN "accounting"."journal_entries" je ON gl.journal_entry_id = je.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${start.toISOString()}'
-      AND gl.transaction_date <= '${end.toISOString()}'
+      AND gl.transaction_date >= ${start.toISOString()}
+      AND gl.transaction_date <= ${end.toISOString()}
       AND coa.account_type = 'CASH_BANK'
       AND je.journal_type IN ('equity', 'loan', 'financing')
     `);
 
     // Cash Balances
-    const cashBalances: any[] = await prisma.$queryRawUnsafe(`
+    const cashBalances: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
-        COALESCE(SUM(CASE WHEN gl.transaction_date < '${start.toISOString()}' THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as beginning,
-        COALESCE(SUM(CASE WHEN gl.transaction_date <= '${end.toISOString()}' THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as ending
+        COALESCE(SUM(CASE WHEN gl.transaction_date < ${start.toISOString()} THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as beginning,
+        COALESCE(SUM(CASE WHEN gl.transaction_date <= ${end.toISOString()} THEN gl.debit_amount - gl.credit_amount ELSE 0 END), 0) as ending
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
@@ -420,6 +441,18 @@ export const getCashFlowSummary = async (req: Request, res: Response, next: Next
 
     const monthsCount = parseInt(months as string);
     const results = [];
+    const normalizedOutletId = outletId ? Number(outletId) : null;
+    if (
+      !Number.isInteger(monthsCount) ||
+      monthsCount < 1 ||
+      monthsCount > 24 ||
+      (normalizedOutletId !== null && (!Number.isInteger(normalizedOutletId) || normalizedOutletId <= 0))
+    ) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Months or outlet ID is invalid' } });
+    }
+    const whereOutlet = normalizedOutletId
+      ? Prisma.sql`AND gl.outlet_id = ${normalizedOutletId}`
+      : Prisma.empty;
 
     for (let i = 0; i < monthsCount; i++) {
       const endDate = new Date();
@@ -429,9 +462,7 @@ export const getCashFlowSummary = async (req: Request, res: Response, next: Next
       const startDate = new Date(endDate);
       startDate.setDate(1); // First day of month
 
-      const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
-
-      const cashFlow: any[] = await prisma.$queryRawUnsafe(`
+      const cashFlow: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT
           COALESCE(SUM(gl.debit_amount), 0) as inflows,
           COALESCE(SUM(gl.credit_amount), 0) as outflows
@@ -439,8 +470,8 @@ export const getCashFlowSummary = async (req: Request, res: Response, next: Next
         JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
         WHERE gl.tenant_id = ${tenantId}
         ${whereOutlet}
-        AND gl.transaction_date >= '${startDate.toISOString()}'
-        AND gl.transaction_date <= '${endDate.toISOString()}'
+        AND gl.transaction_date >= ${startDate.toISOString()}
+        AND gl.transaction_date <= ${endDate.toISOString()}
         AND coa.account_type = 'CASH_BANK'
       `);
 

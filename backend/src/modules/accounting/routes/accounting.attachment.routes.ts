@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -63,7 +63,7 @@ const upload = multer({
 
 // Apply auth and tenant middleware
 router.use(authMiddleware);
-router.use(tenantMiddleware);
+router.use(tenantMiddleware, requireTenantContext);
 
 // Upload attachment(s)
 /**

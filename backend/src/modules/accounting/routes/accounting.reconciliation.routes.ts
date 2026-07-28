@@ -1,8 +1,11 @@
 import { Router } from 'express';
+import { authMiddleware } from '../../../middlewares/auth.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { roleMiddleware } from '../../../middlewares/role.middleware';
 import * as reconController from '../controllers/accounting.reconciliation.controller';
 
 const router = Router();
+router.use(authMiddleware, tenantMiddleware, requireTenantContext);
 
 // Bank Reconciliation CRUD
 /**

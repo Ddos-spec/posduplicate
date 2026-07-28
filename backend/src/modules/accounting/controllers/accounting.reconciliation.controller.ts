@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -90,13 +91,47 @@ export const createReconciliation = async (req: Request, res: Response, next: Ne
       });
     }
 
+    const parsedAccountId = Number(accountId);
+    const parsedOutletId = outletId ? Number(outletId) : null;
+    const parsedReconciliationDate = new Date(reconciliationDate);
+    if (
+      !Number.isInteger(parsedAccountId) ||
+      parsedAccountId <= 0 ||
+      (parsedOutletId !== null && (!Number.isInteger(parsedOutletId) || parsedOutletId <= 0)) ||
+      Number.isNaN(parsedReconciliationDate.getTime())
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Account, outlet, or reconciliation date is invalid' }
+      });
+    }
+
+    const [account, outlet] = await Promise.all([
+      prisma.chart_of_accounts.findFirst({
+        where: { id: parsedAccountId, tenant_id: tenantId },
+        select: { id: true }
+      }),
+      parsedOutletId
+        ? prisma.outlets.findFirst({
+            where: { id: parsedOutletId, tenant_id: tenantId },
+            select: { id: true }
+          })
+        : Promise.resolve(null)
+    ]);
+    if (!account || (parsedOutletId && !outlet)) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Account or outlet does not belong to the active tenant' }
+      });
+    }
+
     // Calculate book balance from GL
-    const bookBalanceResult: any[] = await prisma.$queryRawUnsafe(`
+    const bookBalanceResult: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT COALESCE(SUM(debit_amount - credit_amount), 0) as balance
       FROM "accounting"."general_ledger"
       WHERE tenant_id = ${tenantId}
-      AND account_id = ${accountId}
-      AND transaction_date <= '${new Date(reconciliationDate).toISOString()}'
+      AND account_id = ${parsedAccountId}
+      AND transaction_date <= ${parsedReconciliationDate}
     `);
 
     const bookBalance = new Decimal(bookBalanceResult[0]?.balance || 0);
@@ -106,9 +141,9 @@ export const createReconciliation = async (req: Request, res: Response, next: Ne
     const reconciliation = await prisma.bank_reconciliations.create({
       data: {
         tenant_id: tenantId,
-        account_id: parseInt(accountId),
-        outlet_id: outletId ? parseInt(outletId) : null,
-        reconciliation_date: new Date(reconciliationDate),
+        account_id: parsedAccountId,
+        outlet_id: parsedOutletId,
+        reconciliation_date: parsedReconciliationDate,
         book_balance: bookBalance,
         bank_statement_balance: bankBalance,
         difference,
@@ -279,14 +314,47 @@ export const getUnmatchedGLEntries = async (req: Request, res: Response, next: N
       return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Account ID is required' } });
     }
 
-    const entries: any[] = await prisma.$queryRawUnsafe(`
+    const accountId = Number(account_id);
+    const startDate = start_date ? new Date(String(start_date)) : null;
+    const endDate = end_date ? new Date(String(end_date)) : null;
+    if (
+      !Number.isInteger(accountId) ||
+      accountId <= 0 ||
+      (startDate && Number.isNaN(startDate.getTime())) ||
+      (endDate && Number.isNaN(endDate.getTime()))
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Account ID or date range is invalid' }
+      });
+    }
+
+    const account = await prisma.chart_of_accounts.findFirst({
+      where: { id: accountId, tenant_id: tenantId },
+      select: { id: true }
+    });
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Account not found for the active tenant' }
+      });
+    }
+
+    const startFilter = startDate
+      ? Prisma.sql`AND gl.transaction_date >= ${startDate}`
+      : Prisma.empty;
+    const endFilter = endDate
+      ? Prisma.sql`AND gl.transaction_date <= ${endDate}`
+      : Prisma.empty;
+
+    const entries: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT gl.*, je.journal_number, je.description as journal_desc
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."journal_entries" je ON gl.journal_entry_id = je.id
       WHERE gl.tenant_id = ${tenantId}
-      AND gl.account_id = ${account_id}
-      ${start_date ? `AND gl.transaction_date >= '${new Date(start_date as string).toISOString()}'` : ''}
-      ${end_date ? `AND gl.transaction_date <= '${new Date(end_date as string).toISOString()}'` : ''}
+      AND gl.account_id = ${accountId}
+      ${startFilter}
+      ${endFilter}
       AND gl.journal_entry_id NOT IN (
         SELECT COALESCE(matched_to_journal_id, 0) FROM "accounting"."bank_reconciliation_details"
       )

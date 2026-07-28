@@ -30,22 +30,17 @@ export default function ReasonSelectDialog({
   const [error, setError] = useState<string>('');
 
   const handleConfirm = () => {
-    let finalReason = '';
-    
     if (selectedReason === 'Lainnya') {
       if (!customReason.trim()) {
         setError('Mohon isi alasan lainnya');
         return;
       }
-      finalReason = customReason.trim();
-    } else {
-      if (!selectedReason) {
-        setError('Mohon pilih alasan');
-        return;
-      }
-      finalReason = selectedReason;
+    } else if (!selectedReason) {
+      setError('Mohon pilih alasan');
+      return;
     }
 
+    const finalReason = selectedReason === 'Lainnya' ? customReason.trim() : selectedReason;
     setError('');
     onConfirm(finalReason);
   };

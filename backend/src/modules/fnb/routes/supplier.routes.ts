@@ -8,10 +8,15 @@ import {
   getSupplierSpending
 } from '../controllers/supplier.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware, ownerOnly } from '../../../middlewares/tenant.middleware';
+import {
+  ownerOnly,
+  requireTenantContext,
+  tenantMiddleware,
+  tenantOutletScopeMiddleware
+} from '../../../middlewares/tenant.middleware';
 
 const router = Router();
-router.use(authMiddleware, tenantMiddleware);
+router.use(authMiddleware, tenantMiddleware, requireTenantContext, tenantOutletScopeMiddleware);
 
 /**
  * @swagger

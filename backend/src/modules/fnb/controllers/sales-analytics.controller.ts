@@ -1,6 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 
+type OutletFilter = number | { in: number[] };
+
+const scopedOutletFilter = (req: Request, rawOutletId?: unknown): OutletFilter | null => {
+  const outletIds = req.tenantOutletIds ?? [];
+  if (rawOutletId === undefined || rawOutletId === null || rawOutletId === '') {
+    return { in: outletIds };
+  }
+  const outletId = Number(rawOutletId);
+  if (!Number.isInteger(outletId) || !outletIds.includes(outletId)) return null;
+  return outletId;
+};
+
 // Get all sales transactions
 export const getAllSalesTransactions = async (req: Request, res: Response, _next: NextFunction) => {
   try {
@@ -16,11 +28,14 @@ export const getAllSalesTransactions = async (req: Request, res: Response, _next
       offset = '0'
     } = req.query;
 
-    const where: any = {};
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { outlet_id: outletFilter };
 
     if (outlet) {
       where.outlet = outlet;
@@ -71,8 +86,11 @@ export const getSalesTransactionById = async (req: Request, res: Response, _next
   try {
     const { id } = req.params;
 
-    const transaction = await prisma.sales_transactions.findUnique({
-      where: { id: parseInt(id) }
+    const transaction = await prisma.sales_transactions.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: req.tenantOutletIds ?? [] }
+      }
     });
 
     if (!transaction) {
@@ -122,6 +140,13 @@ export const createSalesTransaction = async (req: Request, res: Response, _next:
         error: { code: 'VALIDATION_ERROR', message: 'Field wajib tidak lengkap' }
       });
     }
+    const parsedOutletId = scopedOutletFilter(req, outletId);
+    if (typeof parsedOutletId !== 'number') {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'A valid tenant outlet is required' }
+      });
+    }
 
     const newTransaction = await prisma.sales_transactions.create({
       data: {
@@ -145,7 +170,7 @@ export const createSalesTransaction = async (req: Request, res: Response, _next:
         payment_method: paymentMethod,
         served_by: servedBy,
         collected_by: collectedBy,
-        outlet_id: outletId ? parseInt(outletId) : null
+        outlet_id: parsedOutletId
       }
     });
 
@@ -168,6 +193,15 @@ export const bulkCreateSalesTransactions = async (req: Request, res: Response, _
       return res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'Transactions array is required' }
+      });
+    }
+    const containsInvalidOutlet = transactions.some((transaction: any) => (
+      typeof scopedOutletFilter(req, transaction.outletId) !== 'number'
+    ));
+    if (containsInvalidOutlet) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Every transaction must use an outlet from the active tenant' }
       });
     }
 
@@ -193,7 +227,7 @@ export const bulkCreateSalesTransactions = async (req: Request, res: Response, _
         payment_method: t.paymentMethod,
         served_by: t.servedBy,
         collected_by: t.collectedBy,
-        outlet_id: t.outletId ? parseInt(t.outletId) : null
+        outlet_id: Number(t.outletId)
       })),
       skipDuplicates: true
     });
@@ -213,11 +247,14 @@ export const getAnalyticsSummary = async (req: Request, res: Response, _next: Ne
   try {
     const { outlet_id, date_from, date_to } = req.query;
 
-    const where: any = {};
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { outlet_id: outletFilter };
 
     if (date_from || date_to) {
       where.date = {};
@@ -264,11 +301,14 @@ export const getNetSalesTrend = async (req: Request, res: Response, _next: NextF
   try {
     const { outlet_id, date_from, date_to } = req.query;
 
-    const where: any = {};
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { outlet_id: outletFilter };
 
     if (date_from || date_to) {
       where.date = {};
@@ -324,11 +364,14 @@ export const getTopSellingItems = async (req: Request, res: Response, _next: Nex
   try {
     const { outlet_id, date_from, date_to, limit = '10' } = req.query;
 
-    const where: any = {};
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { outlet_id: outletFilter };
 
     if (date_from || date_to) {
       where.date = {};
@@ -370,11 +413,14 @@ export const getSalesByCategory = async (req: Request, res: Response, _next: Nex
   try {
     const { outlet_id, date_from, date_to } = req.query;
 
-    const where: any = {};
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { outlet_id: outletFilter };
 
     if (date_from || date_to) {
       where.date = {};
@@ -414,11 +460,14 @@ export const getSalesByPaymentMethod = async (req: Request, res: Response, _next
   try {
     const { outlet_id, date_from, date_to } = req.query;
 
-    const where: any = {};
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { outlet_id: outletFilter };
 
     if (date_from || date_to) {
       where.date = {};

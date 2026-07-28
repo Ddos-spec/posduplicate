@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 
 /**
@@ -19,6 +20,29 @@ import prisma from '../../../utils/prisma';
 type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'escalated' | 'delegated';
 type ApprovalMode = 'sequential' | 'parallel' | 'any';
 type EntityType = 'journal' | 'payment' | 'purchase_order' | 'invoice' | 'expense' | 'budget';
+
+const ENTITY_TYPES = new Set<EntityType>([
+  'journal',
+  'payment',
+  'purchase_order',
+  'invoice',
+  'expense',
+  'budget'
+]);
+const APPROVAL_STATUSES = new Set<ApprovalStatus>([
+  'pending',
+  'approved',
+  'rejected',
+  'escalated',
+  'delegated'
+]);
+const URGENCY_LEVELS = new Set(['normal', 'high', 'urgent']);
+const APPROVAL_MODES = new Set<ApprovalMode>(['sequential', 'parallel', 'any']);
+
+const positiveInteger = (value: unknown): number | null => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
 
 interface ApprovalLevel {
   level: number;
@@ -109,7 +133,7 @@ export const getApprovalConfig = async (req: Request, res: Response, next: NextF
     const tenantId = req.tenantId!;
 
     // Get custom config from database
-    const config: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const config: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT * FROM "accounting"."approval_config"
       WHERE tenant_id = ${tenantId}
       ORDER BY level
@@ -147,29 +171,73 @@ export const updateApprovalConfig = async (req: Request, res: Response, next: Ne
     const userId = (req as any).userId;
     const { levels } = req.body;
 
-    if (!levels || !Array.isArray(levels)) {
+    if (!levels || !Array.isArray(levels) || levels.length === 0 || levels.length > 10) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Levels configuration required' }
+        error: { code: 'VALIDATION_ERROR', message: 'One to ten approval levels are required' }
       });
     }
 
-    // Delete existing config
-    await prisma.$executeRawUnsafe(`
-      DELETE FROM "accounting"."approval_config" WHERE tenant_id = ${tenantId}
-    `).catch(() => {});
-
-    // Insert new config
+    const normalizedLevels: ApprovalLevel[] = [];
     for (const level of levels) {
-      await prisma.$executeRawUnsafe(`
-        INSERT INTO "accounting"."approval_config"
-        (tenant_id, level, role_name, min_amount, max_amount, mode, required_approvers, auto_approve_below, escalation_hours, updated_by, updated_at)
-        VALUES
-        (${tenantId}, ${level.level}, '${level.roleName}', ${level.minAmount}, ${level.maxAmount || 'NULL'}, '${level.mode}', ${level.requiredApprovers}, ${level.autoApproveBelow || 0}, ${level.escalationHours || 24}, ${userId}, NOW())
-      `).catch(async () => {
-        await createApprovalTables();
+      const normalized: ApprovalLevel = {
+        level: Number(level.level),
+        roleName: typeof level.roleName === 'string' ? level.roleName.trim() : '',
+        minAmount: Number(level.minAmount),
+        maxAmount: level.maxAmount === null || level.maxAmount === undefined ? null : Number(level.maxAmount),
+        mode: level.mode,
+        requiredApprovers: Number(level.requiredApprovers),
+        autoApproveBelow: Number(level.autoApproveBelow || 0),
+        escalationHours: Number(level.escalationHours || 24)
+      };
+      if (
+        !Number.isInteger(normalized.level) ||
+        normalized.level <= 0 ||
+        normalized.roleName.length === 0 ||
+        normalized.roleName.length > 100 ||
+        !Number.isFinite(normalized.minAmount) ||
+        normalized.minAmount < 0 ||
+        (normalized.maxAmount !== null &&
+          (!Number.isFinite(normalized.maxAmount) || normalized.maxAmount < normalized.minAmount)) ||
+        !APPROVAL_MODES.has(normalized.mode) ||
+        !Number.isInteger(normalized.requiredApprovers) ||
+        normalized.requiredApprovers < 1 ||
+        normalized.requiredApprovers > 20 ||
+        !Number.isFinite(normalized.autoApproveBelow) ||
+        normalized.autoApproveBelow < 0 ||
+        !Number.isInteger(normalized.escalationHours) ||
+        normalized.escalationHours < 0 ||
+        normalized.escalationHours > 8760
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'Approval level configuration is invalid' }
+        });
+      }
+      normalizedLevels.push(normalized);
+    }
+    if (new Set(normalizedLevels.map(level => level.level)).size !== normalizedLevels.length) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Approval level numbers must be unique' }
       });
     }
+
+    await createApprovalTables();
+    await prisma.$transaction(async tx => {
+      await tx.$executeRaw(Prisma.sql`
+        DELETE FROM "accounting"."approval_config" WHERE tenant_id = ${tenantId}
+      `);
+
+      for (const level of normalizedLevels) {
+        await tx.$executeRaw(Prisma.sql`
+          INSERT INTO "accounting"."approval_config"
+          (tenant_id, level, role_name, min_amount, max_amount, mode, required_approvers, auto_approve_below, escalation_hours, updated_by, updated_at)
+          VALUES
+          (${tenantId}, ${level.level}, ${level.roleName}, ${level.minAmount}, ${level.maxAmount}, ${level.mode}, ${level.requiredApprovers}, ${level.autoApproveBelow}, ${level.escalationHours}, ${userId}, NOW())
+        `);
+      }
+    });
 
     res.json({
       success: true,
@@ -191,8 +259,32 @@ export const createApprovalRequest = async (req: Request, res: Response, next: N
     const userId = (req as any).userId;
     const { entityType, entityId, amount, description, urgency = 'normal' } = req.body;
 
+    const normalizedEntityId = positiveInteger(entityId);
+    const normalizedAmount = Number(amount);
+    const normalizedDescription = typeof description === 'string' ? description.trim() : '';
+    if (
+      !ENTITY_TYPES.has(entityType) ||
+      !normalizedEntityId ||
+      !Number.isFinite(normalizedAmount) ||
+      normalizedAmount < 0 ||
+      normalizedDescription.length === 0 ||
+      normalizedDescription.length > 1000 ||
+      !URGENCY_LEVELS.has(urgency)
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Approval request payload is invalid' }
+      });
+    }
+    if (!(await entityBelongsToTenant(entityType, normalizedEntityId, tenantId))) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Approval entity not found for the active tenant' }
+      });
+    }
+
     // Get approval levels for this amount
-    const levels = await getApprovalLevelsForAmount(tenantId, amount);
+    const levels = await getApprovalLevelsForAmount(tenantId, normalizedAmount);
 
     if (levels.length === 0) {
       return res.status(400).json({
@@ -203,9 +295,9 @@ export const createApprovalRequest = async (req: Request, res: Response, next: N
 
     // Check for auto-approve
     const firstLevel = levels[0];
-    if (amount < firstLevel.autoApproveBelow) {
+    if (normalizedAmount < firstLevel.autoApproveBelow) {
       // Auto-approve
-      await updateEntityStatus(entityType, entityId, 'approved');
+      await updateEntityStatus(entityType, normalizedEntityId, 'approved', tenantId);
 
       return res.json({
         success: true,
@@ -214,37 +306,39 @@ export const createApprovalRequest = async (req: Request, res: Response, next: N
       });
     }
 
-    // Create approval request
-    const requestId = await prisma.$queryRawUnsafe<any[]>(`
+    const approvers = await getApproversForLevel(tenantId, firstLevel.roleName);
+    if (approvers.length === 0) {
+      return res.status(409).json({
+        success: false,
+        error: { code: 'NO_APPROVERS', message: 'No active approver is configured for the first level' }
+      });
+    }
+
+    await createApprovalTables();
+    const requestId = await prisma.$queryRaw<any[]>(Prisma.sql`
       INSERT INTO "accounting"."approval_requests"
       (tenant_id, entity_type, entity_id, amount, description, current_level, total_levels, status, urgency, requested_by, requested_at, expires_at)
       VALUES
-      (${tenantId}, '${entityType}', ${entityId}, ${amount}, '${description}', 1, ${levels.length}, 'pending', '${urgency}', ${userId}, NOW(), NOW() + INTERVAL '${firstLevel.escalationHours} hours')
+      (${tenantId}, ${entityType}, ${normalizedEntityId}, ${normalizedAmount}, ${normalizedDescription}, 1, ${levels.length}, 'pending', ${urgency}, ${userId}, NOW(), NOW() + ${firstLevel.escalationHours} * INTERVAL '1 hour')
       RETURNING id
-    `).catch(async () => {
-      await createApprovalTables();
-      return [{ id: 0 }];
-    });
+    `);
 
     const id = (requestId as any[])[0]?.id;
 
-    // Get approvers for first level
-    const approvers = await getApproversForLevel(tenantId, firstLevel.roleName);
-
     // Create pending approval entries
     for (const approver of approvers) {
-      await prisma.$executeRawUnsafe(`
+      await prisma.$executeRaw(Prisma.sql`
         INSERT INTO "accounting"."approval_actions"
         (request_id, level, approver_id, status, created_at)
         VALUES (${id}, 1, ${approver.id}, 'pending', NOW())
-      `).catch(() => {});
+      `);
 
       // Send notification to approver
       await createApprovalNotification(
         approver.id,
         'APPROVAL_REQUEST',
-        `Approval request baru: ${description} (${formatCurrency(amount)})`,
-        { requestId: id, entityType, entityId, amount }
+        `Approval request baru: ${normalizedDescription} (${formatCurrency(normalizedAmount)})`,
+        { requestId: id, entityType, entityId: normalizedEntityId, amount: normalizedAmount }
       );
     }
 
@@ -273,9 +367,18 @@ export const getPendingApprovals = async (req: Request, res: Response, next: Nex
     const userId = (req as any).userId;
     const { status = 'pending', page = 1, limit = 20 } = req.query;
 
-    const offset = (Number(page) - 1) * Number(limit);
+    const normalizedStatus = String(status) as ApprovalStatus;
+    const normalizedPage = Math.max(1, Number(page) || 1);
+    const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
+    if (!APPROVAL_STATUSES.has(normalizedStatus)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Approval status is invalid' }
+      });
+    }
+    const offset = (normalizedPage - 1) * normalizedLimit;
 
-    const approvals: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const approvals: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         ar.*,
         aa.id as action_id,
@@ -286,25 +389,25 @@ export const getPendingApprovals = async (req: Request, res: Response, next: Nex
       JOIN "users" u ON ar.requested_by = u.id
       WHERE ar.tenant_id = ${tenantId}
       AND aa.approver_id = ${userId}
-      AND aa.status = '${status}'
+      AND aa.status = ${normalizedStatus}
       ORDER BY
         CASE ar.urgency WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 ELSE 3 END,
         ar.requested_at DESC
-      LIMIT ${limit} OFFSET ${offset}
+      LIMIT ${normalizedLimit} OFFSET ${offset}
     `).catch(() => []);
 
-    const total: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const total: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT COUNT(*) as count
       FROM "accounting"."approval_requests" ar
       JOIN "accounting"."approval_actions" aa ON ar.id = aa.request_id
       WHERE ar.tenant_id = ${tenantId}
       AND aa.approver_id = ${userId}
-      AND aa.status = '${status}'
+      AND aa.status = ${normalizedStatus}
     `).catch(() => [{ count: 0 }]);
 
     // Get entity details for each approval
     const enrichedApprovals = await Promise.all(approvals.map(async (a) => {
-      const entityDetails = await getEntityDetails(a.entity_type, a.entity_id);
+      const entityDetails = await getEntityDetails(a.entity_type, a.entity_id, tenantId);
       return {
         ...a,
         entityDetails,
@@ -319,8 +422,8 @@ export const getPendingApprovals = async (req: Request, res: Response, next: Nex
       data: {
         approvals: enrichedApprovals,
         pagination: {
-          page: Number(page),
-          limit: Number(limit),
+          page: normalizedPage,
+          limit: normalizedLimit,
           total: Number(total[0]?.count || 0)
         }
       }
@@ -340,10 +443,19 @@ export const approveRequest = async (req: Request, res: Response, next: NextFunc
     const { requestId } = req.params;
     const { comment } = req.body;
 
+    const normalizedRequestId = positiveInteger(requestId);
+    const normalizedComment = typeof comment === 'string' ? comment.trim() : '';
+    if (!normalizedRequestId || normalizedComment.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Request ID or comment is invalid' }
+      });
+    }
+
     // Get request details
-    const request: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const request: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT * FROM "accounting"."approval_requests"
-      WHERE id = ${requestId} AND tenant_id = ${tenantId}
+      WHERE id = ${normalizedRequestId} AND tenant_id = ${tenantId}
     `).catch(() => []);
 
     if (request.length === 0) {
@@ -356,9 +468,9 @@ export const approveRequest = async (req: Request, res: Response, next: NextFunc
     const req_ = request[0];
 
     // Verify user is an approver for current level
-    const action: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const action: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT * FROM "accounting"."approval_actions"
-      WHERE request_id = ${requestId} AND approver_id = ${userId} AND level = ${req_.current_level} AND status = 'pending'
+      WHERE request_id = ${normalizedRequestId} AND approver_id = ${userId} AND level = ${req_.current_level} AND status = 'pending'
     `).catch(() => []);
 
     if (action.length === 0) {
@@ -369,33 +481,33 @@ export const approveRequest = async (req: Request, res: Response, next: NextFunc
     }
 
     // Update action
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       UPDATE "accounting"."approval_actions"
-      SET status = 'approved', comment = '${comment || ''}', action_at = NOW()
+      SET status = 'approved', comment = ${normalizedComment}, action_at = NOW()
       WHERE id = ${action[0].id}
     `);
 
     // Check if level is complete
-    const levelComplete = await isLevelComplete(Number(requestId), req_.current_level);
+    const levelComplete = await isLevelComplete(normalizedRequestId, req_.current_level, tenantId);
 
     if (levelComplete) {
       if (req_.current_level >= req_.total_levels) {
         // All levels approved - complete the request
-        await prisma.$executeRawUnsafe(`
+        await prisma.$executeRaw(Prisma.sql`
           UPDATE "accounting"."approval_requests"
           SET status = 'approved', completed_at = NOW()
-          WHERE id = ${requestId}
+          WHERE id = ${normalizedRequestId} AND tenant_id = ${tenantId}
         `);
 
         // Update entity status
-        await updateEntityStatus(req_.entity_type, req_.entity_id, 'approved');
+        await updateEntityStatus(req_.entity_type, req_.entity_id, 'approved', tenantId);
 
         // Notify requester about approval
         await createApprovalNotification(
           req_.requested_by,
           'APPROVAL_APPROVED',
           `Request disetujui: ${req_.description}`,
-          { requestId: Number(requestId), entityType: req_.entity_type, entityId: req_.entity_id }
+          { requestId: normalizedRequestId, entityType: req_.entity_type, entityId: req_.entity_id }
         );
 
         res.json({
@@ -408,20 +520,33 @@ export const approveRequest = async (req: Request, res: Response, next: NextFunc
         const nextLevel = req_.current_level + 1;
         const levels = await getApprovalLevelsForAmount(tenantId, Number(req_.amount));
         const nextLevelConfig = levels.find(l => l.level === nextLevel);
+        if (!nextLevelConfig) {
+          return res.status(409).json({
+            success: false,
+            error: { code: 'INVALID_APPROVAL_CONFIG', message: 'Next approval level is not configured' }
+          });
+        }
 
-        await prisma.$executeRawUnsafe(`
+        const approvers = await getApproversForLevel(tenantId, nextLevelConfig.roleName);
+        if (approvers.length === 0) {
+          return res.status(409).json({
+            success: false,
+            error: { code: 'NO_APPROVERS', message: 'No active approver is configured for the next level' }
+          });
+        }
+
+        await prisma.$executeRaw(Prisma.sql`
           UPDATE "accounting"."approval_requests"
-          SET current_level = ${nextLevel}, expires_at = NOW() + INTERVAL '${nextLevelConfig?.escalationHours || 24} hours'
-          WHERE id = ${requestId}
+          SET current_level = ${nextLevel}, expires_at = NOW() + ${nextLevelConfig.escalationHours} * INTERVAL '1 hour'
+          WHERE id = ${normalizedRequestId} AND tenant_id = ${tenantId}
         `);
 
         // Create pending approvals for next level
-        const approvers = await getApproversForLevel(tenantId, nextLevelConfig?.roleName || 'Manager');
         for (const approver of approvers) {
-          await prisma.$executeRawUnsafe(`
+          await prisma.$executeRaw(Prisma.sql`
             INSERT INTO "accounting"."approval_actions"
             (request_id, level, approver_id, status, created_at)
-            VALUES (${requestId}, ${nextLevel}, ${approver.id}, 'pending', NOW())
+            VALUES (${normalizedRequestId}, ${nextLevel}, ${approver.id}, 'pending', NOW())
           `).catch(() => {});
         }
 
@@ -459,13 +584,21 @@ export const rejectRequest = async (req: Request, res: Response, next: NextFunct
         error: { code: 'VALIDATION_ERROR', message: 'Alasan penolakan wajib diisi' }
       });
     }
+    const normalizedRequestId = positiveInteger(requestId);
+    const normalizedReason = typeof reason === 'string' ? reason.trim() : '';
+    if (!normalizedRequestId || normalizedReason.length === 0 || normalizedReason.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Request ID or rejection reason is invalid' }
+      });
+    }
 
     // Verify approver
-    const action: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const action: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT aa.*, ar.entity_type, ar.entity_id, ar.requested_by, ar.description, ar.amount
       FROM "accounting"."approval_actions" aa
       JOIN "accounting"."approval_requests" ar ON aa.request_id = ar.id
-      WHERE aa.request_id = ${requestId} AND aa.approver_id = ${userId} AND aa.status = 'pending'
+      WHERE aa.request_id = ${normalizedRequestId} AND aa.approver_id = ${userId} AND aa.status = 'pending'
       AND ar.tenant_id = ${tenantId}
     `).catch(() => []);
 
@@ -477,28 +610,28 @@ export const rejectRequest = async (req: Request, res: Response, next: NextFunct
     }
 
     // Update action
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       UPDATE "accounting"."approval_actions"
-      SET status = 'rejected', comment = '${reason}', action_at = NOW()
+      SET status = 'rejected', comment = ${normalizedReason}, action_at = NOW()
       WHERE id = ${action[0].id}
     `);
 
     // Update request
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       UPDATE "accounting"."approval_requests"
       SET status = 'rejected', completed_at = NOW()
-      WHERE id = ${requestId}
+      WHERE id = ${normalizedRequestId} AND tenant_id = ${tenantId}
     `);
 
     // Update entity status
-    await updateEntityStatus(action[0].entity_type, action[0].entity_id, 'rejected');
+    await updateEntityStatus(action[0].entity_type, action[0].entity_id, 'rejected', tenantId);
 
     // Notify requester about rejection
     await createApprovalNotification(
       action[0].requested_by,
       'APPROVAL_REJECTED',
-      `Request ditolak: ${action[0].description} - Alasan: ${reason}`,
-      { requestId: Number(requestId), entityType: action[0].entity_type, entityId: action[0].entity_id, reason }
+      `Request ditolak: ${action[0].description} - Alasan: ${normalizedReason}`,
+      { requestId: normalizedRequestId, entityType: action[0].entity_type, entityId: action[0].entity_id, reason: normalizedReason }
     );
 
     res.json({
@@ -526,11 +659,34 @@ export const delegateApproval = async (req: Request, res: Response, next: NextFu
         error: { code: 'VALIDATION_ERROR', message: 'Delegasi ke siapa harus diisi' }
       });
     }
+    const normalizedRequestId = positiveInteger(requestId);
+    const normalizedDelegateId = positiveInteger(delegateTo);
+    const normalizedReason = typeof reason === 'string' ? reason.trim() : '';
+    if (!normalizedRequestId || !normalizedDelegateId || normalizedReason.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Delegation payload is invalid' }
+      });
+    }
+    const delegate = await prisma.users.findFirst({
+      where: { id: normalizedDelegateId, tenant_id: tenantId, is_active: true },
+      select: { id: true }
+    });
+    if (!delegate) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Delegate user not found for the active tenant' }
+      });
+    }
 
     // Verify approver
-    const action: any[] = await prisma.$queryRawUnsafe<any[]>(`
-      SELECT * FROM "accounting"."approval_actions"
-      WHERE request_id = ${requestId} AND approver_id = ${userId} AND status = 'pending'
+    const action: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT aa.* FROM "accounting"."approval_actions" aa
+      JOIN "accounting"."approval_requests" ar ON aa.request_id = ar.id
+      WHERE aa.request_id = ${normalizedRequestId}
+      AND aa.approver_id = ${userId}
+      AND aa.status = 'pending'
+      AND ar.tenant_id = ${tenantId}
     `).catch(() => []);
 
     if (action.length === 0) {
@@ -541,17 +697,17 @@ export const delegateApproval = async (req: Request, res: Response, next: NextFu
     }
 
     // Update current action
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       UPDATE "accounting"."approval_actions"
-      SET status = 'delegated', comment = 'Didelegasikan ke user ${delegateTo}: ${reason || ''}', action_at = NOW()
+      SET status = 'delegated', comment = ${`Didelegasikan ke user ${normalizedDelegateId}: ${normalizedReason}`}, action_at = NOW()
       WHERE id = ${action[0].id}
     `);
 
     // Create new action for delegate
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       INSERT INTO "accounting"."approval_actions"
       (request_id, level, approver_id, delegated_from, status, created_at)
-      VALUES (${requestId}, ${action[0].level}, ${delegateTo}, ${userId}, 'pending', NOW())
+      VALUES (${normalizedRequestId}, ${action[0].level}, ${normalizedDelegateId}, ${userId}, 'pending', NOW())
     `);
 
     res.json({
@@ -570,8 +726,15 @@ export const getApprovalHistory = async (req: Request, res: Response, next: Next
   try {
     const tenantId = req.tenantId!;
     const { entityType, entityId } = req.params;
+    const normalizedEntityId = positiveInteger(entityId);
+    if (!ENTITY_TYPES.has(entityType as EntityType) || !normalizedEntityId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Entity type or ID is invalid' }
+      });
+    }
 
-    const history: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const history: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         ar.*,
         aa.level,
@@ -585,8 +748,8 @@ export const getApprovalHistory = async (req: Request, res: Response, next: Next
       JOIN "users" u ON aa.approver_id = u.id
       LEFT JOIN "users" u2 ON aa.delegated_from = u2.id
       WHERE ar.tenant_id = ${tenantId}
-      AND ar.entity_type = '${entityType}'
-      AND ar.entity_id = ${entityId}
+      AND ar.entity_type = ${entityType}
+      AND ar.entity_id = ${normalizedEntityId}
       ORDER BY ar.requested_at DESC, aa.level, aa.created_at
     `).catch(() => []);
 
@@ -617,16 +780,21 @@ export const getApprovalStats = async (req: Request, res: Response, next: NextFu
     const tenantId = req.tenantId!;
     const { period = 'month' } = req.query;
 
-    let dateFilter = '';
+    let dateFilter = Prisma.empty;
     if (period === 'week') {
-      dateFilter = `AND requested_at >= NOW() - INTERVAL '7 days'`;
+      dateFilter = Prisma.sql`AND requested_at >= NOW() - INTERVAL '7 days'`;
     } else if (period === 'month') {
-      dateFilter = `AND requested_at >= NOW() - INTERVAL '30 days'`;
+      dateFilter = Prisma.sql`AND requested_at >= NOW() - INTERVAL '30 days'`;
     } else if (period === 'year') {
-      dateFilter = `AND requested_at >= NOW() - INTERVAL '365 days'`;
+      dateFilter = Prisma.sql`AND requested_at >= NOW() - INTERVAL '365 days'`;
+    } else if (period !== 'all') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Statistics period is invalid' }
+      });
     }
 
-    const stats: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const stats: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         status,
         COUNT(*) as count,
@@ -638,7 +806,7 @@ export const getApprovalStats = async (req: Request, res: Response, next: NextFu
       GROUP BY status
     `).catch(() => []);
 
-    const byEntity: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const byEntity: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         entity_type,
         COUNT(*) as count,
@@ -687,7 +855,7 @@ export const getApprovalStats = async (req: Request, res: Response, next: NextFu
 // ============= HELPER FUNCTIONS =============
 
 async function getApprovalLevelsForAmount(tenantId: number, amount: number): Promise<ApprovalLevel[]> {
-  const config: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const config: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT * FROM "accounting"."approval_config"
     WHERE tenant_id = ${tenantId}
     ORDER BY level
@@ -711,23 +879,23 @@ async function getApprovalLevelsForAmount(tenantId: number, amount: number): Pro
 }
 
 async function getApproversForLevel(tenantId: number, roleName: string): Promise<any[]> {
-  return prisma.$queryRawUnsafe<any[]>(`
+  return prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT u.id, u.name, u.email
     FROM "users" u
     JOIN "roles" r ON u.role_id = r.id
     WHERE u.tenant_id = ${tenantId}
     AND u.is_active = true
-    AND r.name ILIKE '%${roleName}%'
+    AND LOWER(r.name) = LOWER(${roleName})
   `).catch(() => []);
 }
 
-async function isLevelComplete(requestId: number, level: number): Promise<boolean> {
+async function isLevelComplete(requestId: number, level: number, tenantId: number): Promise<boolean> {
   // Get approval config for this request
-  const request: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const request: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT ar.*, ac.mode, ac.required_approvers
     FROM "accounting"."approval_requests" ar
     LEFT JOIN "accounting"."approval_config" ac ON ar.tenant_id = ac.tenant_id AND ac.level = ${level}
-    WHERE ar.id = ${requestId}
+    WHERE ar.id = ${requestId} AND ar.tenant_id = ${tenantId}
   `).catch(() => []);
 
   if (request.length === 0) return false;
@@ -736,7 +904,7 @@ async function isLevelComplete(requestId: number, level: number): Promise<boolea
   const required = request[0].required_approvers || 1;
 
   // Count approvals for this level
-  const approved: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const approved: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COUNT(*) as count FROM "accounting"."approval_actions"
     WHERE request_id = ${requestId} AND level = ${level} AND status = 'approved'
   `).catch(() => [{ count: 0 }]);
@@ -749,7 +917,7 @@ async function isLevelComplete(requestId: number, level: number): Promise<boolea
     return approvedCount >= required;
   } else {
     // sequential - need all
-    const total: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const total: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT COUNT(*) as count FROM "accounting"."approval_actions"
       WHERE request_id = ${requestId} AND level = ${level}
     `).catch(() => [{ count: 1 }]);
@@ -758,35 +926,104 @@ async function isLevelComplete(requestId: number, level: number): Promise<boolea
   }
 }
 
-async function updateEntityStatus(entityType: string, entityId: number, status: string): Promise<void> {
-  const tableMap: Record<string, { table: string; schema: string }> = {
-    journal: { table: 'journal_entries', schema: 'accounting' },
-    payment: { table: 'ap_payments', schema: 'accounting' },
-    invoice: { table: 'accounts_receivable', schema: 'accounting' },
-    expense: { table: 'general_ledger', schema: 'accounting' }
-  };
+async function entityBelongsToTenant(
+  entityType: EntityType,
+  entityId: number,
+  tenantId: number
+): Promise<boolean> {
+  if (entityType === 'journal') {
+    return Boolean(await prisma.journal_entries.findFirst({
+      where: { id: entityId, tenant_id: tenantId },
+      select: { id: true }
+    }));
+  }
+  if (entityType === 'payment') {
+    return Boolean(await prisma.ap_payments.findFirst({
+      where: { id: entityId, tenant_id: tenantId },
+      select: { id: true }
+    }));
+  }
+  if (entityType === 'invoice') {
+    return Boolean(await prisma.accounts_receivable.findFirst({
+      where: { id: entityId, tenant_id: tenantId },
+      select: { id: true }
+    }));
+  }
+  if (entityType === 'budget') {
+    return Boolean(await prisma.budgets.findFirst({
+      where: { id: entityId, tenant_id: tenantId },
+      select: { id: true }
+    }));
+  }
+  if (entityType === 'purchase_order') {
+    return Boolean(await prisma.purchase_orders.findFirst({
+      where: { id: entityId, outlets: { tenant_id: tenantId } },
+      select: { id: true }
+    }));
+  }
+  return Boolean(await prisma.expenses.findFirst({
+    where: { id: entityId, outlets: { tenant_id: tenantId } },
+    select: { id: true }
+  }));
+}
 
-  const target = tableMap[entityType];
-  if (target) {
-    await prisma.$executeRawUnsafe(`
-      UPDATE "${target.schema}"."${target.table}"
-      SET status = '${status === 'approved' ? 'posted' : 'rejected'}', updated_at = NOW()
-      WHERE id = ${entityId}
+async function updateEntityStatus(
+  entityType: string,
+  entityId: number,
+  status: 'approved' | 'rejected',
+  tenantId: number
+): Promise<void> {
+  const persistedStatus = status === 'approved' ? 'posted' : 'rejected';
+  if (entityType === 'journal') {
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE "accounting"."journal_entries"
+      SET status = ${persistedStatus}, updated_at = NOW()
+      WHERE id = ${entityId} AND tenant_id = ${tenantId}
+    `).catch(() => {});
+  } else if (entityType === 'invoice') {
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE "accounting"."accounts_receivable"
+      SET status = ${persistedStatus}, updated_at = NOW()
+      WHERE id = ${entityId} AND tenant_id = ${tenantId}
     `).catch(() => {});
   }
 }
 
-async function getEntityDetails(entityType: string, entityId: number): Promise<any> {
-  const queries: Record<string, string> = {
-    journal: `SELECT * FROM "accounting"."journal_entries" WHERE id = ${entityId}`,
-    payment: `SELECT * FROM "accounting"."ap_payments" WHERE id = ${entityId}`,
-    invoice: `SELECT * FROM "accounting"."accounts_receivable" WHERE id = ${entityId}`
-  };
-
-  const query = queries[entityType];
-  if (!query) return null;
-
-  const result: any[] = await prisma.$queryRawUnsafe<any[]>(query).catch(() => []);
+async function getEntityDetails(entityType: string, entityId: number, tenantId: number): Promise<any> {
+  let result: any[] = [];
+  if (entityType === 'journal') {
+    result = await prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT * FROM "accounting"."journal_entries"
+      WHERE id = ${entityId} AND tenant_id = ${tenantId}
+    `).catch(() => []);
+  } else if (entityType === 'payment') {
+    result = await prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT * FROM "accounting"."ap_payments"
+      WHERE id = ${entityId} AND tenant_id = ${tenantId}
+    `).catch(() => []);
+  } else if (entityType === 'invoice') {
+    result = await prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT * FROM "accounting"."accounts_receivable"
+      WHERE id = ${entityId} AND tenant_id = ${tenantId}
+    `).catch(() => []);
+  } else if (entityType === 'budget') {
+    result = await prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT * FROM "accounting"."budgets"
+      WHERE id = ${entityId} AND tenant_id = ${tenantId}
+    `).catch(() => []);
+  } else if (entityType === 'purchase_order') {
+    result = await prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT po.* FROM "public"."purchase_orders" po
+      JOIN "public"."outlets" o ON po.outlet_id = o.id
+      WHERE po.id = ${entityId} AND o.tenant_id = ${tenantId}
+    `).catch(() => []);
+  } else if (entityType === 'expense') {
+    result = await prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT e.* FROM "public"."expenses" e
+      JOIN "public"."outlets" o ON e.outlet_id = o.id
+      WHERE e.id = ${entityId} AND o.tenant_id = ${tenantId}
+    `).catch(() => []);
+  }
   return result[0] || null;
 }
 
@@ -809,7 +1046,7 @@ function formatCurrency(value: number): string {
 }
 
 async function createApprovalTables(): Promise<void> {
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE TABLE IF NOT EXISTS "accounting"."approval_config" (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER NOT NULL,
@@ -827,7 +1064,7 @@ async function createApprovalTables(): Promise<void> {
     )
   `).catch(() => {});
 
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE TABLE IF NOT EXISTS "accounting"."approval_requests" (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER NOT NULL,
@@ -846,7 +1083,7 @@ async function createApprovalTables(): Promise<void> {
     )
   `).catch(() => {});
 
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE TABLE IF NOT EXISTS "accounting"."approval_actions" (
       id SERIAL PRIMARY KEY,
       request_id INTEGER NOT NULL REFERENCES "accounting"."approval_requests"(id),

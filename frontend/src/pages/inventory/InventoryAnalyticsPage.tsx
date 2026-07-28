@@ -77,7 +77,7 @@ export default function InventoryAnalyticsPage() {
   const fetchRecipeCosts = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/fnb/inventory-analytics/recipe-costs');
+      const res = await api.get('/inventory-analytics/recipe-costs');
       setRecipeCosts(res.data.data);
       setRecipeSummary(res.data.summary);
     } catch (err) {
@@ -90,7 +90,7 @@ export default function InventoryAnalyticsPage() {
   const fetchVariance = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/fnb/inventory-analytics/variance', {
+      const res = await api.get('/inventory-analytics/variance', {
         params: { start_date: startDate, end_date: endDate }
       });
       setVarianceData(res.data.data);
@@ -105,7 +105,7 @@ export default function InventoryAnalyticsPage() {
   const fetchMenuEngineering = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/fnb/inventory-analytics/menu-engineering', {
+      const res = await api.get('/inventory-analytics/menu-engineering', {
         params: { start_date: startDate, end_date: endDate }
       });
       setMenuItems(res.data.data);
@@ -119,7 +119,7 @@ export default function InventoryAnalyticsPage() {
 
   const recalculateAllCosts = async () => {
     try {
-      const res = await api.post('/fnb/inventory-analytics/recipe-costs/recalculate-all');
+      const res = await api.post('/inventory-analytics/recipe-costs/recalculate-all');
       toast.success(res.data.message);
       fetchRecipeCosts();
     } catch (err) {

@@ -56,6 +56,25 @@ export const validateRegister = [
     .notEmpty()
     .withMessage('Name is required')
     .trim(),
+  body('businessName')
+    .isString()
+    .notEmpty()
+    .withMessage('Business name is required')
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('Business name must be at most 255 characters'),
+  body('roleId')
+    .not()
+    .exists()
+    .withMessage('Role is assigned by the server'),
+  body('tenantId')
+    .not()
+    .exists()
+    .withMessage('Tenant is created by the server'),
+  body('outletId')
+    .not()
+    .exists()
+    .withMessage('Outlet is assigned after registration'),
   body('phone')
     .optional()
     .isMobilePhone('any')

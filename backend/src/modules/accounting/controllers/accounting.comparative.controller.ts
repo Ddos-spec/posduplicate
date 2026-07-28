@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -28,11 +29,11 @@ export const getComparativeIncomeStatement = async (req: Request, res: Response,
       });
     }
 
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const whereOutlet = outletId ? Prisma.sql`AND gl.outlet_id = ${Number(outletId)}` : Prisma.empty;
     const results: any[] = [];
 
     for (const period of periods) {
-      const data: any[] = await prisma.$queryRawUnsafe(`
+      const data: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT
           coa.account_type,
           coa.account_code,
@@ -43,8 +44,8 @@ export const getComparativeIncomeStatement = async (req: Request, res: Response,
         JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
         WHERE gl.tenant_id = ${tenantId}
         ${whereOutlet}
-        AND gl.transaction_date >= '${new Date(period.startDate).toISOString()}'
-        AND gl.transaction_date <= '${new Date(period.endDate).toISOString()}'
+        AND gl.transaction_date >= ${new Date(period.startDate).toISOString()}
+        AND gl.transaction_date <= ${new Date(period.endDate).toISOString()}
         AND coa.account_type IN ('REVENUE', 'EXPENSE', 'COGS')
         GROUP BY coa.account_type, coa.account_code, coa.account_name
         ORDER BY coa.account_code
@@ -132,13 +133,13 @@ export const getComparativeBalanceSheet = async (req: Request, res: Response, ne
       });
     }
 
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const whereOutlet = outletId ? Prisma.sql`AND gl.outlet_id = ${Number(outletId)}` : Prisma.empty;
     const results: any[] = [];
 
     for (const dateInfo of dates) {
       const asOfDate = new Date(dateInfo.date);
 
-      const data: any[] = await prisma.$queryRawUnsafe(`
+      const data: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT
           coa.account_type,
           coa.account_code,
@@ -149,7 +150,7 @@ export const getComparativeBalanceSheet = async (req: Request, res: Response, ne
         JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
         WHERE gl.tenant_id = ${tenantId}
         ${whereOutlet}
-        AND gl.transaction_date <= '${asOfDate.toISOString()}'
+        AND gl.transaction_date <= ${asOfDate.toISOString()}
         AND coa.account_type NOT IN ('REVENUE', 'EXPENSE', 'COGS')
         GROUP BY coa.account_type, coa.account_code, coa.account_name
         ORDER BY coa.account_code
@@ -222,7 +223,7 @@ export const getYearOverYearAnalysis = async (req: Request, res: Response, next:
 
     const yearsCount = parseInt(years as string);
     const currentYear = new Date().getFullYear();
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const whereOutlet = outletId ? Prisma.sql`AND gl.outlet_id = ${Number(outletId)}` : Prisma.empty;
 
     const results: any[] = [];
 
@@ -246,7 +247,7 @@ export const getYearOverYearAnalysis = async (req: Request, res: Response, next:
           accountTypes = "'REVENUE'";
       }
 
-      const data: any[] = await prisma.$queryRawUnsafe(`
+      const data: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT
           coa.account_type,
           EXTRACT(MONTH FROM gl.transaction_date) as month,
@@ -256,8 +257,8 @@ export const getYearOverYearAnalysis = async (req: Request, res: Response, next:
         JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
         WHERE gl.tenant_id = ${tenantId}
         ${whereOutlet}
-        AND gl.transaction_date >= '${startDate.toISOString()}'
-        AND gl.transaction_date <= '${endDate.toISOString()}'
+        AND gl.transaction_date >= ${startDate.toISOString()}
+        AND gl.transaction_date <= ${endDate.toISOString()}
         AND coa.account_type IN (${accountTypes})
         GROUP BY coa.account_type, EXTRACT(MONTH FROM gl.transaction_date)
         ORDER BY month
@@ -349,8 +350,8 @@ export const getBudgetVsActualComparative = async (req: Request, res: Response, 
 
       if (!period) continue;
 
-      const whereOutlet = outletId ? `AND outlet_id = ${outletId}` : '';
-      const whereOutletGL = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+      const whereOutlet = outletId ? Prisma.sql`AND outlet_id = ${Number(outletId)}` : Prisma.empty;
+      const whereOutletGL = outletId ? Prisma.sql`AND gl.outlet_id = ${Number(outletId)}` : Prisma.empty;
 
       // Get budgets
       const budgets = await prisma.budgets.findMany({
@@ -363,7 +364,7 @@ export const getBudgetVsActualComparative = async (req: Request, res: Response, 
       });
 
       // Get actuals
-      const actuals: any[] = await prisma.$queryRawUnsafe(`
+      const actuals: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT
           gl.account_id,
           SUM(CASE WHEN coa.normal_balance = 'DEBIT' THEN gl.debit_amount - gl.credit_amount
@@ -372,8 +373,8 @@ export const getBudgetVsActualComparative = async (req: Request, res: Response, 
         JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
         WHERE gl.tenant_id = ${tenantId}
         ${whereOutletGL}
-        AND gl.transaction_date >= '${period.start_date.toISOString()}'
-        AND gl.transaction_date <= '${period.end_date.toISOString()}'
+        AND gl.transaction_date >= ${period.start_date.toISOString()}
+        AND gl.transaction_date <= ${period.end_date.toISOString()}
         GROUP BY gl.account_id
       `);
 

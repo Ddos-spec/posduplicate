@@ -28,6 +28,14 @@ jest.mock('../../src/middlewares/tenant.middleware', () => ({
     req.userRole = 'Owner';
     next();
   },
+  requireTenantContext: (req: any, _res: any, next: any) => {
+    req.tenantId = req.tenantId || 1;
+    next();
+  },
+  tenantOutletScopeMiddleware: (req: any, _res: any, next: any) => {
+    req.tenantOutletIds = [1];
+    next();
+  },
   ownerOnly: (_req: any, _res: any, next: any) => next(),
   superAdminOnly: (_req: any, _res: any, next: any) => next()
 }));
@@ -117,6 +125,15 @@ describe('Accounting API Integration (Mocked DB)', () => {
             expect(res.status).toBe(400);
             expect(res.body.success).toBe(false);
             expect(res.body.error.code).toBe('NOT_BALANCED');
+        });
+    });
+
+    describe('Private accounting attachments', () => {
+        it('does not expose accounting files through the public static route', async () => {
+            const res = await request(app).get('/uploads/accounting/invoice/1/secret.pdf');
+
+            expect(res.status).toBe(404);
+            expect(res.body.error.code).toBe('NOT_FOUND');
         });
     });
 

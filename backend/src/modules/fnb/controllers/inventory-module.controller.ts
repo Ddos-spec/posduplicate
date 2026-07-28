@@ -1,6 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 
+type OutletFilter = number | { in: number[] };
+
+const scopedOutletFilter = (req: Request, rawOutletId?: unknown): OutletFilter | null => {
+  const outletIds = req.tenantOutletIds ?? [];
+  if (rawOutletId === undefined || rawOutletId === null || rawOutletId === '') {
+    return { in: outletIds };
+  }
+  const outletId = Number(rawOutletId);
+  if (!Number.isInteger(outletId) || !outletIds.includes(outletId)) return null;
+  return outletId;
+};
+
 async function hasValidOutlet(outletId: number | null | undefined) {
   if (!outletId) return false;
   const outlet = await prisma.outlets.findUnique({ where: { id: outletId }, select: { id: true } });
@@ -63,11 +75,14 @@ async function checkAndCreateAlerts(inventoryId: number, outletId: number) {
 export const getAllInventory = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, category, low_stock, business_type, status } = req.query;
-    const where: any = { is_active: true };
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { is_active: true, outlet_id: outletFilter };
 
     if (category) {
       where.category = category;
@@ -117,11 +132,14 @@ export const getAllInventory = async (req: Request, res: Response, _next: NextFu
 export const getInventoryStats = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id } = req.query;
-    const where: any = { is_active: true };
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { is_active: true, outlet_id: outletFilter };
 
     const items = await prisma.inventory.findMany({ where });
 
@@ -151,7 +169,7 @@ export const getInventoryStats = async (req: Request, res: Response, _next: Next
     // Count pending POs
     const pendingPOs = await prisma.purchase_orders.count({
       where: {
-        ...(outlet_id && { outlet_id: parseInt(outlet_id as string) }),
+        outlet_id: outletFilter,
         status: { in: ['draft', 'pending', 'approved', 'ordered'] }
       }
     });
@@ -176,11 +194,14 @@ export const getInventoryStats = async (req: Request, res: Response, _next: Next
 export const getInventoryAlerts = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, include_resolved } = req.query;
-    const where: any = {};
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { outlet_id: outletFilter };
 
     if (include_resolved !== 'true') {
       where.is_resolved = false;
@@ -211,11 +232,14 @@ export const getInventoryAlerts = async (req: Request, res: Response, _next: Nex
 export const generateAlerts = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id } = req.query;
-    const where: any = { is_active: true };
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { is_active: true, outlet_id: outletFilter };
 
     const items = await prisma.inventory.findMany({ where });
     const alertsToCreate: any[] = [];
@@ -317,6 +341,19 @@ export const resolveAlert = async (req: Request, res: Response, _next: NextFunct
     const { id } = req.params;
     const userId = req.userId;
 
+    const existingAlert = await prisma.inventory_alerts.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: req.tenantOutletIds ?? [] }
+      }
+    });
+    if (!existingAlert) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Alert tidak ditemukan' }
+      });
+    }
+
     const alert = await prisma.inventory_alerts.update({
       where: { id: parseInt(id) },
       data: {
@@ -340,11 +377,14 @@ export const resolveAlert = async (req: Request, res: Response, _next: NextFunct
 export const getInventoryForecast = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, days = 7 } = req.query;
-    const where: any = {};
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
     }
+    const where: any = { outlet_id: outletFilter };
 
     // Get forecast data from database
     const forecasts = await prisma.inventory_forecast.findMany({
@@ -361,52 +401,13 @@ export const getInventoryForecast = async (req: Request, res: Response, _next: N
       orderBy: { forecast_date: 'asc' }
     });
 
-    // If no forecast data, generate mock data based on historical transactions
+    // Never fabricate operational forecast data in the live API.
     if (forecasts.length === 0) {
-      const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-      const mockForecast = [];
-      const today = new Date();
-
-      for (let i = 0; i < parseInt(days as string); i++) {
-        const date = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
-        const dayOfWeek = date.getDay();
-        const dayName = dayNames[dayOfWeek];
-
-        // Weekend has higher usage
-        const baseUsage = 450;
-        let multiplier = 1;
-        let reason = 'Normal Day';
-
-        if (dayOfWeek === 5) { // Friday
-          multiplier = 1.3;
-          reason = 'Early Weekend (+30%)';
-        } else if (dayOfWeek === 6) { // Saturday
-          multiplier = 1.5;
-          reason = 'Peak Weekend (+50%)';
-        } else if (dayOfWeek === 0) { // Sunday
-          multiplier = 1.4;
-          reason = 'Family Day (+40%)';
-        } else if (dayOfWeek === 4) { // Thursday
-          multiplier = 1.1;
-          reason = 'Pre-Weekend';
-        }
-
-        const usage = Math.round(baseUsage * multiplier * (0.9 + Math.random() * 0.2));
-        const predicted = Math.round(usage * (1.05 + Math.random() * 0.1));
-
-        mockForecast.push({
-          day: dayName,
-          date: date.toISOString().split('T')[0],
-          usage,
-          predicted,
-          reason
-        });
-      }
-
       return res.json({
         success: true,
-        data: mockForecast,
-        source: 'generated'
+        data: [],
+        source: 'insufficient_data',
+        message: 'Belum ada data forecast untuk outlet dan rentang waktu ini'
       });
     }
 
@@ -425,8 +426,11 @@ export const getInventoryById = async (req: Request, res: Response, _next: NextF
   try {
     const { id } = req.params;
 
-    const item = await prisma.inventory.findUnique({
-      where: { id: parseInt(id) }
+    const item = await prisma.inventory.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: req.tenantOutletIds ?? [] }
+      }
     });
 
     if (!item) {
@@ -474,6 +478,28 @@ export const createInventory = async (req: Request, res: Response, _next: NextFu
         error: { code: 'VALIDATION_ERROR', message: 'Name, category, dan unit wajib diisi' }
       });
     }
+    const parsedOutletId = scopedOutletFilter(req, outletId);
+    if (typeof parsedOutletId !== 'number') {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'A valid tenant outlet is required' }
+      });
+    }
+    if (supplierId) {
+      const supplier = await prisma.suppliers.findFirst({
+        where: {
+          id: Number(supplierId),
+          outlet_id: parsedOutletId,
+          is_active: true
+        }
+      });
+      if (!supplier) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'INVALID_SUPPLIER_SCOPE', message: 'Supplier does not belong to this outlet' }
+        });
+      }
+    }
 
     const newItem = await prisma.inventory.create({
       data: {
@@ -487,7 +513,7 @@ export const createInventory = async (req: Request, res: Response, _next: NextFu
         stock_alert: parseFloat(stockAlert),
         track_cost: trackCost,
         cost_amount: parseFloat(costAmount),
-        outlet_id: outletId ? parseInt(outletId) : null,
+        outlet_id: parsedOutletId,
         supplier_id: supplierId ? parseInt(supplierId) : null,
         business_type: businessType,
         days_cover: daysCover ? parseFloat(daysCover) : null,
@@ -538,8 +564,11 @@ export const updateInventory = async (req: Request, res: Response, _next: NextFu
     } = req.body;
 
     // Check if item exists
-    const existingItem = await prisma.inventory.findUnique({
-      where: { id: parseInt(id) }
+    const existingItem = await prisma.inventory.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: req.tenantOutletIds ?? [] }
+      }
     });
 
     if (!existingItem) {
@@ -547,6 +576,32 @@ export const updateInventory = async (req: Request, res: Response, _next: NextFu
         success: false,
         error: { code: 'NOT_FOUND', message: 'Item tidak ditemukan' }
       });
+    }
+    let nextOutletId = existingItem.outlet_id;
+    if (outletId !== undefined) {
+      const scopedOutletId = scopedOutletFilter(req, outletId);
+      if (typeof scopedOutletId !== 'number') {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+        });
+      }
+      nextOutletId = scopedOutletId;
+    }
+    if (supplierId) {
+      const supplier = await prisma.suppliers.findFirst({
+        where: {
+          id: Number(supplierId),
+          outlet_id: nextOutletId!,
+          is_active: true
+        }
+      });
+      if (!supplier) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'INVALID_SUPPLIER_SCOPE', message: 'Supplier does not belong to this outlet' }
+        });
+      }
     }
 
     const updatedItem = await prisma.inventory.update({
@@ -562,7 +617,7 @@ export const updateInventory = async (req: Request, res: Response, _next: NextFu
         ...(stockAlert !== undefined && { stock_alert: parseFloat(stockAlert) }),
         ...(trackCost !== undefined && { track_cost: trackCost }),
         ...(costAmount !== undefined && { cost_amount: parseFloat(costAmount) }),
-        ...(outletId !== undefined && { outlet_id: outletId ? parseInt(outletId) : null }),
+        ...(outletId !== undefined && { outlet_id: nextOutletId }),
         ...(supplierId !== undefined && { supplier_id: supplierId ? parseInt(supplierId) : null }),
         ...(businessType !== undefined && { business_type: businessType }),
         ...(daysCover !== undefined && { days_cover: daysCover ? parseFloat(daysCover) : null }),
@@ -590,8 +645,11 @@ export const deleteInventory = async (req: Request, res: Response, _next: NextFu
   try {
     const { id } = req.params;
 
-    const existingItem = await prisma.inventory.findUnique({
-      where: { id: parseInt(id) }
+    const existingItem = await prisma.inventory.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: req.tenantOutletIds ?? [] }
+      }
     });
 
     if (!existingItem) {
@@ -619,14 +677,18 @@ export const deleteInventory = async (req: Request, res: Response, _next: NextFu
 export const getLowStockItems = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id } = req.query;
+    const outletFilter = scopedOutletFilter(req, outlet_id);
+    if (!outletFilter) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
+    }
     const where: any = {
       is_active: true,
-      alert: true
+      alert: true,
+      outlet_id: outletFilter
     };
-
-    if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
-    }
 
     const items = await prisma.inventory.findMany({
       where,
@@ -649,10 +711,13 @@ export const getLowStockItems = async (req: Request, res: Response, _next: NextF
 };
 
 // Get inventory categories
-export const getInventoryCategories = async (_req: Request, res: Response, _next: NextFunction) => {
+export const getInventoryCategories = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const categories = await prisma.inventory.findMany({
-      where: { is_active: true },
+      where: {
+        is_active: true,
+        outlet_id: { in: req.tenantOutletIds ?? [] }
+      },
       select: { category: true },
       distinct: ['category']
     });
@@ -681,8 +746,11 @@ export const adjustInventoryStock = async (req: Request, res: Response, _next: N
       });
     }
 
-    const item = await prisma.inventory.findUnique({
-      where: { id: parseInt(id) }
+    const item = await prisma.inventory.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: req.tenantOutletIds ?? [] }
+      }
     });
 
     if (!item) {

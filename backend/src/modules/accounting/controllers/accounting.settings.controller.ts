@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 
 /**
@@ -549,11 +550,12 @@ export const updateSettings = async (req: Request, res: Response, next: NextFunc
 
     // Save to database (upsert pattern)
     try {
-      await prisma.$executeRawUnsafe(`
+      const serializedSettings = JSON.stringify(newSettings);
+      await prisma.$executeRaw(Prisma.sql`
         INSERT INTO "tenant_settings" (tenant_id, setting_key, setting_value, updated_at)
-        VALUES (${tenantId}, 'accounting', '${JSON.stringify(newSettings)}', NOW())
+        VALUES (${tenantId}, 'accounting', ${serializedSettings}, NOW())
         ON CONFLICT (tenant_id, setting_key)
-        DO UPDATE SET setting_value = '${JSON.stringify(newSettings)}', updated_at = NOW()
+        DO UPDATE SET setting_value = ${serializedSettings}, updated_at = NOW()
       `);
     } catch {
       // Table might not exist, create simple storage
@@ -639,11 +641,12 @@ export const updateSectionSettings = async (req: Request, res: Response, next: N
     };
 
     try {
-      await prisma.$executeRawUnsafe(`
+      const serializedSettings = JSON.stringify(newSettings);
+      await prisma.$executeRaw(Prisma.sql`
         INSERT INTO "tenant_settings" (tenant_id, setting_key, setting_value, updated_at)
-        VALUES (${tenantId}, 'accounting', '${JSON.stringify(newSettings)}', NOW())
+        VALUES (${tenantId}, 'accounting', ${serializedSettings}, NOW())
         ON CONFLICT (tenant_id, setting_key)
-        DO UPDATE SET setting_value = '${JSON.stringify(newSettings)}', updated_at = NOW()
+        DO UPDATE SET setting_value = ${serializedSettings}, updated_at = NOW()
       `);
     } catch {
       console.log('Settings table not available');
@@ -735,11 +738,13 @@ export const updateRoleSettings = async (req: Request, res: Response, next: Next
     const newSettings = { ...currentSettings, ...updates };
 
     try {
-      await prisma.$executeRawUnsafe(`
+      const serializedSettings = JSON.stringify(newSettings);
+      const settingKey = `role_${normalizedRole}`;
+      await prisma.$executeRaw(Prisma.sql`
         INSERT INTO "tenant_settings" (tenant_id, setting_key, setting_value, updated_at)
-        VALUES (${tenantId}, 'role_${normalizedRole}', '${JSON.stringify(newSettings)}', NOW())
+        VALUES (${tenantId}, ${settingKey}, ${serializedSettings}, NOW())
         ON CONFLICT (tenant_id, setting_key)
-        DO UPDATE SET setting_value = '${JSON.stringify(newSettings)}', updated_at = NOW()
+        DO UPDATE SET setting_value = ${serializedSettings}, updated_at = NOW()
       `);
     } catch {
       console.log('Settings table not available');
@@ -779,9 +784,9 @@ export const resetSettings = async (req: Request, res: Response, next: NextFunct
       };
 
       try {
-        await prisma.$executeRawUnsafe(`
+        await prisma.$executeRaw(Prisma.sql`
           UPDATE "tenant_settings"
-          SET setting_value = '${JSON.stringify(newSettings)}', updated_at = NOW()
+          SET setting_value = ${JSON.stringify(newSettings)}, updated_at = NOW()
           WHERE tenant_id = ${tenantId} AND setting_key = 'accounting'
         `);
       } catch {
@@ -796,7 +801,7 @@ export const resetSettings = async (req: Request, res: Response, next: NextFunct
     } else {
       // Reset all settings
       try {
-        await prisma.$executeRawUnsafe(`
+        await prisma.$executeRaw(Prisma.sql`
           DELETE FROM "tenant_settings"
           WHERE tenant_id = ${tenantId} AND setting_key = 'accounting'
         `);
@@ -998,11 +1003,12 @@ export const importSettings = async (req: Request, res: Response, next: NextFunc
     };
 
     try {
-      await prisma.$executeRawUnsafe(`
+      const serializedSettings = JSON.stringify(newSettings);
+      await prisma.$executeRaw(Prisma.sql`
         INSERT INTO "tenant_settings" (tenant_id, setting_key, setting_value, updated_at)
-        VALUES (${tenantId}, 'accounting', '${JSON.stringify(newSettings)}', NOW())
+        VALUES (${tenantId}, 'accounting', ${serializedSettings}, NOW())
         ON CONFLICT (tenant_id, setting_key)
-        DO UPDATE SET setting_value = '${JSON.stringify(newSettings)}', updated_at = NOW()
+        DO UPDATE SET setting_value = ${serializedSettings}, updated_at = NOW()
       `);
     } catch {
       console.log('Settings table not available');

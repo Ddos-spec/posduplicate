@@ -1,13 +1,13 @@
 import express from 'express';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import * as psakController from '../controllers/accounting.psak.controller';
 
 const router = express.Router();
 
 // Middleware
 router.use(authMiddleware);
-router.use(tenantMiddleware);
+router.use(tenantMiddleware, requireTenantContext);
 
 // ===== PSAK 1: Laporan Posisi Keuangan (Neraca) =====
 /**

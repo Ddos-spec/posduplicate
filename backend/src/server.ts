@@ -2,7 +2,9 @@ import express, { Express, Request, Response, NextFunction, Router } from 'expre
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
 import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -19,6 +21,7 @@ import adminRoutes from './modules/admin';
 import medsosRoutes from './modules/medsos';
 import scheduler from './services/scheduler.service';
 import { swaggerSpec } from './config/swagger';
+import prisma from './utils/prisma';
 
 const app: Express = express();
 const httpServer = createServer(app);
@@ -56,16 +59,13 @@ io.on('connection', (socket) => {
 app.set('trust proxy', 1);
 
 // Middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl)
     if (!origin) {
-      callback(null, true);
-      return;
-    }
-
-    // Allow all Vercel deployments
-    if (origin.includes('.vercel.app')) {
       callback(null, true);
       return;
     }
@@ -85,19 +85,47 @@ app.use(cors({
     'Content-Type',
     'Authorization',
     'X-Tenant-ID',
+    'X-Integration-ID',
     'Cache-Control',
     'Pragma',
     'Expires',
     'If-Modified-Since'
   ]
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({
+  limit: '1mb',
+  verify: (req, _res, buffer) => {
+    (req as Request).rawBody = Buffer.from(buffer);
+  }
+}));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(morgan('dev'));
 
-// Serve static files from uploads directory
-// Use process.cwd() to match the upload middleware path
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/health' || req.path === '/ready'
+}));
+
+// Accounting attachments are private and must only be downloaded through the
+// authenticated, tenant-scoped attachment controller.
+app.use('/uploads/accounting', (_req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    error: { code: 'NOT_FOUND', message: 'File not found' }
+  });
+});
+
+// Serve tenant-scoped public media (for example product images).
+// Use process.cwd() to match the upload middleware path.
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
+  dotfiles: 'deny',
+  index: false,
+  fallthrough: false,
+  maxAge: '1h'
+}));
 
 // All routes live on this router so it can be mounted both at "/" (the
 // mypos.my-aicustom.com subdomain) and at "/mypos" (the my-aicustom.com/mypos
@@ -141,6 +169,24 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
     message: 'OmniPilot AI API is running',
     timestamp: new Date().toISOString()
   });
+});
+
+apiRouter.get('/ready', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return res.json({
+      status: 'READY',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Readiness check failed:', error);
+    return res.status(503).json({
+      status: 'NOT_READY',
+      database: 'unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // API Documentation (Swagger)
@@ -195,8 +241,12 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
 
   // Simple File Logging for easier debugging
   try {
-    const logMessage = `[${new Date().toISOString()}] ${req.method} ${req.path} - Error: ${err.message}\nStack: ${err.stack}\n\n`;
-    fs.appendFileSync(path.join(__dirname, '../server-error.log'), logMessage);
+    const safeMessage = String(err.message || 'Unknown error').replace(/[\r\n]/g, ' ');
+    const stack = process.env.NODE_ENV === 'development' ? `\nStack: ${err.stack}` : '';
+    const logMessage = `[${new Date().toISOString()}] ${req.method} ${req.path} - Error: ${safeMessage}${stack}\n\n`;
+    fs.appendFile(path.join(__dirname, '../server-error.log'), logMessage, (logErr) => {
+      if (logErr) console.error('Failed to write to error log file:', logErr);
+    });
   } catch (logErr) {
     console.error('Failed to write to error log file:', logErr);
   }

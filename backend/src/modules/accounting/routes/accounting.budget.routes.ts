@@ -1,8 +1,11 @@
 import { Router } from 'express';
+import { authMiddleware } from '../../../middlewares/auth.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { roleMiddleware } from '../../../middlewares/role.middleware';
 import * as budgetController from '../controllers/accounting.budget.controller';
 
 const router = Router();
+router.use(authMiddleware, tenantMiddleware, requireTenantContext);
 
 // Budget CRUD
 /**

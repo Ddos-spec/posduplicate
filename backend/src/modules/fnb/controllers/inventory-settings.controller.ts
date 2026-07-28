@@ -1,27 +1,34 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 
+const getScopedOutletId = (req: Request, rawOutletId: unknown): number | null => {
+  const outletId = Number(rawOutletId);
+  if (!Number.isInteger(outletId) || outletId <= 0) return null;
+  return (req.tenantOutletIds ?? []).includes(outletId) ? outletId : null;
+};
+
 // Get inventory settings for outlet
 export const getInventorySettings = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id } = req.query;
 
-    if (!outlet_id) {
+    const outletId = getScopedOutletId(req, outlet_id);
+    if (!outletId) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'outlet_id wajib diisi' }
+        error: { code: 'INVALID_OUTLET', message: 'Outlet tidak ditemukan dalam tenant aktif' }
       });
     }
 
     let settings = await prisma.inventory_settings.findUnique({
-      where: { outlet_id: parseInt(outlet_id as string) }
+      where: { outlet_id: outletId }
     });
 
     // Create default settings if not exists
     if (!settings) {
       settings = await prisma.inventory_settings.create({
         data: {
-          outlet_id: parseInt(outlet_id as string),
+          outlet_id: outletId,
           business_type: 'fnb',
           low_stock_threshold_days: 3,
           auto_reorder_enabled: false,
@@ -58,16 +65,17 @@ export const updateInventorySettings = async (req: Request, res: Response, _next
       settings: customSettings
     } = req.body;
 
-    if (!outlet_id) {
+    const outletId = getScopedOutletId(req, outlet_id);
+    if (!outletId) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'outlet_id wajib diisi' }
+        error: { code: 'INVALID_OUTLET', message: 'Outlet tidak ditemukan dalam tenant aktif' }
       });
     }
 
     // Upsert settings
     const settings = await prisma.inventory_settings.upsert({
-      where: { outlet_id: parseInt(outlet_id as string) },
+      where: { outlet_id: outletId },
       update: {
         ...(businessType !== undefined && { business_type: businessType }),
         ...(lowStockThresholdDays !== undefined && { low_stock_threshold_days: lowStockThresholdDays }),
@@ -79,7 +87,7 @@ export const updateInventorySettings = async (req: Request, res: Response, _next
         ...(customSettings !== undefined && { settings: customSettings })
       },
       create: {
-        outlet_id: parseInt(outlet_id as string),
+        outlet_id: outletId,
         business_type: businessType || 'fnb',
         low_stock_threshold_days: lowStockThresholdDays || 3,
         auto_reorder_enabled: autoReorderEnabled || false,
@@ -170,10 +178,21 @@ export const getBusinessTypeFields = async (req: Request, res: Response, _next: 
 export const getInventorySummary = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id } = req.query;
-    const where: any = { is_active: true };
+    const outletIds = req.tenantOutletIds ?? [];
+    const where: any = {
+      is_active: true,
+      outlet_id: { in: outletIds }
+    };
 
     if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+      const outletId = getScopedOutletId(req, outlet_id);
+      if (!outletId) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Outlet tidak berada dalam tenant aktif' }
+        });
+      }
+      where.outlet_id = outletId;
     }
 
     const items = await prisma.inventory.findMany({ where });

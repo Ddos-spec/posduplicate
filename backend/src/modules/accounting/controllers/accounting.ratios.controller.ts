@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -49,10 +50,10 @@ export const getFinancialRatios = async (req: Request, res: Response, next: Next
 
     const endDate = asOfDate ? new Date(asOfDate as string) : new Date();
     const startOfYear = new Date(endDate.getFullYear(), 0, 1);
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const whereOutlet = outletId ? Prisma.sql`AND gl.outlet_id = ${Number(outletId)}` : Prisma.empty;
 
     // Get all account balances
-    const balances: any[] = await prisma.$queryRawUnsafe(`
+    const balances: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         coa.account_type,
         coa.category,
@@ -62,12 +63,12 @@ export const getFinancialRatios = async (req: Request, res: Response, next: Next
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date <= '${endDate.toISOString()}'
+      AND gl.transaction_date <= ${endDate.toISOString()}
       GROUP BY coa.account_type, coa.category
     `);
 
     // Get YTD Income Statement
-    const incomeData: any[] = await prisma.$queryRawUnsafe(`
+    const incomeData: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         coa.account_type,
         SUM(CASE WHEN coa.normal_balance = 'CREDIT' THEN gl.credit_amount - gl.debit_amount
@@ -76,8 +77,8 @@ export const getFinancialRatios = async (req: Request, res: Response, next: Next
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${startOfYear.toISOString()}'
-      AND gl.transaction_date <= '${endDate.toISOString()}'
+      AND gl.transaction_date >= ${startOfYear.toISOString()}
+      AND gl.transaction_date <= ${endDate.toISOString()}
       AND coa.account_type IN ('REVENUE', 'EXPENSE', 'COGS')
       GROUP BY coa.account_type
     `);
@@ -234,8 +235,8 @@ export const getKPIDashboard = async (req: Request, res: Response, next: NextFun
   try {
     const tenantId = req.tenantId!;
     const { period = 'monthly', outletId } = req.query;
-    const whereOutlet = outletId ? `AND outlet_id = ${outletId}` : '';
-    const whereOutletGL = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const whereOutlet = outletId ? Prisma.sql`AND outlet_id = ${Number(outletId)}` : Prisma.empty;
+    const whereOutletGL = outletId ? Prisma.sql`AND gl.outlet_id = ${Number(outletId)}` : Prisma.empty;
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -243,46 +244,46 @@ export const getKPIDashboard = async (req: Request, res: Response, next: NextFun
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
     // Current Month Revenue
-    const currentRevenue: any[] = await prisma.$queryRawUnsafe(`
+    const currentRevenue: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT COALESCE(SUM(gl.credit_amount - gl.debit_amount), 0) as total
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutletGL}
       AND coa.account_type = 'REVENUE'
-      AND gl.transaction_date >= '${startOfMonth.toISOString()}'
+      AND gl.transaction_date >= ${startOfMonth.toISOString()}
     `);
 
     // Last Month Revenue (for comparison)
-    const lastRevenue: any[] = await prisma.$queryRawUnsafe(`
+    const lastRevenue: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT COALESCE(SUM(gl.credit_amount - gl.debit_amount), 0) as total
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutletGL}
       AND coa.account_type = 'REVENUE'
-      AND gl.transaction_date >= '${startOfLastMonth.toISOString()}'
-      AND gl.transaction_date <= '${endOfLastMonth.toISOString()}'
+      AND gl.transaction_date >= ${startOfLastMonth.toISOString()}
+      AND gl.transaction_date <= ${endOfLastMonth.toISOString()}
     `);
 
     // Transaction Count
-    const txCount: any[] = await prisma.$queryRawUnsafe(`
+    const txCount: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT COUNT(*) as count
       FROM "transactions"
       WHERE outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})
-      ${whereOutlet.replace('outlet_id', 'outlet_id')}
+      ${whereOutlet}
       AND status = 'completed'
-      AND created_at >= '${startOfMonth.toISOString()}'
+      AND created_at >= ${startOfMonth.toISOString()}
     `);
 
     // Average Transaction Value
-    const avgTx: any[] = await prisma.$queryRawUnsafe(`
+    const avgTx: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT COALESCE(AVG(total), 0) as avg
       FROM "transactions"
       WHERE outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})
-      ${whereOutlet.replace('outlet_id', 'outlet_id')}
+      ${whereOutlet}
       AND status = 'completed'
-      AND created_at >= '${startOfMonth.toISOString()}'
+      AND created_at >= ${startOfMonth.toISOString()}
     `);
 
     // Outstanding Receivables
@@ -300,7 +301,7 @@ export const getKPIDashboard = async (req: Request, res: Response, next: NextFun
     `;
 
     // Cash Balance
-    const cashBalance: any[] = await prisma.$queryRawUnsafe(`
+    const cashBalance: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT COALESCE(SUM(gl.debit_amount - gl.credit_amount), 0) as total
       FROM "accounting"."general_ledger" gl
       JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
@@ -369,7 +370,7 @@ export const getTrendAnalysis = async (req: Request, res: Response, next: NextFu
   try {
     const tenantId = req.tenantId!;
     const { months = 12, outletId, metrics = 'revenue,expense,profit' } = req.query;
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const whereOutlet = outletId ? Prisma.sql`AND gl.outlet_id = ${Number(outletId)}` : Prisma.empty;
     const monthsCount = parseInt(months as string);
     const requestedMetrics = (metrics as string).split(',');
 
@@ -382,7 +383,7 @@ export const getTrendAnalysis = async (req: Request, res: Response, next: NextFu
       const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
       endOfMonth.setHours(23, 59, 59, 999);
 
-      const monthData: any[] = await prisma.$queryRawUnsafe(`
+      const monthData: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT
           coa.account_type,
           SUM(CASE WHEN coa.normal_balance = 'CREDIT' THEN gl.credit_amount - gl.debit_amount
@@ -391,8 +392,8 @@ export const getTrendAnalysis = async (req: Request, res: Response, next: NextFu
         JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
         WHERE gl.tenant_id = ${tenantId}
         ${whereOutlet}
-        AND gl.transaction_date >= '${startOfMonth.toISOString()}'
-        AND gl.transaction_date <= '${endOfMonth.toISOString()}'
+        AND gl.transaction_date >= ${startOfMonth.toISOString()}
+        AND gl.transaction_date <= ${endOfMonth.toISOString()}
         AND coa.account_type IN ('REVENUE', 'EXPENSE', 'COGS')
         GROUP BY coa.account_type
       `);

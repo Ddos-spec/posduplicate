@@ -90,7 +90,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
-      window.location.href = '/login';
+      const basePath = window.location.pathname.startsWith('/myerp') ? '/myerp' : '';
+      window.location.assign(`${basePath}/login`);
     }
     return Promise.reject(error);
   }

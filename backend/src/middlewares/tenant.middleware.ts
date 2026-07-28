@@ -11,6 +11,7 @@ declare global {
       userId?: number;
       userRole?: string;
       outletId?: number;
+      tenantOutletIds?: number[];
     }
   }
 }
@@ -28,6 +29,18 @@ export const tenantMiddleware = async (
   try {
     const requestedTenantHeader = req.header('X-Tenant-ID');
     const requestedTenantId = requestedTenantHeader ? Number(requestedTenantHeader) : null;
+    if (
+      requestedTenantHeader &&
+      (!Number.isInteger(requestedTenantId) || Number(requestedTenantId) <= 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_TENANT_ID',
+          message: 'X-Tenant-ID must be a positive integer'
+        }
+      });
+    }
 
     // Get user info from JWT (assume auth middleware runs first)
     const userId = req.userId; // Set by auth middleware
@@ -78,7 +91,7 @@ export const tenantMiddleware = async (
       req.userRole = 'Super Admin';
       req.userId = user.id;
 
-      if (requestedTenantId && Number.isFinite(requestedTenantId)) {
+      if (requestedTenantId) {
         const scopedTenant = await prisma.tenants.findFirst({
           where: {
             id: requestedTenantId,
@@ -165,6 +178,64 @@ export const tenantMiddleware = async (
       error: {
         code: 'INTERNAL_ERROR',
         message: 'Internal server error'
+      }
+    });
+  }
+};
+
+/**
+ * Require an explicit tenant context. Super Admin callers must select a tenant
+ * through X-Tenant-ID before using tenant-owned operational endpoints.
+ */
+export const requireTenantContext = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.tenantId) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'TENANT_CONTEXT_REQUIRED',
+        message: 'Select a tenant before accessing this resource'
+      }
+    });
+  }
+  return next();
+};
+
+/**
+ * Preload the outlets owned by the active tenant for FNB controller scoping.
+ */
+export const tenantOutletScopeMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.tenantId) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'TENANT_CONTEXT_REQUIRED',
+          message: 'Tenant context is required'
+        }
+      });
+    }
+
+    const outlets = await prisma.outlets.findMany({
+      where: { tenant_id: req.tenantId },
+      select: { id: true }
+    });
+    req.tenantOutletIds = outlets.map((outlet) => outlet.id);
+    return next();
+  } catch (error) {
+    console.error('Tenant outlet scope middleware error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Unable to establish tenant outlet scope'
       }
     });
   }

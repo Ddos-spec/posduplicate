@@ -1,14 +1,28 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 
+const tenantOutletIds = (req: Request): number[] => req.tenantOutletIds ?? [];
+
+const isTenantOutlet = (req: Request, outletId: unknown): outletId is number => {
+  const parsed = Number(outletId);
+  return Number.isInteger(parsed) && parsed > 0 && tenantOutletIds(req).includes(parsed);
+};
+
 // Get all purchase orders
 export const getAllPurchaseOrders = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, status, supplier_id } = req.query;
-    const where: any = {};
+    const where: any = { outlet_id: { in: tenantOutletIds(req) } };
 
     if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+      const parsedOutletId = Number(outlet_id);
+      if (!isTenantOutlet(req, parsedOutletId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+        });
+      }
+      where.outlet_id = parsedOutletId;
     }
 
     if (status) {
@@ -55,8 +69,11 @@ export const getPurchaseOrderById = async (req: Request, res: Response, _next: N
   try {
     const { id } = req.params;
 
-    const order = await prisma.purchase_orders.findUnique({
-      where: { id: parseInt(id) },
+    const order = await prisma.purchase_orders.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      },
       include: {
         suppliers: { select: { id: true, name: true, phone: true } },
         users_created: { select: { id: true, name: true } },
@@ -128,8 +145,49 @@ export const createPurchaseOrder = async (req: Request, res: Response, _next: Ne
         error: { code: 'VALIDATION_ERROR', message: 'Outlet dan items wajib diisi' }
       });
     }
+    if (!isTenantOutlet(req, Number(outletId))) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+      });
+    }
 
-    const poNumber = await generatePONumber(outletId);
+    const parsedOutletId = Number(outletId);
+    const inventoryIds = [
+      ...new Set<number>(items.map((item: any): number => Number(item.inventoryId)))
+    ];
+    if (inventoryIds.some(id => !Number.isInteger(id) || id <= 0)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INVENTORY_ID', message: 'Inventory IDs must be positive integers' }
+      });
+    }
+    const validInventoryCount = await prisma.inventory.count({
+      where: {
+        id: { in: inventoryIds },
+        outlet_id: parsedOutletId,
+        is_active: true
+      }
+    });
+    if (validInventoryCount !== inventoryIds.length) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'INVALID_INVENTORY_SCOPE', message: 'One or more inventory items do not belong to this outlet' }
+      });
+    }
+    if (supplierId) {
+      const supplier = await prisma.suppliers.findFirst({
+        where: { id: Number(supplierId), outlet_id: parsedOutletId, is_active: true }
+      });
+      if (!supplier) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'INVALID_SUPPLIER_SCOPE', message: 'Supplier does not belong to this outlet' }
+        });
+      }
+    }
+
+    const poNumber = await generatePONumber(parsedOutletId);
 
     // Calculate totals
     let subtotal = 0;
@@ -147,7 +205,7 @@ export const createPurchaseOrder = async (req: Request, res: Response, _next: Ne
 
     const order = await prisma.purchase_orders.create({
       data: {
-        outlet_id: outletId,
+        outlet_id: parsedOutletId,
         po_number: poNumber,
         supplier_id: supplierId || null,
         status: 'draft',
@@ -186,8 +244,11 @@ export const updatePurchaseOrder = async (req: Request, res: Response, _next: Ne
     const { id } = req.params;
     const { supplierId, expectedDate, notes, items } = req.body;
 
-    const existingPO = await prisma.purchase_orders.findUnique({
-      where: { id: parseInt(id) }
+    const existingPO = await prisma.purchase_orders.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      }
     });
 
     if (!existingPO) {
@@ -204,9 +265,48 @@ export const updatePurchaseOrder = async (req: Request, res: Response, _next: Ne
       });
     }
 
+    if (supplierId !== undefined && supplierId !== null) {
+      const supplier = await prisma.suppliers.findFirst({
+        where: {
+          id: Number(supplierId),
+          outlet_id: existingPO.outlet_id,
+          is_active: true
+        }
+      });
+      if (!supplier) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'INVALID_SUPPLIER_SCOPE', message: 'Supplier does not belong to this outlet' }
+        });
+      }
+    }
+
     // Calculate new totals if items provided
     let subtotal = existingPO.subtotal;
     if (items && items.length > 0) {
+      const inventoryIds = [
+        ...new Set<number>(items.map((item: any): number => Number(item.inventoryId)))
+      ];
+      if (inventoryIds.some(id => !Number.isInteger(id) || id <= 0)) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_INVENTORY_ID', message: 'Inventory IDs must be positive integers' }
+        });
+      }
+      const validInventoryCount = await prisma.inventory.count({
+        where: {
+          id: { in: inventoryIds },
+          outlet_id: existingPO.outlet_id,
+          is_active: true
+        }
+      });
+      if (validInventoryCount !== inventoryIds.length) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'INVALID_INVENTORY_SCOPE', message: 'One or more inventory items do not belong to this outlet' }
+        });
+      }
+
       subtotal = 0 as unknown as typeof existingPO.subtotal;
 
       // Delete old items
@@ -275,8 +375,11 @@ export const updatePOStatus = async (req: Request, res: Response, _next: NextFun
       });
     }
 
-    const existingPO = await prisma.purchase_orders.findUnique({
-      where: { id: parseInt(id) }
+    const existingPO = await prisma.purchase_orders.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      }
     });
 
     if (!existingPO) {
@@ -320,8 +423,11 @@ export const receivePOItems = async (req: Request, res: Response, _next: NextFun
     const { id } = req.params;
     const { items } = req.body; // Array of { itemId, receivedQty }
 
-    const existingPO = await prisma.purchase_orders.findUnique({
-      where: { id: parseInt(id) },
+    const existingPO = await prisma.purchase_orders.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      },
       include: { purchase_order_items: true }
     });
 
@@ -409,8 +515,11 @@ export const deletePurchaseOrder = async (req: Request, res: Response, _next: Ne
   try {
     const { id } = req.params;
 
-    const existingPO = await prisma.purchase_orders.findUnique({
-      where: { id: parseInt(id) }
+    const existingPO = await prisma.purchase_orders.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      }
     });
 
     if (!existingPO) {
@@ -449,10 +558,20 @@ export const deletePurchaseOrder = async (req: Request, res: Response, _next: Ne
 export const getPOSuggestions = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id } = req.query;
-    const where: any = { is_active: true };
+    const where: any = {
+      is_active: true,
+      outlet_id: { in: tenantOutletIds(req) }
+    };
 
     if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+      const parsedOutletId = Number(outlet_id);
+      if (!isTenantOutlet(req, parsedOutletId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+        });
+      }
+      where.outlet_id = parsedOutletId;
     }
 
     const items = await prisma.inventory.findMany({

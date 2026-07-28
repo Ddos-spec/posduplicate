@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -182,7 +183,7 @@ export const getMultiCurrencyBalances = async (req: Request, res: Response, next
     const { displayCurrency = 'IDR' } = req.query;
 
     // Get cash/bank accounts with their balances
-    const cashAccounts: any[] = await prisma.$queryRawUnsafe(`
+    const cashAccounts: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         coa.id,
         coa.account_code,

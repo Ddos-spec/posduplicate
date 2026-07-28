@@ -2,11 +2,12 @@ import { Router } from 'express';
 import { upload } from '../../../middleware/upload';
 import { uploadImage, uploadMultipleImages } from '../controllers/upload.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 
 const router = Router();
 
 // All upload routes require authentication
-router.use(authMiddleware);
+router.use(authMiddleware, tenantMiddleware, requireTenantContext);
 
 // Upload single image
 /**

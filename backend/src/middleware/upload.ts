@@ -1,6 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 
 // Create uploads directory if it doesn't exist
 // Use process.cwd() to ensure we always target the project root 'uploads' folder
@@ -13,15 +14,14 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Configure storage
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadsDir);
+  destination: (req, _file, cb) => {
+    const tenantDirectory = path.join(uploadsDir, String(req.tenantId));
+    fs.mkdirSync(tenantDirectory, { recursive: true });
+    cb(null, tenantDirectory);
   },
   filename: (_req, file, cb) => {
-    // Generate unique filename: timestamp-randomstring-originalname
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    const nameWithoutExt = path.basename(file.originalname, ext);
-    cb(null, `${nameWithoutExt}-${uniqueSuffix}${ext}`);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${crypto.randomBytes(24).toString('hex')}${ext}`);
   }
 });
 

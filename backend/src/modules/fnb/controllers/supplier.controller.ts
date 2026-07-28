@@ -2,14 +2,23 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
 
+const tenantOutletIds = (req: Request): number[] => req.tenantOutletIds ?? [];
+
 // Get all suppliers
 export const getSuppliers = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, active_only } = req.query;
-    const where: any = {};
+    const where: any = { outlet_id: { in: tenantOutletIds(req) } };
 
     if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+      const outletId = Number(outlet_id);
+      if (!tenantOutletIds(req).includes(outletId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+        });
+      }
+      where.outlet_id = outletId;
     }
 
     if (active_only === 'true') {
@@ -39,8 +48,11 @@ export const getSupplier = async (req: Request, res: Response, _next: NextFuncti
   try {
     const { id } = req.params;
 
-    const supplier = await prisma.suppliers.findUnique({
-      where: { id: parseInt(id) },
+    const supplier = await prisma.suppliers.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      },
       include: {
         expenses: {
           orderBy: { created_at: 'desc' },
@@ -93,6 +105,12 @@ export const createSupplier = async (req: Request, res: Response, _next: NextFun
       return res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'Outlet ID and name are required' }
+      });
+    }
+    if (!tenantOutletIds(req).includes(Number(outletId))) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
       });
     }
 
@@ -156,7 +174,12 @@ export const updateSupplier = async (req: Request, res: Response, _next: NextFun
     const { id } = req.params;
     const { name, phone, email, address, notes, isActive } = req.body;
 
-    const existing = await prisma.suppliers.findUnique({ where: { id: parseInt(id) } });
+    const existing = await prisma.suppliers.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      }
+    });
 
     if (!existing) {
       return res.status(404).json({
@@ -208,7 +231,12 @@ export const deleteSupplier = async (req: Request, res: Response, _next: NextFun
   try {
     const { id } = req.params;
 
-    const existing = await prisma.suppliers.findUnique({ where: { id: parseInt(id) } });
+    const existing = await prisma.suppliers.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      }
+    });
 
     if (!existing) {
       return res.status(404).json({
@@ -252,10 +280,17 @@ export const deleteSupplier = async (req: Request, res: Response, _next: NextFun
 export const getSupplierSpending = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, date_from, date_to } = req.query;
-    const where: any = {};
+    const where: any = { outlet_id: { in: tenantOutletIds(req) } };
 
     if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+      const outletId = Number(outlet_id);
+      if (!tenantOutletIds(req).includes(outletId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
+        });
+      }
+      where.outlet_id = outletId;
     }
 
     if (date_from || date_to) {
@@ -277,7 +312,10 @@ export const getSupplierSpending = async (req: Request, res: Response, _next: Ne
     );
 
     const suppliers = await prisma.suppliers.findMany({
-      where: { is_active: true, ...(outlet_id && { outlet_id: parseInt(outlet_id as string) }) },
+      where: {
+        is_active: true,
+        outlet_id: outlet_id ? Number(outlet_id) : { in: tenantOutletIds(req) }
+      },
       include: {
         expenses: {
           where,

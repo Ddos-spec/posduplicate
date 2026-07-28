@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
-import { generateApiKey } from '../../../utils/apiKeyGenerator';
+import { generateApiKey, hashApiKey } from '../../../utils/apiKeyGenerator';
 
 /**
  * Get ALL API keys for ALL tenants (Admin only)
@@ -139,9 +139,7 @@ export const createApiKey = async (req: Request, res: Response, next: NextFuncti
 
     // Generate new API key
     const apiKey = generateApiKey();
-    // Store plain text as requested for easier integration/lookup by middleware
-    // Security note: Ideally this should be hashed, but current middleware uses findUnique lookup
-    const hashedKey = apiKey; 
+    const hashedKey = hashApiKey(apiKey);
 
     // Create API key record
     const apiKeyRecord = await prisma.api_keys.create({

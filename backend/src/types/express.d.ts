@@ -6,5 +6,7 @@ declare module 'express-serve-static-core' {
     tenantId?: number;
     outletId?: number;
     roleName?: string;
+    userRole?: string;
+    tenantOutletIds?: number[];
   }
 }

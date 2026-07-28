@@ -5,7 +5,13 @@ import jwt from 'jsonwebtoken';
 import { createActivityLog } from './activity-log.controller';
 import { normalizeEmailIdentity } from '../../../utils/email';
 
-// const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Using inline for now as in original code
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  return secret;
+};
 
 /**
  * Login
@@ -22,13 +28,6 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       });
     }
 
-    // Find user
-    // Explicitly select fields to ensure we only get what exists in the DB
-    // and avoid any schema-DB mismatch (like missing printerSettings column)
-// This is a bulk semantic replacement, I will try to target specific blocks to be safe or use multiple replace calls.
-// Let's perform replacements block by block.
-
-// Fix 1: Login Select
     const user = await prisma.users.findUnique({
       where: { email },
       select: {
@@ -114,12 +113,12 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         tenantId: user.tenant_id,
         outletId: user.outlet_id
       },
-      process.env.JWT_SECRET || 'fallback-secret',
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
     // Remove password hash from response
-    const { passwordHash, ...userWithoutPassword } = user as any;
+    const { password_hash: _passwordHash, ...userWithoutPassword } = user;
 
     res.json({
       success: true,
@@ -135,57 +134,95 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 /**
- * Register (create new user)
+ * Register a new tenant and its Owner user.
+ *
+ * Security invariant: role, tenant and outlet identifiers are never accepted
+ * from the public request. They are derived and created by the server.
  */
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { password, name, roleId, tenantId, outletId } = req.body;
+    const { password, name, businessName, phone, address } = req.body;
     const email = normalizeEmailIdentity(req.body.email);
 
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !businessName) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Email, password, and name are required' }
+        error: { code: 'VALIDATION_ERROR', message: 'Email, password, name, and business name are required' }
       });
     }
 
-    // Check if email exists
-    const existing = await prisma.users.findUnique({ where: { email } });
-    if (existing) {
+    const user = await prisma.$transaction(async (tx) => {
+      const [existingUser, existingTenant, ownerRole] = await Promise.all([
+        tx.users.findUnique({ where: { email } }),
+        tx.tenants.findUnique({ where: { email } }),
+        tx.roles.findUnique({ where: { name: 'Owner' } })
+      ]);
+
+      if (existingUser || existingTenant) {
+        throw new Error('EMAIL_EXISTS');
+      }
+      if (!ownerRole) {
+        throw new Error('OWNER_ROLE_NOT_FOUND');
+      }
+
+      const trialExpiresAt = new Date();
+      trialExpiresAt.setDate(trialExpiresAt.getDate() + 14);
+
+      const tenant = await tx.tenants.create({
+        data: {
+          business_name: String(businessName).trim(),
+          owner_name: String(name).trim(),
+          email,
+          phone: typeof phone === 'string' && phone.trim() ? phone.trim() : null,
+          address: typeof address === 'string' && address.trim() ? address.trim() : null,
+          subscription_plan: 'basic',
+          subscription_status: 'trial',
+          subscription_starts_at: new Date(),
+          subscription_expires_at: trialExpiresAt,
+          is_active: true,
+          onboarding_completed: false,
+          onboarding_step: 1
+        }
+      });
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      return tx.users.create({
+        data: {
+          email,
+          password_hash: passwordHash,
+          name: String(name).trim(),
+          role_id: ownerRole.id,
+          tenant_id: tenant.id,
+          outlet_id: null
+        },
+        include: {
+          roles: true,
+          tenants_users_tenant_idTotenants: true,
+          outlets: true
+        }
+      });
+    });
+
+    const { password_hash: _passwordHash, ...userWithoutPassword } = user;
+
+    res.status(201).json({
+      success: true,
+      data: userWithoutPassword,
+      message: 'Tenant and owner registered successfully'
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'EMAIL_EXISTS') {
       return res.status(400).json({
         success: false,
         error: { code: 'EMAIL_EXISTS', message: 'Email already registered' }
       });
     }
-
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = await prisma.users.create({
-      data: {
-        email,
-        password_hash: passwordHash,
-        name,
-        role_id: roleId,
-        tenant_id: tenantId,
-        outlet_id: outletId
-      },
-      include: {
-        roles: true,
-        tenants_users_tenant_idTotenants: true,
-        outlets: true
-      }
-    });
-
-    const { password_hash: _, ...userWithoutPassword } = user;
-
-    res.status(201).json({
-      success: true,
-      data: userWithoutPassword,
-      message: 'User registered successfully'
-    });
-  } catch (error) {
+    if (error instanceof Error && error.message === 'OWNER_ROLE_NOT_FOUND') {
+      return res.status(500).json({
+        success: false,
+        error: { code: 'CONFIGURATION_ERROR', message: 'Owner role is not configured' }
+      });
+    }
     return next(error);
   }
 };
@@ -321,6 +358,18 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
       return res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'Current and new password are required' }
+      });
+    }
+    if (typeof newPassword !== 'string' || newPassword.length < 10) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'WEAK_PASSWORD', message: 'New password must be at least 10 characters' }
+      });
+    }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'PASSWORD_REUSE', message: 'New password must be different from current password' }
       });
     }
 

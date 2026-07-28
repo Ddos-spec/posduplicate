@@ -13,6 +13,7 @@ import {
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import useConfirmationStore from '../../store/confirmationStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface InventoryItem {
   id: number;
@@ -84,8 +85,8 @@ export default function InventoryTab() {
   const loadInventory = useCallback(async () => {
     try {
       setLoading(true);
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlet?.id;
+      const user = useAuthStore.getState().user;
+      const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
 
       const params: any = {};
       if (outletId) params.outlet_id = outletId;
@@ -165,8 +166,8 @@ export default function InventoryTab() {
       return;
     }
 
-    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-    const outletId = user?.outletId || user?.outlet?.id;
+    const user = useAuthStore.getState().user;
+    const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
 
     try {
       const data = {

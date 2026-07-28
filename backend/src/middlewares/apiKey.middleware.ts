@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../utils/prisma';
+import { hashApiKey } from '../utils/apiKeyGenerator';
 
 // Extend Express Request to include API Key info
 declare global {
@@ -29,10 +30,12 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
       });
     }
 
-    // Find the API key in database (Comparing PLAIN TEXT for simplicity per user request, 
-    // normally hashing is preferred but requires more complex management UI for "show once")
-    const apiKeyRecord = await prisma.api_keys.findUnique({
-      where: { api_key: apiKey },
+    const hashedApiKey = hashApiKey(apiKey);
+    // Transitional lookup supports legacy plaintext rows and migrates them on use.
+    const apiKeyRecord = await prisma.api_keys.findFirst({
+      where: {
+        api_key: { in: [hashedApiKey, apiKey] }
+      },
       include: {
         tenants: {
           select: {
@@ -52,6 +55,13 @@ export const apiKeyAuth = async (req: Request, res: Response, next: NextFunction
           code: 'INVALID_API_KEY',
           message: 'Invalid API key.',
         },
+      });
+    }
+
+    if (apiKeyRecord.api_key === apiKey) {
+      await prisma.api_keys.update({
+        where: { id: apiKeyRecord.id },
+        data: { api_key: hashedApiKey }
       });
     }
 

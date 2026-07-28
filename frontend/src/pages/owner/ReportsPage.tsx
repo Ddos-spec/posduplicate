@@ -10,6 +10,7 @@ import axios from 'axios';
 import { dashboardService } from '../../services/dashboardService';
 import api from '../../services/api';
 import { exportExpensesExcel, exportExpensesPDF, exportTransactionsExcel, exportTransactionsPDF } from '../../utils/exportUtils';
+import { useAuthStore } from '../../store/authStore';
 
 // Interfaces
 interface SalesDataPoint {
@@ -239,8 +240,8 @@ export default function ReportsPage() {
   const loadAnalyticsData = useCallback(async () => {
     try {
       setLoading(true);
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlet?.id;
+      const user = useAuthStore.getState().user;
+      const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
 
       const params: any = {};
       if (outletId) params.outlet_id = outletId;
@@ -268,8 +269,8 @@ export default function ReportsPage() {
   const loadFinancialData = async () => {
     try {
       setLoading(true);
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlet?.id;
+      const user = useAuthStore.getState().user;
+      const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
       const data = await dashboardService.getFinancialReport({ outlet_id: outletId, start_date: dateRange.startDate, end_date: dateRange.endDate });
       setFinancialData(data);
     } catch (err) { console.error(err); toast.error('Failed to load financials'); } finally { setLoading(false); }
@@ -278,8 +279,8 @@ export default function ReportsPage() {
   const loadOperationalData = async () => {
     try {
       setLoading(true);
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlet?.id;
+      const user = useAuthStore.getState().user;
+      const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
       const [ops, fraud] = await Promise.all([
         dashboardService.getOperationalReport({ outlet_id: outletId, start_date: dateRange.startDate, end_date: dateRange.endDate }),
         dashboardService.getFraudStats({ outlet_id: outletId, start_date: dateRange.startDate, end_date: dateRange.endDate })
@@ -292,8 +293,8 @@ export default function ReportsPage() {
   const loadInventoryData = async () => {
     try {
       setLoading(true);
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlet?.id;
+      const user = useAuthStore.getState().user;
+      const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
       const data = await dashboardService.getInventoryValue({ outlet_id: outletId });
       setInventoryValueData(data);
     } catch (err) { console.error(err); toast.error('Failed to load inventory value'); } finally { setLoading(false); }
@@ -302,8 +303,8 @@ export default function ReportsPage() {
   const loadCustomerData = async () => {
     try {
       setLoading(true);
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlet?.id;
+      const user = useAuthStore.getState().user;
+      const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
       const data = await dashboardService.getCustomerAnalytics({ outlet_id: outletId });
       setCustomerData(data);
     } catch (err) { console.error(err); toast.error('Failed to load customer data'); } finally { setLoading(false); }
@@ -1122,8 +1123,8 @@ function ExpenseTrackingTab() {
   const loadMovements = async () => {
     try {
       setLoading(true);
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlets?.id;
+      const user = useAuthStore.getState().user;
+      const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
       const params: any = {};
       if (outletId) params.outlet_id = outletId;
       if (dateFrom) params.date_from = dateFrom;
@@ -1142,8 +1143,8 @@ function ExpenseTrackingTab() {
 
   const loadSummary = async () => {
     try {
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlets?.id;
+      const user = useAuthStore.getState().user;
+      const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
       const params: any = {};
       if (outletId) params.outlet_id = outletId;
       if (dateFrom) params.date_from = dateFrom;

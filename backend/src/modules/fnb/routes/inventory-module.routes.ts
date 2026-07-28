@@ -1,4 +1,10 @@
 import { Router } from 'express';
+import { authMiddleware } from '../../../middlewares/auth.middleware';
+import {
+  requireTenantContext,
+  tenantMiddleware,
+  tenantOutletScopeMiddleware
+} from '../../../middlewares/tenant.middleware';
 import {
   getAllInventory,
   getInventoryById,
@@ -16,6 +22,7 @@ import {
 } from '../controllers/inventory-module.controller';
 
 const router = Router();
+router.use(authMiddleware, tenantMiddleware, requireTenantContext, tenantOutletScopeMiddleware);
 
 // Dashboard & Stats
 /**

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import path from 'path';
 import fs from 'fs';
@@ -20,6 +21,21 @@ import crypto from 'crypto';
 // ============= TYPES =============
 
 type DocumentType = 'invoice' | 'journal' | 'transaction' | 'faktur' | 'bukti_potong' | 'reconciliation' | 'asset' | 'budget';
+const DOCUMENT_TYPES = new Set<DocumentType>([
+  'invoice',
+  'journal',
+  'transaction',
+  'faktur',
+  'bukti_potong',
+  'reconciliation',
+  'asset',
+  'budget'
+]);
+
+const positiveInteger = (value: unknown): number | null => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
 
 // Allowed file types
 const ALLOWED_TYPES = {
@@ -56,7 +72,8 @@ export const uploadAttachment = async (req: Request, res: Response, next: NextFu
       });
     }
 
-    if (!documentType || !documentId) {
+    const normalizedDocumentId = positiveInteger(documentId);
+    if (!documentType || !normalizedDocumentId) {
       return res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'documentType dan documentId wajib diisi' }
@@ -64,8 +81,7 @@ export const uploadAttachment = async (req: Request, res: Response, next: NextFu
     }
 
     // Validate document type
-    const validTypes = ['invoice', 'journal', 'transaction', 'faktur', 'bukti_potong', 'reconciliation', 'asset', 'budget'];
-    if (!validTypes.includes(documentType)) {
+    if (!DOCUMENT_TYPES.has(documentType as DocumentType)) {
       return res.status(400).json({
         success: false,
         error: { code: 'INVALID_TYPE', message: 'documentType tidak valid' }
@@ -74,6 +90,7 @@ export const uploadAttachment = async (req: Request, res: Response, next: NextFu
 
     const uploadedFiles: any[] = [];
     const errors: any[] = [];
+    await createAttachmentTable();
 
     for (const file of files) {
       // Validate file type
@@ -93,12 +110,12 @@ export const uploadAttachment = async (req: Request, res: Response, next: NextFu
       const hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
       // Check for duplicate
-      const existing: any[] = await prisma.$queryRawUnsafe<any[]>(`
+      const existing: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT id, version FROM "accounting"."document_attachments"
         WHERE tenant_id = ${tenantId}
-        AND document_type = '${documentType}'
-        AND document_id = ${documentId}
-        AND hash = '${hash}'
+        AND document_type = ${documentType}
+        AND document_id = ${normalizedDocumentId}
+        AND hash = ${hash}
       `).catch(() => []);
 
       if (existing.length > 0) {
@@ -109,41 +126,41 @@ export const uploadAttachment = async (req: Request, res: Response, next: NextFu
       }
 
       // Get next version
-      const lastVersion: any[] = await prisma.$queryRawUnsafe<any[]>(`
+      const originalName = path.basename(file.originalname);
+      const lastVersion: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT COALESCE(MAX(version), 0) as max_version FROM "accounting"."document_attachments"
         WHERE tenant_id = ${tenantId}
-        AND document_type = '${documentType}'
-        AND document_id = ${documentId}
-        AND original_name = '${file.originalname.replace(/'/g, "''")}'
+        AND document_type = ${documentType}
+        AND document_id = ${normalizedDocumentId}
+        AND original_name = ${originalName}
       `).catch(() => [{ max_version: 0 }]);
 
       const version = Number(lastVersion[0]?.max_version || 0) + 1;
 
       // Move to accounting attachments folder
-      const attachmentDir = path.join(process.cwd(), 'uploads', 'accounting', documentType, documentId.toString());
+      const attachmentDir = path.join(process.cwd(), 'uploads', 'accounting', documentType, normalizedDocumentId.toString());
       if (!fs.existsSync(attachmentDir)) {
         fs.mkdirSync(attachmentDir, { recursive: true });
       }
 
-      const newFileName = `${Date.now()}-v${version}-${file.originalname}`;
+      const extension = ALLOWED_TYPES[file.mimetype as keyof typeof ALLOWED_TYPES];
+      const newFileName = `${crypto.randomUUID()}-v${version}${extension}`;
       const newPath = path.join(attachmentDir, newFileName);
       fs.renameSync(file.path, newPath);
 
       // Store relative path
-      const relativePath = path.join('uploads', 'accounting', documentType, documentId.toString(), newFileName);
+      const relativePath = path.join('uploads', 'accounting', documentType, normalizedDocumentId.toString(), newFileName);
 
       // Save to database
-      await prisma.$executeRawUnsafe(`
+      await prisma.$executeRaw(Prisma.sql`
         INSERT INTO "accounting"."document_attachments"
         (tenant_id, document_type, document_id, file_name, original_name, mime_type,
          size, hash, version, path, uploaded_by, created_at)
         VALUES
-        (${tenantId}, '${documentType}', ${documentId}, '${newFileName}',
-         '${file.originalname.replace(/'/g, "''")}', '${file.mimetype}',
-         ${file.size}, '${hash}', ${version}, '${relativePath}', ${userId}, NOW())
-      `).catch(async () => {
-        await createAttachmentTable();
-      });
+        (${tenantId}, ${documentType}, ${normalizedDocumentId}, ${newFileName},
+         ${originalName}, ${file.mimetype},
+         ${file.size}, ${hash}, ${version}, ${relativePath}, ${userId}, NOW())
+      `);
 
       uploadedFiles.push({
         fileName: newFileName,
@@ -174,16 +191,23 @@ export const getAttachments = async (req: Request, res: Response, next: NextFunc
   try {
     const tenantId = req.tenantId!;
     const { documentType, documentId } = req.params;
+    const normalizedDocumentId = positiveInteger(documentId);
+    if (!DOCUMENT_TYPES.has(documentType as DocumentType) || !normalizedDocumentId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Document type or ID is invalid' }
+      });
+    }
 
-    const attachments: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const attachments: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         a.*,
         u.name as uploaded_by_name
       FROM "accounting"."document_attachments" a
       LEFT JOIN "users" u ON a.uploaded_by = u.id
       WHERE a.tenant_id = ${tenantId}
-      AND a.document_type = '${documentType}'
-      AND a.document_id = ${documentId}
+      AND a.document_type = ${documentType}
+      AND a.document_id = ${normalizedDocumentId}
       AND a.deleted_at IS NULL
       ORDER BY a.created_at DESC
     `).catch(() => []);
@@ -214,10 +238,17 @@ export const downloadAttachment = async (req: Request, res: Response, next: Next
   try {
     const tenantId = req.tenantId!;
     const { attachmentId } = req.params;
+    const normalizedAttachmentId = positiveInteger(attachmentId);
+    if (!normalizedAttachmentId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Attachment ID is invalid' }
+      });
+    }
 
-    const attachment: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const attachment: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT * FROM "accounting"."document_attachments"
-      WHERE id = ${attachmentId}
+      WHERE id = ${normalizedAttachmentId}
       AND tenant_id = ${tenantId}
       AND deleted_at IS NULL
     `).catch(() => []);
@@ -229,7 +260,14 @@ export const downloadAttachment = async (req: Request, res: Response, next: Next
       });
     }
 
-    const filePath = path.join(process.cwd(), attachment[0].path);
+    const attachmentRoot = path.resolve(process.cwd(), 'uploads', 'accounting');
+    const filePath = path.resolve(process.cwd(), attachment[0].path);
+    if (!filePath.startsWith(`${attachmentRoot}${path.sep}`)) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'INVALID_FILE_PATH', message: 'Stored attachment path is invalid' }
+      });
+    }
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({
@@ -239,10 +277,10 @@ export const downloadAttachment = async (req: Request, res: Response, next: Next
     }
 
     // Log download
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       INSERT INTO "accounting"."attachment_logs"
       (tenant_id, attachment_id, action, user_id, created_at)
-      VALUES (${tenantId}, ${attachmentId}, 'download', ${(req as any).userId}, NOW())
+      VALUES (${tenantId}, ${normalizedAttachmentId}, 'download', ${(req as any).userId}, NOW())
     `).catch(() => {});
 
     res.download(filePath, attachment[0].original_name);
@@ -259,10 +297,17 @@ export const deleteAttachment = async (req: Request, res: Response, next: NextFu
     const tenantId = req.tenantId!;
     const userId = (req as any).userId;
     const { attachmentId } = req.params;
+    const normalizedAttachmentId = positiveInteger(attachmentId);
+    if (!normalizedAttachmentId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Attachment ID is invalid' }
+      });
+    }
 
-    const attachment: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const attachment: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT * FROM "accounting"."document_attachments"
-      WHERE id = ${attachmentId}
+      WHERE id = ${normalizedAttachmentId}
       AND tenant_id = ${tenantId}
       AND deleted_at IS NULL
     `).catch(() => []);
@@ -275,17 +320,17 @@ export const deleteAttachment = async (req: Request, res: Response, next: NextFu
     }
 
     // Soft delete
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       UPDATE "accounting"."document_attachments"
       SET deleted_at = NOW(), deleted_by = ${userId}
-      WHERE id = ${attachmentId}
+      WHERE id = ${normalizedAttachmentId} AND tenant_id = ${tenantId}
     `);
 
     // Log deletion
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       INSERT INTO "accounting"."attachment_logs"
       (tenant_id, attachment_id, action, user_id, created_at)
-      VALUES (${tenantId}, ${attachmentId}, 'delete', ${userId}, NOW())
+      VALUES (${tenantId}, ${normalizedAttachmentId}, 'delete', ${userId}, NOW())
     `).catch(() => {});
 
     res.json({
@@ -304,16 +349,32 @@ export const getAllAttachments = async (req: Request, res: Response, next: NextF
   try {
     const tenantId = req.tenantId!;
     const { documentType, startDate, endDate, page = 1, limit = 20 } = req.query;
+    const normalizedPage = Math.max(1, Number(page) || 1);
+    const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
+    const parsedStartDate = startDate ? new Date(String(startDate)) : null;
+    const parsedEndDate = endDate ? new Date(String(endDate)) : null;
+    if (
+      (documentType && !DOCUMENT_TYPES.has(String(documentType) as DocumentType)) ||
+      (parsedStartDate && Number.isNaN(parsedStartDate.getTime())) ||
+      (parsedEndDate && Number.isNaN(parsedEndDate.getTime()))
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Attachment filters are invalid' }
+      });
+    }
 
-    let whereClause = `WHERE a.tenant_id = ${tenantId} AND a.deleted_at IS NULL`;
+    const filters: Prisma.Sql[] = [
+      Prisma.sql`a.tenant_id = ${tenantId}`,
+      Prisma.sql`a.deleted_at IS NULL`
+    ];
+    if (documentType) filters.push(Prisma.sql`a.document_type = ${String(documentType)}`);
+    if (parsedStartDate) filters.push(Prisma.sql`a.created_at >= ${parsedStartDate}`);
+    if (parsedEndDate) filters.push(Prisma.sql`a.created_at <= ${parsedEndDate}`);
+    const whereClause = Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}`;
+    const offset = (normalizedPage - 1) * normalizedLimit;
 
-    if (documentType) whereClause += ` AND a.document_type = '${documentType}'`;
-    if (startDate) whereClause += ` AND a.created_at >= '${startDate}'`;
-    if (endDate) whereClause += ` AND a.created_at <= '${endDate}'`;
-
-    const offset = (Number(page) - 1) * Number(limit);
-
-    const attachments: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const attachments: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         a.*,
         u.name as uploaded_by_name
@@ -321,15 +382,15 @@ export const getAllAttachments = async (req: Request, res: Response, next: NextF
       LEFT JOIN "users" u ON a.uploaded_by = u.id
       ${whereClause}
       ORDER BY a.created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
+      LIMIT ${normalizedLimit} OFFSET ${offset}
     `).catch(() => []);
 
-    const total: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const total: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT COUNT(*) as count FROM "accounting"."document_attachments" a ${whereClause}
     `).catch(() => [{ count: 0 }]);
 
     // Calculate storage usage
-    const storage: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const storage: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         COALESCE(SUM(size), 0) as total_size,
         COUNT(*) as total_files
@@ -358,10 +419,10 @@ export const getAllAttachments = async (req: Request, res: Response, next: NextF
           totalFiles: Number(storage[0]?.total_files || 0)
         },
         pagination: {
-          page: Number(page),
-          limit: Number(limit),
+          page: normalizedPage,
+          limit: normalizedLimit,
           total: Number(total[0]?.count || 0),
-          totalPages: Math.ceil(Number(total[0]?.count || 0) / Number(limit))
+          totalPages: Math.ceil(Number(total[0]?.count || 0) / normalizedLimit)
         }
       }
     });
@@ -377,17 +438,24 @@ export const getAttachmentVersions = async (req: Request, res: Response, next: N
   try {
     const tenantId = req.tenantId!;
     const { documentType, documentId, originalName } = req.params;
+    const normalizedDocumentId = positiveInteger(documentId);
+    if (!DOCUMENT_TYPES.has(documentType as DocumentType) || !normalizedDocumentId || !originalName) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Attachment version selector is invalid' }
+      });
+    }
 
-    const versions: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const versions: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         a.*,
         u.name as uploaded_by_name
       FROM "accounting"."document_attachments" a
       LEFT JOIN "users" u ON a.uploaded_by = u.id
       WHERE a.tenant_id = ${tenantId}
-      AND a.document_type = '${documentType}'
-      AND a.document_id = ${documentId}
-      AND a.original_name = '${originalName.replace(/'/g, "''")}'
+      AND a.document_type = ${documentType}
+      AND a.document_id = ${normalizedDocumentId}
+      AND a.original_name = ${path.basename(originalName)}
       ORDER BY a.version DESC
     `).catch(() => []);
 
@@ -433,6 +501,7 @@ export const bulkUpload = async (req: Request, res: Response, next: NextFunction
     }
 
     const results: any[] = [];
+    await createAttachmentTable();
 
     for (const file of files) {
       const mapping = mappings.find((m: any) => m.fileName === file.originalname);
@@ -447,39 +516,62 @@ export const bulkUpload = async (req: Request, res: Response, next: NextFunction
         continue;
       }
 
+      const normalizedDocumentId = positiveInteger(mapping.documentId);
+      const documentType = String(mapping.documentType) as DocumentType;
+      const extension = ALLOWED_TYPES[file.mimetype as keyof typeof ALLOWED_TYPES];
+      if (
+        !normalizedDocumentId ||
+        !DOCUMENT_TYPES.has(documentType) ||
+        !extension ||
+        file.size > MAX_FILE_SIZE
+      ) {
+        results.push({
+          file: file.originalname,
+          status: 'error',
+          message: 'Mapping, tipe, atau ukuran file tidak valid'
+        });
+        fs.unlinkSync(file.path);
+        continue;
+      }
+
+      let storedPath: string | null = null;
       try {
         // Process upload
         const fileBuffer = fs.readFileSync(file.path);
         const hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
-        const attachmentDir = path.join(process.cwd(), 'uploads', 'accounting', mapping.documentType, mapping.documentId.toString());
+        const attachmentDir = path.join(process.cwd(), 'uploads', 'accounting', documentType, normalizedDocumentId.toString());
         if (!fs.existsSync(attachmentDir)) {
           fs.mkdirSync(attachmentDir, { recursive: true });
         }
 
-        const newFileName = `${Date.now()}-${file.originalname}`;
+        const newFileName = `${crypto.randomUUID()}${extension}`;
         const newPath = path.join(attachmentDir, newFileName);
         fs.renameSync(file.path, newPath);
+        storedPath = newPath;
 
-        const relativePath = path.join('uploads', 'accounting', mapping.documentType, mapping.documentId.toString(), newFileName);
+        const relativePath = path.join('uploads', 'accounting', documentType, normalizedDocumentId.toString(), newFileName);
 
-        await prisma.$executeRawUnsafe(`
+        await prisma.$executeRaw(Prisma.sql`
           INSERT INTO "accounting"."document_attachments"
           (tenant_id, document_type, document_id, file_name, original_name, mime_type,
            size, hash, version, path, uploaded_by, created_at)
           VALUES
-          (${tenantId}, '${mapping.documentType}', ${mapping.documentId}, '${newFileName}',
-           '${file.originalname.replace(/'/g, "''")}', '${file.mimetype}',
-           ${file.size}, '${hash}', 1, '${relativePath}', ${userId}, NOW())
+          (${tenantId}, ${documentType}, ${normalizedDocumentId}, ${newFileName},
+           ${path.basename(file.originalname)}, ${file.mimetype},
+           ${file.size}, ${hash}, 1, ${relativePath}, ${userId}, NOW())
         `);
 
         results.push({
           file: file.originalname,
           status: 'success',
-          documentType: mapping.documentType,
-          documentId: mapping.documentId
+          documentType,
+          documentId: normalizedDocumentId
         });
       } catch (err) {
+        if (storedPath && fs.existsSync(storedPath)) {
+          fs.unlinkSync(storedPath);
+        }
         results.push({
           file: file.originalname,
           status: 'error',
@@ -512,7 +604,7 @@ function formatFileSize(bytes: number): string {
 }
 
 async function createAttachmentTable(): Promise<void> {
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE TABLE IF NOT EXISTS "accounting"."document_attachments" (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER NOT NULL,
@@ -532,12 +624,12 @@ async function createAttachmentTable(): Promise<void> {
     )
   `).catch(() => {});
 
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE INDEX IF NOT EXISTS idx_attachments_document
     ON "accounting"."document_attachments" (tenant_id, document_type, document_id)
   `).catch(() => {});
 
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE TABLE IF NOT EXISTS "accounting"."attachment_logs" (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER NOT NULL,

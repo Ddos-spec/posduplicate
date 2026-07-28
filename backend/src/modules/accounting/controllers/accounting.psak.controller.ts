@@ -1,5 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
+
+async function resolveOutletScope(
+  tenantId: number,
+  value: unknown
+): Promise<{ ok: true; outletId: number | null } | { ok: false; status: number; message: string }> {
+  if (value === undefined || value === null || value === '') {
+    return { ok: true, outletId: null };
+  }
+  const outletId = Number(value);
+  if (!Number.isInteger(outletId) || outletId <= 0) {
+    return { ok: false, status: 400, message: 'Outlet ID is invalid' };
+  }
+  const outlet = await prisma.outlets.findFirst({
+    where: { id: outletId, tenant_id: tenantId },
+    select: { id: true }
+  });
+  return outlet
+    ? { ok: true, outletId }
+    : { ok: false, status: 404, message: 'Outlet not found for the active tenant' };
+}
 
 /**
  * PSAK-Compliant Financial Reports Controller
@@ -46,7 +67,16 @@ export const getLaporanPosisiKeuangan = async (req: Request, res: Response, next
     const { outletId, endDate, comparativeDate, language = 'id' } = req.query;
 
     const currentEnd = endDate ? new Date(endDate as string) : new Date();
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const outletScope = await resolveOutletScope(tenantId, outletId);
+    if (!outletScope.ok) {
+      return res.status(outletScope.status).json({
+        success: false,
+        error: { code: 'INVALID_OUTLET', message: outletScope.message }
+      });
+    }
+    const whereOutlet = outletScope.outletId
+      ? Prisma.sql`AND gl.outlet_id = ${outletScope.outletId}`
+      : Prisma.empty;
 
     // Get tenant info for header
     const tenant = await prisma.tenants.findUnique({
@@ -234,7 +264,16 @@ export const getLaporanLabaRugi = async (req: Request, res: Response, next: Next
 
     const periodStart = startDate ? new Date(startDate as string) : getFirstDayOfMonth(new Date());
     const periodEnd = endDate ? new Date(endDate as string) : new Date();
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const outletScope = await resolveOutletScope(tenantId, outletId);
+    if (!outletScope.ok) {
+      return res.status(outletScope.status).json({
+        success: false,
+        error: { code: 'INVALID_OUTLET', message: outletScope.message }
+      });
+    }
+    const whereOutlet = outletScope.outletId
+      ? Prisma.sql`AND gl.outlet_id = ${outletScope.outletId}`
+      : Prisma.empty;
 
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
@@ -494,7 +533,16 @@ export const getLaporanArusKasDirect = async (req: Request, res: Response, next:
 
     const periodStart = startDate ? new Date(startDate as string) : getFirstDayOfMonth(new Date());
     const periodEnd = endDate ? new Date(endDate as string) : new Date();
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const outletScope = await resolveOutletScope(tenantId, outletId);
+    if (!outletScope.ok) {
+      return res.status(outletScope.status).json({
+        success: false,
+        error: { code: 'INVALID_OUTLET', message: outletScope.message }
+      });
+    }
+    const whereOutlet = outletScope.outletId
+      ? Prisma.sql`AND gl.outlet_id = ${outletScope.outletId}`
+      : Prisma.empty;
 
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
@@ -603,7 +651,16 @@ export const getLaporanArusKasIndirect = async (req: Request, res: Response, nex
 
     const periodStart = startDate ? new Date(startDate as string) : getFirstDayOfMonth(new Date());
     const periodEnd = endDate ? new Date(endDate as string) : new Date();
-    const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+    const outletScope = await resolveOutletScope(tenantId, outletId);
+    if (!outletScope.ok) {
+      return res.status(outletScope.status).json({
+        success: false,
+        error: { code: 'INVALID_OUTLET', message: outletScope.message }
+      });
+    }
+    const whereOutlet = outletScope.outletId
+      ? Prisma.sql`AND gl.outlet_id = ${outletScope.outletId}`
+      : Prisma.empty;
 
     const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
@@ -785,9 +842,9 @@ async function getAccountBalances(
   asOfDate: Date,
   accountType: string,
   categories: string[],
-  whereOutlet: string
+  whereOutlet: Prisma.Sql
 ): Promise<{ name: string; balance: number; code: string }[]> {
-  const results: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const results: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT
       coa.account_code as code,
       coa.account_name as name,
@@ -799,10 +856,10 @@ async function getAccountBalances(
       ), 0) as balance
     FROM "accounting"."chart_of_accounts" coa
     LEFT JOIN "accounting"."general_ledger" gl ON coa.id = gl.account_id
-      AND gl.transaction_date <= '${asOfDate.toISOString()}'
+      AND gl.transaction_date <= ${asOfDate}
       ${whereOutlet}
     WHERE coa.tenant_id = ${tenantId}
-    AND coa.account_type = '${accountType}'
+    AND coa.account_type = ${accountType}
     AND coa.is_active = true
     GROUP BY coa.id, coa.account_code, coa.account_name
     HAVING COALESCE(SUM(
@@ -826,9 +883,9 @@ async function getIncomeStatementSection(
   startDate: Date,
   endDate: Date,
   accountType: string,
-  whereOutlet: string
+  whereOutlet: Prisma.Sql
 ): Promise<{ name: string; amount: number; code: string }[]> {
-  const results: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const results: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT
       coa.account_code as code,
       coa.account_name as name,
@@ -840,10 +897,10 @@ async function getIncomeStatementSection(
       ), 0) as amount
     FROM "accounting"."chart_of_accounts" coa
     LEFT JOIN "accounting"."general_ledger" gl ON coa.id = gl.account_id
-      AND gl.transaction_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+      AND gl.transaction_date BETWEEN ${startDate} AND ${endDate}
       ${whereOutlet}
     WHERE coa.tenant_id = ${tenantId}
-    AND coa.account_type = '${accountType}'
+    AND coa.account_type = ${accountType}
     AND coa.is_active = true
     GROUP BY coa.id, coa.account_code, coa.account_name
     HAVING COALESCE(SUM(
@@ -866,7 +923,7 @@ async function getOtherIncomeExpenses(
   tenantId: number,
   startDate: Date,
   endDate: Date,
-  whereOutlet: string
+  whereOutlet: Prisma.Sql
 ): Promise<{ pendapatan: { name: string; amount: number }[]; beban: { name: string; amount: number }[] }> {
   // Simplified - would need proper categorization
   return {
@@ -875,21 +932,21 @@ async function getOtherIncomeExpenses(
   };
 }
 
-async function getCashFlowOperating(tenantId: number, startDate: Date, endDate: Date, whereOutlet: string) {
+async function getCashFlowOperating(tenantId: number, startDate: Date, endDate: Date, whereOutlet: Prisma.Sql) {
   // Get cash receipts from customers
-  const receipts: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const receipts: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COALESCE(SUM(collection_amount), 0) as total
     FROM "accounting"."ar_collections"
     WHERE tenant_id = ${tenantId}
-    AND collection_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+    AND collection_date BETWEEN ${startDate} AND ${endDate}
   `).catch(() => [{ total: 0 }]);
 
   // Get cash payments to suppliers
-  const payments: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const payments: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COALESCE(SUM(payment_amount), 0) as total
     FROM "accounting"."ap_payments"
     WHERE tenant_id = ${tenantId}
-    AND payment_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+    AND payment_date BETWEEN ${startDate} AND ${endDate}
   `).catch(() => [{ total: 0 }]);
 
   return {
@@ -904,7 +961,7 @@ async function getCashFlowOperating(tenantId: number, startDate: Date, endDate: 
   };
 }
 
-async function getCashFlowInvesting(tenantId: number, startDate: Date, endDate: Date, whereOutlet: string) {
+async function getCashFlowInvesting(tenantId: number, startDate: Date, endDate: Date, whereOutlet: Prisma.Sql) {
   // Simplified
   return {
     penerimaan: { items: [], total: 0 },
@@ -912,7 +969,7 @@ async function getCashFlowInvesting(tenantId: number, startDate: Date, endDate: 
   };
 }
 
-async function getCashFlowFinancing(tenantId: number, startDate: Date, endDate: Date, whereOutlet: string) {
+async function getCashFlowFinancing(tenantId: number, startDate: Date, endDate: Date, whereOutlet: Prisma.Sql) {
   // Simplified
   return {
     penerimaan: { items: [], total: 0 },
@@ -920,15 +977,15 @@ async function getCashFlowFinancing(tenantId: number, startDate: Date, endDate: 
   };
 }
 
-async function getCashBalance(tenantId: number, asOfDate: Date, whereOutlet: string): Promise<number> {
-  const result: any[] = await prisma.$queryRawUnsafe<any[]>(`
+async function getCashBalance(tenantId: number, asOfDate: Date, whereOutlet: Prisma.Sql): Promise<number> {
+  const result: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COALESCE(SUM(gl.debit_amount - gl.credit_amount), 0) as balance
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
     WHERE gl.tenant_id = ${tenantId}
     AND coa.account_type = 'ASSET'
     AND coa.category ILIKE '%kas%'
-    AND gl.transaction_date <= '${asOfDate.toISOString()}'
+    AND gl.transaction_date <= ${asOfDate}
     ${whereOutlet}
   `).catch(() => [{ balance: 0 }]);
 
@@ -936,22 +993,22 @@ async function getCashBalance(tenantId: number, asOfDate: Date, whereOutlet: str
 }
 
 async function getNetIncomeForPeriod(tenantId: number, startDate: Date, endDate: Date): Promise<number> {
-  const revenue: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const revenue: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COALESCE(SUM(gl.credit_amount - gl.debit_amount), 0) as total
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
     WHERE gl.tenant_id = ${tenantId}
     AND coa.account_type = 'REVENUE'
-    AND gl.transaction_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+    AND gl.transaction_date BETWEEN ${startDate} AND ${endDate}
   `).catch(() => [{ total: 0 }]);
 
-  const expenses: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const expenses: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COALESCE(SUM(gl.debit_amount - gl.credit_amount), 0) as total
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
     WHERE gl.tenant_id = ${tenantId}
     AND coa.account_type IN ('EXPENSE', 'COGS')
-    AND gl.transaction_date BETWEEN '${startDate.toISOString()}' AND '${endDate.toISOString()}'
+    AND gl.transaction_date BETWEEN ${startDate} AND ${endDate}
   `).catch(() => [{ total: 0 }]);
 
   return Number(revenue[0]?.total || 0) - Number(expenses[0]?.total || 0);
@@ -959,13 +1016,13 @@ async function getNetIncomeForPeriod(tenantId: number, startDate: Date, endDate:
 
 async function getEquityBalances(tenantId: number, asOfDate: Date): Promise<number[]> {
   // Simplified - returns [Modal Saham, Tambahan Modal, Saldo Laba, Total]
-  const result: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const result: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COALESCE(SUM(gl.credit_amount - gl.debit_amount), 0) as balance
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
     WHERE gl.tenant_id = ${tenantId}
     AND coa.account_type = 'EQUITY'
-    AND gl.transaction_date <= '${asOfDate.toISOString()}'
+    AND gl.transaction_date <= ${asOfDate}
   `).catch(() => [{ balance: 0 }]);
 
   const total = Number(result[0]?.balance || 0);
@@ -976,7 +1033,7 @@ async function getEquityMovements(tenantId: number, startDate: Date, endDate: Da
   return [];
 }
 
-async function getIndirectMethodAdjustments(tenantId: number, startDate: Date, endDate: Date, whereOutlet: string) {
+async function getIndirectMethodAdjustments(tenantId: number, startDate: Date, endDate: Date, whereOutlet: Prisma.Sql) {
   // Common adjustments for indirect method
   return [
     { name: 'Beban penyusutan', amount: 0 },
@@ -986,12 +1043,12 @@ async function getIndirectMethodAdjustments(tenantId: number, startDate: Date, e
   ];
 }
 
-async function generateComparativeBalance(tenantId: number, endDate: Date, whereOutlet: string) {
+async function generateComparativeBalance(tenantId: number, endDate: Date, whereOutlet: Prisma.Sql) {
   // Simplified
   return null;
 }
 
-async function generateComparativeIncomeStatement(tenantId: number, startDate: Date, endDate: Date, whereOutlet: string) {
+async function generateComparativeIncomeStatement(tenantId: number, startDate: Date, endDate: Date, whereOutlet: Prisma.Sql) {
   return null;
 }
 

@@ -1,8 +1,11 @@
 import { Router } from 'express';
+import { authMiddleware } from '../../../middlewares/auth.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { roleMiddleware } from '../../../middlewares/role.middleware';
 import * as taxController from '../controllers/accounting.tax.controller';
 
 const router = Router();
+router.use(authMiddleware, tenantMiddleware, requireTenantContext);
 
 // Tax Configuration CRUD
 /**

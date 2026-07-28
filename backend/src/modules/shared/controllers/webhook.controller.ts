@@ -40,7 +40,10 @@ const createTransactionFromWebhook = async (
 
   // Check for existing transaction
   const existing = await prisma.transactions.findFirst({
-    where: { transaction_number: transactionNumber }
+    where: {
+      transaction_number: transactionNumber,
+      outlet_id: outletId
+    }
   });
 
   if (existing) {
@@ -133,12 +136,20 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
       amount,
       referenceNumber
     });
+    const outletId = req.integrationOutletId;
+    if (!outletId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'OUTLET_NOT_CONFIGURED', message: 'QRIS integration outlet is not configured' }
+      });
+    }
 
     // Find the payment by reference number
     const payment = await prisma.payments.findFirst({
       where: {
         reference_number: referenceNumber,
-        method: 'qris'
+        method: 'qris',
+        transactions: { outlet_id: outletId }
       },
       include: {
         transactions: true
@@ -180,8 +191,8 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
     };
 
     // Cache result for idempotency
-    if ((req as any).idempotencyKey) {
-      cacheWebhookResult((req as any).idempotencyKey, result);
+    if (req.idempotencyKey) {
+      await cacheWebhookResult(req.idempotencyKey, result);
     }
 
     return res.json(result);
@@ -197,7 +208,7 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
 export const gofoodWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderId, status, items, customer, totalAmount, notes } = req.body;
-    const outletId = (req as any).integrationOutletId;
+    const outletId = req.integrationOutletId;
 
     console.log('[GoFood Webhook] Received:', {
       orderId,
@@ -219,7 +230,8 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
     // Check for existing transaction
     const existingTransaction = await prisma.transactions.findFirst({
       where: {
-        transaction_number: `GOFOOD-${orderId}`
+        transaction_number: `GOFOOD-${orderId}`,
+        outlet_id: outletId
       }
     });
 
@@ -240,8 +252,8 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
         data: { transactionId: existingTransaction.id, status: mappedStatus }
       };
 
-      if ((req as any).idempotencyKey) {
-        cacheWebhookResult((req as any).idempotencyKey, result);
+      if (req.idempotencyKey) {
+        await cacheWebhookResult(req.idempotencyKey, result);
       }
 
       return res.json(result);
@@ -262,8 +274,8 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
       data: { transactionId: transaction.id, transactionNumber: transaction.transaction_number }
     };
 
-    if ((req as any).idempotencyKey) {
-      cacheWebhookResult((req as any).idempotencyKey, result);
+    if (req.idempotencyKey) {
+      await cacheWebhookResult(req.idempotencyKey, result);
     }
 
     return res.json(result);
@@ -279,7 +291,7 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
 export const grabfoodWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderId, status, items, customer, totalAmount, notes } = req.body;
-    const outletId = (req as any).integrationOutletId;
+    const outletId = req.integrationOutletId;
 
     console.log('[GrabFood Webhook] Received:', {
       orderId,
@@ -301,7 +313,8 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
     // Check for existing transaction
     const existingTransaction = await prisma.transactions.findFirst({
       where: {
-        transaction_number: `GRABFOOD-${orderId}`
+        transaction_number: `GRABFOOD-${orderId}`,
+        outlet_id: outletId
       }
     });
 
@@ -321,8 +334,8 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
         data: { transactionId: existingTransaction.id, status: mappedStatus }
       };
 
-      if ((req as any).idempotencyKey) {
-        cacheWebhookResult((req as any).idempotencyKey, result);
+      if (req.idempotencyKey) {
+        await cacheWebhookResult(req.idempotencyKey, result);
       }
 
       return res.json(result);
@@ -343,8 +356,8 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
       data: { transactionId: transaction.id, transactionNumber: transaction.transaction_number }
     };
 
-    if ((req as any).idempotencyKey) {
-      cacheWebhookResult((req as any).idempotencyKey, result);
+    if (req.idempotencyKey) {
+      await cacheWebhookResult(req.idempotencyKey, result);
     }
 
     return res.json(result);
@@ -360,7 +373,7 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
 export const shopeefoodWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderId, status, items, customer, totalAmount, notes } = req.body;
-    const outletId = (req as any).integrationOutletId;
+    const outletId = req.integrationOutletId;
 
     console.log('[ShopeeFood Webhook] Received:', {
       orderId,
@@ -382,7 +395,8 @@ export const shopeefoodWebhook = async (req: Request, res: Response, next: NextF
     // Check for existing transaction
     const existingTransaction = await prisma.transactions.findFirst({
       where: {
-        transaction_number: `SHOPEEFOOD-${orderId}`
+        transaction_number: `SHOPEEFOOD-${orderId}`,
+        outlet_id: outletId
       }
     });
 
@@ -402,8 +416,8 @@ export const shopeefoodWebhook = async (req: Request, res: Response, next: NextF
         data: { transactionId: existingTransaction.id, status: mappedStatus }
       };
 
-      if ((req as any).idempotencyKey) {
-        cacheWebhookResult((req as any).idempotencyKey, result);
+      if (req.idempotencyKey) {
+        await cacheWebhookResult(req.idempotencyKey, result);
       }
 
       return res.json(result);
@@ -424,8 +438,8 @@ export const shopeefoodWebhook = async (req: Request, res: Response, next: NextF
       data: { transactionId: transaction.id, transactionNumber: transaction.transaction_number }
     };
 
-    if ((req as any).idempotencyKey) {
-      cacheWebhookResult((req as any).idempotencyKey, result);
+    if (req.idempotencyKey) {
+      await cacheWebhookResult(req.idempotencyKey, result);
     }
 
     return res.json(result);

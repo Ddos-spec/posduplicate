@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 
+const tenantOutletIds = (req: Request): number[] => req.tenantOutletIds ?? [];
+
 // Get all promotions
 export const getPromotions = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -54,8 +56,11 @@ export const getPromotionById = async (req: Request, res: Response, next: NextFu
   try {
     const { id } = req.params;
 
-    const promotion = await prisma.promotions.findUnique({
-      where: { id: parseInt(id) },
+    const promotion = await prisma.promotions.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      },
       include: {
         outlets: {
           select: {
@@ -111,10 +116,16 @@ export const createPromotion = async (req: Request, res: Response, next: NextFun
       usageLimit
     } = req.body;
 
-    if (!name || !discountType || !discountValue) {
+    if (!outletId || !name || !discountType || !discountValue) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Name, discount type and value are required' }
+        error: { code: 'VALIDATION_ERROR', message: 'Outlet, name, discount type and value are required' }
+      });
+    }
+    if (!tenantOutletIds(req).includes(Number(outletId))) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Outlet does not belong to the active tenant' }
       });
     }
 
@@ -127,7 +138,7 @@ export const createPromotion = async (req: Request, res: Response, next: NextFun
 
     const promotion = await prisma.promotions.create({
       data: {
-        outlet_id: outletId || null,
+        outlet_id: Number(outletId),
         name,
         description,
         discount_type: discountType,
@@ -183,6 +194,19 @@ export const updatePromotion = async (req: Request, res: Response, next: NextFun
 
     const data: any = {};
 
+    const existing = await prisma.promotions.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      }
+    });
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'PROMOTION_NOT_FOUND', message: 'Promotion not found' }
+      });
+    }
+
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;
     if (discountType !== undefined) data.discount_type = discountType;
@@ -224,6 +248,19 @@ export const deletePromotion = async (req: Request, res: Response, next: NextFun
   try {
     const { id } = req.params;
 
+    const existing = await prisma.promotions.findFirst({
+      where: {
+        id: parseInt(id),
+        outlet_id: { in: tenantOutletIds(req) }
+      }
+    });
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'PROMOTION_NOT_FOUND', message: 'Promotion not found' }
+      });
+    }
+
     await prisma.promotions.delete({
       where: { id: parseInt(id) }
     });
@@ -240,12 +277,19 @@ export const deletePromotion = async (req: Request, res: Response, next: NextFun
 // Get applicable promotions for a transaction
 export const getApplicablePromotions = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { subtotal, items, categoryIds } = req.body;
+    const { subtotal, items, categoryIds, outletId } = req.body;
+    if (!tenantOutletIds(req).includes(Number(outletId))) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'A valid tenant outlet is required' }
+      });
+    }
 
     const now = new Date();
 
     const promotions = await prisma.promotions.findMany({
       where: {
+        outlet_id: Number(outletId),
         is_active: true,
         OR: [
           { start_date: null },
@@ -326,6 +370,26 @@ export const applyPromotion = async (req: Request, res: Response, next: NextFunc
       return res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'Promotion ID, transaction ID and discount amount are required' }
+      });
+    }
+    const [promotion, transaction] = await Promise.all([
+      prisma.promotions.findFirst({
+        where: {
+          id: Number(promotionId),
+          outlet_id: { in: tenantOutletIds(req) }
+        }
+      }),
+      prisma.transactions.findFirst({
+        where: {
+          id: Number(transactionId),
+          outlet_id: { in: tenantOutletIds(req) }
+        }
+      })
+    ]);
+    if (!promotion || !transaction || promotion.outlet_id !== transaction.outlet_id) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCESS_DENIED', message: 'Promotion and transaction must belong to the same tenant outlet' }
       });
     }
 

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import prisma from '../../../utils/prisma';
 import bcrypt from 'bcrypt';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
@@ -136,7 +137,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
  */
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, password, role, outletId, sendEmailNotification } = req.body;
+    const { name, password, role, outletId } = req.body;
     const email = normalizeEmailIdentity(req.body.email);
     const tenantId = req.tenantId!;
 
@@ -199,7 +200,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     }
 
     const rawPassword = typeof password === 'string' ? password.trim() : '';
-    const tempPassword = rawPassword || `Temp${Math.floor(Math.random() * 10000)}!`;
+    const tempPassword = rawPassword || `Temp-${randomBytes(9).toString('base64url')}!`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
     const normalizedOutletId = outletId ? Number(outletId) : null;
 
@@ -242,11 +243,6 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
         console.error('Failed to create accounting user log:', logError);
     }
 
-    // 4. Send Email (Mock)
-    if (sendEmailNotification) {
-        console.log(`[Email Mock] To: ${email}, Subject: Welcome to MyAkuntan, Password: ${tempPassword}`);
-    }
-
     return res.status(201).json({
         success: true,
         data: {
@@ -255,8 +251,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
                 name: user.name,
                 email: user.email,
                 tempPassword // Return only once
-            },
-            emailSent: sendEmailNotification
+            }
         }
     });
 

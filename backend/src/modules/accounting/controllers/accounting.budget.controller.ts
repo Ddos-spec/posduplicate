@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -214,9 +215,29 @@ export const getBudgetVsActual = async (req: Request, res: Response, next: NextF
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Period not found' } });
     }
 
+    const outletId = outlet_id ? Number(outlet_id) : null;
+    if (outletId !== null) {
+      if (!Number.isInteger(outletId) || outletId <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'Outlet ID is invalid' }
+        });
+      }
+      const outlet = await prisma.outlets.findFirst({
+        where: { id: outletId, tenant_id: tenantId },
+        select: { id: true }
+      });
+      if (!outlet) {
+        return res.status(404).json({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Outlet not found for the active tenant' }
+        });
+      }
+    }
+
     // Get budgets for this period
     const budgetWhere: any = { tenant_id: tenantId, period_id: parseInt(period_id as string) };
-    if (outlet_id) budgetWhere.outlet_id = parseInt(outlet_id as string);
+    if (outletId !== null) budgetWhere.outlet_id = outletId;
 
     const budgets = await prisma.budgets.findMany({
       where: budgetWhere,
@@ -224,9 +245,11 @@ export const getBudgetVsActual = async (req: Request, res: Response, next: NextF
     });
 
     // Get actual amounts from GL
-    const whereOutlet = outlet_id ? `AND gl.outlet_id = ${outlet_id}` : '';
+    const whereOutlet = outletId !== null
+      ? Prisma.sql`AND gl.outlet_id = ${outletId}`
+      : Prisma.empty;
 
-    const actuals: any[] = await prisma.$queryRawUnsafe(`
+    const actuals: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         gl.account_id,
         SUM(gl.debit_amount) as total_debit,
@@ -234,8 +257,8 @@ export const getBudgetVsActual = async (req: Request, res: Response, next: NextF
       FROM "accounting"."general_ledger" gl
       WHERE gl.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND gl.transaction_date >= '${period.start_date.toISOString()}'
-      AND gl.transaction_date <= '${period.end_date.toISOString()}'
+      AND gl.transaction_date >= ${period.start_date}
+      AND gl.transaction_date <= ${period.end_date}
       GROUP BY gl.account_id
     `);
 

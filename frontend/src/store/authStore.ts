@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import api from '../services/api';
 import axios from 'axios';
+import { useSuperAdminTenantStore } from './superAdminTenantStore';
 
 interface TenantInfo {
   id: number;
@@ -28,6 +29,7 @@ interface User {
   tenant_id?: number;
   tenants_users_tenant_idTotenants?: any;
   outletId?: number;
+  outlet_id?: number;
   outlets?: any;
   dashboard_preferences?: {
     mcs?: McsPermissions;
@@ -60,16 +62,21 @@ export const useAuthStore = create<AuthState>()(
           if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
             errorMessage = error.response.data.error.message;
           }
-          throw new Error(errorMessage);
+          throw new Error(errorMessage, { cause: error });
         }
       },
 
       logout: () => {
+        useSuperAdminTenantStore.getState().clearSelectedTenant();
+        if (typeof window !== 'undefined' && 'caches' in window) {
+          void window.caches.delete('api-cache');
+        }
         set({ user: null, token: null });
       },
     }),
     {
       name: 'auth-storage',
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         user: state.user,
         token: state.token

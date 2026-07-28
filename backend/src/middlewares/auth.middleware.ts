@@ -51,6 +51,7 @@ export const authMiddleware = async (
       req.userId = decoded.userId;
       req.tenantId = decoded.tenantId;
       req.userRole = decoded.roleName;
+      req.roleName = decoded.roleName;
 
       return next();
     } catch (jwtError) {
@@ -112,6 +113,7 @@ export const optionalAuth = async (
       req.userId = decoded.userId;
       req.tenantId = decoded.tenantId;
       req.userRole = decoded.roleName;
+      req.roleName = decoded.roleName;
     } catch (jwtError) {
       // Token invalid, continue without auth
       console.warn('Optional auth: Invalid token, continuing without auth');

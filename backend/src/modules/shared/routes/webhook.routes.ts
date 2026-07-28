@@ -10,6 +10,7 @@ import {
   verifyGoFoodSignature,
   verifyGrabFoodSignature,
   verifyShopeeFoodSignature,
+  resolveWebhookIntegration,
   webhookRateLimiter,
   webhookIdempotency
 } from '../../../middlewares/webhook.middleware';
@@ -43,8 +44,9 @@ const router = Router();
 router.post(
   '/qris',
   webhookRateLimiter('qris'),
-  webhookIdempotency('qris'),
+  resolveWebhookIntegration('qris'),
   verifyQRISSignature,
+  webhookIdempotency('qris'),
   qrisWebhook
 );
 
@@ -75,8 +77,9 @@ router.post(
 router.post(
   '/gofood',
   webhookRateLimiter('gofood'),
-  webhookIdempotency('gofood'),
+  resolveWebhookIntegration('gofood'),
   verifyGoFoodSignature,
+  webhookIdempotency('gofood'),
   gofoodWebhook
 );
 
@@ -107,8 +110,9 @@ router.post(
 router.post(
   '/grabfood',
   webhookRateLimiter('grabfood'),
-  webhookIdempotency('grabfood'),
+  resolveWebhookIntegration('grabfood'),
   verifyGrabFoodSignature,
+  webhookIdempotency('grabfood'),
   grabfoodWebhook
 );
 
@@ -139,8 +143,9 @@ router.post(
 router.post(
   '/shopeefood',
   webhookRateLimiter('shopeefood'),
-  webhookIdempotency('shopeefood'),
+  resolveWebhookIntegration('shopeefood'),
   verifyShopeeFoodSignature,
+  webhookIdempotency('shopeefood'),
   shopeefoodWebhook
 );
 

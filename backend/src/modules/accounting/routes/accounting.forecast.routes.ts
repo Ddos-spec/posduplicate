@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { authMiddleware } from '../../../middlewares/auth.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import {
   getOwnerForecast,
   getRetailForecast,
@@ -8,6 +10,7 @@ import {
 } from '../controllers/accounting.forecast.controller';
 
 const router = Router();
+router.use(authMiddleware, tenantMiddleware, requireTenantContext);
 
 // Owner comprehensive forecast
 /**
