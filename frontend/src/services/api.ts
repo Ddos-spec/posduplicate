@@ -6,6 +6,14 @@ import { useSuperAdminTenantStore } from '../store/superAdminTenantStore';
 // Determine API URL dynamically to support LAN/Mobile testing
 const getBaseUrl = () => {
   const isNativeApp = Capacitor.isNativePlatform();
+
+  // Production web traffic must stay same-origin so Vercel can proxy it to the
+  // live VPS backend. This prevents an old VITE_API_URL from baking a retired
+  // EasyPanel hostname into the deployed client.
+  if (!isNativeApp && import.meta.env.PROD) {
+    return '/api';
+  }
+
   const configuredApiUrl = isNativeApp
     ? import.meta.env.VITE_MOBILE_API_URL || import.meta.env.VITE_API_URL
     : import.meta.env.VITE_API_URL;
