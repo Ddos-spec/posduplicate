@@ -264,7 +264,7 @@ function getBackendPublicUrl(): string {
 }
 
 function getSocialHubApiBaseUrl(): string {
-  const configured = process.env.MCS_SOCIAL_API_BASE_URL || 'https://postgres-customerservicecrm.qk6yxt.easypanel.host';
+  const configured = process.env.MCS_SOCIAL_API_BASE_URL || 'https://crm-api.163.61.44.41.sslip.io';
   return configured.replace(/\/$/, '');
 }
 

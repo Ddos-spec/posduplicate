@@ -231,7 +231,7 @@ export const deleteApiKey = async (req: Request, res: Response, next: NextFuncti
 export const getApiDocumentation = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const documentation = {
-      baseUrl: process.env.API_BASE_URL || 'https://filter-bot-mypos-backend.qk6yxt.easypanel.host',
+      baseUrl: process.env.API_BASE_URL || 'https://mypos-api.163.61.44.41.sslip.io',
       version: '1.0.0',
       authentication: {
         type: 'API Key',

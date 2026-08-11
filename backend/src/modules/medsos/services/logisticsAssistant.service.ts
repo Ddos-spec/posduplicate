@@ -488,7 +488,7 @@ export const trackWaybill = async (params: {
 };
 
 export const buildAutomationToolDescriptor = (tenantId: number, settings: LogisticsAssistantSettings) => {
-  const baseUrl = String(process.env.API_BASE_URL || 'https://filter-bot-mypos-backend.qk6yxt.easypanel.host').replace(/\/$/, '');
+  const baseUrl = String(process.env.API_BASE_URL || 'https://mypos-api.163.61.44.41.sslip.io').replace(/\/$/, '');
   const serverStatus = getManagedLogisticsStatus();
 
   return {
