@@ -13,11 +13,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "http://163.61.44.41:3500/api/$1"
+      "destination": "https://mypos-api.163.61.44.41.sslip.io/api/$1"
     },
     {
       "source": "/uploads/(.*)",
-      "destination": "http://163.61.44.41:3500/uploads/$1"
+      "destination": "https://mypos-api.163.61.44.41.sslip.io/uploads/$1"
     },
     {
       "source": "/myerp/(.*\\..*)",
