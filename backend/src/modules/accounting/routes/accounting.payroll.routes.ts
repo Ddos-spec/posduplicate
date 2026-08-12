@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireCapability } from '../../../middlewares/capability.middleware';
 import {
   // Employee management
   getEmployees,
@@ -50,7 +51,7 @@ router.use(tenantMiddleware);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/employees', getEmployees);
+router.get('/employees', requireCapability('workforce.employee.read'), getEmployees);
 /**
  * @swagger
  * /api/accounting/payroll/employees:
@@ -75,7 +76,7 @@ router.get('/employees', getEmployees);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/employees', upsertEmployee);
+router.post('/employees', requireCapability('workforce.employee.manage'), upsertEmployee);
 /**
  * @swagger
  * /api/accounting/payroll/employees/{id}:
@@ -106,7 +107,7 @@ router.post('/employees', upsertEmployee);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/employees/:id', upsertEmployee);
+router.put('/employees/:id', requireCapability('workforce.employee.manage'), upsertEmployee);
 
 // ============= PAYROLL PERIODS =============
 /**
@@ -131,7 +132,7 @@ router.put('/employees/:id', upsertEmployee);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/periods', getPayrollPeriods);
+router.get('/periods', requireCapability('workforce.payroll.read'), getPayrollPeriods);
 /**
  * @swagger
  * /api/accounting/payroll/periods:
@@ -156,7 +157,7 @@ router.get('/periods', getPayrollPeriods);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/periods', createPayrollPeriod);
+router.post('/periods', requireCapability('workforce.payroll.manage'), createPayrollPeriod);
 
 // ============= PAYROLL PROCESSING =============
 /**
@@ -183,7 +184,7 @@ router.post('/periods', createPayrollPeriod);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/periods/:periodId/calculate', calculatePayroll);
+router.post('/periods/:periodId/calculate', requireCapability('workforce.payroll.manage'), calculatePayroll);
 /**
  * @swagger
  * /api/accounting/payroll/periods/{periodId}/details:
@@ -212,7 +213,7 @@ router.post('/periods/:periodId/calculate', calculatePayroll);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/periods/:periodId/details', getPayrollDetails);
+router.get('/periods/:periodId/details', requireCapability('workforce.payroll.read'), getPayrollDetails);
 /**
  * @swagger
  * /api/accounting/payroll/periods/{periodId}/finalize:
@@ -237,7 +238,7 @@ router.get('/periods/:periodId/details', getPayrollDetails);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/periods/:periodId/finalize', finalizePayroll);
+router.post('/periods/:periodId/finalize', requireCapability('workforce.payroll.manage'), finalizePayroll);
 
 // ============= PAYSLIP =============
 /**
@@ -269,7 +270,7 @@ router.post('/periods/:periodId/finalize', finalizePayroll);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/periods/:periodId/payslip/:employeeId', generatePayslip);
+router.get('/periods/:periodId/payslip/:employeeId', requireCapability('workforce.payroll.read'), generatePayslip);
 
 // ============= THR =============
 /**
@@ -296,7 +297,7 @@ router.get('/periods/:periodId/payslip/:employeeId', generatePayslip);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/thr/calculate', calculateTHR);
+router.post('/thr/calculate', requireCapability('workforce.payroll.manage'), calculateTHR);
 
 // ============= OVERTIME =============
 /**
@@ -323,7 +324,7 @@ router.post('/thr/calculate', calculateTHR);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/overtime', recordOvertime);
+router.post('/overtime', requireCapability('workforce.payroll.manage'), recordOvertime);
 
 // ============= REPORTS =============
 /**
@@ -348,7 +349,7 @@ router.post('/overtime', recordOvertime);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/reports/summary', getPayrollReport);
+router.get('/reports/summary', requireCapability('workforce.payroll.read'), getPayrollReport);
 /**
  * @swagger
  * /api/accounting/payroll/reports/pph21:
@@ -371,6 +372,6 @@ router.get('/reports/summary', getPayrollReport);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/reports/pph21', getPPh21Report);
+router.get('/reports/pph21', requireCapability('workforce.payroll.read'), getPPh21Report);
 
 export default router;
