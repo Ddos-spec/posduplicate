@@ -94,51 +94,8 @@ jobs:
       - name: Verify migration runner idempotency
         run: node dist/scripts/apply-p1-migrations.js
 
-      - name: Verify P1 tables and migration ledger
-        run: |
-          node - <<'NODE'
-          const { Client } = require('pg');
-          const required = [
-            'crm_opportunities',
-            'sales_quotations',
-            'sales_orders',
-            'loyalty_ledger',
-            'warehouse_locations',
-            'warehouse_stock_ledger',
-            'stock_transfers',
-            'stock_counts',
-            'barcode_aliases',
-            'manufacturing_orders',
-            'quality_checks',
-            'maintenance_requests',
-          ];
-          (async () => {
-            const client = new Client({ connectionString: process.env.DATABASE_URL });
-            await client.connect();
-            const tables = await client.query(
-              `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = ANY($1::text[])`,
-              [required]
-            );
-            const existing = new Set(tables.rows.map((row) => row.tablename));
-            const missing = required.filter((table) => !existing.has(table));
-            const ledger = await client.query(
-              `SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`
-            );
-            await client.end();
-            if (missing.length) {
-              console.error(`Missing P1 tables: ${missing.join(', ')}`);
-              process.exit(1);
-            }
-            if (ledger.rows.length !== 2 || ledger.rows.some((row) => !row.checksum_sha256 || row.checksum_sha256.length !== 64)) {
-              console.error('P1 migration ledger is invalid', ledger.rows);
-              process.exit(1);
-            }
-            console.log(`P1 production migration runner verified (${required.length} tables, ${ledger.rows.length} ledger entries).`);
-          })().catch((error) => {
-            console.error(error);
-            process.exit(1);
-          });
-          NODE
+      - name: Verify P1 tables, migration ledger, and immutable triggers
+        run: node dist/scripts/verify-p1-database-v2.js
 
       - name: Production backend Docker image build gate
         working-directory: .
