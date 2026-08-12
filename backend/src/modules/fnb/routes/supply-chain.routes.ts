@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware, ownerOnly } from '../../../middlewares/tenant.middleware';
+import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireCapability } from '../../../middlewares/capability.middleware';
 import {
   bootstrapWarehouse,
   createBarcodeAlias,
@@ -36,34 +37,34 @@ import {
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
 
-router.get('/summary', getSupplyChainSummary);
-router.post('/warehouse/bootstrap', ownerOnly, bootstrapWarehouse);
-router.get('/warehouse/locations', getWarehouseLocations);
-router.post('/warehouse/locations', ownerOnly, createWarehouseLocation);
-router.get('/warehouse/balances', getWarehouseBalances);
-router.get('/warehouse/transfers', getStockTransfers);
-router.post('/warehouse/transfers', ownerOnly, createStockTransfer);
-router.post('/warehouse/transfers/:id/execute', ownerOnly, executeStockTransfer);
-router.get('/warehouse/counts', getStockCounts);
-router.post('/warehouse/counts', ownerOnly, createStockCount);
-router.post('/warehouse/counts/:id/finalize', ownerOnly, finalizeStockCount);
+router.get('/summary', requireCapability('supply.warehouse.read'), getSupplyChainSummary);
+router.post('/warehouse/bootstrap', requireCapability('supply.warehouse.manage'), bootstrapWarehouse);
+router.get('/warehouse/locations', requireCapability('supply.warehouse.read'), getWarehouseLocations);
+router.post('/warehouse/locations', requireCapability('supply.warehouse.manage'), createWarehouseLocation);
+router.get('/warehouse/balances', requireCapability('supply.warehouse.read'), getWarehouseBalances);
+router.get('/warehouse/transfers', requireCapability('supply.warehouse.read'), getStockTransfers);
+router.post('/warehouse/transfers', requireCapability('supply.warehouse.manage'), createStockTransfer);
+router.post('/warehouse/transfers/:id/execute', requireCapability('supply.warehouse.manage'), executeStockTransfer);
+router.get('/warehouse/counts', requireCapability('supply.warehouse.read'), getStockCounts);
+router.post('/warehouse/counts', requireCapability('supply.warehouse.manage'), createStockCount);
+router.post('/warehouse/counts/:id/finalize', requireCapability('supply.warehouse.manage'), finalizeStockCount);
 
-router.post('/barcode', ownerOnly, createBarcodeAlias);
-router.get('/barcode/:barcode', resolveBarcode);
+router.post('/barcode', requireCapability('supply.barcode.manage'), createBarcodeAlias);
+router.get('/barcode/:barcode', requireCapability('supply.barcode.read'), resolveBarcode);
 
-router.get('/manufacturing/orders', getManufacturingOrders);
-router.post('/manufacturing/orders', ownerOnly, createManufacturingOrder);
-router.post('/manufacturing/orders/:id/transition', ownerOnly, transitionManufacturingOrder);
-router.post('/manufacturing/orders/:id/complete', ownerOnly, completeManufacturingOrder);
+router.get('/manufacturing/orders', requireCapability('supply.manufacturing.read'), getManufacturingOrders);
+router.post('/manufacturing/orders', requireCapability('supply.manufacturing.manage'), createManufacturingOrder);
+router.post('/manufacturing/orders/:id/transition', requireCapability('supply.manufacturing.manage'), transitionManufacturingOrder);
+router.post('/manufacturing/orders/:id/complete', requireCapability('supply.manufacturing.manage'), completeManufacturingOrder);
 
-router.get('/quality/checks', getQualityChecks);
-router.post('/quality/checks', ownerOnly, createQualityCheck);
-router.post('/quality/checks/:id/resolve', ownerOnly, resolveQualityCheck);
+router.get('/quality/checks', requireCapability('supply.quality.read'), getQualityChecks);
+router.post('/quality/checks', requireCapability('supply.quality.manage'), createQualityCheck);
+router.post('/quality/checks/:id/resolve', requireCapability('supply.quality.manage'), resolveQualityCheck);
 
-router.get('/maintenance/equipment', getEquipment);
-router.post('/maintenance/equipment', ownerOnly, createEquipment);
-router.get('/maintenance/requests', getMaintenanceRequests);
-router.post('/maintenance/requests', ownerOnly, createMaintenanceRequest);
-router.post('/maintenance/requests/:id/status', ownerOnly, updateMaintenanceRequest);
+router.get('/maintenance/equipment', requireCapability('supply.maintenance.read'), getEquipment);
+router.post('/maintenance/equipment', requireCapability('supply.maintenance.manage'), createEquipment);
+router.get('/maintenance/requests', requireCapability('supply.maintenance.read'), getMaintenanceRequests);
+router.post('/maintenance/requests', requireCapability('supply.maintenance.manage'), createMaintenanceRequest);
+router.post('/maintenance/requests/:id/status', requireCapability('supply.maintenance.manage'), updateMaintenanceRequest);
 
 export default router;
