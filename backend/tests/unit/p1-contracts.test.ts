@@ -4,7 +4,7 @@ import path from 'path';
 const root = path.resolve(__dirname, '../..');
 const read = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
-describe('P1 business-suite contracts', () => {
+describe('business-suite contracts', () => {
   test('revenue and supply-chain route surfaces are tenant gated and capability protected', () => {
     const revenueRoutes = read('src/modules/fnb/routes/revenue.routes.ts');
     const supplyRoutes = read('src/modules/fnb/routes/supply-chain.routes.ts');
@@ -36,6 +36,15 @@ describe('P1 business-suite contracts', () => {
     expect(recipeRoutes).toContain("router.post('/', requireCapability('supply.manufacturing.manage'), addRecipeItem)");
     expect(recipeRoutes).toContain("router.delete('/:id', requireCapability('supply.manufacturing.manage'), deleteRecipeItem)");
     expect(recipeRoutes).not.toContain('ownerOnly');
+  });
+
+  test('workforce routes use tenant context and named capabilities', () => {
+    const workforceRoutes = read('src/modules/fnb/routes/workforce.routes.ts');
+    expect(workforceRoutes).toContain('authMiddleware');
+    expect(workforceRoutes).toContain('tenantMiddleware');
+    expect(workforceRoutes).toContain("requireCapability('workforce.employee.read')");
+    expect(workforceRoutes).toContain("requireCapability('workforce.attendance.read')");
+    expect(workforceRoutes).toContain("requireCapability('workforce.attendance.self')");
   });
 
   test('revenue financial mutations require named capabilities', () => {
@@ -81,26 +90,11 @@ describe('P1 business-suite contracts', () => {
     expect(revenueMigration).not.toContain('BIGSERIAL');
     expect(supplyMigration).not.toContain('BIGSERIAL');
 
-    for (const table of [
-      'crm_opportunities',
-      'sales_quotations',
-      'sales_orders',
-      'loyalty_ledger',
-    ]) expect(revenueMigration).toContain(`public.${table}`);
-
-    for (const table of [
-      'warehouse_locations',
-      'warehouse_stock_ledger',
-      'stock_transfers',
-      'stock_counts',
-      'barcode_aliases',
-      'manufacturing_orders',
-      'quality_checks',
-      'maintenance_requests',
-    ]) expect(supplyMigration).toContain(`public.${table}`);
+    for (const table of ['crm_opportunities', 'sales_quotations', 'sales_orders', 'loyalty_ledger']) expect(revenueMigration).toContain(`public.${table}`);
+    for (const table of ['warehouse_locations', 'warehouse_stock_ledger', 'stock_transfers', 'stock_counts', 'barcode_aliases', 'manufacturing_orders', 'quality_checks', 'maintenance_requests']) expect(supplyMigration).toContain(`public.${table}`);
   });
 
-  test('production migration runner is forward-only, locked, checksum protected and idempotent', () => {
+  test('production migration runner is forward-only, locked, checksum protected and includes P2 attendance', () => {
     const runner = read('src/scripts/apply-p1-migrations.ts');
     const dockerfile = read('Dockerfile');
 
@@ -108,19 +102,21 @@ describe('P1 business-suite contracts', () => {
     expect(runner).toContain('suite_schema_migrations');
     expect(runner).toContain('checksum_sha256');
     expect(runner).toContain('already applied');
-    expect(runner).toContain('Never edit an applied P1 migration');
+    expect(runner).toContain('Never edit an applied suite migration');
     expect(runner).toContain("'20260812103000_p1_revenue_core'");
     expect(runner).toContain("'20260812112000_p1_supply_chain_core'");
     expect(runner).toContain("'20260812130000_p1_procurement_rfq'");
     expect(runner).toContain("'20260812140000_p1_append_only_guards'");
+    expect(runner).toContain("'20260813023000_p2_workforce_attendance'");
     expect(dockerfile).toContain('node:22-alpine');
     expect(dockerfile).toContain('node dist/scripts/apply-p1-migrations.js && exec node dist/server.js');
   });
 
-  test('FNB router mounts the P1 revenue and supply-chain APIs', () => {
+  test('FNB router mounts revenue, supply-chain and workforce APIs', () => {
     const index = read('src/modules/fnb/index.ts');
     expect(index).toContain("router.use('/revenue', revenueRoutes)");
     expect(index).toContain("router.use('/supply-chain', supplyChainRoutes)");
+    expect(index).toContain("router.use('/workforce', workforceRoutes)");
   });
 
   test('supplier and recipe source-of-truth controllers scope access to tenant outlets', () => {
