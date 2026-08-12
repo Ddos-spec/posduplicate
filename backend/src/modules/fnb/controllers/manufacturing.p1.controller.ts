@@ -12,6 +12,53 @@ const assertOutlet = async (tenantId: number, outletId: number) => {
   if (!outlet) throw Object.assign(new Error('Outlet bukan milik tenant ini'), { status: 403, code: 'OUTLET_ACCESS_DENIED' });
 };
 
+const lockTenantInventoryMutation = async (tx: any, tenantId: number) => {
+  await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(${tenantId}, 73001)`);
+};
+
+const validateConsumptionSnapshot = (consumption: any) => {
+  const planned = Number(consumption.quantity_planned);
+  const alreadyConsumed = Number(consumption.quantity_consumed || 0);
+  if (!Number.isFinite(planned) || planned <= 0 || !Number.isFinite(alreadyConsumed) || alreadyConsumed < 0 || alreadyConsumed > planned) {
+    throw Object.assign(new Error(`Material consumption snapshot ${consumption.id} tidak valid`), { status: 409, code: 'MATERIAL_CONSUMPTION_INVALID' });
+  }
+  return { planned, alreadyConsumed, remaining: planned - alreadyConsumed };
+};
+
+const consumeIngredientAtomically = async (tx: any, ingredientId: number, outletId: number, quantity: number, moNumber: string) => {
+  const updated = await tx.$queryRaw<any[]>(Prisma.sql`
+    UPDATE public.ingredients
+    SET stock = COALESCE(stock, 0) - ${quantity}, updated_at = NOW()
+    WHERE id = ${ingredientId}
+      AND outlet_id = ${outletId}
+      AND COALESCE(is_active, TRUE) = TRUE
+      AND COALESCE(stock, 0) >= ${quantity}
+    RETURNING id, name, cost_per_unit, stock + ${quantity} AS stock_before, stock AS stock_after
+  `);
+  if (updated[0]) return updated[0];
+
+  const existing = await tx.ingredients.findFirst({ where: { id: ingredientId, outlet_id: outletId, is_active: true } });
+  if (!existing) throw Object.assign(new Error(`Ingredient ${ingredientId} tidak ditemukan`), { status: 404, code: 'INGREDIENT_NOT_FOUND' });
+  throw Object.assign(new Error(`Stock ${existing.name} tidak cukup untuk MO ${moNumber}`), { status: 409, code: 'INSUFFICIENT_MATERIAL' });
+};
+
+const consumeInventoryAtomically = async (tx: any, inventoryId: number, outletId: number, quantity: number) => {
+  const updated = await tx.$queryRaw<any[]>(Prisma.sql`
+    UPDATE public.inventory
+    SET current_stock = current_stock - ${quantity}, updated_at = NOW()
+    WHERE id = ${inventoryId}
+      AND outlet_id = ${outletId}
+      AND is_active = TRUE
+      AND current_stock >= ${quantity}
+    RETURNING id, name, cost_amount, current_stock + ${quantity} AS stock_before, current_stock AS stock_after
+  `);
+  if (updated[0]) return updated[0];
+
+  const existing = await tx.inventory.findFirst({ where: { id: inventoryId, outlet_id: outletId, is_active: true } });
+  if (!existing) throw Object.assign(new Error(`Inventory ${inventoryId} tidak ditemukan`), { status: 404, code: 'INVENTORY_NOT_FOUND' });
+  throw Object.assign(new Error(`Stock ${existing.name} tidak cukup`), { status: 409, code: 'INSUFFICIENT_MATERIAL' });
+};
+
 export const getManufacturingOrders = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = requireTenant(req);
@@ -152,6 +199,7 @@ export const completeManufacturingOrder = async (req: Request, res: Response, ne
     const quantityProducedInput = req.body.quantityProduced === undefined ? null : Number(req.body.quantityProduced);
 
     const result = await prisma.$transaction(async (tx) => {
+      await lockTenantInventoryMutation(tx, tenantId);
       const rows = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.manufacturing_orders WHERE id = ${id} AND tenant_id = ${tenantId} FOR UPDATE`);
       const mo = rows[0];
       if (!mo) throw Object.assign(new Error('Manufacturing order tidak ditemukan'), { status: 404, code: 'MO_NOT_FOUND' });
@@ -161,39 +209,47 @@ export const completeManufacturingOrder = async (req: Request, res: Response, ne
 
       const consumptions = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.manufacturing_consumptions WHERE manufacturing_order_id = ${id} ORDER BY id FOR UPDATE`);
       for (const consumption of consumptions) {
+        const { alreadyConsumed, remaining } = validateConsumptionSnapshot(consumption);
+        if (remaining <= 0) continue;
+
         if (consumption.ingredient_id) {
-          const ingredient = await tx.ingredients.findFirst({ where: { id: Number(consumption.ingredient_id), outlet_id: Number(mo.outlet_id), is_active: true } });
-          if (!ingredient) throw Object.assign(new Error(`Ingredient ${consumption.ingredient_id} tidak ditemukan`), { status: 404, code: 'INGREDIENT_NOT_FOUND' });
-          const plannedConsumption = Number(consumption.quantity_planned);
-          const stockBefore = Number(ingredient.stock || 0);
-          if (stockBefore < plannedConsumption) throw Object.assign(new Error(`Stock ${ingredient.name} tidak cukup untuk MO ${mo.mo_number}`), { status: 409, code: 'INSUFFICIENT_MATERIAL' });
-          const stockAfter = stockBefore - plannedConsumption;
-          await tx.ingredients.update({ where: { id: ingredient.id }, data: { stock: stockAfter } });
+          const ingredient = await consumeIngredientAtomically(tx, Number(consumption.ingredient_id), Number(mo.outlet_id), remaining, mo.mo_number);
+          const unitCost = Number(ingredient.cost_per_unit || consumption.unit_cost || 0);
           await tx.stock_movements.create({
             data: {
               outlet_id: Number(mo.outlet_id),
               ingredient_id: ingredient.id,
               type: 'OUT',
-              quantity: plannedConsumption,
-              unit_price: Number(ingredient.cost_per_unit || 0),
-              total_cost: plannedConsumption * Number(ingredient.cost_per_unit || 0),
-              stock_before: stockBefore,
-              stock_after: stockAfter,
+              quantity: remaining,
+              unit_price: unitCost,
+              total_cost: remaining * unitCost,
+              stock_before: Number(ingredient.stock_before),
+              stock_after: Number(ingredient.stock_after),
               notes: `Manufacturing consumption ${mo.mo_number}`,
               user_id: req.userId!
             }
           });
-          await tx.$executeRaw(Prisma.sql`UPDATE public.manufacturing_consumptions SET quantity_consumed = ${plannedConsumption} WHERE id = ${consumption.id}`);
+          await tx.$executeRaw(Prisma.sql`UPDATE public.manufacturing_consumptions SET quantity_consumed = ${alreadyConsumed + remaining} WHERE id = ${consumption.id}`);
         } else if (consumption.inventory_id) {
-          const inv = await tx.inventory.findFirst({ where: { id: Number(consumption.inventory_id), outlet_id: Number(mo.outlet_id), is_active: true } });
-          if (!inv) throw Object.assign(new Error(`Inventory ${consumption.inventory_id} tidak ditemukan`), { status: 404, code: 'INVENTORY_NOT_FOUND' });
-          const plannedConsumption = Number(consumption.quantity_planned);
-          const stockBefore = Number(inv.current_stock || 0);
-          if (stockBefore < plannedConsumption) throw Object.assign(new Error(`Stock ${inv.name} tidak cukup`), { status: 409, code: 'INSUFFICIENT_MATERIAL' });
-          const stockAfter = stockBefore - plannedConsumption;
-          await tx.inventory.update({ where: { id: inv.id }, data: { current_stock: stockAfter } });
-          await tx.stock_movements.create({ data: { outlet_id: Number(mo.outlet_id), inventory_id: inv.id, type: 'OUT', quantity: plannedConsumption, unit_price: Number(inv.cost_amount || 0), total_cost: plannedConsumption * Number(inv.cost_amount || 0), stock_before: stockBefore, stock_after: stockAfter, notes: `Manufacturing consumption ${mo.mo_number}`, user_id: req.userId! } });
-          await tx.$executeRaw(Prisma.sql`UPDATE public.manufacturing_consumptions SET quantity_consumed = ${plannedConsumption} WHERE id = ${consumption.id}`);
+          const inv = await consumeInventoryAtomically(tx, Number(consumption.inventory_id), Number(mo.outlet_id), remaining);
+          const unitCost = Number(inv.cost_amount || consumption.unit_cost || 0);
+          await tx.stock_movements.create({
+            data: {
+              outlet_id: Number(mo.outlet_id),
+              inventory_id: inv.id,
+              type: 'OUT',
+              quantity: remaining,
+              unit_price: unitCost,
+              total_cost: remaining * unitCost,
+              stock_before: Number(inv.stock_before),
+              stock_after: Number(inv.stock_after),
+              notes: `Manufacturing consumption ${mo.mo_number}`,
+              user_id: req.userId!
+            }
+          });
+          await tx.$executeRaw(Prisma.sql`UPDATE public.manufacturing_consumptions SET quantity_consumed = ${alreadyConsumed + remaining} WHERE id = ${consumption.id}`);
+        } else {
+          throw Object.assign(new Error(`Material consumption ${consumption.id} tidak memiliki sumber stok`), { status: 409, code: 'MATERIAL_SOURCE_MISSING' });
         }
       }
 
