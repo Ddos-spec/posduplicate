@@ -107,15 +107,13 @@ jobs:
       - name: Backend production Docker build
         run: docker build --file backend/Dockerfile --tag omnipilot-p1-runtime:ci backend
 
-      - name: Commit tested warehouse integrity and restore runtime workflow
+      - name: Commit tested warehouse integrity
         if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git show HEAD^:.github/workflows/p1-runtime-ci.yml > .github/workflows/p1-runtime-ci.yml
-          rm -f .github/workflows/p1-a-warehouse-integrity-once.yml
           rm -f .github/scripts/apply_p1a_warehouse_integrity.py
-          git add backend/src/modules/fnb/controllers/warehouse.p1.controller.ts backend/tests/unit/p1-warehouse-integrity.test.ts .github/workflows/p1-runtime-ci.yml .github/workflows/p1-a-warehouse-integrity-once.yml .github/scripts/apply_p1a_warehouse_integrity.py
+          git add backend/src/modules/fnb/controllers/warehouse.p1.controller.ts backend/tests/unit/p1-warehouse-integrity.test.ts .github/scripts/apply_p1a_warehouse_integrity.py
           git diff --cached --check
           git commit -m "test(p1-a): harden warehouse transfer and cycle count"
           git push origin HEAD:feat/odoo-complete-suite
