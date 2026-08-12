@@ -51,7 +51,11 @@ const money = (value: unknown) => new Intl.NumberFormat('id-ID', {
 
 const qty = (value: unknown) => new Intl.NumberFormat('id-ID', { maximumFractionDigits: 3 }).format(Number(value || 0));
 
-export default function ProcurementRfqPanelV2() {
+type ProcurementRfqPanelV2Props = {
+  onPoConverted?: () => void | Promise<void>;
+};
+
+export default function ProcurementRfqPanelV2({ onPoConverted }: ProcurementRfqPanelV2Props) {
   const { isDark } = useThemeStore();
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -251,7 +255,8 @@ export default function ProcurementRfqPanelV2() {
     try {
       const po = await convertPurchaseRfqToPo(rfq.id);
       await load();
-      toast.success(`${po.po_number} dibuat`);
+      await onPoConverted?.();
+      toast.success(`${po.po_number} dibuat dan masuk ke Purchase Order Control`);
     } catch (error) {
       console.error(error);
       toast.error('Conversion ke PO gagal');
