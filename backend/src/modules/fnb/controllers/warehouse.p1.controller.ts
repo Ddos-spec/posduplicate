@@ -231,6 +231,10 @@ export const executeStockTransfer = async (req: Request, res: Response, next: Ne
     const tenantId = tenantIdFrom(req);
     const transferId = Number(req.params.id);
     const result = await prisma.$transaction(async (tx) => {
+      // Share the aggregate-stock mutation lock with receiving and cycle-count finalization.
+      // Transfers do not mutate aggregate stock, but serialization prevents a count from reconciling
+      // against a location balance while that same balance is moving between locations.
+      await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(${tenantId}, 73001)`);
       const transfers = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.stock_transfers WHERE id = ${transferId} AND tenant_id = ${tenantId} FOR UPDATE`);
       const transfer = transfers[0];
       if (!transfer) throw Object.assign(new Error('Transfer tidak ditemukan'), { status: 404, code: 'TRANSFER_NOT_FOUND' });
@@ -339,16 +343,39 @@ export const finalizeStockCount = async (req: Request, res: Response, next: Next
     const tenantId = tenantIdFrom(req);
     const stockCountId = Number(req.params.id);
     const submitted = Array.isArray(req.body.lines) ? req.body.lines : [];
+    const submittedIds = submitted.map((line: any) => Number(line.inventoryId));
+    if (submittedIds.some((inventoryId: number) => !Number.isInteger(inventoryId) || inventoryId <= 0)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_COUNT_INVENTORY_ID', message: 'Semua inventoryId stock count harus valid' } });
+    }
+    if (new Set(submittedIds).size !== submittedIds.length) {
+      return res.status(400).json({ success: false, error: { code: 'DUPLICATE_COUNT_LINE', message: 'Satu inventory hanya boleh muncul sekali saat finalize stock count' } });
+    }
     const submittedMap = new Map<number, number>(
       submitted.map((line: any) => [Number(line.inventoryId), Number(line.countedQuantity)] as [number, number])
     );
 
     const result = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(${tenantId}, 73001)`);
       const counts = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.stock_counts WHERE id = ${stockCountId} AND tenant_id = ${tenantId} FOR UPDATE`);
       const count = counts[0];
       if (!count) throw Object.assign(new Error('Stock count tidak ditemukan'), { status: 404, code: 'COUNT_NOT_FOUND' });
       if (count.status !== 'counting') throw Object.assign(new Error('Stock count sudah tidak bisa difinalisasi'), { status: 409, code: 'INVALID_COUNT_STATUS' });
       const lines = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.stock_count_lines WHERE stock_count_id = ${stockCountId} ORDER BY id`);
+      const scopedInventoryIds = new Set(lines.map((line: any) => Number(line.inventory_id)));
+      const currentBalanceScope = await tx.$queryRaw<any[]>(Prisma.sql`
+        SELECT inventory_id FROM public.warehouse_stock_balances
+        WHERE tenant_id = ${tenantId} AND location_id = ${count.location_id} AND quantity <> 0
+      `);
+      const newInventoryIds = currentBalanceScope
+        .map((row: any) => Number(row.inventory_id))
+        .filter((inventoryId: number) => !scopedInventoryIds.has(inventoryId));
+      if (newInventoryIds.length > 0) {
+        throw Object.assign(new Error('Scope stock count berubah karena ada inventory baru pada lokasi setelah count dibuka'), {
+          status: 409,
+          code: 'COUNT_SCOPE_CHANGED',
+          details: { newInventoryIds },
+        });
+      }
 
       for (const line of lines) {
         const inventoryId = Number(line.inventory_id);
@@ -356,12 +383,16 @@ export const finalizeStockCount = async (req: Request, res: Response, next: Next
         const counted = submittedMap.get(inventoryId)!;
         if (!Number.isFinite(counted) || counted < 0) throw Object.assign(new Error('Counted quantity tidak valid'), { status: 400, code: 'INVALID_COUNTED_QUANTITY' });
         const expected = Number(line.expected_quantity || 0);
-        const variance = counted - expected;
+        // Keep variance against the opening snapshot for audit/reporting, but reconcile using the
+        // location balance that is actually current at finalize time. This prevents transfers or
+        // receipts that happened during the count window from being applied a second time.
+        const snapshotVariance = counted - expected;
 
         const balanceRows = await tx.$queryRaw<any[]>(Prisma.sql`
           SELECT * FROM public.warehouse_stock_balances WHERE tenant_id = ${tenantId} AND location_id = ${count.location_id} AND inventory_id = ${inventoryId} FOR UPDATE
         `);
         const balanceBefore = Number(balanceRows[0]?.quantity || 0);
+        const appliedVariance = counted - balanceBefore;
         if (balanceRows[0]) {
           await tx.$executeRaw(Prisma.sql`UPDATE public.warehouse_stock_balances SET quantity = ${counted}, updated_at = NOW() WHERE id = ${balanceRows[0].id}`);
         } else {
@@ -372,11 +403,11 @@ export const finalizeStockCount = async (req: Request, res: Response, next: Next
           VALUES (${tenantId}, ${count.outlet_id}, ${count.location_id}, ${inventoryId}, 'count_adjustment', ${counted - balanceBefore}, ${balanceBefore}, ${counted}, 'stock_count', ${String(stockCountId)}, ${count.count_number}, ${req.userId || null})
         `);
 
-        if (variance !== 0) {
+        if (appliedVariance !== 0) {
           const inventory = await tx.inventory.findFirst({ where: { id: inventoryId, outlet_id: Number(count.outlet_id) } });
           if (!inventory) throw Object.assign(new Error(`Inventory ${inventoryId} tidak ditemukan`), { status: 404, code: 'INVENTORY_NOT_FOUND' });
           const aggregateBefore = Number(inventory.current_stock || 0);
-          const aggregateAfter = aggregateBefore + variance;
+          const aggregateAfter = aggregateBefore + appliedVariance;
           if (aggregateAfter < 0) throw Object.assign(new Error('Variance membuat aggregate stock negatif'), { status: 409, code: 'NEGATIVE_AGGREGATE_STOCK' });
           await tx.inventory.update({ where: { id: inventory.id }, data: { current_stock: aggregateAfter } });
           await tx.stock_movements.create({
@@ -384,17 +415,17 @@ export const finalizeStockCount = async (req: Request, res: Response, next: Next
               outlet_id: Number(count.outlet_id),
               inventory_id: inventory.id,
               type: 'ADJUST',
-              quantity: Math.abs(variance),
+              quantity: Math.abs(appliedVariance),
               unit_price: Number(inventory.cost_amount || 0),
-              total_cost: Math.abs(variance) * Number(inventory.cost_amount || 0),
+              total_cost: Math.abs(appliedVariance) * Number(inventory.cost_amount || 0),
               stock_before: aggregateBefore,
               stock_after: aggregateAfter,
-              notes: `Stock count ${count.count_number}; variance ${variance}`,
+              notes: `Stock count ${count.count_number}; snapshot variance ${snapshotVariance}; applied variance ${appliedVariance}`,
               user_id: req.userId!
             }
           });
         }
-        await tx.$executeRaw(Prisma.sql`UPDATE public.stock_count_lines SET counted_quantity = ${counted}, variance_quantity = ${variance} WHERE id = ${line.id}`);
+        await tx.$executeRaw(Prisma.sql`UPDATE public.stock_count_lines SET counted_quantity = ${counted}, variance_quantity = ${snapshotVariance} WHERE id = ${line.id}`);
       }
       const updated = await tx.$queryRaw<any[]>(Prisma.sql`
         UPDATE public.stock_counts SET status = 'finalized', finalized_by = ${req.userId || null}, finalized_at = NOW()
