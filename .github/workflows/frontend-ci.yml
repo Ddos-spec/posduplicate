@@ -47,6 +47,24 @@ jobs:
       run:
         working-directory: backend
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: suite_user
+          POSTGRES_PASSWORD: suite_password
+          POSTGRES_DB: posduplicate_suite
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://suite_user:suite_password@localhost:5432/posduplicate_suite
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,6 +81,48 @@ jobs:
 
       - name: Generate Prisma client
         run: npm run prisma:generate
+
+      - name: Clean database migration gate
+        run: npx prisma migrate deploy
+
+      - name: Verify P1 tables exist
+        run: |
+          node - <<'NODE'
+          const { Client } = require('pg');
+          const required = [
+            'crm_opportunities',
+            'sales_quotations',
+            'sales_orders',
+            'loyalty_ledger',
+            'warehouse_locations',
+            'warehouse_stock_ledger',
+            'stock_transfers',
+            'stock_counts',
+            'barcode_aliases',
+            'manufacturing_orders',
+            'quality_checks',
+            'maintenance_requests',
+          ];
+          (async () => {
+            const client = new Client({ connectionString: process.env.DATABASE_URL });
+            await client.connect();
+            const result = await client.query(
+              `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = ANY($1::text[])`,
+              [required]
+            );
+            const existing = new Set(result.rows.map((row) => row.tablename));
+            const missing = required.filter((table) => !existing.has(table));
+            await client.end();
+            if (missing.length) {
+              console.error(`Missing P1 tables after migrate deploy: ${missing.join(', ')}`);
+              process.exit(1);
+            }
+            console.log(`P1 migration verification passed (${required.length} tables).`);
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
 
       - name: Backend TypeScript build gate
         run: npm run build
