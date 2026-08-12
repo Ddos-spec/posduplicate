@@ -17,9 +17,17 @@ describe('P1 business-suite contracts', () => {
       expect(source).toContain('tenantMiddleware');
       expect(source).toMatch(/router\.use\(authMiddleware, tenantMiddleware\)/);
     }
+    expect(revenueRoutes).toContain('ownerOnly');
     expect(supplyRoutes).toContain('ownerOnly');
     expect(purchaseRoutes).toContain('ownerOnly');
     expect(recipeRoutes).toContain('ownerOnly');
+  });
+
+  test('revenue financial mutations require owner or manager privileges', () => {
+    const revenueRoutes = read('src/modules/fnb/routes/revenue.routes.ts');
+    expect(revenueRoutes).toMatch(/quotations\/:id\/status', ownerOnly, updateQuotationStatus/);
+    expect(revenueRoutes).toMatch(/quotations\/:id\/convert', ownerOnly, convertQuotationToOrder/);
+    expect(revenueRoutes).toMatch(/loyalty\/:customerId\/adjust', ownerOnly, adjustLoyaltyWallet/);
   });
 
   test('PO receiving uses the warehouse-aware atomic receiving path', () => {
@@ -74,6 +82,21 @@ describe('P1 business-suite contracts', () => {
       'quality_checks',
       'maintenance_requests',
     ]) expect(supplyMigration).toContain(`public.${table}`);
+  });
+
+  test('production migration runner is forward-only, locked, checksum protected and idempotent', () => {
+    const runner = read('src/scripts/apply-p1-migrations.ts');
+    const dockerfile = read('Dockerfile');
+
+    expect(runner).toContain('pg_advisory_lock');
+    expect(runner).toContain('suite_schema_migrations');
+    expect(runner).toContain('checksum_sha256');
+    expect(runner).toContain('already applied');
+    expect(runner).toContain('Never edit an applied P1 migration');
+    expect(runner).toContain("'20260812103000_p1_revenue_core'");
+    expect(runner).toContain("'20260812112000_p1_supply_chain_core'");
+    expect(dockerfile).toContain('node:22-alpine');
+    expect(dockerfile).toContain('node dist/scripts/apply-p1-migrations.js && exec node dist/server.js');
   });
 
   test('FNB router mounts the P1 revenue and supply-chain APIs', () => {
