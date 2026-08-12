@@ -9,12 +9,17 @@ const REQUIRED_TABLES = [
   'barcode_aliases', 'manufacturing_orders', 'quality_checks', 'maintenance_requests',
   'purchase_rfqs', 'purchase_rfq_items', 'purchase_rfq_suppliers',
   'purchase_rfq_supplier_items', 'procurement_event_ledger',
+  'workforce_attendance_sessions',
 ] as const;
 
 const REQUIRED_TRIGGERS = [
   'trg_loyalty_ledger_append_only',
   'trg_warehouse_stock_ledger_append_only',
   'trg_procurement_event_ledger_append_only',
+] as const;
+
+const REQUIRED_INDEXES = [
+  'ux_workforce_attendance_open_employee',
 ] as const;
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -50,13 +55,22 @@ async function run() {
     );
     const tableSet = new Set(tables.rows.map((row) => row.tablename));
     const missingTables = REQUIRED_TABLES.filter((table) => !tableSet.has(table));
-    assert(missingTables.length === 0, `Missing P1 tables: ${missingTables.join(', ')}`);
+    assert(missingTables.length === 0, `Missing suite tables: ${missingTables.join(', ')}`);
 
     const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(
       `SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`
     );
-    assert(ledger.rows.length === 4, `Expected 4 P1 migration ledger entries, found ${ledger.rows.length}`);
-    assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid P1 migration checksum');
+    assert(ledger.rows.length === 5, `Expected 5 suite migration ledger entries, found ${ledger.rows.length}`);
+    assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid suite migration checksum');
+    assert(ledger.rows.some((row) => row.migration_name === '20260813023000_p2_workforce_attendance'), 'P2 workforce migration missing from ledger');
+
+    const indexes = await client.query<{ indexname: string }>(
+      `SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = ANY($1::text[])`,
+      [REQUIRED_INDEXES]
+    );
+    const indexSet = new Set(indexes.rows.map((row) => row.indexname));
+    const missingIndexes = REQUIRED_INDEXES.filter((name) => !indexSet.has(name));
+    assert(missingIndexes.length === 0, `Missing workforce indexes: ${missingIndexes.join(', ')}`);
 
     const triggers = await client.query<{ tgname: string }>(
       `SELECT tgname FROM pg_trigger WHERE NOT tgisinternal AND tgname = ANY($1::text[])`,
@@ -75,19 +89,19 @@ async function run() {
       const loyalty = await client.query<{ id: number }>(`
         INSERT INTO public.loyalty_ledger
           (tenant_id, customer_id, wallet_id, entry_type, points_delta, reason)
-        VALUES (999001, 999001, $1, 'adjustment', 10, 'P1 immutable verification') RETURNING id
+        VALUES (999001, 999001, $1, 'adjustment', 10, 'suite immutable verification') RETURNING id
       `, [wallet.rows[0].id]);
 
       const location = await client.query<{ id: number }>(`
         INSERT INTO public.warehouse_locations (tenant_id, outlet_id, code, name, location_type)
-        VALUES (999001, 999001, 'VERIFY', 'P1 Verify Location', 'stock')
+        VALUES (999001, 999001, 'VERIFY', 'Suite Verify Location', 'stock')
         ON CONFLICT (tenant_id, outlet_id, code) DO UPDATE SET name = EXCLUDED.name
         RETURNING id
       `);
       const warehouse = await client.query<{ id: number }>(`
         INSERT INTO public.warehouse_stock_ledger
           (tenant_id, outlet_id, location_id, inventory_id, entry_type, quantity_delta, balance_before, balance_after, reference_type, reference_id, notes)
-        VALUES (999001, 999001, $1, 999001, 'manual_adjustment', 1, 0, 1, 'verification', 'verify', 'P1 immutable verification')
+        VALUES (999001, 999001, $1, 999001, 'manual_adjustment', 1, 0, 1, 'verification', 'verify', 'suite immutable verification')
         RETURNING id
       `, [location.rows[0].id]);
 
@@ -117,13 +131,13 @@ async function run() {
       throw error;
     }
 
-    console.log(`P1 DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, 6 blocked mutations.`);
+    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} workforce indexes, 6 blocked mutations.`);
   } finally {
     await client.end();
   }
 }
 
 run().catch((error) => {
-  console.error('[P1 DB verification] failed', error);
+  console.error('[Suite DB verification] failed', error);
   process.exit(1);
 });
