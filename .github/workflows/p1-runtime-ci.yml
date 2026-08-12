@@ -19,7 +19,7 @@ on:
       - '.github/workflows/p1-runtime-ci.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   p1-runtime:
@@ -45,11 +45,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Apply warehouse integrity patch
-        run: python .github/scripts/apply_p1a_warehouse_integrity.py
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
@@ -84,10 +79,6 @@ jobs:
         working-directory: backend
         run: node dist/scripts/apply-p1-migrations.js
 
-      - name: Warehouse integrity tests
-        working-directory: backend
-        run: npm test -- --runInBand p1-warehouse-integrity.test.ts
-
       - name: Backend tests
         working-directory: backend
         run: npm test -- --runInBand
@@ -106,14 +97,3 @@ jobs:
 
       - name: Backend production Docker build
         run: docker build --file backend/Dockerfile --tag omnipilot-p1-runtime:ci backend
-
-      - name: Commit tested warehouse integrity
-        if: github.event_name == 'push'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f .github/scripts/apply_p1a_warehouse_integrity.py
-          git add backend/src/modules/fnb/controllers/warehouse.p1.controller.ts backend/tests/unit/p1-warehouse-integrity.test.ts .github/scripts/apply_p1a_warehouse_integrity.py
-          git diff --cached --check
-          git commit -m "test(p1-a): harden warehouse transfer and cycle count"
-          git push origin HEAD:feat/odoo-complete-suite
