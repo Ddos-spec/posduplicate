@@ -29,7 +29,8 @@ const REQUIRED_TRIGGERS = [
   'trg_procurement_event_ledger_append_only',
 ] as const;
 
-const assert = (condition: unknown, message: string): asserts condition => {
+type AssertCondition = (condition: unknown, message: string) => asserts condition;
+const assert: AssertCondition = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
