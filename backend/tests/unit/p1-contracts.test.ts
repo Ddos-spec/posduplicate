@@ -5,7 +5,7 @@ const root = path.resolve(__dirname, '../..');
 const read = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 describe('P1 business-suite contracts', () => {
-  test('revenue and supply-chain route surfaces are tenant gated', () => {
+  test('revenue and supply-chain route surfaces are tenant gated and capability protected', () => {
     const revenueRoutes = read('src/modules/fnb/routes/revenue.routes.ts');
     const supplyRoutes = read('src/modules/fnb/routes/supply-chain.routes.ts');
     const purchaseRoutes = read('src/modules/fnb/routes/purchase-orders.routes.ts');
@@ -17,17 +17,22 @@ describe('P1 business-suite contracts', () => {
       expect(source).toContain('tenantMiddleware');
       expect(source).toMatch(/router\.use\(authMiddleware, tenantMiddleware\)/);
     }
-    expect(revenueRoutes).toContain('ownerOnly');
-    expect(supplyRoutes).toContain('ownerOnly');
-    expect(purchaseRoutes).toContain('ownerOnly');
+
+    for (const source of [revenueRoutes, supplyRoutes, purchaseRoutes]) {
+      expect(source).toContain('requireCapability');
+    }
+
+    expect(revenueRoutes).toContain("requireCapability('revenue.sales.manage')");
+    expect(supplyRoutes).toContain("requireCapability('supply.warehouse.manage')");
+    expect(purchaseRoutes).toContain("requireCapability('supply.procurement.manage')");
     expect(recipeRoutes).toContain('ownerOnly');
   });
 
-  test('revenue financial mutations require owner or manager privileges', () => {
+  test('revenue financial mutations require named capabilities', () => {
     const revenueRoutes = read('src/modules/fnb/routes/revenue.routes.ts');
-    expect(revenueRoutes).toMatch(/quotations\/:id\/status', ownerOnly, updateQuotationStatus/);
-    expect(revenueRoutes).toMatch(/quotations\/:id\/convert', ownerOnly, convertQuotationToOrder/);
-    expect(revenueRoutes).toMatch(/loyalty\/:customerId\/adjust', ownerOnly, adjustLoyaltyWallet/);
+    expect(revenueRoutes).toMatch(/quotations\/:id\/status', requireCapability\('revenue\.sales\.manage'\), updateQuotationStatus/);
+    expect(revenueRoutes).toMatch(/quotations\/:id\/convert', requireCapability\('revenue\.sales\.manage'\), convertQuotationToOrder/);
+    expect(revenueRoutes).toMatch(/loyalty\/:customerId\/adjust', requireCapability\('revenue\.loyalty\.adjust'\), adjustLoyaltyWallet/);
   });
 
   test('PO receiving uses the warehouse-aware atomic receiving path', () => {
@@ -35,6 +40,7 @@ describe('P1 business-suite contracts', () => {
     const receiving = read('src/modules/fnb/controllers/procurement-receiving.p1.controller.ts');
 
     expect(purchaseRoutes).toContain('receivePOItemsWithWarehouse');
+    expect(purchaseRoutes).toContain("requireCapability('supply.procurement.manage')");
     expect(receiving).toContain("'receipt'");
     expect(receiving).toContain('warehouse_stock_ledger');
     expect(receiving).toContain('warehouse_stock_balances');
@@ -95,6 +101,8 @@ describe('P1 business-suite contracts', () => {
     expect(runner).toContain('Never edit an applied P1 migration');
     expect(runner).toContain("'20260812103000_p1_revenue_core'");
     expect(runner).toContain("'20260812112000_p1_supply_chain_core'");
+    expect(runner).toContain("'20260812130000_p1_procurement_rfq'");
+    expect(runner).toContain("'20260812140000_p1_append_only_guards'");
     expect(dockerfile).toContain('node:22-alpine');
     expect(dockerfile).toContain('node dist/scripts/apply-p1-migrations.js && exec node dist/server.js');
   });
