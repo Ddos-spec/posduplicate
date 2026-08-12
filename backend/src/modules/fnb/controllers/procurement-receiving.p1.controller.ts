@@ -16,6 +16,9 @@ export const receivePOItemsWithWarehouse = async (req: Request, res: Response, n
 
     const tenantOutlets = await prisma.outlets.findMany({ where: { tenant_id: tenantId }, select: { id: true } });
     const outletIds = tenantOutlets.map((row) => row.id);
+    if (outletIds.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'TENANT_OUTLET_NOT_FOUND', message: 'Tenant belum memiliki outlet untuk receiving' } });
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const locked = await tx.$queryRaw<any[]>(Prisma.sql`
