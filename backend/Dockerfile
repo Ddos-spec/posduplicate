@@ -1,71 +1,50 @@
 # ==============================================
 # OmniPilot AI Backend - Production Dockerfile
 # ==============================================
-# Optimized for EasyPanel deployment
+# P1-ready EasyPanel image. Uses Node 22 and applies only forward P1 migrations
+# through the audited suite migration runner before the API starts.
 
-# Build stage
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci --only=production && \
-    npm install -D typescript @types/node ts-node
+# Keep the build deterministic against package-lock. Full deps are retained in
+# the runtime image for now because this legacy package classifies Prisma client
+# under devDependencies. We can slim this after dependency metadata is normalized.
+RUN npm ci
 
-# Copy source code
 COPY . .
-
-# Generate Prisma Client
 RUN npx prisma generate
-
-# Build TypeScript
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
+FROM node:22-alpine
 
-# Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
-# Create app user (security best practice)
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 WORKDIR /app
 
-# Copy package files and install production dependencies only
-COPY package*.json ./
-RUN npm ci --only=production
-
-# Copy Prisma schema and generate client
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
-RUN npx prisma generate
-
-# Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
-# Copy uploads directory structure
-RUN mkdir -p uploads && \
-    chown -R nodejs:nodejs uploads
+RUN mkdir -p uploads && chown -R nodejs:nodejs uploads
 
-# Switch to non-root user
 USER nodejs
 
-# Expose port (EasyPanel will handle this)
-# Port is dynamic via ENV variable, default 3000
 EXPOSE 3500
 
-# Health check
-# Use PORT env variable or default to 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
-  CMD node -e "const port = process.env.PORT || 3000; require('http').get('http://localhost:' + port + '/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "const port = process.env.PORT || 3000; require('http').get('http://localhost:' + port + '/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"
 
-# Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start application
-CMD ["node", "dist/server.js"]
+# Migration runner is idempotent, checksum-protected, transaction-scoped and
+# protected by a PostgreSQL advisory lock. API starts only after schema is ready.
+CMD ["sh", "-c", "node dist/scripts/apply-p1-migrations.js && exec node dist/server.js"]
