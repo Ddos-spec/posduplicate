@@ -9,7 +9,7 @@ const REQUIRED_TABLES = [
   'barcode_aliases', 'manufacturing_orders', 'quality_checks', 'maintenance_requests',
   'purchase_rfqs', 'purchase_rfq_items', 'purchase_rfq_suppliers',
   'purchase_rfq_supplier_items', 'procurement_event_ledger',
-  'workforce_attendance_sessions',
+  'workforce_attendance_sessions', 'payroll_rate_profiles',
 ] as const;
 
 const REQUIRED_TRIGGERS = [
@@ -20,19 +20,17 @@ const REQUIRED_TRIGGERS = [
 
 const REQUIRED_INDEXES = [
   'ux_workforce_attendance_open_employee',
+  'ux_payroll_rate_profile_global_version',
+  'ux_payroll_rate_profile_tenant_version',
 ] as const;
 
-function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message);
-}
+function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 
 const expectMutationBlocked = async (client: Client, sql: string, label: string, index: number) => {
   const savepoint = `immutable_check_${index}`;
   await client.query(`SAVEPOINT ${savepoint}`);
-  try {
-    await client.query(sql);
-    throw new Error(`${label}: mutation unexpectedly succeeded`);
-  } catch (error: any) {
+  try { await client.query(sql); throw new Error(`${label}: mutation unexpectedly succeeded`); }
+  catch (error: any) {
     if (String(error?.message || '').includes('unexpectedly succeeded')) throw error;
     assert(error?.code === '55000', `${label}: expected SQLSTATE 55000, got ${error?.code || 'unknown'} (${error?.message || error})`);
   } finally {
@@ -44,74 +42,42 @@ const expectMutationBlocked = async (client: Client, sql: string, label: string,
 async function run() {
   const databaseUrl = process.env.DATABASE_URL;
   assert(databaseUrl, 'DATABASE_URL is required');
-
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
-
   try {
-    const tables = await client.query<{ tablename: string }>(
-      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = ANY($1::text[])`,
-      [REQUIRED_TABLES]
-    );
+    const tables = await client.query<{ tablename: string }>(`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = ANY($1::text[])`, [REQUIRED_TABLES]);
     const tableSet = new Set(tables.rows.map((row) => row.tablename));
     const missingTables = REQUIRED_TABLES.filter((table) => !tableSet.has(table));
     assert(missingTables.length === 0, `Missing suite tables: ${missingTables.join(', ')}`);
 
-    const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(
-      `SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`
-    );
-    assert(ledger.rows.length === 5, `Expected 5 suite migration ledger entries, found ${ledger.rows.length}`);
+    const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(`SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`);
+    assert(ledger.rows.length === 6, `Expected 6 suite migration ledger entries, found ${ledger.rows.length}`);
     assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid suite migration checksum');
     assert(ledger.rows.some((row) => row.migration_name === '20260813023000_p2_workforce_attendance'), 'P2 workforce migration missing from ledger');
+    assert(ledger.rows.some((row) => row.migration_name === '20260813030000_p2_payroll_rate_profiles'), 'P2 payroll profile migration missing from ledger');
 
-    const indexes = await client.query<{ indexname: string }>(
-      `SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = ANY($1::text[])`,
-      [REQUIRED_INDEXES]
-    );
+    const indexes = await client.query<{ indexname: string }>(`SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = ANY($1::text[])`, [REQUIRED_INDEXES]);
     const indexSet = new Set(indexes.rows.map((row) => row.indexname));
     const missingIndexes = REQUIRED_INDEXES.filter((name) => !indexSet.has(name));
-    assert(missingIndexes.length === 0, `Missing workforce indexes: ${missingIndexes.join(', ')}`);
+    assert(missingIndexes.length === 0, `Missing suite indexes: ${missingIndexes.join(', ')}`);
 
-    const triggers = await client.query<{ tgname: string }>(
-      `SELECT tgname FROM pg_trigger WHERE NOT tgisinternal AND tgname = ANY($1::text[])`,
-      [REQUIRED_TRIGGERS]
-    );
+    const profile = await client.query<any>(`SELECT * FROM public.payroll_rate_profiles WHERE tenant_id IS NULL AND profile_code = 'ID-PAYROLL-2026' AND version = 1 LIMIT 1`);
+    assert(profile.rows[0], 'Draft 2026 payroll governance profile missing');
+    assert(profile.rows[0].status === 'draft', 'Reference payroll profile must remain draft until full engine verification');
+    assert(profile.rows[0].tax_method === 'PPH21_TER', 'Payroll reference tax method must be PPH21_TER');
+
+    const triggers = await client.query<{ tgname: string }>(`SELECT tgname FROM pg_trigger WHERE NOT tgisinternal AND tgname = ANY($1::text[])`, [REQUIRED_TRIGGERS]);
     const triggerSet = new Set(triggers.rows.map((row) => row.tgname));
     const missingTriggers = REQUIRED_TRIGGERS.filter((name) => !triggerSet.has(name));
     assert(missingTriggers.length === 0, `Missing immutable triggers: ${missingTriggers.join(', ')}`);
 
     await client.query('BEGIN');
     try {
-      const wallet = await client.query<{ id: number }>(`
-        INSERT INTO public.loyalty_wallets (tenant_id, customer_id, points_balance)
-        VALUES (999001, 999001, 10) RETURNING id
-      `);
-      const loyalty = await client.query<{ id: number }>(`
-        INSERT INTO public.loyalty_ledger
-          (tenant_id, customer_id, wallet_id, entry_type, points_delta, reason)
-        VALUES (999001, 999001, $1, 'adjustment', 10, 'suite immutable verification') RETURNING id
-      `, [wallet.rows[0].id]);
-
-      const location = await client.query<{ id: number }>(`
-        INSERT INTO public.warehouse_locations (tenant_id, outlet_id, code, name, location_type)
-        VALUES (999001, 999001, 'VERIFY', 'Suite Verify Location', 'stock')
-        ON CONFLICT (tenant_id, outlet_id, code) DO UPDATE SET name = EXCLUDED.name
-        RETURNING id
-      `);
-      const warehouse = await client.query<{ id: number }>(`
-        INSERT INTO public.warehouse_stock_ledger
-          (tenant_id, outlet_id, location_id, inventory_id, entry_type, quantity_delta, balance_before, balance_after, reference_type, reference_id, notes)
-        VALUES (999001, 999001, $1, 999001, 'manual_adjustment', 1, 0, 1, 'verification', 'verify', 'suite immutable verification')
-        RETURNING id
-      `, [location.rows[0].id]);
-
-      const procurement = await client.query<{ id: number }>(`
-        INSERT INTO public.procurement_event_ledger
-          (tenant_id, outlet_id, event_type, reference_type, reference_id, payload)
-        VALUES (999001, 999001, 'verification', 'verification', 'verify', '{}'::jsonb)
-        RETURNING id
-      `);
-
+      const wallet = await client.query<{ id: number }>(`INSERT INTO public.loyalty_wallets (tenant_id, customer_id, points_balance) VALUES (999001, 999001, 10) RETURNING id`);
+      const loyalty = await client.query<{ id: number }>(`INSERT INTO public.loyalty_ledger (tenant_id, customer_id, wallet_id, entry_type, points_delta, reason) VALUES (999001, 999001, $1, 'adjustment', 10, 'suite immutable verification') RETURNING id`, [wallet.rows[0].id]);
+      const location = await client.query<{ id: number }>(`INSERT INTO public.warehouse_locations (tenant_id, outlet_id, code, name, location_type) VALUES (999001, 999001, 'VERIFY', 'Suite Verify Location', 'stock') ON CONFLICT (tenant_id, outlet_id, code) DO UPDATE SET name = EXCLUDED.name RETURNING id`);
+      const warehouse = await client.query<{ id: number }>(`INSERT INTO public.warehouse_stock_ledger (tenant_id, outlet_id, location_id, inventory_id, entry_type, quantity_delta, balance_before, balance_after, reference_type, reference_id, notes) VALUES (999001, 999001, $1, 999001, 'manual_adjustment', 1, 0, 1, 'verification', 'verify', 'suite immutable verification') RETURNING id`, [location.rows[0].id]);
+      const procurement = await client.query<{ id: number }>(`INSERT INTO public.procurement_event_ledger (tenant_id, outlet_id, event_type, reference_type, reference_id, payload) VALUES (999001, 999001, 'verification', 'verification', 'verify', '{}'::jsonb) RETURNING id`);
       const checks = [
         [`UPDATE public.loyalty_ledger SET reason='tamper' WHERE id=${Number(loyalty.rows[0].id)}`, 'loyalty UPDATE'],
         [`DELETE FROM public.loyalty_ledger WHERE id=${Number(loyalty.rows[0].id)}`, 'loyalty DELETE'],
@@ -120,24 +86,12 @@ async function run() {
         [`UPDATE public.procurement_event_ledger SET event_type='tamper' WHERE id=${Number(procurement.rows[0].id)}`, 'procurement UPDATE'],
         [`DELETE FROM public.procurement_event_ledger WHERE id=${Number(procurement.rows[0].id)}`, 'procurement DELETE'],
       ] as const;
-
-      for (let index = 0; index < checks.length; index += 1) {
-        await expectMutationBlocked(client, checks[index][0], checks[index][1], index);
-      }
-
+      for (let index = 0; index < checks.length; index += 1) await expectMutationBlocked(client, checks[index][0], checks[index][1], index);
       await client.query('ROLLBACK');
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    }
+    } catch (error) { await client.query('ROLLBACK'); throw error; }
 
-    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} workforce indexes, 6 blocked mutations.`);
-  } finally {
-    await client.end();
-  }
+    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, 6 blocked mutations.`);
+  } finally { await client.end(); }
 }
 
-run().catch((error) => {
-  console.error('[Suite DB verification] failed', error);
-  process.exit(1);
-});
+run().catch((error) => { console.error('[Suite DB verification] failed', error); process.exit(1); });
