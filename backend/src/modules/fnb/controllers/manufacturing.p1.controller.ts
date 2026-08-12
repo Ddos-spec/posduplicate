@@ -78,6 +78,10 @@ export const getManufacturingOrders = async (req: Request, res: Response, next: 
     const tenantId = requireTenant(req);
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT mo.*, i.name AS item_name, i.price AS item_price,
+        COALESCE((SELECT SUM(c.quantity_planned * c.unit_cost) FROM public.manufacturing_consumptions c WHERE c.manufacturing_order_id = mo.id), 0) AS planned_material_cost,
+        COALESCE((SELECT SUM(c.quantity_consumed * c.unit_cost) FROM public.manufacturing_consumptions c WHERE c.manufacturing_order_id = mo.id), 0) AS consumed_material_cost,
+        CASE WHEN mo.quantity_planned > 0 THEN (mo.quantity_produced / mo.quantity_planned) * 100 ELSE 0 END AS yield_percentage,
+        CASE WHEN mo.quantity_produced > 0 THEN COALESCE((SELECT SUM(c.quantity_consumed * c.unit_cost) FROM public.manufacturing_consumptions c WHERE c.manufacturing_order_id = mo.id), 0) / mo.quantity_produced ELSE 0 END AS output_unit_cost,
         COALESCE((SELECT json_agg(json_build_object(
           'id', c.id,
           'ingredientId', c.ingredient_id,
@@ -228,7 +232,7 @@ export const completeManufacturingOrder = async (req: Request, res: Response, ne
 
         if (consumption.ingredient_id) {
           const ingredient = await consumeIngredientAtomically(tx, Number(consumption.ingredient_id), Number(mo.outlet_id), remaining, mo.mo_number);
-          const unitCost = Number(ingredient.cost_per_unit || consumption.unit_cost || 0);
+          const unitCost = Number(consumption.unit_cost || ingredient.cost_per_unit || 0);
           await tx.stock_movements.create({
             data: {
               outlet_id: Number(mo.outlet_id),
@@ -246,7 +250,7 @@ export const completeManufacturingOrder = async (req: Request, res: Response, ne
           await tx.$executeRaw(Prisma.sql`UPDATE public.manufacturing_consumptions SET quantity_consumed = ${alreadyConsumed + remaining} WHERE id = ${consumption.id}`);
         } else if (consumption.inventory_id) {
           const inv = await consumeInventoryAtomically(tx, Number(consumption.inventory_id), Number(mo.outlet_id), remaining);
-          const unitCost = Number(inv.cost_amount || consumption.unit_cost || 0);
+          const unitCost = Number(consumption.unit_cost || inv.cost_amount || 0);
           await tx.stock_movements.create({
             data: {
               outlet_id: Number(mo.outlet_id),
@@ -267,6 +271,10 @@ export const completeManufacturingOrder = async (req: Request, res: Response, ne
         }
       }
 
+      const materialCost = consumptions.reduce((sum, consumption) => sum + (Number(consumption.quantity_planned) * Number(consumption.unit_cost || 0)), 0);
+      const yieldPercentage = Number(mo.quantity_planned) > 0 ? (quantityProduced / Number(mo.quantity_planned)) * 100 : 0;
+      const outputUnitCost = quantityProduced > 0 ? materialCost / quantityProduced : 0;
+
       const product = await tx.items.findFirst({ where: { id: Number(mo.item_id), outlet_id: Number(mo.outlet_id), is_active: true } });
       if (!product) throw Object.assign(new Error('Finished product tidak ditemukan'), { status: 404, code: 'ITEM_NOT_FOUND' });
       if (product.track_stock && quantityProduced > 0) {
@@ -277,8 +285,8 @@ export const completeManufacturingOrder = async (req: Request, res: Response, ne
             item_id: product.id,
             type: 'IN',
             quantity: quantityProduced,
-            unit_price: 0,
-            total_cost: 0,
+            unit_price: outputUnitCost,
+            total_cost: materialCost,
             stock_before: Number(postedProduct.stock_before),
             stock_after: Number(postedProduct.stock_after),
             notes: `Manufacturing output ${mo.mo_number}`,
@@ -295,9 +303,9 @@ export const completeManufacturingOrder = async (req: Request, res: Response, ne
       `);
       await tx.$executeRaw(Prisma.sql`
         INSERT INTO public.quality_checks (tenant_id, outlet_id, check_type, reference_type, reference_id, item_id, status, criteria, notes, created_by)
-        VALUES (${tenantId}, ${Number(mo.outlet_id)}, 'production_output', 'manufacturing_order', ${String(id)}, ${Number(mo.item_id)}, 'pending', CAST(${JSON.stringify({ quantityProduced })} AS jsonb), ${`Auto QC from ${mo.mo_number}`}, ${req.userId || null})
+        VALUES (${tenantId}, ${Number(mo.outlet_id)}, 'production_output', 'manufacturing_order', ${String(id)}, ${Number(mo.item_id)}, 'pending', CAST(${JSON.stringify({ quantityProduced, yieldPercentage, materialCost, outputUnitCost })} AS jsonb), ${`Auto QC from ${mo.mo_number}`}, ${req.userId || null})
       `);
-      return updated[0];
+      return { ...updated[0], plannedMaterialCost: materialCost, consumedMaterialCost: materialCost, yieldPercentage, outputUnitCost };
     });
 
     res.json({ success: true, data: result, message: 'Manufacturing completed; materials consumed, output posted, QC created' });
