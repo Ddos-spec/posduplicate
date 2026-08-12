@@ -12,6 +12,56 @@ const assertOutlet = async (tenantId: number, outletId: number) => {
   if (!outlet) throw Object.assign(new Error('Outlet bukan milik tenant ini'), { status: 403, code: 'OUTLET_ACCESS_DENIED' });
 };
 
+const jsonObject = (value: unknown, field: string) => {
+  if (value === undefined || value === null) return {};
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw Object.assign(new Error(`${field} harus berupa object JSON`), { status: 400, code: 'INVALID_JSON_OBJECT' });
+  }
+  return value as Record<string, unknown>;
+};
+
+const validateQualityTarget = async (
+  tenantId: number,
+  outletId: number,
+  inventoryId: number | null,
+  itemId: number | null,
+  referenceType: string | null,
+  referenceId: string | null,
+) => {
+  if (inventoryId && itemId) {
+    throw Object.assign(new Error('QC hanya boleh menargetkan satu inventory atau satu item'), { status: 400, code: 'QC_TARGET_AMBIGUOUS' });
+  }
+
+  if (inventoryId) {
+    const inventory = await prisma.inventory.findFirst({ where: { id: inventoryId, outlet_id: outletId, is_active: true }, select: { id: true } });
+    if (!inventory) throw Object.assign(new Error('Inventory target QC tidak ditemukan pada outlet'), { status: 404, code: 'QC_INVENTORY_NOT_FOUND' });
+  }
+
+  if (itemId) {
+    const item = await prisma.items.findFirst({ where: { id: itemId, outlet_id: outletId, is_active: true }, select: { id: true } });
+    if (!item) throw Object.assign(new Error('Item target QC tidak ditemukan pada outlet'), { status: 404, code: 'QC_ITEM_NOT_FOUND' });
+  }
+
+  if (referenceType === 'manufacturing_order') {
+    const moId = Number(referenceId);
+    if (!Number.isInteger(moId) || moId <= 0) {
+      throw Object.assign(new Error('Reference manufacturing order tidak valid'), { status: 400, code: 'QC_REFERENCE_INVALID' });
+    }
+    const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT id, item_id, outlet_id FROM public.manufacturing_orders
+      WHERE id = ${moId} AND tenant_id = ${tenantId} AND outlet_id = ${outletId}
+      LIMIT 1
+    `);
+    if (!rows[0]) throw Object.assign(new Error('Manufacturing order reference tidak ditemukan'), { status: 404, code: 'QC_MO_NOT_FOUND' });
+    if (itemId && Number(rows[0].item_id) !== itemId) {
+      throw Object.assign(new Error('Item QC tidak sesuai dengan finished product MO'), { status: 409, code: 'QC_REFERENCE_MISMATCH' });
+    }
+    return { manufacturingItemId: Number(rows[0].item_id) };
+  }
+
+  return { manufacturingItemId: null as number | null };
+};
+
 export const getQualityChecks = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = requireTenant(req);
@@ -37,12 +87,42 @@ export const createQualityCheck = async (req: Request, res: Response, next: Next
     const checkType = String(req.body.checkType || '').trim();
     if (!outletId || !checkType) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Outlet dan check type wajib diisi' } });
     await assertOutlet(tenantId, outletId);
-    const criteria = JSON.stringify(req.body.criteria || {});
+
+    const inventoryId = req.body.inventoryId === undefined || req.body.inventoryId === null ? null : Number(req.body.inventoryId);
+    const requestedItemId = req.body.itemId === undefined || req.body.itemId === null ? null : Number(req.body.itemId);
+    if ((inventoryId !== null && (!Number.isInteger(inventoryId) || inventoryId <= 0)) || (requestedItemId !== null && (!Number.isInteger(requestedItemId) || requestedItemId <= 0))) {
+      return res.status(400).json({ success: false, error: { code: 'QC_TARGET_INVALID', message: 'Inventory/item target QC tidak valid' } });
+    }
+
+    const referenceType = req.body.referenceType ? String(req.body.referenceType).trim() : null;
+    const referenceId = req.body.referenceId === undefined || req.body.referenceId === null ? null : String(req.body.referenceId);
+    if (checkType === 'production_output' && (referenceType !== 'manufacturing_order' || !referenceId)) {
+      return res.status(400).json({ success: false, error: { code: 'PRODUCTION_QC_REFERENCE_REQUIRED', message: 'Production output QC wajib mereferensikan manufacturing order' } });
+    }
+
+    const target = await validateQualityTarget(tenantId, outletId, inventoryId, requestedItemId, referenceType, referenceId);
+    const itemId = requestedItemId || target.manufacturingItemId;
+
+    if (checkType === 'production_output' && referenceType && referenceId) {
+      const existing = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT id FROM public.quality_checks
+        WHERE tenant_id = ${tenantId}
+          AND outlet_id = ${outletId}
+          AND check_type = 'production_output'
+          AND reference_type = ${referenceType}
+          AND reference_id = ${referenceId}
+          AND status = 'pending'
+        LIMIT 1
+      `);
+      if (existing[0]) return res.status(409).json({ success: false, error: { code: 'QC_ALREADY_PENDING', message: 'Production QC untuk reference ini masih pending' } });
+    }
+
+    const criteria = JSON.stringify(jsonObject(req.body.criteria, 'criteria'));
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       INSERT INTO public.quality_checks
         (tenant_id, outlet_id, check_type, reference_type, reference_id, inventory_id, item_id, status, criteria, notes, created_by)
       VALUES
-        (${tenantId}, ${outletId}, ${checkType}, ${req.body.referenceType || null}, ${req.body.referenceId ? String(req.body.referenceId) : null}, ${req.body.inventoryId ? Number(req.body.inventoryId) : null}, ${req.body.itemId ? Number(req.body.itemId) : null}, 'pending', CAST(${criteria} AS jsonb), ${req.body.notes || null}, ${req.userId || null})
+        (${tenantId}, ${outletId}, ${checkType}, ${referenceType}, ${referenceId}, ${inventoryId}, ${itemId}, 'pending', CAST(${criteria} AS jsonb), ${req.body.notes || null}, ${req.userId || null})
       RETURNING *
     `);
     res.status(201).json({ success: true, data: rows[0] });
@@ -56,16 +136,31 @@ export const resolveQualityCheck = async (req: Request, res: Response, next: Nex
     const tenantId = requireTenant(req);
     const id = Number(req.params.id);
     const status = String(req.body.status || '');
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ success: false, error: { code: 'INVALID_QC_ID', message: 'QC ID tidak valid' } });
     if (!['pass', 'fail', 'waived'].includes(status)) return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: 'Status QC harus pass/fail/waived' } });
-    const measurements = JSON.stringify(req.body.measurements || {});
-    const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      UPDATE public.quality_checks
-      SET status = ${status}, measurements = CAST(${measurements} AS jsonb), notes = COALESCE(${req.body.notes || null}, notes), checked_by = ${req.userId || null}, checked_at = NOW()
-      WHERE id = ${id} AND tenant_id = ${tenantId} AND status = 'pending'
-      RETURNING *
-    `);
-    if (!rows[0]) return res.status(404).json({ success: false, error: { code: 'QC_NOT_FOUND_OR_CLOSED', message: 'QC tidak ditemukan atau sudah selesai' } });
-    res.json({ success: true, data: rows[0] });
+    const notes = req.body.notes === undefined || req.body.notes === null ? null : String(req.body.notes).trim();
+    if ((status === 'fail' || status === 'waived') && !notes) {
+      return res.status(400).json({ success: false, error: { code: 'QC_REASON_REQUIRED', message: 'QC fail/waived wajib memiliki alasan' } });
+    }
+    const measurements = JSON.stringify(jsonObject(req.body.measurements, 'measurements'));
+
+    const resolved = await prisma.$transaction(async (tx) => {
+      const current = await tx.$queryRaw<any[]>(Prisma.sql`
+        SELECT * FROM public.quality_checks WHERE id = ${id} AND tenant_id = ${tenantId} FOR UPDATE
+      `);
+      if (!current[0]) throw Object.assign(new Error('QC tidak ditemukan'), { status: 404, code: 'QC_NOT_FOUND' });
+      if (current[0].status !== 'pending') throw Object.assign(new Error('QC sudah diselesaikan'), { status: 409, code: 'QC_ALREADY_RESOLVED' });
+
+      const rows = await tx.$queryRaw<any[]>(Prisma.sql`
+        UPDATE public.quality_checks
+        SET status = ${status}, measurements = CAST(${measurements} AS jsonb), notes = COALESCE(${notes}, notes), checked_by = ${req.userId || null}, checked_at = NOW()
+        WHERE id = ${id} AND tenant_id = ${tenantId} AND status = 'pending'
+        RETURNING *
+      `);
+      if (!rows[0]) throw Object.assign(new Error('QC berubah saat diproses'), { status: 409, code: 'QC_CONCURRENT_UPDATE' });
+      return rows[0];
+    });
+    res.json({ success: true, data: resolved });
   } catch (error) {
     next(error);
   }
