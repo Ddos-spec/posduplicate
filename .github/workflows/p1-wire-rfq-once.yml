@@ -1,0 +1,103 @@
+name: P1 One-shot RFQ Wiring
+
+on:
+  push:
+    branches:
+      - feat/odoo-complete-suite
+    paths:
+      - '.github/workflows/p1-wire-rfq-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  wire-rfq:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout P1 branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/odoo-complete-suite
+          fetch-depth: 0
+
+      - name: Patch launcher and Supply Chain workspace safely
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          selector_path = Path('frontend/src/pages/ModuleSelectorPage.tsx')
+          selector = selector_path.read_text()
+          supply_marker = "const P1_SUPPLY_IDS = new Set(["
+          start = selector.find(supply_marker)
+          if start < 0:
+              raise SystemExit('P1_SUPPLY_IDS marker not found')
+          end = selector.find(']);', start)
+          if end < 0:
+              raise SystemExit('P1_SUPPLY_IDS end marker not found')
+          block = selector[start:end]
+          if "  'inventory',\n" in block:
+              block = block.replace("  'inventory',\n", '', 1)
+          selector = selector[:start] + block + selector[end:]
+          selector_path.write_text(selector)
+
+          page_path = Path('frontend/src/pages/SupplyChainWorkspacePage.tsx')
+          page = page_path.read_text()
+          import_line = "import ProcurementRfqPanel from '../components/supply-chain/ProcurementRfqPanel';"
+          if import_line not in page:
+              anchor = "} from '../services/supplyChainService';"
+              if anchor not in page:
+                  raise SystemExit('Supply-chain service import anchor not found')
+              page = page.replace(anchor, anchor + "\n" + import_line, 1)
+
+          procurement_start = "{tab === 'procurement' && <section className={`rounded-2xl border ${card}`}"
+          warehouse_start = "{tab === 'warehouse' &&"
+          p_start = page.find(procurement_start)
+          w_start = page.find(warehouse_start)
+          if p_start < 0 or w_start < 0 or w_start <= p_start:
+              raise SystemExit('Procurement/Warehouse tab boundaries not found')
+
+          segment = page[p_start:w_start]
+          if '<ProcurementRfqPanel />' not in segment:
+              segment = segment.replace(
+                  "{tab === 'procurement' && <section",
+                  "{tab === 'procurement' && <div className=\"space-y-5\"><ProcurementRfqPanel /><section",
+                  1,
+              )
+              stripped = segment.rstrip()
+              if not stripped.endswith('</section>}'):
+                  raise SystemExit('Procurement section closing marker not found')
+              stripped = stripped[:-len('</section>}')] + '</section></div>}'
+              segment = stripped + segment[len(segment.rstrip()):]
+              page = page[:p_start] + segment + page[w_start:]
+
+          if page.count('<ProcurementRfqPanel />') != 1:
+              raise SystemExit(f'Expected one RFQ panel, found {page.count("<ProcurementRfqPanel />")}')
+          page_path.write_text(page)
+          PY
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build patched frontend before commit
+        working-directory: frontend
+        run: npm run build
+
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/p1-wire-rfq-once.yml
+
+      - name: Commit only after successful build
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/pages/ModuleSelectorPage.tsx frontend/src/pages/SupplyChainWorkspacePage.tsx .github/workflows/p1-wire-rfq-once.yml
+          git diff --cached --check
+          git commit -m "feat(p1): wire RFQ sourcing into supply-chain workspace"
+          git push origin HEAD:feat/odoo-complete-suite
