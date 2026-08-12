@@ -17,6 +17,24 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: backend_ci
+          POSTGRES_PASSWORD: backend_ci
+          POSTGRES_DB: posduplicate_backend_ci
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://backend_ci:backend_ci@localhost:5432/posduplicate_backend_ci
+
     defaults:
       run:
         working-directory: ./backend
@@ -40,6 +58,9 @@ jobs:
 
     - name: Build backend
       run: npm run build
+
+    - name: Build test database baseline
+      run: npx prisma db push --skip-generate
 
     - name: Run Tests (Unit & Integration)
       run: npm test -- --runInBand
