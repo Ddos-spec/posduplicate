@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { tenantMiddleware, ownerOnly } from '../../../middlewares/tenant.middleware';
 import {
   adjustLoyaltyWallet,
   convertQuotationToOrder,
@@ -28,12 +28,12 @@ router.post('/crm/opportunities/:id/activities', createOpportunityActivity);
 
 router.get('/quotations', getQuotations);
 router.post('/quotations', createQuotation);
-router.patch('/quotations/:id/status', updateQuotationStatus);
-router.post('/quotations/:id/convert', convertQuotationToOrder);
+router.patch('/quotations/:id/status', ownerOnly, updateQuotationStatus);
+router.post('/quotations/:id/convert', ownerOnly, convertQuotationToOrder);
 router.get('/sales-orders', getSalesOrders);
 
 router.get('/customer-360/:customerId', getCustomer360);
 router.get('/loyalty/:customerId', getLoyaltyWallet);
-router.post('/loyalty/:customerId/adjust', adjustLoyaltyWallet);
+router.post('/loyalty/:customerId/adjust', ownerOnly, adjustLoyaltyWallet);
 
 export default router;
