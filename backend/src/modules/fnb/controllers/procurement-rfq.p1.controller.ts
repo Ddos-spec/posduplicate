@@ -208,6 +208,12 @@ export const submitSupplierRfqQuote = async (req: Request, res: Response, next: 
     const supplierId = Number(req.params.supplierId);
     const itemQuotes = Array.isArray(req.body.items) ? req.body.items : [];
     if (itemQuotes.length === 0) return res.status(400).json({ success: false, error: { code: 'QUOTE_ITEMS_REQUIRED', message: 'Supplier quote membutuhkan item prices' } });
+    const leadTimeDays = req.body.leadTimeDays === undefined || req.body.leadTimeDays === null || req.body.leadTimeDays === ''
+      ? null
+      : Number(req.body.leadTimeDays);
+    if (leadTimeDays !== null && (!Number.isFinite(leadTimeDays) || leadTimeDays < 0)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_LEAD_TIME', message: 'Lead time supplier harus angka >= 0' } });
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const rfqs = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.purchase_rfqs WHERE id = ${rfqId} AND tenant_id = ${tenantId} FOR UPDATE`);
@@ -244,7 +250,7 @@ export const submitSupplierRfqQuote = async (req: Request, res: Response, next: 
       }
       await tx.$executeRaw(Prisma.sql`
         UPDATE public.purchase_rfq_suppliers
-        SET status = 'responded', quote_reference = ${req.body.quoteReference || null}, quoted_total = ${quotedTotal}, lead_time_days = ${req.body.leadTimeDays === undefined ? null : Number(req.body.leadTimeDays)}, valid_until = ${req.body.validUntil ? new Date(req.body.validUntil) : null}, notes = ${req.body.notes || null}, responded_at = NOW(), updated_at = NOW()
+        SET status = 'responded', quote_reference = ${req.body.quoteReference || null}, quoted_total = ${quotedTotal}, lead_time_days = ${leadTimeDays}, valid_until = ${req.body.validUntil ? new Date(req.body.validUntil) : null}, notes = ${req.body.notes || null}, responded_at = NOW(), updated_at = NOW()
         WHERE id = ${supplierLink.id}
       `);
       await tx.$executeRaw(Prisma.sql`UPDATE public.purchase_rfqs SET status = 'quoted', updated_at = NOW() WHERE id = ${rfqId} AND tenant_id = ${tenantId}`);
@@ -254,7 +260,7 @@ export const submitSupplierRfqQuote = async (req: Request, res: Response, next: 
         eventType: 'supplier_quote_received',
         referenceType: 'rfq',
         referenceId: rfqId,
-        payload: { supplierId, quotedTotal, leadTimeDays: req.body.leadTimeDays ?? null },
+        payload: { supplierId, quotedTotal, leadTimeDays, items: itemQuotes },
         userId: req.userId,
       });
       return { supplierId, quotedTotal };
@@ -278,6 +284,23 @@ export const selectRfqSupplier = async (req: Request, res: Response, next: NextF
       if (rfq.status !== 'quoted') throw Object.assign(new Error('Supplier hanya bisa dipilih setelah quote diterima'), { status: 409, code: 'INVALID_RFQ_STATUS' });
       const supplierRows = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.purchase_rfq_suppliers WHERE rfq_id = ${rfqId} AND supplier_id = ${supplierId} AND status = 'responded' FOR UPDATE`);
       if (!supplierRows[0]) throw Object.assign(new Error('Supplier belum memberikan quote valid'), { status: 409, code: 'SUPPLIER_QUOTE_REQUIRED' });
+
+      const capacityShortages = await tx.$queryRaw<any[]>(Prisma.sql`
+        SELECT ri.inventory_id, ri.quantity AS requested_quantity, rsi.available_quantity
+        FROM public.purchase_rfq_items ri
+        JOIN public.purchase_rfq_supplier_items rsi
+          ON rsi.rfq_item_id = ri.id AND rsi.rfq_supplier_id = ${supplierRows[0].id}
+        WHERE ri.rfq_id = ${rfqId}
+          AND rsi.available_quantity IS NOT NULL
+          AND rsi.available_quantity < ri.quantity
+      `);
+      if (capacityShortages.length > 0) {
+        throw Object.assign(new Error('Supplier tidak memiliki kapasitas cukup untuk seluruh kebutuhan RFQ'), {
+          status: 409,
+          code: 'SUPPLIER_CAPACITY_INSUFFICIENT',
+          details: capacityShortages,
+        });
+      }
       await tx.$executeRaw(Prisma.sql`UPDATE public.purchase_rfq_suppliers SET status = CASE WHEN supplier_id = ${supplierId} THEN 'selected' ELSE status END, updated_at = NOW() WHERE rfq_id = ${rfqId}`);
       const updated = await tx.$queryRaw<any[]>(Prisma.sql`
         UPDATE public.purchase_rfqs SET status = 'selected', selected_supplier_id = ${supplierId}, updated_at = NOW()
