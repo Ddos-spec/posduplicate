@@ -1,4 +1,5 @@
 name: P2 Harden Payroll Routes Once
+# rerun after workforce schema-alignment fix
 
 on:
   push:
