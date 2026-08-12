@@ -8,7 +8,8 @@ import {
   getSupplierSpending
 } from '../controllers/supplier.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware, ownerOnly } from '../../../middlewares/tenant.middleware';
+import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireCapability } from '../../../middlewares/capability.middleware';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
@@ -35,7 +36,7 @@ router.use(authMiddleware, tenantMiddleware);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/', getSuppliers);
+router.get('/', requireCapability('supply.procurement.read'), getSuppliers);
 /**
  * @swagger
  * /api/suppliers/spending:
@@ -58,7 +59,7 @@ router.get('/', getSuppliers);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/spending', getSupplierSpending);
+router.get('/spending', requireCapability('supply.procurement.read'), getSupplierSpending);
 /**
  * @swagger
  * /api/suppliers/{id}:
@@ -87,14 +88,14 @@ router.get('/spending', getSupplierSpending);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', getSupplier);
+router.get('/:id', requireCapability('supply.procurement.read'), getSupplier);
 /**
  * @swagger
  * /api/suppliers:
  *   post:
  *     tags: [Suppliers]
  *     summary: Create supplier
- *     description: Owner/Manager only
+ *     description: Requires procurement manage capability
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -124,14 +125,14 @@ router.get('/:id', getSupplier);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', ownerOnly, createSupplier); // Only Owner/Manager can create
+router.post('/', requireCapability('supply.procurement.manage'), createSupplier);
 /**
  * @swagger
  * /api/suppliers/{id}:
  *   put:
  *     tags: [Suppliers]
  *     summary: Update supplier
- *     description: Owner/Manager only
+ *     description: Requires procurement manage capability
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -156,14 +157,14 @@ router.post('/', ownerOnly, createSupplier); // Only Owner/Manager can create
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/:id', ownerOnly, updateSupplier); // Only Owner/Manager can update
+router.put('/:id', requireCapability('supply.procurement.manage'), updateSupplier);
 /**
  * @swagger
  * /api/suppliers/{id}:
  *   delete:
  *     tags: [Suppliers]
  *     summary: Delete supplier
- *     description: Owner/Manager only
+ *     description: Requires procurement manage capability
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -182,6 +183,6 @@ router.put('/:id', ownerOnly, updateSupplier); // Only Owner/Manager can update
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:id', ownerOnly, deleteSupplier); // Only Owner/Manager can delete
+router.delete('/:id', requireCapability('supply.procurement.manage'), deleteSupplier);
 
 export default router;
