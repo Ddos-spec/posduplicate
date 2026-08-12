@@ -3,6 +3,7 @@ import api from './api';
 export type SupplyChainTab = 'procurement' | 'warehouse' | 'barcode' | 'manufacturing' | 'quality' | 'maintenance';
 
 export interface OutletLite { id: number; name: string; }
+export interface SupplierLite { id: number; outlet_id: number; name: string; is_active?: boolean; phone?: string | null; email?: string | null; }
 export interface WarehouseLocation { id: number; outlet_id: number; outlet_name?: string; code: string; name: string; location_type: string; }
 export interface WarehouseBalance { id: number; outlet_id: number; outlet_name?: string; location_id: number; location_code: string; location_name: string; inventory_id: number; inventory_name: string; sku?: string | null; unit: string; quantity: number | string; aggregate_stock: number | string; }
 export interface StockTransfer { id: number; transfer_number: string; outlet_id: number; source_location_id: number; destination_location_id: number; source_code: string; destination_code: string; status: string; created_at: string; lines: Array<{ id: number; inventoryId: number; inventoryName: string; sku?: string | null; quantityRequested: number | string; quantityDone: number | string }>; }
@@ -14,11 +15,62 @@ export interface MaintenanceRequest { id: number; equipment_id: number; equipmen
 export interface PurchaseOrder { id: number; po_number: string; outlet_id: number; supplier_id?: number | null; status: string; total: number | string; expected_date?: string | null; suppliers?: { id: number; name: string } | null; purchase_order_items: Array<{ id: number; inventory_id: number; quantity: number | string; received_qty: number | string; unit: string; unit_price: number | string; inventory?: { id: number; name: string; sku?: string | null; unit: string; current_stock?: number | string } | null }>; }
 export interface ProductLite { id: number; name: string; outlet_id: number; track_stock?: boolean; stock?: number | string; }
 
+export interface PurchaseRfqItem {
+  id: number;
+  inventoryId: number;
+  inventoryName: string;
+  sku?: string | null;
+  quantity: number | string;
+  unit: string;
+  targetUnitPrice?: number | string | null;
+  notes?: string | null;
+}
+
+export interface PurchaseRfqSupplierItem {
+  id: number;
+  rfqItemId: number;
+  unitPrice: number | string;
+  availableQuantity?: number | string | null;
+  notes?: string | null;
+}
+
+export interface PurchaseRfqSupplier {
+  id: number;
+  supplierId: number;
+  supplierName: string;
+  status: string;
+  quoteReference?: string | null;
+  quotedTotal?: number | string | null;
+  leadTimeDays?: number | null;
+  validUntil?: string | null;
+  notes?: string | null;
+  respondedAt?: string | null;
+  items: PurchaseRfqSupplierItem[];
+}
+
+export interface PurchaseRfq {
+  id: number;
+  outlet_id: number;
+  outlet_name?: string | null;
+  rfq_number: string;
+  status: string;
+  required_date?: string | null;
+  notes?: string | null;
+  selected_supplier_id?: number | null;
+  selected_supplier_name?: string | null;
+  converted_po_id?: number | null;
+  converted_po_number?: string | null;
+  created_at?: string;
+  items: PurchaseRfqItem[];
+  suppliers: PurchaseRfqSupplier[];
+}
+
 const unwrap = <T>(response: { data: { data: T } }): T => response.data.data;
 
 export async function getSupplySummary() { return unwrap<any>(await api.get('/supply-chain/summary')); }
 export async function bootstrapWarehouse() { return unwrap<any>(await api.post('/supply-chain/warehouse/bootstrap')); }
 export async function getOutlets(): Promise<OutletLite[]> { return unwrap<OutletLite[]>(await api.get('/outlets')); }
+export async function getSuppliers(): Promise<SupplierLite[]> { return unwrap<SupplierLite[]>(await api.get('/suppliers?active_only=true')); }
 export async function getLocations(): Promise<WarehouseLocation[]> { return unwrap<WarehouseLocation[]>(await api.get('/supply-chain/warehouse/locations')); }
 export async function getBalances(): Promise<WarehouseBalance[]> { return unwrap<WarehouseBalance[]>(await api.get('/supply-chain/warehouse/balances')); }
 export async function getTransfers(): Promise<StockTransfer[]> { return unwrap<StockTransfer[]>(await api.get('/supply-chain/warehouse/transfers')); }
@@ -46,3 +98,43 @@ export async function getPurchaseOrders(): Promise<PurchaseOrder[]> { return unw
 export async function updatePurchaseOrderStatus(id: number, status: string) { return unwrap<PurchaseOrder>(await api.patch(`/purchase-orders/${id}/status`, { status })); }
 export async function receivePurchaseOrder(id: number, items: Array<{ itemId: number; receivedQty: number }>) { return unwrap<any>(await api.post(`/purchase-orders/${id}/receive`, { items })); }
 export async function getProducts(): Promise<ProductLite[]> { return unwrap<ProductLite[]>(await api.get('/products')); }
+
+export async function getPurchaseRfqs(): Promise<PurchaseRfq[]> {
+  return unwrap<PurchaseRfq[]>(await api.get('/supply-chain/procurement/rfqs'));
+}
+
+export async function createPurchaseRfq(payload: {
+  outletId: number;
+  supplierIds: number[];
+  requiredDate?: string | null;
+  notes?: string;
+  items: Array<{ inventoryId: number; quantity: number; unit?: string; targetUnitPrice?: number | null; notes?: string }>;
+}) {
+  return unwrap<PurchaseRfq>(await api.post('/supply-chain/procurement/rfqs', payload));
+}
+
+export async function sendPurchaseRfq(id: number) {
+  return unwrap<PurchaseRfq>(await api.post(`/supply-chain/procurement/rfqs/${id}/send`));
+}
+
+export async function submitPurchaseRfqSupplierQuote(
+  id: number,
+  supplierId: number,
+  payload: {
+    quoteReference?: string;
+    leadTimeDays?: number | null;
+    validUntil?: string | null;
+    notes?: string;
+    items: Array<{ rfqItemId: number; unitPrice: number; availableQuantity?: number | null; notes?: string }>;
+  }
+) {
+  return unwrap<{ supplierId: number; quotedTotal: number | string }>(await api.post(`/supply-chain/procurement/rfqs/${id}/suppliers/${supplierId}/quote`, payload));
+}
+
+export async function selectPurchaseRfqSupplier(id: number, supplierId: number) {
+  return unwrap<PurchaseRfq>(await api.post(`/supply-chain/procurement/rfqs/${id}/select`, { supplierId }));
+}
+
+export async function convertPurchaseRfqToPo(id: number) {
+  return unwrap<PurchaseOrder>(await api.post(`/supply-chain/procurement/rfqs/${id}/convert`));
+}
