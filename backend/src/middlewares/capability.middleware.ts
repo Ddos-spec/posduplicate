@@ -19,7 +19,14 @@ export type SuiteCapability =
   | 'supply.quality.read'
   | 'supply.quality.manage'
   | 'supply.maintenance.read'
-  | 'supply.maintenance.manage';
+  | 'supply.maintenance.manage'
+  | 'workforce.employee.read'
+  | 'workforce.employee.manage'
+  | 'workforce.attendance.read'
+  | 'workforce.attendance.manage'
+  | 'workforce.attendance.self'
+  | 'workforce.payroll.read'
+  | 'workforce.payroll.manage';
 
 type FeatureRecord = Record<string, unknown>;
 
@@ -38,10 +45,14 @@ const ROLE_PRESETS: Record<string, SuiteCapability[] | '*'> = {
     'revenue.loyalty.read',
     'supply.procurement.read',
     'supply.warehouse.read',
+    'workforce.employee.read',
+    'workforce.attendance.self',
+    'workforce.payroll.read',
   ],
   cashier: [
     'revenue.customer360.read',
     'revenue.loyalty.read',
+    'workforce.attendance.self',
   ],
 };
 
