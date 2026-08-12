@@ -11,6 +11,7 @@ const MIGRATIONS = [
   '20260812112000_p1_supply_chain_core',
   '20260812130000_p1_procurement_rfq',
   '20260812140000_p1_append_only_guards',
+  '20260813023000_p2_workforce_attendance',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081201;
@@ -36,7 +37,7 @@ const ensureMigrationLedger = async (client: Client) => {
       migration_name VARCHAR(160) PRIMARY KEY,
       checksum_sha256 CHAR(64) NOT NULL,
       applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      applied_by VARCHAR(120) NOT NULL DEFAULT 'p1-runner'
+      applied_by VARCHAR(120) NOT NULL DEFAULT 'suite-runner'
     )
   `);
 };
@@ -56,10 +57,10 @@ const applyMigration = async (client: Client, migrationName: string) => {
       throw new Error(
         `Applied migration ${migrationName} has checksum drift. ` +
         `Database=${existing.rows[0].checksum_sha256}, file=${checksum}. ` +
-        'Never edit an applied P1 migration; create a new forward migration instead.'
+        'Never edit an applied suite migration; create a new forward migration instead.'
       );
     }
-    console.log(`[P1 migration] ${migrationName}: already applied`);
+    console.log(`[Suite migration] ${migrationName}: already applied`);
     return;
   }
 
@@ -71,7 +72,7 @@ const applyMigration = async (client: Client, migrationName: string) => {
       [migrationName, checksum]
     );
     await client.query('COMMIT');
-    console.log(`[P1 migration] ${migrationName}: applied`);
+    console.log(`[Suite migration] ${migrationName}: applied`);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -81,7 +82,7 @@ const applyMigration = async (client: Client, migrationName: string) => {
 const run = async () => {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required to apply P1 migrations');
+    throw new Error('DATABASE_URL is required to apply suite migrations');
   }
 
   const client = new Client({ connectionString: databaseUrl });
@@ -102,10 +103,10 @@ const run = async () => {
       [MIGRATIONS]
     );
     if (applied.rows.length !== MIGRATIONS.length) {
-      throw new Error(`P1 migration ledger incomplete: expected ${MIGRATIONS.length}, found ${applied.rows.length}`);
+      throw new Error(`Suite migration ledger incomplete: expected ${MIGRATIONS.length}, found ${applied.rows.length}`);
     }
 
-    console.log(`[P1 migration] complete: ${applied.rows.map((row) => row.migration_name).join(', ')}`);
+    console.log(`[Suite migration] complete: ${applied.rows.map((row) => row.migration_name).join(', ')}`);
   } finally {
     if (lockAcquired) {
       await client.query('SELECT pg_advisory_unlock($1)', [ADVISORY_LOCK_KEY]).catch(() => undefined);
@@ -115,6 +116,6 @@ const run = async () => {
 };
 
 run().catch((error) => {
-  console.error('[P1 migration] failed', error);
+  console.error('[Suite migration] failed', error);
   process.exit(1);
 });
