@@ -4,7 +4,7 @@ import path from 'path';
 const root = path.resolve(__dirname, '../..');
 const read = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
-describe('P1 immutable audit guards', () => {
+describe('suite immutable audit guards', () => {
   test('append-only guard migration protects every P1 operational ledger', () => {
     const migration = read('prisma/migrations/20260812140000_p1_append_only_guards/migration.sql');
 
@@ -18,19 +18,22 @@ describe('P1 immutable audit guards', () => {
     expect(migration).toContain("ERRCODE = '55000'");
   });
 
-  test('production migration runner includes immutable guard as a forward migration', () => {
+  test('production migration runner includes immutable guard and P2 workforce as forward migrations', () => {
     const runner = read('src/scripts/apply-p1-migrations.ts');
     expect(runner).toContain("'20260812140000_p1_append_only_guards'");
+    expect(runner).toContain("'20260813023000_p2_workforce_attendance'");
     expect(runner).toContain('checksum_sha256');
-    expect(runner).toContain('Never edit an applied P1 migration');
+    expect(runner).toContain('Never edit an applied suite migration');
   });
 
-  test('shared database verifier validates four migrations and immutable trigger behavior', () => {
+  test('shared database verifier validates suite migrations, workforce index and immutable trigger behavior', () => {
     const verifier = read('src/scripts/verify-p1-database-v2.ts');
     const suiteWorkflow = read('../.github/workflows/frontend-ci.yml');
     const runtimeWorkflow = read('../.github/workflows/p1-runtime-ci.yml');
 
-    expect(verifier).toContain('ledger.rows.length === 4');
+    expect(verifier).toContain('ledger.rows.length === 5');
+    expect(verifier).toContain('workforce_attendance_sessions');
+    expect(verifier).toContain('ux_workforce_attendance_open_employee');
     expect(verifier).toContain('trg_loyalty_ledger_append_only');
     expect(verifier).toContain('trg_warehouse_stock_ledger_append_only');
     expect(verifier).toContain('trg_procurement_event_ledger_append_only');
