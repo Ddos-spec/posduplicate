@@ -7,7 +7,6 @@ const read = (relativePath: string) => fs.readFileSync(path.join(root, relativeP
 describe('suite immutable audit guards', () => {
   test('append-only guard migration protects every P1 operational ledger', () => {
     const migration = read('prisma/migrations/20260812140000_p1_append_only_guards/migration.sql');
-
     expect(migration).toContain('prevent_suite_ledger_mutation');
     expect(migration).toContain('trg_loyalty_ledger_append_only');
     expect(migration).toContain('trg_warehouse_stock_ledger_append_only');
@@ -18,27 +17,28 @@ describe('suite immutable audit guards', () => {
     expect(migration).toContain("ERRCODE = '55000'");
   });
 
-  test('production migration runner includes immutable guard and P2 workforce as forward migrations', () => {
+  test('production migration runner includes P2 workforce and payroll governance migrations', () => {
     const runner = read('src/scripts/apply-p1-migrations.ts');
     expect(runner).toContain("'20260812140000_p1_append_only_guards'");
     expect(runner).toContain("'20260813023000_p2_workforce_attendance'");
+    expect(runner).toContain("'20260813030000_p2_payroll_rate_profiles'");
     expect(runner).toContain('checksum_sha256');
     expect(runner).toContain('Never edit an applied suite migration');
   });
 
-  test('shared database verifier validates suite migrations, workforce index and immutable trigger behavior', () => {
+  test('shared database verifier validates six suite migrations, workforce/payroll indexes and immutable triggers', () => {
     const verifier = read('src/scripts/verify-p1-database-v2.ts');
     const suiteWorkflow = read('../.github/workflows/frontend-ci.yml');
     const runtimeWorkflow = read('../.github/workflows/p1-runtime-ci.yml');
-
-    expect(verifier).toContain('ledger.rows.length === 5');
+    expect(verifier).toContain('ledger.rows.length === 6');
     expect(verifier).toContain('workforce_attendance_sessions');
+    expect(verifier).toContain('payroll_rate_profiles');
     expect(verifier).toContain('ux_workforce_attendance_open_employee');
+    expect(verifier).toContain('ux_payroll_rate_profile_global_version');
     expect(verifier).toContain('trg_loyalty_ledger_append_only');
     expect(verifier).toContain('trg_warehouse_stock_ledger_append_only');
     expect(verifier).toContain('trg_procurement_event_ledger_append_only');
     expect(verifier).toContain("error?.code === '55000'");
-
     expect(suiteWorkflow).toContain('node dist/scripts/verify-p1-database-v2.js');
     expect(runtimeWorkflow).toContain('node dist/scripts/verify-p1-database-v2.js');
     expect(suiteWorkflow).toContain('Production backend Docker image build gate');
