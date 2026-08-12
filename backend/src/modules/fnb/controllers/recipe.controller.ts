@@ -22,11 +22,18 @@ const getTenantItem = async (tenantId: number, itemId: number) => {
   return prisma.items.findFirst({ where: { id: itemId, outlet_id: { in: outletIds } } });
 };
 
-const assertTenantIngredients = async (tenantId: number, ingredientIds: number[]) => {
+const assertOutletIngredients = async (outletId: number, ingredientIds: number[]) => {
   if (ingredientIds.length === 0) return;
-  const outletIds = await tenantOutletIds(tenantId);
-  const ingredients = await prisma.ingredients.findMany({ where: { id: { in: ingredientIds }, outlet_id: { in: outletIds }, is_active: true }, select: { id: true, outlet_id: true } });
-  if (ingredients.length !== new Set(ingredientIds).size) throw Object.assign(new Error('Ada ingredient yang tidak ditemukan atau bukan milik tenant ini'), { status: 400, code: 'INVALID_INGREDIENT' });
+  const ingredients = await prisma.ingredients.findMany({
+    where: { id: { in: ingredientIds }, outlet_id: outletId, is_active: true },
+    select: { id: true, outlet_id: true }
+  });
+  if (ingredients.length !== new Set(ingredientIds).size) {
+    throw Object.assign(new Error('Ada ingredient yang tidak ditemukan, tidak aktif, atau bukan milik outlet produk ini'), {
+      status: 400,
+      code: 'INVALID_BOM_INGREDIENT'
+    });
+  }
 };
 
 export const getRecipes = async (req: Request, res: Response, next: NextFunction) => {
@@ -83,7 +90,7 @@ export const updateProductRecipe = async (req: Request, res: Response, next: Nex
     if (new Set(normalized.map((ingredient: RecipeLine) => ingredient.ingredientId)).size !== normalized.length) {
       return res.status(400).json({ success: false, error: { code: 'DUPLICATE_INGREDIENT', message: 'Ingredient tidak boleh duplikat pada BOM yang sama' } });
     }
-    await assertTenantIngredients(tenantId, normalized.map((ingredient: RecipeLine) => ingredient.ingredientId));
+    await assertOutletIngredients(item.outlet_id, normalized.map((ingredient: RecipeLine) => ingredient.ingredientId));
 
     await prisma.$transaction(async (tx) => {
       await tx.recipes.deleteMany({ where: { item_id: itemId } });
@@ -108,7 +115,7 @@ export const addRecipeItem = async (req: Request, res: Response, next: NextFunct
     if (!Number.isInteger(itemId) || !Number.isInteger(ingredientId) || quantity <= 0 || !unit) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'itemId, ingredientId, quantity dan unit wajib valid' } });
     const item = await getTenantItem(tenantId, itemId);
     if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Product not found' } });
-    await assertTenantIngredients(tenantId, [ingredientId]);
+    await assertOutletIngredients(item.outlet_id, [ingredientId]);
     const duplicate = await prisma.recipes.findFirst({ where: { item_id: itemId, ingredient_id: ingredientId } });
     if (duplicate) return res.status(409).json({ success: false, error: { code: 'DUPLICATE_INGREDIENT', message: 'Ingredient sudah ada pada BOM' } });
     const recipe = await prisma.recipes.create({ data: { item_id: itemId, ingredient_id: ingredientId, quantity, unit } });
