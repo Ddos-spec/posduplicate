@@ -1,6 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 
+type RecipeLine = {
+  ingredientId: number;
+  quantity: number;
+  unit: string;
+};
+
 const requireTenant = (req: Request) => {
   if (!req.tenantId) throw Object.assign(new Error('Tenant context is required'), { status: 400, code: 'TENANT_REQUIRED' });
   return req.tenantId;
@@ -66,23 +72,23 @@ export const updateProductRecipe = async (req: Request, res: Response, next: Nex
     const item = await getTenantItem(tenantId, itemId);
     if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Product not found' } });
 
-    const normalized = ingredients.map((ingredient: any) => ({
+    const normalized: RecipeLine[] = ingredients.map((ingredient: any): RecipeLine => ({
       ingredientId: Number(ingredient.ingredientId),
       quantity: Number(ingredient.quantity),
       unit: String(ingredient.unit || '').trim()
     }));
-    if (normalized.some((ingredient) => !Number.isInteger(ingredient.ingredientId) || ingredient.ingredientId <= 0 || !Number.isFinite(ingredient.quantity) || ingredient.quantity <= 0 || !ingredient.unit)) {
+    if (normalized.some((ingredient: RecipeLine) => !Number.isInteger(ingredient.ingredientId) || ingredient.ingredientId <= 0 || !Number.isFinite(ingredient.quantity) || ingredient.quantity <= 0 || !ingredient.unit)) {
       return res.status(400).json({ success: false, error: { code: 'INVALID_RECIPE_LINE', message: 'Ingredient, quantity dan unit harus valid' } });
     }
-    if (new Set(normalized.map((ingredient) => ingredient.ingredientId)).size !== normalized.length) {
+    if (new Set(normalized.map((ingredient: RecipeLine) => ingredient.ingredientId)).size !== normalized.length) {
       return res.status(400).json({ success: false, error: { code: 'DUPLICATE_INGREDIENT', message: 'Ingredient tidak boleh duplikat pada BOM yang sama' } });
     }
-    await assertTenantIngredients(tenantId, normalized.map((ingredient) => ingredient.ingredientId));
+    await assertTenantIngredients(tenantId, normalized.map((ingredient: RecipeLine) => ingredient.ingredientId));
 
     await prisma.$transaction(async (tx) => {
       await tx.recipes.deleteMany({ where: { item_id: itemId } });
       if (normalized.length > 0) {
-        await tx.recipes.createMany({ data: normalized.map((ingredient) => ({ item_id: itemId, ingredient_id: ingredient.ingredientId, quantity: ingredient.quantity, unit: ingredient.unit })) });
+        await tx.recipes.createMany({ data: normalized.map((ingredient: RecipeLine) => ({ item_id: itemId, ingredient_id: ingredient.ingredientId, quantity: ingredient.quantity, unit: ingredient.unit })) });
       }
     });
     const updatedRecipe = await prisma.recipes.findMany({ where: { item_id: itemId }, include: { ingredients: true } });
