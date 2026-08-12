@@ -3,7 +3,7 @@
 -- Location balances refine stock placement and warehouse_stock_ledger is append-only audit history.
 
 CREATE TABLE IF NOT EXISTS public.warehouse_locations (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL,
   outlet_id INTEGER NOT NULL,
   code VARCHAR(40) NOT NULL,
@@ -18,10 +18,10 @@ CREATE TABLE IF NOT EXISTS public.warehouse_locations (
 CREATE INDEX IF NOT EXISTS idx_warehouse_locations_scope ON public.warehouse_locations (tenant_id, outlet_id, is_active);
 
 CREATE TABLE IF NOT EXISTS public.warehouse_stock_balances (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL,
   outlet_id INTEGER NOT NULL,
-  location_id BIGINT NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE CASCADE,
+  location_id INTEGER NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE CASCADE,
   inventory_id INTEGER NOT NULL,
   quantity NUMERIC(18,3) NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -31,10 +31,10 @@ CREATE TABLE IF NOT EXISTS public.warehouse_stock_balances (
 CREATE INDEX IF NOT EXISTS idx_warehouse_balance_inventory ON public.warehouse_stock_balances (tenant_id, outlet_id, inventory_id);
 
 CREATE TABLE IF NOT EXISTS public.warehouse_stock_ledger (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL,
   outlet_id INTEGER NOT NULL,
-  location_id BIGINT NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE RESTRICT,
+  location_id INTEGER NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE RESTRICT,
   inventory_id INTEGER NOT NULL,
   entry_type VARCHAR(30) NOT NULL,
   quantity_delta NUMERIC(18,3) NOT NULL,
@@ -53,12 +53,12 @@ COMMENT ON TABLE public.warehouse_stock_ledger IS 'Append-only location-level st
 
 CREATE SEQUENCE IF NOT EXISTS public.stock_transfer_number_seq START 1;
 CREATE TABLE IF NOT EXISTS public.stock_transfers (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL,
   outlet_id INTEGER NOT NULL,
   transfer_number VARCHAR(80) NOT NULL,
-  source_location_id BIGINT NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE RESTRICT,
-  destination_location_id BIGINT NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE RESTRICT,
+  source_location_id INTEGER NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE RESTRICT,
+  destination_location_id INTEGER NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE RESTRICT,
   status VARCHAR(20) NOT NULL DEFAULT 'draft',
   notes TEXT,
   created_by INTEGER,
@@ -73,8 +73,8 @@ CREATE TABLE IF NOT EXISTS public.stock_transfers (
 CREATE INDEX IF NOT EXISTS idx_stock_transfer_scope ON public.stock_transfers (tenant_id, outlet_id, status, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS public.stock_transfer_lines (
-  id BIGSERIAL PRIMARY KEY,
-  transfer_id BIGINT NOT NULL REFERENCES public.stock_transfers(id) ON DELETE CASCADE,
+  id SERIAL PRIMARY KEY,
+  transfer_id INTEGER NOT NULL REFERENCES public.stock_transfers(id) ON DELETE CASCADE,
   inventory_id INTEGER NOT NULL,
   quantity_requested NUMERIC(18,3) NOT NULL,
   quantity_done NUMERIC(18,3) NOT NULL DEFAULT 0,
@@ -83,10 +83,10 @@ CREATE TABLE IF NOT EXISTS public.stock_transfer_lines (
 
 CREATE SEQUENCE IF NOT EXISTS public.stock_count_number_seq START 1;
 CREATE TABLE IF NOT EXISTS public.stock_counts (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL,
   outlet_id INTEGER NOT NULL,
-  location_id BIGINT NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE RESTRICT,
+  location_id INTEGER NOT NULL REFERENCES public.warehouse_locations(id) ON DELETE RESTRICT,
   count_number VARCHAR(80) NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'draft',
   notes TEXT,
@@ -99,8 +99,8 @@ CREATE TABLE IF NOT EXISTS public.stock_counts (
 );
 
 CREATE TABLE IF NOT EXISTS public.stock_count_lines (
-  id BIGSERIAL PRIMARY KEY,
-  stock_count_id BIGINT NOT NULL REFERENCES public.stock_counts(id) ON DELETE CASCADE,
+  id SERIAL PRIMARY KEY,
+  stock_count_id INTEGER NOT NULL REFERENCES public.stock_counts(id) ON DELETE CASCADE,
   inventory_id INTEGER NOT NULL,
   expected_quantity NUMERIC(18,3) NOT NULL DEFAULT 0,
   counted_quantity NUMERIC(18,3),
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS public.stock_count_lines (
 );
 
 CREATE TABLE IF NOT EXISTS public.barcode_aliases (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL,
   outlet_id INTEGER NOT NULL,
   inventory_id INTEGER NOT NULL,
@@ -126,7 +126,7 @@ CREATE INDEX IF NOT EXISTS idx_barcode_inventory ON public.barcode_aliases (tena
 
 CREATE SEQUENCE IF NOT EXISTS public.manufacturing_order_number_seq START 1;
 CREATE TABLE IF NOT EXISTS public.manufacturing_orders (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL,
   outlet_id INTEGER NOT NULL,
   mo_number VARCHAR(80) NOT NULL,
@@ -149,8 +149,8 @@ CREATE TABLE IF NOT EXISTS public.manufacturing_orders (
 CREATE INDEX IF NOT EXISTS idx_mo_scope ON public.manufacturing_orders (tenant_id, outlet_id, status, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS public.manufacturing_consumptions (
-  id BIGSERIAL PRIMARY KEY,
-  manufacturing_order_id BIGINT NOT NULL REFERENCES public.manufacturing_orders(id) ON DELETE CASCADE,
+  id SERIAL PRIMARY KEY,
+  manufacturing_order_id INTEGER NOT NULL REFERENCES public.manufacturing_orders(id) ON DELETE CASCADE,
   ingredient_id INTEGER,
   inventory_id INTEGER,
   quantity_planned NUMERIC(18,3) NOT NULL,
@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS public.manufacturing_consumptions (
 );
 
 CREATE TABLE IF NOT EXISTS public.quality_checks (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL,
   outlet_id INTEGER NOT NULL,
   check_type VARCHAR(40) NOT NULL,
@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS public.quality_checks (
 CREATE INDEX IF NOT EXISTS idx_quality_scope ON public.quality_checks (tenant_id, outlet_id, status, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS public.maintenance_equipment (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL,
   outlet_id INTEGER NOT NULL,
   code VARCHAR(60) NOT NULL,
@@ -201,10 +201,10 @@ CREATE TABLE IF NOT EXISTS public.maintenance_equipment (
 );
 
 CREATE TABLE IF NOT EXISTS public.maintenance_requests (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL,
   outlet_id INTEGER NOT NULL,
-  equipment_id BIGINT NOT NULL REFERENCES public.maintenance_equipment(id) ON DELETE RESTRICT,
+  equipment_id INTEGER NOT NULL REFERENCES public.maintenance_equipment(id) ON DELETE RESTRICT,
   request_type VARCHAR(30) NOT NULL DEFAULT 'corrective',
   priority VARCHAR(20) NOT NULL DEFAULT 'normal',
   title VARCHAR(180) NOT NULL,
