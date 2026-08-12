@@ -69,7 +69,7 @@ export const bootstrapWarehouse = async (req: Request, res: Response, next: Next
         const mainRows = await tx.$queryRaw<any[]>(Prisma.sql`
           SELECT id FROM public.warehouse_locations WHERE tenant_id = ${tenantId} AND outlet_id = ${outletId} AND code = 'MAIN' LIMIT 1
         `);
-        const mainLocationId = mainRows[0].id as number;
+        const mainLocationId = Number(mainRows[0].id);
         const inventory = await tx.inventory.findMany({ where: { outlet_id: outletId, is_active: true }, select: { id: true, current_stock: true } });
 
         for (const item of inventory) {
@@ -339,7 +339,9 @@ export const finalizeStockCount = async (req: Request, res: Response, next: Next
     const tenantId = tenantIdFrom(req);
     const stockCountId = Number(req.params.id);
     const submitted = Array.isArray(req.body.lines) ? req.body.lines : [];
-    const submittedMap = new Map(submitted.map((line: any) => [Number(line.inventoryId), Number(line.countedQuantity)]));
+    const submittedMap = new Map<number, number>(
+      submitted.map((line: any) => [Number(line.inventoryId), Number(line.countedQuantity)] as [number, number])
+    );
 
     const result = await prisma.$transaction(async (tx) => {
       const counts = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.stock_counts WHERE id = ${stockCountId} AND tenant_id = ${tenantId} FOR UPDATE`);
@@ -349,29 +351,30 @@ export const finalizeStockCount = async (req: Request, res: Response, next: Next
       const lines = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.stock_count_lines WHERE stock_count_id = ${stockCountId} ORDER BY id`);
 
       for (const line of lines) {
-        if (!submittedMap.has(Number(line.inventory_id))) throw Object.assign(new Error(`Counted quantity belum diisi untuk inventory ${line.inventory_id}`), { status: 400, code: 'COUNT_INCOMPLETE' });
-        const counted = submittedMap.get(Number(line.inventory_id))!;
+        const inventoryId = Number(line.inventory_id);
+        if (!submittedMap.has(inventoryId)) throw Object.assign(new Error(`Counted quantity belum diisi untuk inventory ${line.inventory_id}`), { status: 400, code: 'COUNT_INCOMPLETE' });
+        const counted = submittedMap.get(inventoryId)!;
         if (!Number.isFinite(counted) || counted < 0) throw Object.assign(new Error('Counted quantity tidak valid'), { status: 400, code: 'INVALID_COUNTED_QUANTITY' });
         const expected = Number(line.expected_quantity || 0);
         const variance = counted - expected;
 
         const balanceRows = await tx.$queryRaw<any[]>(Prisma.sql`
-          SELECT * FROM public.warehouse_stock_balances WHERE tenant_id = ${tenantId} AND location_id = ${count.location_id} AND inventory_id = ${line.inventory_id} FOR UPDATE
+          SELECT * FROM public.warehouse_stock_balances WHERE tenant_id = ${tenantId} AND location_id = ${count.location_id} AND inventory_id = ${inventoryId} FOR UPDATE
         `);
         const balanceBefore = Number(balanceRows[0]?.quantity || 0);
         if (balanceRows[0]) {
           await tx.$executeRaw(Prisma.sql`UPDATE public.warehouse_stock_balances SET quantity = ${counted}, updated_at = NOW() WHERE id = ${balanceRows[0].id}`);
         } else {
-          await tx.$executeRaw(Prisma.sql`INSERT INTO public.warehouse_stock_balances (tenant_id, outlet_id, location_id, inventory_id, quantity) VALUES (${tenantId}, ${count.outlet_id}, ${count.location_id}, ${line.inventory_id}, ${counted})`);
+          await tx.$executeRaw(Prisma.sql`INSERT INTO public.warehouse_stock_balances (tenant_id, outlet_id, location_id, inventory_id, quantity) VALUES (${tenantId}, ${count.outlet_id}, ${count.location_id}, ${inventoryId}, ${counted})`);
         }
         await tx.$executeRaw(Prisma.sql`
           INSERT INTO public.warehouse_stock_ledger (tenant_id, outlet_id, location_id, inventory_id, entry_type, quantity_delta, balance_before, balance_after, reference_type, reference_id, notes, created_by)
-          VALUES (${tenantId}, ${count.outlet_id}, ${count.location_id}, ${line.inventory_id}, 'count_adjustment', ${counted - balanceBefore}, ${balanceBefore}, ${counted}, 'stock_count', ${String(stockCountId)}, ${count.count_number}, ${req.userId || null})
+          VALUES (${tenantId}, ${count.outlet_id}, ${count.location_id}, ${inventoryId}, 'count_adjustment', ${counted - balanceBefore}, ${balanceBefore}, ${counted}, 'stock_count', ${String(stockCountId)}, ${count.count_number}, ${req.userId || null})
         `);
 
         if (variance !== 0) {
-          const inventory = await tx.inventory.findFirst({ where: { id: Number(line.inventory_id), outlet_id: Number(count.outlet_id) } });
-          if (!inventory) throw Object.assign(new Error(`Inventory ${line.inventory_id} tidak ditemukan`), { status: 404, code: 'INVENTORY_NOT_FOUND' });
+          const inventory = await tx.inventory.findFirst({ where: { id: inventoryId, outlet_id: Number(count.outlet_id) } });
+          if (!inventory) throw Object.assign(new Error(`Inventory ${inventoryId} tidak ditemukan`), { status: 404, code: 'INVENTORY_NOT_FOUND' });
           const aggregateBefore = Number(inventory.current_stock || 0);
           const aggregateAfter = aggregateBefore + variance;
           if (aggregateAfter < 0) throw Object.assign(new Error('Variance membuat aggregate stock negatif'), { status: 409, code: 'NEGATIVE_AGGREGATE_STOCK' });
