@@ -10,6 +10,7 @@ const MIGRATIONS = [
   '20260812103000_p1_revenue_core',
   '20260812112000_p1_supply_chain_core',
   '20260812130000_p1_procurement_rfq',
+  '20260812140000_p1_append_only_guards',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081201;
