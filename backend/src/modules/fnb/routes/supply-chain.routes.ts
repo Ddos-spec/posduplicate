@@ -33,11 +33,27 @@ import {
   resolveQualityCheck,
   updateMaintenanceRequest,
 } from '../controllers/quality-maintenance.p1.controller';
+import {
+  convertRfqToPurchaseOrder,
+  createPurchaseRfq,
+  getPurchaseRfqs,
+  selectRfqSupplier,
+  sendPurchaseRfq,
+  submitSupplierRfqQuote,
+} from '../controllers/procurement-rfq.p1.controller';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
 
 router.get('/summary', requireCapability('supply.warehouse.read'), getSupplyChainSummary);
+
+router.get('/procurement/rfqs', requireCapability('supply.procurement.read'), getPurchaseRfqs);
+router.post('/procurement/rfqs', requireCapability('supply.procurement.manage'), createPurchaseRfq);
+router.post('/procurement/rfqs/:id/send', requireCapability('supply.procurement.manage'), sendPurchaseRfq);
+router.post('/procurement/rfqs/:id/suppliers/:supplierId/quote', requireCapability('supply.procurement.manage'), submitSupplierRfqQuote);
+router.post('/procurement/rfqs/:id/select', requireCapability('supply.procurement.manage'), selectRfqSupplier);
+router.post('/procurement/rfqs/:id/convert', requireCapability('supply.procurement.manage'), convertRfqToPurchaseOrder);
+
 router.post('/warehouse/bootstrap', requireCapability('supply.warehouse.manage'), bootstrapWarehouse);
 router.get('/warehouse/locations', requireCapability('supply.warehouse.read'), getWarehouseLocations);
 router.post('/warehouse/locations', requireCapability('supply.warehouse.manage'), createWarehouseLocation);
