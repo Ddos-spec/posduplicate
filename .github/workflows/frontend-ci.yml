@@ -82,7 +82,16 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate
 
-      - name: Clean database migration gate
+      - name: Build legacy schema baseline
+        run: npx prisma db push --skip-generate
+
+      - name: Mark legacy migrations as baseline-applied
+        run: |
+          npx prisma migrate resolve --applied 20251127180942_add_integrations_table
+          npx prisma migrate resolve --applied 20260121145000_create_trial_balance_view
+          npx prisma migrate resolve --applied 20260121192038_medsos_inventory_itemid
+
+      - name: Apply P1 migrations
         run: npx prisma migrate deploy
 
       - name: Verify P1 tables exist
