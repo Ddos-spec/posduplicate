@@ -1,48 +1,4 @@
-from pathlib import Path
-
-controller_path = Path('backend/src/modules/fnb/controllers/procurement-receiving.p1.controller.ts')
-text = controller_path.read_text()
-
-validation_marker = """    const receiptItems = Array.isArray(req.body.items) ? req.body.items : [];
-    if (receiptItems.length === 0) return res.status(400).json({ success: false, error: { code: 'ITEMS_REQUIRED', message: 'Item penerimaan wajib diisi' } });"""
-validation_replacement = validation_marker + """
-    const receiptItemIds = receiptItems.map((item: any) => Number(item.itemId));
-    if (receiptItemIds.some((itemId: number) => !Number.isInteger(itemId) || itemId <= 0)) {
-      return res.status(400).json({ success: false, error: { code: 'INVALID_RECEIPT_ITEM_ID', message: 'Semua itemId penerimaan harus berupa ID valid' } });
-    }
-    if (new Set(receiptItemIds).size !== receiptItemIds.length) {
-      return res.status(400).json({ success: false, error: { code: 'DUPLICATE_RECEIPT_ITEM', message: 'Satu PO item hanya boleh muncul sekali dalam satu request receiving' } });
-    }"""
-if "code: 'DUPLICATE_RECEIPT_ITEM'" not in text:
-    if validation_marker not in text:
-        raise SystemExit('receipt validation marker not found')
-    text = text.replace(validation_marker, validation_replacement, 1)
-
-transaction_marker = """    const result = await prisma.$transaction(async (tx) => {
-      const locked = await tx.$queryRaw<any[]>(Prisma.sql`"""
-transaction_replacement = """    const result = await prisma.$transaction(async (tx) => {
-      // Serialize aggregate-stock mutations per tenant so concurrent PO receipts cannot overwrite each other.
-      await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(${tenantId}, 73001)`);
-      const locked = await tx.$queryRaw<any[]>(Prisma.sql`"""
-if 'pg_advisory_xact_lock(${tenantId}, 73001)' not in text:
-    if transaction_marker not in text:
-        raise SystemExit('transaction marker not found')
-    text = text.replace(transaction_marker, transaction_replacement, 1)
-
-required = [
-    "code: 'DUPLICATE_RECEIPT_ITEM'",
-    'pg_advisory_xact_lock(${tenantId}, 73001)',
-    "code: 'INVALID_RECEIVED_QTY'",
-    "'receipt'",
-    "'purchase_order'",
-    "warehouse RECEIVE",
-]
-missing = [m for m in required if m not in text]
-if missing:
-    raise SystemExit(f'missing receiving hardening markers: {missing}')
-controller_path.write_text(text)
-
-unit_test = r'''import { receivePOItemsWithWarehouse } from '../../src/modules/fnb/controllers/procurement-receiving.p1.controller';
+import { receivePOItemsWithWarehouse } from '../../src/modules/fnb/controllers/procurement-receiving.p1.controller';
 import prisma from '../../src/utils/prisma';
 
 jest.mock('../../src/utils/prisma', () => ({
@@ -161,5 +117,3 @@ describe('P1-A procurement receiving integrity', () => {
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, data: expect.objectContaining({ status: 'partial' }) }));
   });
 });
-'''
-Path('backend/tests/unit/p1-receiving-integrity.test.ts').write_text(unit_test)

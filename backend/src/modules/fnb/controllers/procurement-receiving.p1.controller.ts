@@ -13,6 +13,13 @@ export const receivePOItemsWithWarehouse = async (req: Request, res: Response, n
     const poId = Number(req.params.id);
     const receiptItems = Array.isArray(req.body.items) ? req.body.items : [];
     if (receiptItems.length === 0) return res.status(400).json({ success: false, error: { code: 'ITEMS_REQUIRED', message: 'Item penerimaan wajib diisi' } });
+    const receiptItemIds = receiptItems.map((item: any) => Number(item.itemId));
+    if (receiptItemIds.some((itemId: number) => !Number.isInteger(itemId) || itemId <= 0)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_RECEIPT_ITEM_ID', message: 'Semua itemId penerimaan harus berupa ID valid' } });
+    }
+    if (new Set(receiptItemIds).size !== receiptItemIds.length) {
+      return res.status(400).json({ success: false, error: { code: 'DUPLICATE_RECEIPT_ITEM', message: 'Satu PO item hanya boleh muncul sekali dalam satu request receiving' } });
+    }
 
     const tenantOutlets = await prisma.outlets.findMany({ where: { tenant_id: tenantId }, select: { id: true } });
     const outletIds = tenantOutlets.map((row) => row.id);
@@ -21,6 +28,8 @@ export const receivePOItemsWithWarehouse = async (req: Request, res: Response, n
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      // Serialize aggregate-stock mutations per tenant so concurrent PO receipts cannot overwrite each other.
+      await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(${tenantId}, 73001)`);
       const locked = await tx.$queryRaw<any[]>(Prisma.sql`
         SELECT id, outlet_id FROM public.purchase_orders WHERE id = ${poId} AND outlet_id IN (${Prisma.join(outletIds)}) FOR UPDATE
       `);
