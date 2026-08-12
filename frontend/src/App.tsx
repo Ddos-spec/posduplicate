@@ -53,8 +53,9 @@ const DemoAcctRetail = lazy(() => import('./pages/demo/accounting/DemoAcctRetail
 const DemoForecastPage = lazy(() => import('./pages/demo/accounting/DemoForecastPage'));
 const DemoAccountingReadOnlyPage = lazy(() => import('./pages/demo/accounting/DemoAccountingReadOnlyPage'));
 
-// Module Selector
+// Suite workspaces
 const ModuleSelectorPage = lazy(() => import('./pages/ModuleSelectorPage'));
+const RevenueWorkspacePage = lazy(() => import('./pages/RevenueWorkspacePage'));
 
 // Accounting Module Pages
 const AccountingLayout = lazy(() => import('./components/accounting/AccountingLayout'));
@@ -102,7 +103,6 @@ const MedsosAnalytics = lazy(() => import('./pages/medsos/MedsosAnalytics'));
 const MedsosSettings = lazy(() => import('./pages/medsos/MedsosSettings'));
 const MedsosTeamPage = lazy(() => import('./pages/medsos/MedsosTeamPage'));
 
-// Loading fallback
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
     <div className="text-center">
@@ -112,492 +112,251 @@ const PageLoader = () => (
   </div>
 );
 
-// SECURITY: Base protected route - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
   return token ? <>{children}</> : <Navigate to="/login" />;
 }
 
-// SECURITY: Admin-only route guard
-// Allows: super admin, admin
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
-
-  if (!token) {
-    return <Navigate to="/login" />;
-  }
-
+  if (!token) return <Navigate to="/login" />;
   const allowedRoles = ['super admin', 'admin'];
   const userRole = (user?.roles?.name || user?.role?.name || '').toLowerCase();
-  if (user && allowedRoles.includes(userRole)) {
-    return <>{children}</>;
-  }
-
-  return <Navigate to="/login" />;
+  return user && allowedRoles.includes(userRole) ? <>{children}</> : <Navigate to="/login" />;
 }
 
-// SECURITY: Owner-level route guard
-// Allows: super admin, admin, owner, manager
 function OwnerRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
-
-  if (!token) {
-    return <Navigate to="/login" />;
-  }
-
+  if (!token) return <Navigate to="/login" />;
   const allowedRoles = ['super admin', 'admin', 'owner', 'manager'];
   const userRole = (user?.roles?.name || user?.role?.name || '').toLowerCase();
-  if (user && allowedRoles.includes(userRole)) {
-    return <>{children}</>;
-  }
-
-  return <Navigate to="/login" />;
+  return user && allowedRoles.includes(userRole) ? <>{children}</> : <Navigate to="/login" />;
 }
 
-// SECURITY: Accounting module route guard
-// Allows: super admin, admin, owner, manager, distributor, produsen, retail, accountant
 function AccountingRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
-
-  if (!token) {
-    return <Navigate to="/login" />;
-  }
-
-  const allowedRoles = [
-    'super admin',
-    'super_admin',
-    'admin',
-    'owner',
-    'manager',
-    'distributor',
-    'produsen',
-    'retail',
-    'accountant'
-  ];
+  if (!token) return <Navigate to="/login" />;
+  const allowedRoles = ['super admin','super_admin','admin','owner','manager','distributor','produsen','retail','accountant'];
   const userRole = (user?.roles?.name || user?.role?.name || '').toLowerCase();
-  if (user && allowedRoles.includes(userRole)) {
-    return <>{children}</>;
-  }
-
-  return <Navigate to="/login" />;
+  return user && allowedRoles.includes(userRole) ? <>{children}</> : <Navigate to="/login" />;
 }
 
-// SECURITY: Cashier-level route guard
-// Allows: any authenticated user (cashier, owner, admin, etc.)
 function CashierRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
   return token ? <>{children}</> : <Navigate to="/login" />;
 }
 
-function TenantModuleRoute({
-  moduleKey,
-  children,
-}: {
-  moduleKey: TenantModuleKey;
-  children: React.ReactNode;
-}) {
+function TenantModuleRoute({ moduleKey, children }: { moduleKey: TenantModuleKey; children: React.ReactNode }) {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   const { tenant, loading, loadedTenantId, fetchMyTenant } = useTenantProfileStore();
-
   const roleName = (user?.roles?.name || user?.role?.name || '').toLowerCase();
   const isSuperAdmin = roleName === 'super admin' || roleName === 'super_admin' || roleName === 'admin';
   const tenantId = user?.tenant?.id ?? user?.tenant_id ?? null;
 
   useEffect(() => {
-    if (token && !isSuperAdmin && tenantId && loadedTenantId !== tenantId) {
-      void fetchMyTenant();
-    }
+    if (token && !isSuperAdmin && tenantId && loadedTenantId !== tenantId) void fetchMyTenant();
   }, [fetchMyTenant, isSuperAdmin, loadedTenantId, tenantId, token]);
 
-  if (!token) {
-    return <Navigate to="/login" />;
-  }
-
-  if (isSuperAdmin) {
-    return <>{children}</>;
-  }
-
-  if (tenantId && loading && loadedTenantId !== tenantId) {
-    return <PageLoader />;
-  }
-
-  if (tenantId && tenant && !hasTenantModuleAccess(tenant.features, moduleKey)) {
-    return <Navigate to="/module-selector" replace />;
-  }
-
+  if (!token) return <Navigate to="/login" />;
+  if (isSuperAdmin) return <>{children}</>;
+  if (tenantId && loading && loadedTenantId !== tenantId) return <PageLoader />;
+  if (tenantId && tenant && !hasTenantModuleAccess(tenant.features, moduleKey)) return <Navigate to="/module-selector" replace />;
   return <>{children}</>;
 }
 
-// Lets the same build serve two hosts: on the myerp.my-aicustom.com
-// subdomain the app lives at "/", but proxied through my-aicustom.com/myerp
-// (path prefix not stripped by the reverse proxy) it lives at "/myerp".
 const routerBasename = window.location.pathname.startsWith('/myerp') ? '/myerp' : '/';
 
 function App() {
   return (
     <BrowserRouter basename={routerBasename}>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 1000,
-          success: { duration: 1000 },
-          error: { duration: 2000 },
-        }}
-      />
+      <Toaster position="top-right" toastOptions={{ duration: 1000, success: { duration: 1000 }, error: { duration: 2000 } }} />
       <ConfirmationModal />
       <PWARefreshPrompt />
       <SuperAdminTenantBar />
       <Suspense fallback={<PageLoader />}>
         <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
 
-        {/* DEMO ROUTES (PUBLIC ACCESS) */}
-        <Route path="/demo" element={<DemoLandingPage />} />
-        <Route path="/demo/fnb/owner" element={<DemoFnbOwner />} />
-        <Route path="/demo/fnb/owner/products" element={<DemoFnbProducts />} />
-        <Route path="/demo/fnb/owner/users" element={<DemoFnbUsers />} />
-        <Route path="/demo/fnb/owner/settings" element={<DemoFnbSettings />} />
-        <Route path="/demo/fnb/cashier" element={<DemoCashier />} />
-        <Route path="/demo/accounting/owner" element={<DemoAcctOwner />} />
-        <Route path="/demo/accounting/owner/forecast" element={<DemoForecastPage variant="owner" />} />
-        <Route path="/demo/accounting/owner/coa" element={<DemoCoA />} />
-        <Route path="/demo/accounting/owner/journal" element={<DemoJournal />} />
-        <Route path="/demo/accounting/owner/ledger" element={<DemoLedger />} />
-        <Route path="/demo/accounting/owner/reports" element={<DemoReports />} />
-        
-        {/* Demo Distributor */}
-        <Route path="/demo/accounting/distributor" element={<DemoAcctDistributor />} />
-        <Route path="/demo/accounting/distributor/forecast" element={<DemoForecastPage variant="distributor" />} />
-        <Route path="/demo/accounting/distributor/pembelian" element={<DemoAccountingReadOnlyPage variant="distributor" section="pembelian" />} />
-        <Route path="/demo/accounting/distributor/supplier" element={<DemoAccountingReadOnlyPage variant="distributor" section="supplier" />} />
-        <Route path="/demo/accounting/distributor/stok" element={<DemoAccountingReadOnlyPage variant="distributor" section="stok" />} />
-        <Route path="/demo/accounting/distributor/keuangan" element={<DemoAccountingReadOnlyPage variant="distributor" section="keuangan" />} />
-        <Route path="/demo/accounting/distributor/laporan" element={<DemoAccountingReadOnlyPage variant="distributor" section="laporan" />} />
+          <Route path="/demo" element={<DemoLandingPage />} />
+          <Route path="/demo/fnb/owner" element={<DemoFnbOwner />} />
+          <Route path="/demo/fnb/owner/products" element={<DemoFnbProducts />} />
+          <Route path="/demo/fnb/owner/users" element={<DemoFnbUsers />} />
+          <Route path="/demo/fnb/owner/settings" element={<DemoFnbSettings />} />
+          <Route path="/demo/fnb/cashier" element={<DemoCashier />} />
+          <Route path="/demo/accounting/owner" element={<DemoAcctOwner />} />
+          <Route path="/demo/accounting/owner/forecast" element={<DemoForecastPage variant="owner" />} />
+          <Route path="/demo/accounting/owner/coa" element={<DemoCoA />} />
+          <Route path="/demo/accounting/owner/journal" element={<DemoJournal />} />
+          <Route path="/demo/accounting/owner/ledger" element={<DemoLedger />} />
+          <Route path="/demo/accounting/owner/reports" element={<DemoReports />} />
+          <Route path="/demo/accounting/distributor" element={<DemoAcctDistributor />} />
+          <Route path="/demo/accounting/distributor/forecast" element={<DemoForecastPage variant="distributor" />} />
+          <Route path="/demo/accounting/distributor/pembelian" element={<DemoAccountingReadOnlyPage variant="distributor" section="pembelian" />} />
+          <Route path="/demo/accounting/distributor/supplier" element={<DemoAccountingReadOnlyPage variant="distributor" section="supplier" />} />
+          <Route path="/demo/accounting/distributor/stok" element={<DemoAccountingReadOnlyPage variant="distributor" section="stok" />} />
+          <Route path="/demo/accounting/distributor/keuangan" element={<DemoAccountingReadOnlyPage variant="distributor" section="keuangan" />} />
+          <Route path="/demo/accounting/distributor/laporan" element={<DemoAccountingReadOnlyPage variant="distributor" section="laporan" />} />
+          <Route path="/demo/accounting/producer" element={<DemoAcctProducer />} />
+          <Route path="/demo/accounting/producer/forecast" element={<DemoForecastPage variant="produsen" />} />
+          <Route path="/demo/accounting/producer/produksi" element={<DemoAccountingReadOnlyPage variant="produsen" section="produksi" />} />
+          <Route path="/demo/accounting/producer/inventori" element={<DemoAccountingReadOnlyPage variant="produsen" section="inventori" />} />
+          <Route path="/demo/accounting/producer/laporan" element={<DemoAccountingReadOnlyPage variant="produsen" section="laporan" />} />
+          <Route path="/demo/accounting/retail" element={<DemoAcctRetail />} />
+          <Route path="/demo/accounting/retail/forecast" element={<DemoForecastPage variant="retail" />} />
+          <Route path="/demo/accounting/retail/sales" element={<DemoAccountingReadOnlyPage variant="retail" section="sales" />} />
+          <Route path="/demo/accounting/retail/customers" element={<DemoAccountingReadOnlyPage variant="retail" section="customers" />} />
+          <Route path="/demo/accounting/retail/products" element={<DemoAccountingReadOnlyPage variant="retail" section="products" />} />
+          <Route path="/demo/accounting/retail/inventory" element={<DemoAccountingReadOnlyPage variant="retail" section="inventory" />} />
+          <Route path="/demo/accounting/retail/reports" element={<DemoAccountingReadOnlyPage variant="retail" section="reports" />} />
 
-        {/* Demo Producer */}
-        <Route path="/demo/accounting/producer" element={<DemoAcctProducer />} />
-        <Route path="/demo/accounting/producer/forecast" element={<DemoForecastPage variant="produsen" />} />
-        <Route path="/demo/accounting/producer/produksi" element={<DemoAccountingReadOnlyPage variant="produsen" section="produksi" />} />
-        <Route path="/demo/accounting/producer/inventori" element={<DemoAccountingReadOnlyPage variant="produsen" section="inventori" />} />
-        <Route path="/demo/accounting/producer/laporan" element={<DemoAccountingReadOnlyPage variant="produsen" section="laporan" />} />
+          <Route path="/demo/inventory" element={<InventoryLayout />}>
+            <Route path="dashboard" element={<InventoryDashboard />} />
+            <Route path="stock" element={<StockPage />} />
+            <Route path="recipe" element={<RecipeSimulationPage />} />
+            <Route path="forecast" element={<ForecastPageInventory />} />
+            <Route path="reorder" element={<ReorderPage />} />
+            <Route path="settings" element={<InventorySettings />} />
+            <Route index element={<Navigate to="/demo/inventory/dashboard" />} />
+          </Route>
 
-        {/* Demo Retail */}
-        <Route path="/demo/accounting/retail" element={<DemoAcctRetail />} />
-        <Route path="/demo/accounting/retail/forecast" element={<DemoForecastPage variant="retail" />} />
-        <Route path="/demo/accounting/retail/sales" element={<DemoAccountingReadOnlyPage variant="retail" section="sales" />} />
-        <Route path="/demo/accounting/retail/customers" element={<DemoAccountingReadOnlyPage variant="retail" section="customers" />} />
-        <Route path="/demo/accounting/retail/products" element={<DemoAccountingReadOnlyPage variant="retail" section="products" />} />
-        <Route path="/demo/accounting/retail/inventory" element={<DemoAccountingReadOnlyPage variant="retail" section="inventory" />} />
-        <Route path="/demo/accounting/retail/reports" element={<DemoAccountingReadOnlyPage variant="retail" section="reports" />} />
+          <Route path="/demo/medsos" element={<MedsosLayout />}>
+            <Route path="dashboard" element={<MedsosDashboard />} />
+            <Route path="connections" element={<MedsosConnections />} />
+            <Route path="create" element={<Navigate to="/demo/medsos/crm/content/photo" replace />} />
+            <Route path="calendar" element={<Navigate to="/demo/medsos/crm/planner" replace />} />
+            <Route path="crm/planner" element={<ContentCalendar />} />
+            <Route path="crm/content" element={<Navigate to="/demo/medsos/crm/content/photo" replace />} />
+            <Route path="crm/content/:mode" element={<CreatePost />} />
+            <Route path="inbox" element={<Navigate to="/demo/medsos/inbox/wa" replace />} />
+            <Route path="inbox/:channel" element={<MedsosInbox />} />
+            <Route path="marketplace" element={<MarketplaceControl />} />
+            <Route path="ads" element={<OmnichannelAdsHub />} />
+            <Route path="analytics" element={<Navigate to="/demo/medsos/analytics/wa" replace />} />
+            <Route path="analytics/:channel" element={<MedsosAnalytics />} />
+            <Route path="settings" element={<MedsosSettings />} />
+            <Route path="pricing" element={<Navigate to="/demo/medsos/dashboard" replace />} />
+            <Route index element={<Navigate to="/demo/medsos/dashboard" />} />
+          </Route>
 
-        {/* DEMO INVENTORY (Public Access) - Reusing Logic */}
-        <Route path="/demo/inventory" element={<InventoryLayout />}>
-          <Route path="dashboard" element={<InventoryDashboard />} />
-          <Route path="stock" element={<StockPage />} />
-          <Route path="recipe" element={<RecipeSimulationPage />} />
-          <Route path="forecast" element={<ForecastPageInventory />} />
-          <Route path="reorder" element={<ReorderPage />} />
-          <Route path="settings" element={<InventorySettings />} />
-          <Route index element={<Navigate to="/demo/inventory/dashboard" />} />
-        </Route>
+          <Route path="/module-selector" element={<ProtectedRoute><ModuleSelectorPage /></ProtectedRoute>} />
+          <Route path="/revenue" element={<OwnerRoute><RevenueWorkspacePage /></OwnerRoute>} />
 
-        {/* DEMO MEDSOS (Public Access) - Reusing Logic */}
-        <Route path="/demo/medsos" element={<MedsosLayout />}>
-          <Route path="dashboard" element={<MedsosDashboard />} />
-          <Route path="connections" element={<MedsosConnections />} />
-          <Route path="create" element={<Navigate to="/demo/medsos/crm/content/photo" replace />} />
-          <Route path="calendar" element={<Navigate to="/demo/medsos/crm/planner" replace />} />
-          <Route path="crm/planner" element={<ContentCalendar />} />
-          <Route path="crm/content" element={<Navigate to="/demo/medsos/crm/content/photo" replace />} />
-          <Route path="crm/content/:mode" element={<CreatePost />} />
-          <Route path="inbox" element={<Navigate to="/demo/medsos/inbox/wa" replace />} />
-          <Route path="inbox/:channel" element={<MedsosInbox />} />
-          <Route path="marketplace" element={<MarketplaceControl />} />
-          <Route path="ads" element={<OmnichannelAdsHub />} />
-          <Route path="analytics" element={<Navigate to="/demo/medsos/analytics/wa" replace />} />
-          <Route path="analytics/:channel" element={<MedsosAnalytics />} />
-          <Route path="settings" element={<MedsosSettings />} />
-          <Route path="pricing" element={<Navigate to="/demo/medsos/dashboard" replace />} />
-          <Route index element={<Navigate to="/demo/medsos/dashboard" />} />
-        </Route>
+          <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+            <Route path="dashboard" element={<SuperAdminOmniPage />} />
+            <Route path="tenants" element={<TenantManagementPage />} />
+            <Route path="mycommersocial" element={<MyCommerSocialAdminPage />} />
+            <Route path="analytics" element={<SystemAnalyticsPage />} />
+            <Route path="billing" element={<BillingManagementPage />} />
+            <Route path="api-keys" element={<ApiKeyManagementPage />} />
+            <Route path="api-docs" element={<ApiDocumentationPage />} />
+            <Route index element={<Navigate to="/admin/dashboard" />} />
+          </Route>
 
-        {/* Module Selector Route */}
-        <Route
-          path="/module-selector"
-          element={
-            <ProtectedRoute>
-              <ModuleSelectorPage />
-            </ProtectedRoute>
-          }
-        />
+          <Route path="/owner" element={<TenantModuleRoute moduleKey="pos"><OwnerRoute><OwnerLayout /></OwnerRoute></TenantModuleRoute>}>
+            <Route path="dashboard" element={<OwnerDashboardPage />} />
+            <Route path="users" element={<UserManagementPage />} />
+            <Route path="outlets" element={<OutletManagementPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="approvals" element={<ChangeApprovalPage />} />
+            <Route path="inventory" element={<ProductManagementPage />} />
+            <Route path="products" element={<Navigate to="/owner/inventory" />} />
+            <Route path="transactions/:id" element={<TransactionDetailPage />} />
+            <Route path="integrations" element={<IntegrationsPage />} />
+            <Route index element={<Navigate to="/owner/dashboard" />} />
+          </Route>
 
-        {/* Admin Routes (Super Admin) */}
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminLayout />
-            </AdminRoute>
-          }
-        >
-          <Route path="dashboard" element={<SuperAdminOmniPage />} />
-          <Route path="tenants" element={<TenantManagementPage />} />
-          <Route path="mycommersocial" element={<MyCommerSocialAdminPage />} />
-          <Route path="analytics" element={<SystemAnalyticsPage />} />
-          <Route path="billing" element={<BillingManagementPage />} />
-          <Route path="api-keys" element={<ApiKeyManagementPage />} />
-          <Route path="api-docs" element={<ApiDocumentationPage />} />
-          <Route index element={<Navigate to="/admin/dashboard" />} />
-        </Route>
+          <Route path="/accounting" element={<TenantModuleRoute moduleKey="accounting"><AccountingRoute><AccountingLayout /></AccountingRoute></TenantModuleRoute>}>
+            <Route path="dashboard" element={<DashboardAkuntansiPage />} />
+            <Route path="forecast" element={<ForecastPage />} />
+            <Route path="coa" element={<ChartOfAccountsPage />} />
+            <Route path="journal" element={<CreateJournalPage />} />
+            <Route path="ledger" element={<LedgerPage />} />
+            <Route path="reports" element={<IncomeStatementPage />} />
+            <Route path="ap" element={<AccountsPayablePage />} />
+            <Route path="ar" element={<AccountsReceivablePage />} />
+            <Route path="assets" element={<FixedAssetsPage />} />
+            <Route path="budget" element={<BudgetPage />} />
+            <Route path="users" element={<AccountingUserManagementPage />} />
+            <Route path="users/create" element={<CreateUserPage />} />
+            <Route path="settings" element={<AccountingSettingsPage />} />
+            <Route index element={<Navigate to="/accounting/dashboard" />} />
+          </Route>
 
-        {/* Owner Routes (FNB Module) */}
-        <Route
-          path="/owner"
-          element={
-            <TenantModuleRoute moduleKey="pos">
-              <OwnerRoute>
-                <OwnerLayout />
-              </OwnerRoute>
-            </TenantModuleRoute>
-          }
-        >
-          <Route path="dashboard" element={<OwnerDashboardPage />} />
-          <Route path="users" element={<UserManagementPage />} />
-          <Route path="outlets" element={<OutletManagementPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="approvals" element={<ChangeApprovalPage />} />
-          <Route path="inventory" element={<ProductManagementPage />} />
-          <Route path="products" element={<Navigate to="/owner/inventory" />} />
-          <Route path="transactions/:id" element={<TransactionDetailPage />} />
-          <Route path="integrations" element={<IntegrationsPage />} />
+          <Route path="/inventory" element={<TenantModuleRoute moduleKey="inventory"><ProtectedRoute><InventoryLayout /></ProtectedRoute></TenantModuleRoute>}>
+            <Route path="dashboard" element={<InventoryDashboard />} />
+            <Route path="stock" element={<StockPage />} />
+            <Route path="recipe" element={<RecipeSimulationPage />} />
+            <Route path="forecast" element={<ForecastPageInventory />} />
+            <Route path="reorder" element={<ReorderPage />} />
+            <Route path="settings" element={<InventorySettings />} />
+            <Route path="analytics" element={<InventoryAnalyticsPage />} />
+            <Route index element={<Navigate to="/inventory/dashboard" />} />
+          </Route>
 
-          <Route index element={<Navigate to="/owner/dashboard" />} />
-        </Route>
+          <Route path="/medsos" element={<TenantModuleRoute moduleKey="commerSocial"><ProtectedRoute><MedsosLayout /></ProtectedRoute></TenantModuleRoute>}>
+            <Route path="dashboard" element={<MedsosDashboard />} />
+            <Route path="connections" element={<MedsosConnections />} />
+            <Route path="create" element={<Navigate to="/medsos/crm/content/photo" replace />} />
+            <Route path="calendar" element={<Navigate to="/medsos/crm/planner" replace />} />
+            <Route path="crm/planner" element={<ContentCalendar />} />
+            <Route path="crm/content" element={<Navigate to="/medsos/crm/content/photo" replace />} />
+            <Route path="crm/content/:mode" element={<CreatePost />} />
+            <Route path="inbox" element={<Navigate to="/medsos/inbox/wa" replace />} />
+            <Route path="inbox/:channel" element={<MedsosInbox />} />
+            <Route path="marketplace" element={<MarketplaceControl />} />
+            <Route path="ads" element={<OmnichannelAdsHub />} />
+            <Route path="crm" element={<CustomerDatabasePage />} />
+            <Route path="broadcasts" element={<BroadcastManagerPage />} />
+            <Route path="automations" element={<AutoReplyPage />} />
+            <Route path="analytics" element={<Navigate to="/medsos/analytics/wa" replace />} />
+            <Route path="analytics/:channel" element={<MedsosAnalytics />} />
+            <Route path="settings" element={<MedsosSettings />} />
+            <Route path="pricing" element={<Navigate to="/medsos/dashboard" replace />} />
+            <Route path="team" element={<MedsosTeamPage />} />
+            <Route index element={<Navigate to="/medsos/dashboard" />} />
+          </Route>
 
-        {/* Accounting Module Routes */}
-        <Route
-          path="/accounting"
-          element={
-            <TenantModuleRoute moduleKey="accounting">
-              <AccountingRoute>
-                <AccountingLayout />
-              </AccountingRoute>
-            </TenantModuleRoute>
-          }
-        >
-          <Route path="dashboard" element={<DashboardAkuntansiPage />} />
-          <Route path="forecast" element={<ForecastPage />} />
-          <Route path="coa" element={<ChartOfAccountsPage />} />
-          <Route path="journal" element={<CreateJournalPage />} />
-          <Route path="ledger" element={<LedgerPage />} />
-          <Route path="reports" element={<IncomeStatementPage />} />
-          <Route path="ap" element={<AccountsPayablePage />} />
-          <Route path="ar" element={<AccountsReceivablePage />} />
-          <Route path="assets" element={<FixedAssetsPage />} />
-          <Route path="budget" element={<BudgetPage />} />
-          <Route path="users" element={<AccountingUserManagementPage />} />
-          <Route path="users/create" element={<CreateUserPage />} />
-          <Route path="settings" element={<AccountingSettingsPage />} />
-          <Route index element={<Navigate to="/accounting/dashboard" />} />
-        </Route>
+          <Route path="/accounting/retail" element={<TenantModuleRoute moduleKey="accounting"><AccountingRoute><AccountingLayout variant="retail" /></AccountingRoute></TenantModuleRoute>}>
+            <Route index element={<DashboardRetailPage />} />
+            <Route path="forecast" element={<ForecastPage variant="retail" />} />
+            <Route path="settings" element={<AccountingReadOnlyPage variant="retail" section="settings" />} />
+            <Route path="sales" element={<AccountingReadOnlyPage variant="retail" section="sales" />} />
+            <Route path="customers" element={<AccountingReadOnlyPage variant="retail" section="customers" />} />
+            <Route path="products" element={<AccountingReadOnlyPage variant="retail" section="products" />} />
+            <Route path="inventory" element={<AccountingReadOnlyPage variant="retail" section="inventory" />} />
+            <Route path="reports" element={<AccountingReadOnlyPage variant="retail" section="reports" />} />
+          </Route>
 
-        {/* Inventory Module Routes */}
-        <Route
-          path="/inventory"
-          element={
-            <TenantModuleRoute moduleKey="inventory">
-              <ProtectedRoute>
-                <InventoryLayout />
-              </ProtectedRoute>
-            </TenantModuleRoute>
-          }
-        >
-          <Route path="dashboard" element={<InventoryDashboard />} />
-          <Route path="stock" element={<StockPage />} />
-          <Route path="recipe" element={<RecipeSimulationPage />} />
-          <Route path="forecast" element={<ForecastPageInventory />} />
-          <Route path="reorder" element={<ReorderPage />} />
-          <Route path="settings" element={<InventorySettings />} />
-          <Route path="analytics" element={<InventoryAnalyticsPage />} />
-          <Route index element={<Navigate to="/inventory/dashboard" />} />
-        </Route>
+          <Route path="/accounting/distributor" element={<TenantModuleRoute moduleKey="accounting"><AccountingRoute><AccountingLayout variant="distributor" /></AccountingRoute></TenantModuleRoute>}>
+            <Route index element={<DashboardDistributorPage />} />
+            <Route path="forecast" element={<ForecastPage variant="distributor" />} />
+            <Route path="settings" element={<AccountingReadOnlyPage variant="distributor" section="settings" />} />
+            <Route path="pembelian" element={<AccountingReadOnlyPage variant="distributor" section="pembelian" />} />
+            <Route path="supplier" element={<AccountingReadOnlyPage variant="distributor" section="supplier" />} />
+            <Route path="stok" element={<AccountingReadOnlyPage variant="distributor" section="stok" />} />
+            <Route path="keuangan" element={<AccountingReadOnlyPage variant="distributor" section="keuangan" />} />
+            <Route path="laporan" element={<AccountingReadOnlyPage variant="distributor" section="laporan" />} />
+          </Route>
 
-        {/* Medsos Module Routes */}
-        <Route
-          path="/medsos"
-          element={
-            <TenantModuleRoute moduleKey="commerSocial">
-              <ProtectedRoute>
-                <MedsosLayout />
-              </ProtectedRoute>
-            </TenantModuleRoute>
-          }
-        >
-          <Route path="dashboard" element={<MedsosDashboard />} />
-          <Route path="connections" element={<MedsosConnections />} />
-          <Route path="create" element={<Navigate to="/medsos/crm/content/photo" replace />} />
-          <Route path="calendar" element={<Navigate to="/medsos/crm/planner" replace />} />
-          <Route path="crm/planner" element={<ContentCalendar />} />
-          <Route path="crm/content" element={<Navigate to="/medsos/crm/content/photo" replace />} />
-          <Route path="crm/content/:mode" element={<CreatePost />} />
-          <Route path="inbox" element={<Navigate to="/medsos/inbox/wa" replace />} />
-          <Route path="inbox/:channel" element={<MedsosInbox />} />
-          <Route path="marketplace" element={<MarketplaceControl />} />
-          <Route path="ads" element={<OmnichannelAdsHub />} />
-          <Route path="crm" element={<CustomerDatabasePage />} />
-          <Route path="broadcasts" element={<BroadcastManagerPage />} />
-          <Route path="automations" element={<AutoReplyPage />} />
-          <Route path="analytics" element={<Navigate to="/medsos/analytics/wa" replace />} />
-          <Route path="analytics/:channel" element={<MedsosAnalytics />} />
-          <Route path="settings" element={<MedsosSettings />} />
-          <Route path="pricing" element={<Navigate to="/medsos/dashboard" replace />} />
-          <Route path="team" element={<MedsosTeamPage />} />
-          <Route index element={<Navigate to="/medsos/dashboard" />} />
-        </Route>
+          <Route path="/accounting/produsen" element={<TenantModuleRoute moduleKey="accounting"><AccountingRoute><AccountingLayout variant="produsen" /></AccountingRoute></TenantModuleRoute>}>
+            <Route index element={<DashboardProdusenPage />} />
+            <Route path="forecast" element={<ForecastPage variant="produsen" />} />
+            <Route path="settings" element={<AccountingReadOnlyPage variant="produsen" section="settings" />} />
+            <Route path="produksi" element={<AccountingReadOnlyPage variant="produsen" section="produksi" />} />
+            <Route path="inventori" element={<AccountingReadOnlyPage variant="produsen" section="inventori" />} />
+            <Route path="laporan" element={<AccountingReadOnlyPage variant="produsen" section="laporan" />} />
+          </Route>
 
-        {/* Accounting Retail Dashboard */}
-        <Route
-          path="/accounting/retail"
-          element={
-            <TenantModuleRoute moduleKey="accounting">
-              <AccountingRoute>
-                <AccountingLayout variant="retail" />
-              </AccountingRoute>
-            </TenantModuleRoute>
-          }
-        >
-          <Route index element={<DashboardRetailPage />} />
-          <Route
-            path="forecast"
-            element={<ForecastPage variant="retail" />}
-          />
-          <Route
-            path="settings"
-            element={<AccountingReadOnlyPage variant="retail" section="settings" />}
-          />
-          <Route
-            path="sales"
-            element={<AccountingReadOnlyPage variant="retail" section="sales" />}
-          />
-          <Route
-            path="customers"
-            element={<AccountingReadOnlyPage variant="retail" section="customers" />}
-          />
-          <Route
-            path="products"
-            element={<AccountingReadOnlyPage variant="retail" section="products" />}
-          />
-          <Route
-            path="inventory"
-            element={<AccountingReadOnlyPage variant="retail" section="inventory" />}
-          />
-          <Route
-            path="reports"
-            element={<AccountingReadOnlyPage variant="retail" section="reports" />}
-          />
-        </Route>
-
-        {/* Accounting Distributor Dashboard */}
-        <Route
-          path="/accounting/distributor"
-          element={
-            <TenantModuleRoute moduleKey="accounting">
-              <AccountingRoute>
-                <AccountingLayout variant="distributor" />
-              </AccountingRoute>
-            </TenantModuleRoute>
-          }
-        >
-          <Route index element={<DashboardDistributorPage />} />
-          <Route
-            path="forecast"
-            element={<ForecastPage variant="distributor" />}
-          />
-          <Route
-            path="settings"
-            element={<AccountingReadOnlyPage variant="distributor" section="settings" />}
-          />
-          <Route
-            path="pembelian"
-            element={<AccountingReadOnlyPage variant="distributor" section="pembelian" />}
-          />
-          <Route
-            path="supplier"
-            element={<AccountingReadOnlyPage variant="distributor" section="supplier" />}
-          />
-          <Route
-            path="stok"
-            element={<AccountingReadOnlyPage variant="distributor" section="stok" />}
-          />
-          <Route
-            path="keuangan"
-            element={<AccountingReadOnlyPage variant="distributor" section="keuangan" />}
-          />
-          <Route
-            path="laporan"
-            element={<AccountingReadOnlyPage variant="distributor" section="laporan" />}
-          />
-        </Route>
-
-        {/* Accounting Produsen Dashboard */}
-        <Route
-          path="/accounting/produsen"
-          element={
-            <TenantModuleRoute moduleKey="accounting">
-              <AccountingRoute>
-                <AccountingLayout variant="produsen" />
-              </AccountingRoute>
-            </TenantModuleRoute>
-          }
-        >
-          <Route index element={<DashboardProdusenPage />} />
-          <Route
-            path="forecast"
-            element={<ForecastPage variant="produsen" />}
-          />
-          <Route
-            path="settings"
-            element={<AccountingReadOnlyPage variant="produsen" section="settings" />}
-          />
-          <Route
-            path="produksi"
-            element={<AccountingReadOnlyPage variant="produsen" section="produksi" />}
-          />
-          <Route
-            path="inventori"
-            element={<AccountingReadOnlyPage variant="produsen" section="inventori" />}
-          />
-          <Route
-            path="laporan"
-            element={<AccountingReadOnlyPage variant="produsen" section="laporan" />}
-          />
-        </Route>
-
-        {/* Cashier Route */}
-        <Route
-          path="/cashier"
-          element={
-            <TenantModuleRoute moduleKey="pos">
-              <CashierRoute>
-                <CashierPage />
-              </CashierRoute>
-            </TenantModuleRoute>
-          }
-        />
-
-        {/* Legacy/Compatibility Routes */}
-        <Route path="/dashboard" element={<Navigate to="/owner/dashboard" />} />
-
-        {/* Default Route */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="*" element={<Navigate to="/login" />} />
+          <Route path="/cashier" element={<TenantModuleRoute moduleKey="pos"><CashierRoute><CashierPage /></CashierRoute></TenantModuleRoute>} />
+          <Route path="/dashboard" element={<Navigate to="/owner/dashboard" />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
@@ -605,7 +364,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
