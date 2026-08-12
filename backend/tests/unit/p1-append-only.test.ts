@@ -25,12 +25,20 @@ describe('P1 immutable audit guards', () => {
     expect(runner).toContain('Never edit an applied P1 migration');
   });
 
-  test('Suite CI validates four P1 migrations and immutable trigger presence', () => {
-    const workflow = read('../.github/workflows/frontend-ci.yml');
-    expect(workflow).toContain('ledger.rows.length !== 4');
-    expect(workflow).toContain('trg_loyalty_ledger_append_only');
-    expect(workflow).toContain('trg_warehouse_stock_ledger_append_only');
-    expect(workflow).toContain('trg_procurement_event_ledger_append_only');
-    expect(workflow).toContain('Production backend Docker image build gate');
+  test('shared database verifier validates four migrations and immutable trigger behavior', () => {
+    const verifier = read('src/scripts/verify-p1-database-v2.ts');
+    const suiteWorkflow = read('../.github/workflows/frontend-ci.yml');
+    const runtimeWorkflow = read('../.github/workflows/p1-runtime-ci.yml');
+
+    expect(verifier).toContain('ledger.rows.length === 4');
+    expect(verifier).toContain('trg_loyalty_ledger_append_only');
+    expect(verifier).toContain('trg_warehouse_stock_ledger_append_only');
+    expect(verifier).toContain('trg_procurement_event_ledger_append_only');
+    expect(verifier).toContain("error?.code === '55000'");
+
+    expect(suiteWorkflow).toContain('node dist/scripts/verify-p1-database-v2.js');
+    expect(runtimeWorkflow).toContain('node dist/scripts/verify-p1-database-v2.js');
+    expect(suiteWorkflow).toContain('Production backend Docker image build gate');
+    expect(runtimeWorkflow).toContain('Backend production Docker build');
   });
 });
