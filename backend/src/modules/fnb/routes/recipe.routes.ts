@@ -1,15 +1,16 @@
 import { Router } from 'express';
 import { getRecipes, getRecipeByItemId, updateProductRecipe, addRecipeItem, deleteRecipeItem } from '../controllers/recipe.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware, ownerOnly } from '../../../middlewares/tenant.middleware';
+import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireCapability } from '../../../middlewares/capability.middleware';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
 
-router.get('/', getRecipes);
-router.get('/product/:itemId', getRecipeByItemId);
-router.post('/product/:itemId', ownerOnly, updateProductRecipe);
-router.post('/', ownerOnly, addRecipeItem);
-router.delete('/:id', ownerOnly, deleteRecipeItem);
+router.get('/', requireCapability('supply.manufacturing.read'), getRecipes);
+router.get('/product/:itemId', requireCapability('supply.manufacturing.read'), getRecipeByItemId);
+router.post('/product/:itemId', requireCapability('supply.manufacturing.manage'), updateProductRecipe);
+router.post('/', requireCapability('supply.manufacturing.manage'), addRecipeItem);
+router.delete('/:id', requireCapability('supply.manufacturing.manage'), deleteRecipeItem);
 
 export default router;
