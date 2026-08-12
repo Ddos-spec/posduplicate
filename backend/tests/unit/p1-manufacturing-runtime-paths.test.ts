@@ -39,7 +39,7 @@ const request = (overrides: Record<string, any> = {}) => ({
 } as any);
 const txRunner = (tx: any) => db.$transaction.mockImplementation(async (callback: any) => callback(tx));
 
-describe('P1-B manufacturing runtime failure paths', () => {
+describe('P1-B manufacturing runtime paths', () => {
   beforeEach(() => jest.clearAllMocks());
 
   test('tenant isolation: MO creation rejects outlet outside tenant', async () => {
@@ -113,6 +113,41 @@ describe('P1-B manufacturing runtime failure paths', () => {
     expect(next).toHaveBeenCalledWith(expect.objectContaining({ code: 'INSUFFICIENT_MATERIAL' }));
     expect(tx.stock_movements.create).not.toHaveBeenCalled();
     expect(tx.items.findFirst).not.toHaveBeenCalled();
+  });
+
+  test('happy path atomically consumes material, posts output cost, completes MO and creates QC', async () => {
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      $queryRaw: jest.fn()
+        .mockResolvedValueOnce([{ id: 1, tenant_id: 1, outlet_id: 10, item_id: 20, status: 'in_progress', mo_number: 'MO-1', quantity_planned: 2 }])
+        .mockResolvedValueOnce([{ id: 101, manufacturing_order_id: 1, ingredient_id: 7, inventory_id: null, quantity_planned: 5, quantity_consumed: 0, unit_cost: 1000 }])
+        .mockResolvedValueOnce([{ id: 7, name: 'Flour', cost_per_unit: 900, stock_before: 10, stock_after: 5 }])
+        .mockResolvedValueOnce([{ id: 20, name: 'Bread', stock_before: 3, stock_after: 5 }])
+        .mockResolvedValueOnce([{ id: 1, tenant_id: 1, outlet_id: 10, item_id: 20, status: 'done', quantity_planned: 2, quantity_produced: 2 }]),
+      ingredients: { findFirst: jest.fn() },
+      inventory: { findFirst: jest.fn() },
+      stock_movements: { create: jest.fn().mockResolvedValue({}) },
+      items: { findFirst: jest.fn().mockResolvedValue({ id: 20, name: 'Bread', outlet_id: 10, is_active: true, track_stock: true, stock: 3 }) },
+    };
+    txRunner(tx);
+    const res = response();
+    const next = jest.fn();
+
+    await completeManufacturingOrder(request({ params: { id: '1' }, body: { quantityProduced: 2 } }), res as any, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(tx.stock_movements.create).toHaveBeenCalledTimes(2);
+    expect(tx.stock_movements.create).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      data: expect.objectContaining({ ingredient_id: 7, type: 'OUT', quantity: 5, unit_price: 1000, total_cost: 5000, stock_before: 10, stock_after: 5 }),
+    }));
+    expect(tx.stock_movements.create).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      data: expect.objectContaining({ item_id: 20, type: 'IN', quantity: 2, unit_price: 2500, total_cost: 5000, stock_before: 3, stock_after: 5 }),
+    }));
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(3);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: true,
+      data: expect.objectContaining({ status: 'done', yieldPercentage: 100, outputUnitCost: 2500, consumedMaterialCost: 5000 }),
+    }));
   });
 });
 
