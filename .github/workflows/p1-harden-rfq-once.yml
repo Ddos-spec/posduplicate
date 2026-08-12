@@ -1,0 +1,124 @@
+name: P1 One-shot RFQ Hardening
+
+on:
+  push:
+    branches:
+      - feat/odoo-complete-suite
+    paths:
+      - '.github/workflows/p1-harden-rfq-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  harden-rfq:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest P1 branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/odoo-complete-suite
+          fetch-depth: 0
+
+      - name: Rebase before patch
+        run: git pull --rebase origin feat/odoo-complete-suite
+
+      - name: Patch RFQ validation and audit detail
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/src/modules/fnb/controllers/procurement-rfq.p1.controller.ts')
+          text = path.read_text()
+
+          marker = """    const itemQuotes = Array.isArray(req.body.items) ? req.body.items : [];\n    if (itemQuotes.length === 0) return res.status(400).json({ success: false, error: { code: 'QUOTE_ITEMS_REQUIRED', message: 'Supplier quote membutuhkan item prices' } });"""
+          replacement = """    const itemQuotes = Array.isArray(req.body.items) ? req.body.items : [];\n    if (itemQuotes.length === 0) return res.status(400).json({ success: false, error: { code: 'QUOTE_ITEMS_REQUIRED', message: 'Supplier quote membutuhkan item prices' } });\n    const leadTimeDays = req.body.leadTimeDays === undefined || req.body.leadTimeDays === null || req.body.leadTimeDays === ''\n      ? null\n      : Number(req.body.leadTimeDays);\n    if (leadTimeDays !== null && (!Number.isFinite(leadTimeDays) || leadTimeDays < 0)) {\n      return res.status(400).json({ success: false, error: { code: 'INVALID_LEAD_TIME', message: 'Lead time supplier harus angka >= 0' } });\n    }"""
+          if marker not in text:
+              raise SystemExit('Supplier quote input marker not found')
+          text = text.replace(marker, replacement, 1)
+
+          old_sql = "lead_time_days = ${req.body.leadTimeDays === undefined ? null : Number(req.body.leadTimeDays)}"
+          if old_sql not in text:
+              raise SystemExit('Lead-time SQL marker not found')
+          text = text.replace(old_sql, "lead_time_days = ${leadTimeDays}", 1)
+
+          old_payload = "payload: { supplierId, quotedTotal, leadTimeDays: req.body.leadTimeDays ?? null },"
+          new_payload = "payload: { supplierId, quotedTotal, leadTimeDays, items: itemQuotes },"
+          if old_payload not in text:
+              raise SystemExit('Supplier quote audit payload marker not found')
+          text = text.replace(old_payload, new_payload, 1)
+
+          select_marker = """      const supplierRows = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.purchase_rfq_suppliers WHERE rfq_id = ${rfqId} AND supplier_id = ${supplierId} AND status = 'responded' FOR UPDATE`);\n      if (!supplierRows[0]) throw Object.assign(new Error('Supplier belum memberikan quote valid'), { status: 409, code: 'SUPPLIER_QUOTE_REQUIRED' });"""
+          select_replacement = """      const supplierRows = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.purchase_rfq_suppliers WHERE rfq_id = ${rfqId} AND supplier_id = ${supplierId} AND status = 'responded' FOR UPDATE`);\n      if (!supplierRows[0]) throw Object.assign(new Error('Supplier belum memberikan quote valid'), { status: 409, code: 'SUPPLIER_QUOTE_REQUIRED' });\n\n      const capacityShortages = await tx.$queryRaw<any[]>(Prisma.sql`\n        SELECT ri.inventory_id, ri.quantity AS requested_quantity, rsi.available_quantity\n        FROM public.purchase_rfq_items ri\n        JOIN public.purchase_rfq_supplier_items rsi\n          ON rsi.rfq_item_id = ri.id AND rsi.rfq_supplier_id = ${supplierRows[0].id}\n        WHERE ri.rfq_id = ${rfqId}\n          AND rsi.available_quantity IS NOT NULL\n          AND rsi.available_quantity < ri.quantity\n      `);\n      if (capacityShortages.length > 0) {\n        throw Object.assign(new Error('Supplier tidak memiliki kapasitas cukup untuk seluruh kebutuhan RFQ'), {\n          status: 409,\n          code: 'SUPPLIER_CAPACITY_INSUFFICIENT',\n          details: capacityShortages,\n        });\n      }"""
+          if select_marker not in text:
+              raise SystemExit('RFQ supplier selection marker not found')
+          text = text.replace(select_marker, select_replacement, 1)
+
+          path.write_text(text)
+          PY
+
+      - name: Add RFQ hardening regression contract
+        run: |
+          cat > backend/tests/unit/p1-rfq-hardening.test.ts <<'EOF'
+          import fs from 'fs';
+          import path from 'path';
+
+          const controller = fs.readFileSync(
+            path.resolve(__dirname, '../../src/modules/fnb/controllers/procurement-rfq.p1.controller.ts'),
+            'utf8'
+          );
+
+          describe('P1 RFQ hardening contract', () => {
+            test('lead time is validated before supplier quote persistence', () => {
+              expect(controller).toContain("code: 'INVALID_LEAD_TIME'");
+              expect(controller).toContain('lead_time_days = ${leadTimeDays}');
+            });
+
+            test('quote audit event contains item-level submitted quote detail', () => {
+              expect(controller).toContain('payload: { supplierId, quotedTotal, leadTimeDays, items: itemQuotes }');
+            });
+
+            test('supplier selection blocks insufficient quoted availability', () => {
+              expect(controller).toContain('SUPPLIER_CAPACITY_INSUFFICIENT');
+              expect(controller).toContain('rsi.available_quantity < ri.quantity');
+            });
+          });
+          EOF
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Run backend tests
+        working-directory: backend
+        run: npm test -- --runInBand
+
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/p1-harden-rfq-once.yml
+
+      - name: Rebase latest branch before commit
+        run: git pull --rebase --autostash origin feat/odoo-complete-suite
+
+      - name: Commit tested RFQ hardening
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/src/modules/fnb/controllers/procurement-rfq.p1.controller.ts backend/tests/unit/p1-rfq-hardening.test.ts .github/workflows/p1-harden-rfq-once.yml
+          git diff --cached --check
+          git commit -m "fix(p1): enforce RFQ supplier capacity and quote audit detail"
+          git push origin HEAD:feat/odoo-complete-suite
