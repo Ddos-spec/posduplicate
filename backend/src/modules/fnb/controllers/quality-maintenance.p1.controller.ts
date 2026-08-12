@@ -20,6 +20,19 @@ const jsonObject = (value: unknown, field: string) => {
   return value as Record<string, unknown>;
 };
 
+const parseOptionalDate = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return null;
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) throw Object.assign(new Error(`${field} tidak valid`), { status: 400, code: 'INVALID_DATE' });
+  return date;
+};
+
+const assertTenantUser = async (tenantId: number, userId: number | null) => {
+  if (!userId) return;
+  const user = await prisma.users.findFirst({ where: { id: userId, tenant_id: tenantId, is_active: true }, select: { id: true } });
+  if (!user) throw Object.assign(new Error('Assigned user tidak ditemukan pada tenant'), { status: 404, code: 'ASSIGNED_USER_NOT_FOUND' });
+};
+
 const validateQualityTarget = async (
   tenantId: number,
   outletId: number,
@@ -191,11 +204,13 @@ export const createEquipment = async (req: Request, res: Response, next: NextFun
     const name = String(req.body.name || '').trim();
     if (!outletId || !code || !name) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Outlet, code dan equipment name wajib diisi' } });
     await assertOutlet(tenantId, outletId);
+    const purchaseDate = parseOptionalDate(req.body.purchaseDate, 'purchaseDate');
+    const nextMaintenanceAt = parseOptionalDate(req.body.nextMaintenanceAt, 'nextMaintenanceAt');
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       INSERT INTO public.maintenance_equipment
         (tenant_id, outlet_id, code, name, category, serial_number, purchase_date, next_maintenance_at, notes)
       VALUES
-        (${tenantId}, ${outletId}, ${code}, ${name}, ${req.body.category || null}, ${req.body.serialNumber || null}, ${req.body.purchaseDate ? new Date(req.body.purchaseDate) : null}, ${req.body.nextMaintenanceAt ? new Date(req.body.nextMaintenanceAt) : null}, ${req.body.notes || null})
+        (${tenantId}, ${outletId}, ${code}, ${name}, ${req.body.category || null}, ${req.body.serialNumber || null}, ${purchaseDate}, ${nextMaintenanceAt}, ${req.body.notes || null})
       RETURNING *
     `);
     res.status(201).json({ success: true, data: rows[0] });
@@ -227,21 +242,39 @@ export const createMaintenanceRequest = async (req: Request, res: Response, next
     const tenantId = requireTenant(req);
     const equipmentId = Number(req.body.equipmentId);
     const title = String(req.body.title || '').trim();
-    if (!equipmentId || !title) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Equipment dan title wajib diisi' } });
-    const equipmentRows = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.maintenance_equipment WHERE id = ${equipmentId} AND tenant_id = ${tenantId} AND is_active = TRUE LIMIT 1`);
-    const equipment = equipmentRows[0];
-    if (!equipment) return res.status(404).json({ success: false, error: { code: 'EQUIPMENT_NOT_FOUND', message: 'Equipment tidak ditemukan' } });
-    const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      INSERT INTO public.maintenance_requests
-        (tenant_id, outlet_id, equipment_id, request_type, priority, title, description, status, scheduled_at, assigned_user_id, created_by)
-      VALUES
-        (${tenantId}, ${equipment.outlet_id}, ${equipmentId}, ${req.body.requestType || 'corrective'}, ${req.body.priority || 'normal'}, ${title}, ${req.body.description || null}, 'open', ${req.body.scheduledAt ? new Date(req.body.scheduledAt) : null}, ${req.body.assignedUserId ? Number(req.body.assignedUserId) : null}, ${req.userId || null})
-      RETURNING *
-    `);
-    if ((req.body.priority || 'normal') === 'critical') {
-      await prisma.$executeRaw(Prisma.sql`UPDATE public.maintenance_equipment SET status = 'down', updated_at = NOW() WHERE id = ${equipmentId} AND tenant_id = ${tenantId}`);
-    }
-    res.status(201).json({ success: true, data: rows[0] });
+    const requestType = String(req.body.requestType || 'corrective');
+    const priority = String(req.body.priority || 'normal');
+    if (!Number.isInteger(equipmentId) || equipmentId <= 0 || !title) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Equipment dan title wajib diisi' } });
+    if (!['preventive', 'corrective', 'inspection'].includes(requestType)) return res.status(400).json({ success: false, error: { code: 'INVALID_MAINTENANCE_TYPE', message: 'Request type maintenance tidak valid' } });
+    if (!['low', 'normal', 'high', 'critical'].includes(priority)) return res.status(400).json({ success: false, error: { code: 'INVALID_MAINTENANCE_PRIORITY', message: 'Priority maintenance tidak valid' } });
+    const scheduledAt = parseOptionalDate(req.body.scheduledAt, 'scheduledAt');
+    const assignedUserId = req.body.assignedUserId === undefined || req.body.assignedUserId === null ? null : Number(req.body.assignedUserId);
+    if (assignedUserId !== null && (!Number.isInteger(assignedUserId) || assignedUserId <= 0)) return res.status(400).json({ success: false, error: { code: 'INVALID_ASSIGNED_USER', message: 'Assigned user ID tidak valid' } });
+    await assertTenantUser(tenantId, assignedUserId);
+
+    const created = await prisma.$transaction(async (tx) => {
+      const equipmentRows = await tx.$queryRaw<any[]>(Prisma.sql`
+        SELECT * FROM public.maintenance_equipment
+        WHERE id = ${equipmentId} AND tenant_id = ${tenantId} AND is_active = TRUE
+        FOR UPDATE
+      `);
+      const equipment = equipmentRows[0];
+      if (!equipment) throw Object.assign(new Error('Equipment tidak ditemukan'), { status: 404, code: 'EQUIPMENT_NOT_FOUND' });
+      if (equipment.status === 'retired') throw Object.assign(new Error('Equipment retired tidak dapat menerima maintenance request baru'), { status: 409, code: 'EQUIPMENT_RETIRED' });
+
+      const rows = await tx.$queryRaw<any[]>(Prisma.sql`
+        INSERT INTO public.maintenance_requests
+          (tenant_id, outlet_id, equipment_id, request_type, priority, title, description, status, scheduled_at, assigned_user_id, created_by)
+        VALUES
+          (${tenantId}, ${equipment.outlet_id}, ${equipmentId}, ${requestType}, ${priority}, ${title}, ${req.body.description || null}, 'open', ${scheduledAt}, ${assignedUserId}, ${req.userId || null})
+        RETURNING *
+      `);
+      if (priority === 'critical') {
+        await tx.$executeRaw(Prisma.sql`UPDATE public.maintenance_equipment SET status = 'down', updated_at = NOW() WHERE id = ${equipmentId} AND tenant_id = ${tenantId}`);
+      }
+      return rows[0];
+    });
+    res.status(201).json({ success: true, data: created });
   } catch (error) {
     next(error);
   }
@@ -252,25 +285,60 @@ export const updateMaintenanceRequest = async (req: Request, res: Response, next
     const tenantId = requireTenant(req);
     const id = Number(req.params.id);
     const status = String(req.body.status || '');
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ success: false, error: { code: 'INVALID_REQUEST_ID', message: 'Maintenance request ID tidak valid' } });
     if (!['planned', 'in_progress', 'done', 'cancelled'].includes(status)) return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: 'Status maintenance tidak valid' } });
-    const current = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.maintenance_requests WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1`);
-    if (!current[0]) return res.status(404).json({ success: false, error: { code: 'REQUEST_NOT_FOUND', message: 'Maintenance request tidak ditemukan' } });
-    const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      UPDATE public.maintenance_requests
-      SET status = ${status},
-          scheduled_at = COALESCE(${req.body.scheduledAt ? new Date(req.body.scheduledAt) : null}, scheduled_at),
-          assigned_user_id = COALESCE(${req.body.assignedUserId ? Number(req.body.assignedUserId) : null}, assigned_user_id),
-          completed_at = CASE WHEN ${status} = 'done' THEN NOW() ELSE completed_at END,
-          updated_at = NOW()
-      WHERE id = ${id} AND tenant_id = ${tenantId}
-      RETURNING *
-    `);
-    if (status === 'in_progress') {
-      await prisma.$executeRaw(Prisma.sql`UPDATE public.maintenance_equipment SET status = 'maintenance', updated_at = NOW() WHERE id = ${Number(current[0].equipment_id)} AND tenant_id = ${tenantId}`);
-    } else if (status === 'done' || status === 'cancelled') {
-      await prisma.$executeRaw(Prisma.sql`UPDATE public.maintenance_equipment SET status = 'operational', updated_at = NOW() WHERE id = ${Number(current[0].equipment_id)} AND tenant_id = ${tenantId} AND status <> 'retired'`);
-    }
-    res.json({ success: true, data: rows[0] });
+    const scheduledAt = parseOptionalDate(req.body.scheduledAt, 'scheduledAt');
+    const assignedUserId = req.body.assignedUserId === undefined || req.body.assignedUserId === null ? null : Number(req.body.assignedUserId);
+    if (assignedUserId !== null && (!Number.isInteger(assignedUserId) || assignedUserId <= 0)) return res.status(400).json({ success: false, error: { code: 'INVALID_ASSIGNED_USER', message: 'Assigned user ID tidak valid' } });
+    await assertTenantUser(tenantId, assignedUserId);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const currentRows = await tx.$queryRaw<any[]>(Prisma.sql`
+        SELECT * FROM public.maintenance_requests WHERE id = ${id} AND tenant_id = ${tenantId} FOR UPDATE
+      `);
+      const current = currentRows[0];
+      if (!current) throw Object.assign(new Error('Maintenance request tidak ditemukan'), { status: 404, code: 'REQUEST_NOT_FOUND' });
+
+      const transitions: Record<string, string[]> = {
+        open: ['planned', 'in_progress', 'done', 'cancelled'],
+        planned: ['in_progress', 'done', 'cancelled'],
+        in_progress: ['done', 'cancelled'],
+        done: [],
+        cancelled: [],
+      };
+      if (!(transitions[current.status] || []).includes(status)) {
+        throw Object.assign(new Error(`Transition maintenance ${current.status} -> ${status} tidak valid`), { status: 409, code: 'INVALID_MAINTENANCE_TRANSITION' });
+      }
+
+      const rows = await tx.$queryRaw<any[]>(Prisma.sql`
+        UPDATE public.maintenance_requests
+        SET status = ${status},
+            scheduled_at = COALESCE(${scheduledAt}, scheduled_at),
+            assigned_user_id = COALESCE(${assignedUserId}, assigned_user_id),
+            completed_at = CASE WHEN ${status} = 'done' THEN NOW() ELSE completed_at END,
+            updated_at = NOW()
+        WHERE id = ${id} AND tenant_id = ${tenantId}
+        RETURNING *
+      `);
+
+      const active = await tx.$queryRaw<any[]>(Prisma.sql`
+        SELECT
+          COUNT(*) FILTER (WHERE status NOT IN ('done','cancelled'))::int AS active_count,
+          COUNT(*) FILTER (WHERE status NOT IN ('done','cancelled') AND priority = 'critical')::int AS critical_count
+        FROM public.maintenance_requests
+        WHERE tenant_id = ${tenantId} AND equipment_id = ${Number(current.equipment_id)}
+      `);
+      const activeCount = Number(active[0]?.active_count || 0);
+      const criticalCount = Number(active[0]?.critical_count || 0);
+      const equipmentStatus = criticalCount > 0 ? 'down' : activeCount > 0 ? 'maintenance' : 'operational';
+      await tx.$executeRaw(Prisma.sql`
+        UPDATE public.maintenance_equipment
+        SET status = CASE WHEN status = 'retired' THEN status ELSE ${equipmentStatus} END, updated_at = NOW()
+        WHERE id = ${Number(current.equipment_id)} AND tenant_id = ${tenantId}
+      `);
+      return rows[0];
+    });
+    res.json({ success: true, data: updated });
   } catch (error) {
     next(error);
   }
