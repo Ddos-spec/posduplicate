@@ -1,4 +1,4 @@
-name: Frontend CI
+name: Suite CI
 
 on:
   push:
@@ -39,4 +39,30 @@ jobs:
         run: npx tsc -b --pretty false
 
       - name: Production build gate
+        run: npm run build
+
+  backend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Backend TypeScript build gate
         run: npm run build
