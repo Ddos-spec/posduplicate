@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
+  Boxes,
   CheckCircle2,
   Construction,
   Layers,
@@ -40,11 +41,33 @@ const statusLabels: Record<SuiteImplementationStatus, string> = {
   blueprint: 'BLUEPRINT',
 };
 
-const ROUTE_ALIASES: Record<string, string> = {
+const LEGACY_ROUTE_ALIASES: Record<string, string> = {
   '/medsos/customers': '/medsos/crm',
   '/medsos/broadcast': '/medsos/broadcasts',
   '/medsos/auto-reply': '/medsos/automations',
   '/inventory/recipe-simulation': '/inventory/recipe',
+};
+
+const P1_REVENUE_IDS = new Set(['crm', 'sales', 'customer-360', 'loyalty']);
+const P1_SUPPLY_IDS = new Set([
+  'purchase',
+  'inventory',
+  'warehouse',
+  'barcode',
+  'manufacturing',
+  'mrp',
+  'quality',
+  'maintenance',
+]);
+
+const resolveRuntimeApp = <T extends { id: string; path?: string; status: SuiteImplementationStatus }>(app: T) => {
+  if (P1_REVENUE_IDS.has(app.id)) {
+    return { ...app, path: '/revenue', status: 'partial' as SuiteImplementationStatus, runtimeWorkspace: 'Revenue Operations' };
+  }
+  if (P1_SUPPLY_IDS.has(app.id)) {
+    return { ...app, path: '/supply-chain', status: 'partial' as SuiteImplementationStatus, runtimeWorkspace: 'Supply Chain Operations' };
+  }
+  return { ...app, path: app.path ? (LEGACY_ROUTE_ALIASES[app.path] ?? app.path) : app.path, runtimeWorkspace: null as string | null };
 };
 
 export default function ModuleSelectorPage() {
@@ -61,9 +84,7 @@ export default function ModuleSelectorPage() {
   const tenantId = user?.tenant?.id ?? user?.tenant_id ?? null;
 
   useEffect(() => {
-    if (!isSuperAdmin && tenantId && loadedTenantId !== tenantId) {
-      void fetchMyTenant();
-    }
+    if (!isSuperAdmin && tenantId && loadedTenantId !== tenantId) void fetchMyTenant();
   }, [fetchMyTenant, isSuperAdmin, loadedTenantId, tenantId]);
 
   const enabledModules = useMemo(() => {
@@ -71,9 +92,11 @@ export default function ModuleSelectorPage() {
     return normalizeTenantModules(tenant?.features ?? null);
   }, [isSuperAdmin, tenant?.features]);
 
+  const runtimeApps = useMemo(() => SUITE_APPS.map(resolveRuntimeApp), []);
+
   const accessibleApps = useMemo(
-    () => SUITE_APPS.filter((app) => isSuperAdmin || enabledModules[app.bundle]),
-    [enabledModules, isSuperAdmin]
+    () => runtimeApps.filter((app) => isSuperAdmin || enabledModules[app.bundle]),
+    [enabledModules, isSuperAdmin, runtimeApps]
   );
 
   const filteredApps = useMemo(() => {
@@ -82,7 +105,7 @@ export default function ModuleSelectorPage() {
       if (activeCategory !== 'all' && app.category !== activeCategory) return false;
       if (statusFilter !== 'all' && app.status !== statusFilter) return false;
       if (!query) return true;
-      return [app.name, app.shortName, app.description, ...app.capabilities]
+      return [app.name, app.shortName, app.description, app.runtimeWorkspace, ...app.capabilities]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
     });
@@ -96,9 +119,12 @@ export default function ModuleSelectorPage() {
     [filteredApps]
   );
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const runtimeLiveCount = accessibleApps.filter((app) => app.status === 'live').length;
+  const runtimePartialCount = accessibleApps.filter((app) => app.status === 'partial').length;
+
+  const openApp = (app: typeof runtimeApps[number]) => {
+    if (!app.path || app.status === 'blueprint') return;
+    navigate(app.path);
   };
 
   const resetFilters = () => {
@@ -117,9 +143,6 @@ export default function ModuleSelectorPage() {
       </div>
     );
   }
-
-  const accessibleLiveCount = accessibleApps.filter((app) => app.status === 'live').length;
-  const accessiblePartialCount = accessibleApps.filter((app) => app.status === 'partial').length;
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
@@ -151,7 +174,7 @@ export default function ModuleSelectorPage() {
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{isSuperAdmin ? 'Super Admin' : 'Owner'}</p>
             </div>
             <button
-              onClick={handleLogout}
+              onClick={() => { logout(); navigate('/login'); }}
               className={`p-2.5 rounded-xl border transition ${isDark ? 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'}`}
               aria-label="Logout"
             >
@@ -165,31 +188,29 @@ export default function ModuleSelectorPage() {
         <section className={`relative overflow-hidden rounded-3xl border p-6 lg:p-8 mb-6 ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-sm'}`}>
           <div className="absolute -right-20 -top-24 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl" />
           <div className="absolute right-32 -bottom-32 w-72 h-72 rounded-full bg-cyan-500/10 blur-3xl" />
-          <div className="relative grid xl:grid-cols-[1.2fr_0.8fr] gap-8 items-center">
+          <div className="relative grid xl:grid-cols-[1.15fr_0.85fr] gap-8 items-center">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <OmnipilotMark size={38} />
-                <span className={`text-xs font-bold tracking-[0.18em] uppercase ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>OmniPilot Suite 2.0</span>
+                <span className={`text-xs font-bold tracking-[0.18em] uppercase ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>OmniPilot Suite · P1 Build</span>
               </div>
-              <h1 className="text-3xl lg:text-5xl font-black tracking-tight max-w-4xl">
-                Satu operating system untuk seluruh proses bisnis.
-              </h1>
+              <h1 className="text-3xl lg:text-5xl font-black tracking-tight max-w-4xl">Satu operating system untuk seluruh proses bisnis.</h1>
               <p className={`mt-4 max-w-3xl text-base lg:text-lg leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                Taxonomy aplikasi diperluas mengikuti breadth Odoo, lalu dipadukan dengan kekuatan lokal OmniPilot: POS, akuntansi, inventory, marketplace, WhatsApp, social commerce, dan AI.
+                Revenue dan Supply Chain sekarang punya workspace operasional nyata. App yang belum punya backend, state machine, audit, dan permission tetap ditahan sebagai blueprint—tidak ada tombol pajangan yang mengaku production-ready.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
-                <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 px-3 py-1.5 text-xs font-semibold">{LIVE_SUITE_APP_COUNT} live core</span>
-                <span className="rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-1.5 text-xs font-semibold">{PARTIAL_SUITE_APP_COUNT} in progress</span>
-                <span className="rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 py-1.5 text-xs font-semibold">Indonesia-first commerce</span>
+                <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 px-3 py-1.5 text-xs font-semibold">{LIVE_SUITE_APP_COUNT} catalog live</span>
+                <span className="rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-1.5 text-xs font-semibold">{PARTIAL_SUITE_APP_COUNT}+ P1 in progress</span>
+                <span className="rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 py-1.5 text-xs font-semibold">Tenant + capability gated</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               {[
                 ['Accessible Apps', accessibleApps.length, Sparkles],
-                ['Live Now', accessibleLiveCount, CheckCircle2],
-                ['In Progress', accessiblePartialCount, Construction],
-                ['Categories', SUITE_CATEGORIES.length, Layers],
+                ['Live Now', runtimeLiveCount, CheckCircle2],
+                ['In Progress', runtimePartialCount, Construction],
+                ['Categories', SUITE_CATEGORIES.length, Boxes],
               ].map(([label, value, Icon]) => {
                 const MetricIcon = Icon as typeof Sparkles;
                 return (
@@ -211,30 +232,16 @@ export default function ModuleSelectorPage() {
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Cari CRM, payroll, quality, WhatsApp, forecast..."
+                placeholder="Cari CRM, RFQ, warehouse, MRP, payroll, WhatsApp..."
                 className={`w-full rounded-xl border py-2.5 pl-10 pr-10 outline-none transition focus:ring-2 focus:ring-blue-500/30 ${isDark ? 'border-slate-700 bg-slate-900 text-white placeholder:text-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400'}`}
               />
-              {search && (
-                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2" aria-label="Clear search">
-                  <X className="w-4 h-4 text-slate-400" />
-                </button>
-              )}
+              {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2" aria-label="Clear search"><X className="w-4 h-4 text-slate-400" /></button>}
             </div>
-
-            <select
-              value={activeCategory}
-              onChange={(event) => setActiveCategory(event.target.value as 'all' | SuiteCategoryId)}
-              className={`rounded-xl border px-3 py-2.5 text-sm outline-none ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
-            >
+            <select value={activeCategory} onChange={(event) => setActiveCategory(event.target.value as 'all' | SuiteCategoryId)} className={`rounded-xl border px-3 py-2.5 text-sm outline-none ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
               <option value="all">All categories</option>
               {SUITE_CATEGORIES.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
             </select>
-
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as 'all' | SuiteImplementationStatus)}
-              className={`rounded-xl border px-3 py-2.5 text-sm outline-none ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'}`}
-            >
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | SuiteImplementationStatus)} className={`rounded-xl border px-3 py-2.5 text-sm outline-none ${isDark ? 'border-slate-700 bg-slate-900 text-white' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
               <option value="all">All statuses</option>
               <option value="live">Live</option>
               <option value="partial">In progress</option>
@@ -254,62 +261,46 @@ export default function ModuleSelectorPage() {
           <div className="space-y-10">
             {visibleGroups.map((category) => (
               <section key={category.id}>
-                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-xl lg:text-2xl font-black">{category.name}</h2>
-                      <span className={`text-xs font-semibold rounded-full px-2.5 py-1 ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>{category.apps.length}</span>
-                    </div>
-                    <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{category.description}</p>
+                <div className="mb-4">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl lg:text-2xl font-black">{category.name}</h2>
+                    <span className={`text-xs font-semibold rounded-full px-2.5 py-1 ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>{category.apps.length}</span>
                   </div>
+                  <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{category.description}</p>
                 </div>
 
                 <div className="grid md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                   {category.apps.map((app) => {
-                    const Icon = app.icon;
-                    const resolvedPath = app.path ? (ROUTE_ALIASES[app.path] || app.path) : undefined;
-                    const requiresAdmin = resolvedPath?.startsWith('/admin/') === true;
-                    const canOpen = Boolean(resolvedPath && (!requiresAdmin || isSuperAdmin));
-
+                    const openable = Boolean(app.path) && app.status !== 'blueprint';
                     return (
-                      <article key={app.id} className={`group rounded-2xl border p-5 transition-all ${isDark ? 'border-slate-800 bg-slate-900 hover:border-slate-700' : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-lg'}`}>
-                        <div className="flex items-start justify-between gap-3 mb-4">
-                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                            <Icon className={`w-5 h-5 ${isDark ? 'text-cyan-300' : 'text-blue-600'}`} />
+                      <article key={app.id} className={`group rounded-2xl border p-4 transition ${isDark ? 'border-slate-800 bg-slate-900 hover:border-slate-700' : 'border-slate-200 bg-white hover:border-blue-200 hover:shadow-sm'}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-black text-base leading-tight">{app.name}</h3>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${statusStyles[app.status]}`}>{statusLabels[app.status]}</span>
+                            </div>
+                            {app.shortName && <p className={`mt-1 text-xs font-semibold ${isDark ? 'text-cyan-300' : 'text-blue-600'}`}>{app.shortName}</p>}
                           </div>
-                          <div className="flex flex-wrap justify-end gap-1.5">
-                            {app.localFirst && <span className="rounded-full bg-red-500/10 px-2 py-1 text-[10px] font-bold text-red-600 dark:text-red-300">ID LOCAL</span>}
-                            <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusStyles[app.status]}`}>{statusLabels[app.status]}</span>
-                          </div>
+                          <span className={`rounded-xl p-2 ${openable ? 'bg-blue-500/10 text-blue-500' : isDark ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400'}`}>
+                            {openable ? <ArrowRight size={17} /> : <Lock size={16} />}
+                          </span>
                         </div>
 
-                        <h3 className="text-base font-bold">{app.name}</h3>
-                        <p className={`mt-2 text-sm leading-relaxed min-h-[60px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{app.description}</p>
-
-                        <div className="mt-4 flex flex-wrap gap-1.5 min-h-[54px] content-start">
-                          {app.capabilities.slice(0, 4).map((capability) => (
-                            <span key={capability} className={`rounded-lg px-2 py-1 text-[11px] ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{capability}</span>
-                          ))}
+                        <p className={`mt-3 text-sm leading-5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{app.description}</p>
+                        {app.runtimeWorkspace && <div className={`mt-3 rounded-xl border px-3 py-2 text-xs font-bold ${isDark ? 'border-cyan-900/60 bg-cyan-950/20 text-cyan-300' : 'border-cyan-100 bg-cyan-50 text-cyan-700'}`}>P1 workspace: {app.runtimeWorkspace}</div>}
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {app.capabilities.slice(0, 4).map((capability) => <span key={capability} className={`rounded-lg px-2 py-1 text-[10px] ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{capability}</span>)}
+                          {app.capabilities.length > 4 && <span className={`rounded-lg px-2 py-1 text-[10px] ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>+{app.capabilities.length - 4}</span>}
                         </div>
 
                         <button
-                          onClick={() => canOpen && resolvedPath && navigate(resolvedPath)}
-                          disabled={!canOpen}
-                          className={`mt-5 w-full rounded-xl px-3 py-2.5 text-sm font-semibold flex items-center justify-between transition ${
-                            canOpen
-                              ? isDark
-                                ? 'bg-slate-800 text-white hover:bg-slate-700'
-                                : 'bg-slate-900 text-white hover:bg-slate-800'
-                              : isDark
-                                ? 'bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed'
-                                : 'bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed'
-                          }`}
+                          type="button"
+                          disabled={!openable}
+                          onClick={() => openApp(app)}
+                          className={`mt-4 w-full rounded-xl px-3 py-2.5 text-sm font-bold transition ${openable ? 'bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.99]' : isDark ? 'cursor-not-allowed bg-slate-800 text-slate-500' : 'cursor-not-allowed bg-slate-100 text-slate-400'}`}
                         >
-                          <span className="flex items-center gap-2">
-                            {canOpen ? <CheckCircle2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                            {canOpen ? 'Open workspace' : requiresAdmin ? 'Admin only' : 'Architecture queued'}
-                          </span>
-                          {canOpen ? <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" /> : <Construction className="w-4 h-4" />}
+                          {openable ? (app.runtimeWorkspace ? `Open ${app.runtimeWorkspace}` : 'Open app') : 'Blueprint only'}
                         </button>
                       </article>
                     );
@@ -319,11 +310,6 @@ export default function ModuleSelectorPage() {
             ))}
           </div>
         )}
-
-        <footer className={`mt-12 border-t py-8 text-xs flex flex-col md:flex-row gap-3 justify-between ${isDark ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'}`}>
-          <span>OmniPilot Business Operating Suite · branch feat/odoo-complete-suite</span>
-          <span>Live features remain tenant-gated. Blueprint apps are intentionally not presented as production-ready.</span>
-        </footer>
       </main>
     </div>
   );
