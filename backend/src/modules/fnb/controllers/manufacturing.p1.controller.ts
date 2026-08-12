@@ -26,7 +26,7 @@ const validateConsumptionSnapshot = (consumption: any) => {
 };
 
 const consumeIngredientAtomically = async (tx: any, ingredientId: number, outletId: number, quantity: number, moNumber: string) => {
-  const updated = await tx.$queryRaw<any[]>(Prisma.sql`
+  const updated = (await tx.$queryRaw(Prisma.sql`
     UPDATE public.ingredients
     SET stock = COALESCE(stock, 0) - ${quantity}, updated_at = NOW()
     WHERE id = ${ingredientId}
@@ -34,7 +34,7 @@ const consumeIngredientAtomically = async (tx: any, ingredientId: number, outlet
       AND COALESCE(is_active, TRUE) = TRUE
       AND COALESCE(stock, 0) >= ${quantity}
     RETURNING id, name, cost_per_unit, stock + ${quantity} AS stock_before, stock AS stock_after
-  `);
+  `)) as any[];
   if (updated[0]) return updated[0];
 
   const existing = await tx.ingredients.findFirst({ where: { id: ingredientId, outlet_id: outletId, is_active: true } });
@@ -43,7 +43,7 @@ const consumeIngredientAtomically = async (tx: any, ingredientId: number, outlet
 };
 
 const consumeInventoryAtomically = async (tx: any, inventoryId: number, outletId: number, quantity: number) => {
-  const updated = await tx.$queryRaw<any[]>(Prisma.sql`
+  const updated = (await tx.$queryRaw(Prisma.sql`
     UPDATE public.inventory
     SET current_stock = current_stock - ${quantity}, updated_at = NOW()
     WHERE id = ${inventoryId}
@@ -51,7 +51,7 @@ const consumeInventoryAtomically = async (tx: any, inventoryId: number, outletId
       AND is_active = TRUE
       AND current_stock >= ${quantity}
     RETURNING id, name, cost_amount, current_stock + ${quantity} AS stock_before, current_stock AS stock_after
-  `);
+  `)) as any[];
   if (updated[0]) return updated[0];
 
   const existing = await tx.inventory.findFirst({ where: { id: inventoryId, outlet_id: outletId, is_active: true } });
@@ -60,7 +60,7 @@ const consumeInventoryAtomically = async (tx: any, inventoryId: number, outletId
 };
 
 const postTrackedFinishedGoodsAtomically = async (tx: any, itemId: number, outletId: number, quantity: number) => {
-  const updated = await tx.$queryRaw<any[]>(Prisma.sql`
+  const updated = (await tx.$queryRaw(Prisma.sql`
     UPDATE public.items
     SET stock = COALESCE(stock, 0) + ${quantity}, updated_at = NOW()
     WHERE id = ${itemId}
@@ -68,7 +68,7 @@ const postTrackedFinishedGoodsAtomically = async (tx: any, itemId: number, outle
       AND COALESCE(is_active, TRUE) = TRUE
       AND COALESCE(track_stock, FALSE) = TRUE
     RETURNING id, name, stock - ${quantity} AS stock_before, stock AS stock_after
-  `);
+  `)) as any[];
   if (!updated[0]) throw Object.assign(new Error('Finished product stock gagal diposting'), { status: 409, code: 'ITEM_OUTPUT_POST_FAILED' });
   return updated[0];
 };
