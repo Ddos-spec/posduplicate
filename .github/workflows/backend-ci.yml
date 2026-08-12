@@ -2,19 +2,21 @@ name: Backend CI (Inventory & POS)
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "feat/**", "fix/**" ]
     paths:
       - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
   pull_request:
     branches: [ "main", "master" ]
     paths:
       - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
 
 jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    
+
     defaults:
       run:
         working-directory: ./backend
@@ -26,7 +28,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '22'
         cache: 'npm'
         cache-dependency-path: backend/package-lock.json
 
@@ -36,5 +38,8 @@ jobs:
     - name: Generate Prisma Client
       run: npx prisma generate
 
+    - name: Build backend
+      run: npm run build
+
     - name: Run Tests (Unit & Integration)
-      run: npm test
+      run: npm test -- --runInBand
