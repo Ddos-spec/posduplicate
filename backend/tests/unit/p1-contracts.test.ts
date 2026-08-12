@@ -16,9 +16,6 @@ describe('P1 business-suite contracts', () => {
       expect(source).toContain('authMiddleware');
       expect(source).toContain('tenantMiddleware');
       expect(source).toMatch(/router\.use\(authMiddleware, tenantMiddleware\)/);
-    }
-
-    for (const source of [revenueRoutes, supplyRoutes, purchaseRoutes, supplierRoutes]) {
       expect(source).toContain('requireCapability');
     }
 
@@ -32,7 +29,13 @@ describe('P1 business-suite contracts', () => {
     expect(supplierRoutes).toContain("router.put('/:id', requireCapability('supply.procurement.manage'), updateSupplier)");
     expect(supplierRoutes).toContain("router.delete('/:id', requireCapability('supply.procurement.manage'), deleteSupplier)");
     expect(supplierRoutes).not.toContain('ownerOnly');
-    expect(recipeRoutes).toContain('ownerOnly');
+
+    expect(recipeRoutes).toContain("router.get('/', requireCapability('supply.manufacturing.read'), getRecipes)");
+    expect(recipeRoutes).toContain("router.get('/product/:itemId', requireCapability('supply.manufacturing.read'), getRecipeByItemId)");
+    expect(recipeRoutes).toContain("router.post('/product/:itemId', requireCapability('supply.manufacturing.manage'), updateProductRecipe)");
+    expect(recipeRoutes).toContain("router.post('/', requireCapability('supply.manufacturing.manage'), addRecipeItem)");
+    expect(recipeRoutes).toContain("router.delete('/:id', requireCapability('supply.manufacturing.manage'), deleteRecipeItem)");
+    expect(recipeRoutes).not.toContain('ownerOnly');
   });
 
   test('revenue financial mutations require named capabilities', () => {
@@ -128,5 +131,16 @@ describe('P1 business-suite contracts', () => {
     expect(supplier).toContain('outlet_id: { in: outletIds }');
     expect(recipe).toContain('tenant_id: tenantId');
     expect(recipe).toContain('outlet_id: { in: outletIds }');
+    expect(recipe).toContain('outlet_id: outletId');
+    expect(recipe).toContain('INVALID_BOM_INGREDIENT');
+  });
+
+  test('manufacturing order creation validates BOM snapshot and serializes lifecycle transitions', () => {
+    const manufacturing = read('src/modules/fnb/controllers/manufacturing.p1.controller.ts');
+    expect(manufacturing).toContain('BOM_INGREDIENT_INVALID');
+    expect(manufacturing).toContain('BOM_QUANTITY_INVALID');
+    expect(manufacturing).toContain('INVALID_SCHEDULED_AT');
+    expect(manufacturing).toContain("SELECT * FROM public.manufacturing_orders WHERE id = ${id} AND tenant_id = ${tenantId} FOR UPDATE");
+    expect(manufacturing).toContain("prisma.$transaction(async (tx) =>");
   });
 });
