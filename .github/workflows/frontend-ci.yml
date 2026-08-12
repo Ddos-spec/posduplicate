@@ -139,3 +139,7 @@ jobs:
             process.exit(1);
           });
           NODE
+
+      - name: Production backend Docker image build gate
+        working-directory: .
+        run: docker build --file backend/Dockerfile --tag omnipilot-backend:p1-ci backend
