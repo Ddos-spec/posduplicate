@@ -40,6 +40,13 @@ const statusLabels: Record<SuiteImplementationStatus, string> = {
   blueprint: 'BLUEPRINT',
 };
 
+const ROUTE_ALIASES: Record<string, string> = {
+  '/medsos/customers': '/medsos/crm',
+  '/medsos/broadcast': '/medsos/broadcasts',
+  '/medsos/auto-reply': '/medsos/automations',
+  '/inventory/recipe-simulation': '/inventory/recipe',
+};
+
 export default function ModuleSelectorPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -260,7 +267,10 @@ export default function ModuleSelectorPage() {
                 <div className="grid md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                   {category.apps.map((app) => {
                     const Icon = app.icon;
-                    const canOpen = Boolean(app.path);
+                    const resolvedPath = app.path ? (ROUTE_ALIASES[app.path] || app.path) : undefined;
+                    const requiresAdmin = resolvedPath?.startsWith('/admin/') === true;
+                    const canOpen = Boolean(resolvedPath && (!requiresAdmin || isSuperAdmin));
+
                     return (
                       <article key={app.id} className={`group rounded-2xl border p-5 transition-all ${isDark ? 'border-slate-800 bg-slate-900 hover:border-slate-700' : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-lg'}`}>
                         <div className="flex items-start justify-between gap-3 mb-4">
@@ -283,7 +293,7 @@ export default function ModuleSelectorPage() {
                         </div>
 
                         <button
-                          onClick={() => canOpen && app.path && navigate(app.path)}
+                          onClick={() => canOpen && resolvedPath && navigate(resolvedPath)}
                           disabled={!canOpen}
                           className={`mt-5 w-full rounded-xl px-3 py-2.5 text-sm font-semibold flex items-center justify-between transition ${
                             canOpen
@@ -297,7 +307,7 @@ export default function ModuleSelectorPage() {
                         >
                           <span className="flex items-center gap-2">
                             {canOpen ? <CheckCircle2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                            {canOpen ? 'Open workspace' : 'Architecture queued'}
+                            {canOpen ? 'Open workspace' : requiresAdmin ? 'Admin only' : 'Architecture queued'}
                           </span>
                           {canOpen ? <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" /> : <Construction className="w-4 h-4" />}
                         </button>
