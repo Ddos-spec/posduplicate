@@ -51,6 +51,15 @@ export const createManufacturingOrder = async (req: Request, res: Response, next
     if (!outletId || !itemId || !Number.isFinite(quantityPlanned) || quantityPlanned <= 0) {
       return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Outlet, item dan quantity planned wajib valid' } });
     }
+
+    let scheduledAt: Date | null = null;
+    if (req.body.scheduledAt) {
+      scheduledAt = new Date(req.body.scheduledAt);
+      if (Number.isNaN(scheduledAt.getTime())) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_SCHEDULED_AT', message: 'Scheduled at tidak valid' } });
+      }
+    }
+
     await assertOutlet(tenantId, outletId);
     const item = await prisma.items.findFirst({ where: { id: itemId, outlet_id: outletId, is_active: true } });
     if (!item) return res.status(404).json({ success: false, error: { code: 'ITEM_NOT_FOUND', message: 'Finished product tidak ditemukan di outlet' } });
@@ -60,8 +69,18 @@ export const createManufacturingOrder = async (req: Request, res: Response, next
       include: { ingredients: true }
     });
     if (recipes.length === 0) return res.status(409).json({ success: false, error: { code: 'BOM_REQUIRED', message: 'Product belum memiliki recipe/BOM' } });
-    const invalidIngredient = recipes.find((recipe) => recipe.ingredients.outlet_id !== outletId);
-    if (invalidIngredient) return res.status(409).json({ success: false, error: { code: 'BOM_OUTLET_MISMATCH', message: 'Recipe memakai ingredient dari outlet lain' } });
+
+    const invalidIngredient = recipes.find((recipe) => recipe.ingredients.outlet_id !== outletId || !recipe.ingredients.is_active);
+    if (invalidIngredient) {
+      return res.status(409).json({
+        success: false,
+        error: { code: 'BOM_INGREDIENT_INVALID', message: 'Recipe memakai ingredient inactive atau dari outlet lain' }
+      });
+    }
+    const invalidQuantity = recipes.find((recipe) => !Number.isFinite(Number(recipe.quantity)) || Number(recipe.quantity) <= 0);
+    if (invalidQuantity) {
+      return res.status(409).json({ success: false, error: { code: 'BOM_QUANTITY_INVALID', message: 'Recipe memiliki quantity material yang tidak valid' } });
+    }
 
     const created = await prisma.$transaction(async (tx) => {
       const sequence = await tx.$queryRaw<Array<{ seq: bigint }>>(Prisma.sql`SELECT nextval('public.manufacturing_order_number_seq') AS seq`);
@@ -70,7 +89,7 @@ export const createManufacturingOrder = async (req: Request, res: Response, next
         INSERT INTO public.manufacturing_orders
           (tenant_id, outlet_id, mo_number, item_id, quantity_planned, status, scheduled_at, notes, created_by)
         VALUES
-          (${tenantId}, ${outletId}, ${moNumber}, ${itemId}, ${quantityPlanned}, 'draft', ${req.body.scheduledAt ? new Date(req.body.scheduledAt) : null}, ${req.body.notes || null}, ${req.userId || null})
+          (${tenantId}, ${outletId}, ${moNumber}, ${itemId}, ${quantityPlanned}, 'draft', ${scheduledAt}, ${req.body.notes || null}, ${req.userId || null})
         RETURNING *
       `);
       for (const recipe of recipes) {
@@ -84,7 +103,7 @@ export const createManufacturingOrder = async (req: Request, res: Response, next
       }
       return rows[0];
     });
-    res.status(201).json({ success: true, data: created, message: 'Manufacturing order created from current recipe snapshot' });
+    res.status(201).json({ success: true, data: created, message: 'Manufacturing order created from validated recipe snapshot' });
   } catch (error) {
     next(error);
   }
@@ -95,26 +114,32 @@ export const transitionManufacturingOrder = async (req: Request, res: Response, 
     const tenantId = requireTenant(req);
     const id = Number(req.params.id);
     const action = String(req.body.action || '');
-    const rows = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.manufacturing_orders WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1`);
-    const mo = rows[0];
-    if (!mo) return res.status(404).json({ success: false, error: { code: 'MO_NOT_FOUND', message: 'Manufacturing order tidak ditemukan' } });
-
     const allowed: Record<string, { from: string[]; status: string }> = {
       confirm: { from: ['draft'], status: 'confirmed' },
       start: { from: ['confirmed'], status: 'in_progress' },
       cancel: { from: ['draft', 'confirmed'], status: 'cancelled' }
     };
     const transition = allowed[action];
-    if (!transition || !transition.from.includes(mo.status)) return res.status(409).json({ success: false, error: { code: 'INVALID_MO_TRANSITION', message: `Action ${action} tidak valid dari status ${mo.status}` } });
-    const updated = await prisma.$queryRaw<any[]>(Prisma.sql`
-      UPDATE public.manufacturing_orders
-      SET status = ${transition.status},
-          started_at = CASE WHEN ${transition.status} = 'in_progress' THEN NOW() ELSE started_at END,
-          updated_at = NOW()
-      WHERE id = ${id} AND tenant_id = ${tenantId}
-      RETURNING *
-    `);
-    res.json({ success: true, data: updated[0] });
+    if (!transition) return res.status(409).json({ success: false, error: { code: 'INVALID_MO_TRANSITION', message: `Action ${action} tidak valid` } });
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.manufacturing_orders WHERE id = ${id} AND tenant_id = ${tenantId} FOR UPDATE`);
+      const mo = rows[0];
+      if (!mo) throw Object.assign(new Error('Manufacturing order tidak ditemukan'), { status: 404, code: 'MO_NOT_FOUND' });
+      if (!transition.from.includes(mo.status)) {
+        throw Object.assign(new Error(`Action ${action} tidak valid dari status ${mo.status}`), { status: 409, code: 'INVALID_MO_TRANSITION' });
+      }
+      const result = await tx.$queryRaw<any[]>(Prisma.sql`
+        UPDATE public.manufacturing_orders
+        SET status = ${transition.status},
+            started_at = CASE WHEN ${transition.status} = 'in_progress' THEN NOW() ELSE started_at END,
+            updated_at = NOW()
+        WHERE id = ${id} AND tenant_id = ${tenantId}
+        RETURNING *
+      `);
+      return result[0];
+    });
+    res.json({ success: true, data: updated });
   } catch (error) {
     next(error);
   }
