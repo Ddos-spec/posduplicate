@@ -1,0 +1,135 @@
+name: P1 One-shot Stock Mutation Lock
+
+on:
+  push:
+    branches:
+      - feat/odoo-complete-suite
+    paths:
+      - '.github/workflows/p1-lock-stock-mutations-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  serialize-stock-mutations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest P1 branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/odoo-complete-suite
+          fetch-depth: 0
+
+      - name: Rebase latest branch
+        run: git pull --rebase origin feat/odoo-complete-suite
+
+      - name: Add transaction-scoped stock mutation lock
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          lock_line = "await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(91001, ${tenantId})`);"
+
+          targets = [
+              ('backend/src/modules/fnb/controllers/procurement-receiving.p1.controller.ts', 'export const receivePOItemsWithWarehouse'),
+              ('backend/src/modules/fnb/controllers/warehouse.p1.controller.ts', 'export const finalizeStockCount'),
+              ('backend/src/modules/fnb/controllers/manufacturing.p1.controller.ts', 'export const completeManufacturingOrder'),
+          ]
+
+          for filename, function_marker in targets:
+              path = Path(filename)
+              text = path.read_text()
+              start = text.find(function_marker)
+              if start < 0:
+                  raise SystemExit(f'Function marker not found: {function_marker} in {filename}')
+              next_export = text.find('\nexport const ', start + len(function_marker))
+              end = next_export if next_export >= 0 else len(text)
+              segment = text[start:end]
+              if lock_line in segment:
+                  continue
+              tx_marker = '$transaction(async (tx) => {'
+              tx_pos = segment.find(tx_marker)
+              if tx_pos < 0:
+                  raise SystemExit(f'Transaction marker not found in {function_marker}')
+              insert_at = start + tx_pos + len(tx_marker)
+              text = text[:insert_at] + '\n      // Serialize P1 aggregate-stock mutations per tenant to prevent lost updates across receiving/count/MRP.\n      ' + lock_line + text[insert_at:]
+              path.write_text(text)
+
+          for filename, function_marker in targets:
+              text = Path(filename).read_text()
+              start = text.find(function_marker)
+              next_export = text.find('\nexport const ', start + len(function_marker))
+              end = next_export if next_export >= 0 else len(text)
+              if lock_line not in text[start:end]:
+                  raise SystemExit(f'Lock verification failed for {function_marker}')
+          PY
+
+      - name: Add stock mutation lock contract test
+        run: |
+          cat > backend/tests/unit/p1-stock-mutation-lock.test.ts <<'EOF'
+          import fs from 'fs';
+          import path from 'path';
+
+          const read = (relative: string) => fs.readFileSync(path.resolve(__dirname, '../../', relative), 'utf8');
+          const lock = 'pg_advisory_xact_lock(91001, ${tenantId})';
+
+          const functionSegment = (source: string, marker: string) => {
+            const start = source.indexOf(marker);
+            const next = source.indexOf('\nexport const ', start + marker.length);
+            return source.slice(start, next >= 0 ? next : undefined);
+          };
+
+          describe('P1 aggregate stock serialization', () => {
+            test.each([
+              ['src/modules/fnb/controllers/procurement-receiving.p1.controller.ts', 'export const receivePOItemsWithWarehouse'],
+              ['src/modules/fnb/controllers/warehouse.p1.controller.ts', 'export const finalizeStockCount'],
+              ['src/modules/fnb/controllers/manufacturing.p1.controller.ts', 'export const completeManufacturingOrder'],
+            ])('%s protects %s with the same tenant-scoped advisory lock', (file, marker) => {
+              expect(functionSegment(read(file), marker)).toContain(lock);
+            });
+          });
+          EOF
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Prisma generate
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Run backend tests
+        working-directory: backend
+        run: npm test -- --runInBand
+
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/p1-lock-stock-mutations-once.yml
+
+      - name: Rebase concurrent safe commits
+        run: git pull --rebase --autostash origin feat/odoo-complete-suite
+
+      - name: Re-run backend gates after rebase
+        working-directory: backend
+        run: |
+          npm run build
+          npm test -- --runInBand
+
+      - name: Commit tested lock guard
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/src/modules/fnb/controllers/procurement-receiving.p1.controller.ts backend/src/modules/fnb/controllers/warehouse.p1.controller.ts backend/src/modules/fnb/controllers/manufacturing.p1.controller.ts backend/tests/unit/p1-stock-mutation-lock.test.ts .github/workflows/p1-lock-stock-mutations-once.yml
+          git diff --cached --check
+          git commit -m "fix(p1): serialize aggregate stock mutations per tenant"
+          git push origin HEAD:feat/odoo-complete-suite
