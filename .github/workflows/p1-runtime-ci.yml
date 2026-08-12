@@ -1,0 +1,99 @@
+name: P1 Runtime Gate
+
+on:
+  push:
+    branches:
+      - 'feat/odoo-complete-suite'
+      - 'feat/**'
+      - 'fix/**'
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/p1-runtime-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/p1-runtime-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  p1-runtime:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: p1_user
+          POSTGRES_PASSWORD: p1_password
+          POSTGRES_DB: p1_runtime
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://p1_user:p1_password@localhost:5432/p1_runtime
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Backend install
+        working-directory: backend
+        run: npm ci
+
+      - name: Prisma generate
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Backend build
+        working-directory: backend
+        run: npm run build
+
+      - name: Backend tests
+        working-directory: backend
+        run: npm test -- --runInBand
+
+      - name: Build legacy database baseline
+        working-directory: backend
+        run: npx prisma db push --skip-generate
+
+      - name: Apply P1 forward migrations
+        working-directory: backend
+        run: node dist/scripts/apply-p1-migrations.js
+
+      - name: Prove migration idempotency
+        working-directory: backend
+        run: node dist/scripts/apply-p1-migrations.js
+
+      - name: Verify P1 database behavior
+        working-directory: backend
+        run: node dist/scripts/verify-p1-database-v2.js
+
+      - name: Frontend install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend production build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Backend production Docker build
+        run: docker build --file backend/Dockerfile --tag omnipilot-p1-runtime:ci backend
