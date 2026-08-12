@@ -21,7 +21,7 @@ const assertOutlet = async (tenantId: number, outletId: number) => {
 const getSelfEmployee = async (tenantId: number, userId: number) => {
   const employee = await prisma.employees.findFirst({
     where: { tenant_id: tenantId, user_id: userId, status: 'active' },
-    include: { users: { select: { id: true, name: true, email: true, role: true } } },
+    include: { users: { select: { id: true, name: true, email: true } } },
   });
   if (!employee) throw Object.assign(new Error('User belum terhubung ke employee aktif'), { status: 404, code: 'EMPLOYEE_PROFILE_REQUIRED' });
   return employee;
@@ -46,7 +46,7 @@ export const getEmployeeDirectory = async (req: Request, res: Response, next: Ne
         ...(status && { status }),
         ...(department && { department }),
       },
-      include: { users: { select: { id: true, name: true, email: true, role: true, is_active: true } } },
+      include: { users: { select: { id: true, name: true, email: true, is_active: true } } },
       orderBy: [{ status: 'asc' }, { name: 'asc' }],
       take: limit,
     });
