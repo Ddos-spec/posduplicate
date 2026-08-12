@@ -18,13 +18,20 @@ describe('P1 business-suite contracts', () => {
       expect(source).toMatch(/router\.use\(authMiddleware, tenantMiddleware\)/);
     }
 
-    for (const source of [revenueRoutes, supplyRoutes, purchaseRoutes]) {
+    for (const source of [revenueRoutes, supplyRoutes, purchaseRoutes, supplierRoutes]) {
       expect(source).toContain('requireCapability');
     }
 
     expect(revenueRoutes).toContain("requireCapability('revenue.sales.manage')");
     expect(supplyRoutes).toContain("requireCapability('supply.warehouse.manage')");
     expect(purchaseRoutes).toContain("requireCapability('supply.procurement.manage')");
+    expect(supplierRoutes).toContain("router.get('/', requireCapability('supply.procurement.read'), getSuppliers)");
+    expect(supplierRoutes).toContain("router.get('/spending', requireCapability('supply.procurement.read'), getSupplierSpending)");
+    expect(supplierRoutes).toContain("router.get('/:id', requireCapability('supply.procurement.read'), getSupplier)");
+    expect(supplierRoutes).toContain("router.post('/', requireCapability('supply.procurement.manage'), createSupplier)");
+    expect(supplierRoutes).toContain("router.put('/:id', requireCapability('supply.procurement.manage'), updateSupplier)");
+    expect(supplierRoutes).toContain("router.delete('/:id', requireCapability('supply.procurement.manage'), deleteSupplier)");
+    expect(supplierRoutes).not.toContain('ownerOnly');
     expect(recipeRoutes).toContain('ownerOnly');
   });
 
