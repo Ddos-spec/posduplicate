@@ -59,6 +59,20 @@ const consumeInventoryAtomically = async (tx: any, inventoryId: number, outletId
   throw Object.assign(new Error(`Stock ${existing.name} tidak cukup`), { status: 409, code: 'INSUFFICIENT_MATERIAL' });
 };
 
+const postTrackedFinishedGoodsAtomically = async (tx: any, itemId: number, outletId: number, quantity: number) => {
+  const updated = await tx.$queryRaw<any[]>(Prisma.sql`
+    UPDATE public.items
+    SET stock = COALESCE(stock, 0) + ${quantity}, updated_at = NOW()
+    WHERE id = ${itemId}
+      AND outlet_id = ${outletId}
+      AND COALESCE(is_active, TRUE) = TRUE
+      AND COALESCE(track_stock, FALSE) = TRUE
+    RETURNING id, name, stock - ${quantity} AS stock_before, stock AS stock_after
+  `);
+  if (!updated[0]) throw Object.assign(new Error('Finished product stock gagal diposting'), { status: 409, code: 'ITEM_OUTPUT_POST_FAILED' });
+  return updated[0];
+};
+
 export const getManufacturingOrders = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = requireTenant(req);
@@ -253,12 +267,10 @@ export const completeManufacturingOrder = async (req: Request, res: Response, ne
         }
       }
 
-      const product = await tx.items.findFirst({ where: { id: Number(mo.item_id), outlet_id: Number(mo.outlet_id) } });
+      const product = await tx.items.findFirst({ where: { id: Number(mo.item_id), outlet_id: Number(mo.outlet_id), is_active: true } });
       if (!product) throw Object.assign(new Error('Finished product tidak ditemukan'), { status: 404, code: 'ITEM_NOT_FOUND' });
-      if (product.track_stock) {
-        const stockBefore = Number(product.stock || 0);
-        const stockAfter = stockBefore + quantityProduced;
-        await tx.items.update({ where: { id: product.id }, data: { stock: stockAfter } });
+      if (product.track_stock && quantityProduced > 0) {
+        const postedProduct = await postTrackedFinishedGoodsAtomically(tx, product.id, Number(mo.outlet_id), quantityProduced);
         await tx.stock_movements.create({
           data: {
             outlet_id: Number(mo.outlet_id),
@@ -267,8 +279,8 @@ export const completeManufacturingOrder = async (req: Request, res: Response, ne
             quantity: quantityProduced,
             unit_price: 0,
             total_cost: 0,
-            stock_before: stockBefore,
-            stock_after: stockAfter,
+            stock_before: Number(postedProduct.stock_before),
+            stock_after: Number(postedProduct.stock_after),
             notes: `Manufacturing output ${mo.mo_number}`,
             user_id: req.userId!
           }
