@@ -13,6 +13,7 @@ const REQUIRED_TABLES = [
   'workforce_leave_types', 'workforce_leave_allocations', 'workforce_leave_requests',
   'workforce_recruitment_vacancies', 'workforce_recruitment_applicants',
   'workforce_recruitment_interviews', 'workforce_recruitment_offers',
+  'workforce_appraisal_cycles', 'workforce_appraisals', 'workforce_appraisal_goals',
 ] as const;
 
 const REQUIRED_TRIGGERS = [
@@ -33,6 +34,11 @@ const REQUIRED_INDEXES = [
   'ux_workforce_recruitment_applicant_email_vacancy',
   'ux_workforce_recruitment_hired_employee',
   'ux_workforce_recruitment_offer_accepted',
+  'idx_workforce_appraisal_cycle_scope',
+  'idx_workforce_appraisal_scope',
+  'idx_workforce_appraisal_employee',
+  'idx_workforce_appraisal_reviewer',
+  'idx_workforce_appraisal_goal_appraisal',
 ] as const;
 
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
@@ -62,12 +68,13 @@ async function run() {
     assert(missingTables.length === 0, `Missing suite tables: ${missingTables.join(', ')}`);
 
     const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(`SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`);
-    assert(ledger.rows.length === 8, `Expected 8 suite migration ledger entries, found ${ledger.rows.length}`);
+    assert(ledger.rows.length === 9, `Expected 9 suite migration ledger entries, found ${ledger.rows.length}`);
     assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid suite migration checksum');
     assert(ledger.rows.some((row) => row.migration_name === '20260813023000_p2_workforce_attendance'), 'P2 workforce migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813030000_p2_payroll_rate_profiles'), 'P2 payroll profile migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813033000_p2_workforce_leave'), 'P2 workforce leave migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813040000_p2_recruitment_core'), 'P2 recruitment migration missing from ledger');
+    assert(ledger.rows.some((row) => row.migration_name === '20260813043000_p2_appraisals_core'), 'P2 appraisals migration missing from ledger');
 
     const indexes = await client.query<{ indexname: string }>(`SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = ANY($1::text[])`, [REQUIRED_INDEXES]);
     const indexSet = new Set(indexes.rows.map((row) => row.indexname));
@@ -93,6 +100,26 @@ async function run() {
     `);
     assert(recruitmentColumns.rows.length === 4, 'Recruitment applicant lifecycle columns are incomplete');
 
+    const appraisalColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'workforce_appraisals'
+        AND column_name IN ('cycle_id','employee_id','reviewer_user_id','status','overall_score','self_submitted_at','completed_at')
+    `);
+    assert(appraisalColumns.rows.length === 7, 'Appraisal lifecycle columns are incomplete');
+
+    const appraisalEmployeeForeignKey = await client.query<{ constraint_name: string }>(`
+      SELECT tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.constraint_schema
+      WHERE tc.table_schema = 'public'
+        AND tc.table_name = 'workforce_appraisals'
+        AND tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_schema = 'accounting'
+        AND ccu.table_name = 'employees'
+        AND ccu.column_name = 'id'
+    `);
+    assert(appraisalEmployeeForeignKey.rows.length >= 1, 'Appraisals must reference accounting.employees source of truth');
+
     const triggers = await client.query<{ tgname: string }>(`SELECT tgname FROM pg_trigger WHERE NOT tgisinternal AND tgname = ANY($1::text[])`, [REQUIRED_TRIGGERS]);
     const triggerSet = new Set(triggers.rows.map((row) => row.tgname));
     const missingTriggers = REQUIRED_TRIGGERS.filter((name) => !triggerSet.has(name));
@@ -117,7 +144,7 @@ async function run() {
       await client.query('ROLLBACK');
     } catch (error) { await client.query('ROLLBACK'); throw error; }
 
-    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, workforce leave balances present, recruitment lifecycle present, 6 blocked mutations.`);
+    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, 6 blocked mutations.`);
   } finally { await client.end(); }
 }
 
