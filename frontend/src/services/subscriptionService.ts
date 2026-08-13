@@ -49,6 +49,19 @@ export interface CustomerSubscription {
 }
 
 export interface SubscriptionSummary { active_plans: number; active_contracts: number; monthly_recurring_revenue: number | string; billed_total: number | string; }
+export interface SubscriptionAutomationSettings {
+  tenant_id: number;
+  enabled: boolean;
+  automation_user_id?: number | null;
+  automation_user_name?: string | null;
+  automation_user_email?: string | null;
+  automation_user_role?: string | null;
+  max_renewals_per_run: number;
+  last_run_at?: string | null;
+  last_success_at?: string | null;
+  last_error?: string | null;
+}
+export interface SubscriptionAutomationRunResult { skipped: boolean; reason?: string; attempted: number; succeeded: number; reused: number; failed: number; error?: string | null; }
 
 export interface CustomerOption { id: number; name: string; phone?: string | null; outlet_id?: number | null; }
 export interface ItemOption { id: number; name: string; sku?: string | null; price: number | string; outlet_id?: number | null; is_active?: boolean; }
@@ -56,6 +69,10 @@ export interface ItemOption { id: number; name: string; sku?: string | null; pri
 const unwrap = <T>(response: { data: { data: T } }): T => response.data.data;
 
 export const getSubscriptionSummary = async () => unwrap<SubscriptionSummary>(await api.get('/subscriptions/summary'));
+export const getSubscriptionAutomationSettings = async () => unwrap<SubscriptionAutomationSettings>(await api.get('/subscriptions/automation'));
+export const updateSubscriptionAutomationSettings = async (payload: { enabled: boolean; automationUserId?: number | null; maxRenewalsPerRun?: number }) =>
+  unwrap<SubscriptionAutomationSettings>(await api.put('/subscriptions/automation', payload));
+export const runSubscriptionAutomation = async () => unwrap<SubscriptionAutomationRunResult>(await api.post('/subscriptions/automation/run'));
 export const getSubscriptionPlans = async () => unwrap<SubscriptionPlan[]>(await api.get('/subscriptions/plans'));
 export const createSubscriptionPlan = async (payload: {
   code: string; name: string; description?: string; intervalUnit: SubscriptionIntervalUnit; intervalCount: number; currency?: string;
