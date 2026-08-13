@@ -61,6 +61,51 @@ jobs:
           test.write_text("""import fs from 'fs';\nimport path from 'path';\n\nconst repoRoot = path.resolve(__dirname, '../../..');\nconst source = fs.readFileSync(path.join(repoRoot, 'frontend/src/pages/ModuleSelectorPage.tsx'), 'utf8');\n\ndescribe('ModuleSelector MCS member access contract', () => {\n  test('tenant entitlement remains mandatory before per-user MCS permissions', () => {\n    expect(source).toContain(\"if (!enabledModules[app.bundle]) return false;\");\n    expect(source).toContain(\"if (!isSuperAdmin && !enabledModules[app.bundle]) return;\");\n  });\n\n  test('marketplace, inbox, content, analytics, ads and settings are permission mapped', () => {\n    expect(source).toContain(\"permissions.marketplace === true\");\n    expect(source).toContain(\"permissions.inbox === true\");\n    expect(source).toContain(\"permissions.content === true\");\n    expect(source).toContain(\"permissions.analytics === true\");\n    expect(source).toContain(\"permissions.ads === true\");\n    expect(source).toContain(\"permissions.settings === true\");\n  });\n\n  test('missing MCS permission data fails closed and unrelated roles retain tenant behavior', () => {\n    expect(source).toContain(\"if (!path || !permissions) return false;\");\n    expect(source).toContain(\"if (!isMcsMember || app.bundle !== 'commerSocial' || !app.path || app.status === 'blueprint') return true;\");\n  });\n\n  test('stale cards cannot bypass the same MCS predicate during navigation', () => {\n    expect(source).toContain(\"app.bundle === 'commerSocial' && !canMcsMemberAccessPath(app.path, mcsPermissions)\");\n    expect(source).toContain('navigate(app.path);');\n  });\n\n  test('team, connections, dashboard and unknown MCS routes are not implicitly granted', () => {\n    expect(source).not.toContain(\"path === '/medsos/team' || permissions\");\n    expect(source).not.toContain(\"path === '/medsos/connections' || permissions\");\n    expect(source).not.toContain(\"path === '/medsos/dashboard' || permissions\");\n    expect(source).toContain('return false;\\n};');\n  });\n});\n""")
           PY
 
+      - name: Repair exact-head frontend typecheck blockers
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path_str: str, old: str, new: str, already: str | None = None):
+              path = Path(path_str)
+              text = path.read_text()
+              if old in text:
+                  path.write_text(text.replace(old, new, 1))
+                  return
+              if already and already in text:
+                  return
+              raise SystemExit(f'Expected pattern not found in {path_str}')
+
+          replace_once(
+              'frontend/src/pages/SupplyChainWorkspacePage.tsx',
+              '  CheckCircle2,\n',
+              '',
+          )
+          replace_once(
+              'frontend/src/pages/workforce/ServicesAppointmentsPanel.tsx',
+              'import { CalendarCheck, CalendarClock, CheckCircle2, Clock3, RefreshCw, UserRoundCheck, XCircle } from \'lucide-react\';',
+              'import { CalendarCheck, CalendarClock, Clock3, RefreshCw, UserRoundCheck, XCircle } from \'lucide-react\';',
+              "import { CalendarCheck, CalendarClock, Clock3, RefreshCw, UserRoundCheck, XCircle } from 'lucide-react';",
+          )
+          replace_once(
+              'frontend/src/pages/workforce/ServicesFieldServicePanel.tsx',
+              'import { CalendarClock, Crosshair, MapPin, RefreshCw, Route, Truck, Wrench, XCircle } from \'lucide-react\';',
+              'import { Crosshair, MapPin, RefreshCw, Route, Truck, Wrench, XCircle } from \'lucide-react\';',
+              "import { Crosshair, MapPin, RefreshCw, Route, Truck, Wrench, XCircle } from 'lucide-react';",
+          )
+          replace_once(
+              'frontend/src/pages/medsos/OmnichannelAdsHub.tsx',
+              '  invalidateMcsRequestCache,\n',
+              '',
+          )
+          replace_once(
+              'frontend/src/pages/medsos/OmnichannelAdsHub.tsx',
+              "          executionStatus: decision === 'approve' ? 'ready_for_manual_execution' : nextStatus,",
+              "          executionStatus: decision === 'approve' ? 'ready_for_manual_execution' : decision === 'revise' ? 'revision_requested' : 'deferred',",
+              "executionStatus: decision === 'approve' ? 'ready_for_manual_execution' : decision === 'revise' ? 'revision_requested' : 'deferred'",
+          )
+          PY
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -88,7 +133,13 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/src/pages/ModuleSelectorPage.tsx backend/tests/unit/module-selector-mcs-access.test.ts
+          git add \
+            frontend/src/pages/ModuleSelectorPage.tsx \
+            backend/tests/unit/module-selector-mcs-access.test.ts \
+            frontend/src/pages/SupplyChainWorkspacePage.tsx \
+            frontend/src/pages/medsos/OmnichannelAdsHub.tsx \
+            frontend/src/pages/workforce/ServicesAppointmentsPanel.tsx \
+            frontend/src/pages/workforce/ServicesFieldServicePanel.tsx
           git diff --cached --quiet && exit 0
-          git commit -m "fix: enforce MCS member launcher permissions"
+          git commit -m "fix: enforce MCS launcher access and restore frontend typecheck"
           git push origin HEAD:feat/odoo-complete-suite
