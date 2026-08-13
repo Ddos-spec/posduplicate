@@ -33,6 +33,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_payroll_details_period_employee
 CREATE INDEX IF NOT EXISTS idx_payroll_details_source_run
   ON accounting.payroll_details (source_calculation_run_id);
 
+CREATE OR REPLACE FUNCTION public.prevent_official_payroll_detail_mutation()
+RETURNS trigger AS $$
+BEGIN
+  IF OLD.source_calculation_run_id IS NOT NULL THEN
+    RAISE EXCEPTION 'Official payroll detail is immutable once materialized'
+      USING ERRCODE = '55000';
+  END IF;
+  IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_payroll_official_detail_immutable ON accounting.payroll_details;
+CREATE TRIGGER trg_payroll_official_detail_immutable
+  BEFORE UPDATE OR DELETE ON accounting.payroll_details
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_official_payroll_detail_mutation();
+
 CREATE TABLE IF NOT EXISTS public.payroll_accounting_settings (
   tenant_id INTEGER PRIMARY KEY REFERENCES public.tenants(id) ON DELETE CASCADE,
   salary_expense_account_id INTEGER NOT NULL REFERENCES accounting.chart_of_accounts(id) ON DELETE RESTRICT,
@@ -44,10 +61,38 @@ CREATE TABLE IF NOT EXISTS public.payroll_accounting_settings (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.payroll_official_materializations (
+  id BIGSERIAL PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  period_id INTEGER NOT NULL REFERENCES accounting.payroll_periods(id) ON DELETE RESTRICT,
+  calculation_run_id BIGINT NOT NULL REFERENCES public.payroll_calculation_runs(id) ON DELETE RESTRICT,
+  profile_id INTEGER NOT NULL REFERENCES public.payroll_rate_profiles(id) ON DELETE RESTRICT,
+  profile_version INTEGER NOT NULL,
+  tax_period_kind VARCHAR(20) NOT NULL,
+  detail_count INTEGER NOT NULL,
+  totals JSONB NOT NULL DEFAULT '{}'::jsonb,
+  materialized_by INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+  materialized_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT payroll_official_materialization_tax_kind_valid CHECK (tax_period_kind IN ('non_final','final')),
+  CONSTRAINT payroll_official_materialization_detail_count_positive CHECK (detail_count > 0),
+  CONSTRAINT payroll_official_materialization_totals_object CHECK (jsonb_typeof(totals) = 'object')
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_payroll_official_materialization_period
+  ON public.payroll_official_materializations (tenant_id, period_id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_payroll_official_materialization_run
+  ON public.payroll_official_materializations (tenant_id, calculation_run_id);
+
+DROP TRIGGER IF EXISTS trg_payroll_official_materialization_append_only ON public.payroll_official_materializations;
+CREATE TRIGGER trg_payroll_official_materialization_append_only
+  BEFORE UPDATE OR DELETE ON public.payroll_official_materializations
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_suite_ledger_mutation();
+
 CREATE TABLE IF NOT EXISTS public.payroll_official_postings (
   id BIGSERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
   period_id INTEGER NOT NULL REFERENCES accounting.payroll_periods(id) ON DELETE RESTRICT,
+  materialization_id BIGINT NOT NULL REFERENCES public.payroll_official_materializations(id) ON DELETE RESTRICT,
   calculation_run_id BIGINT NOT NULL REFERENCES public.payroll_calculation_runs(id) ON DELETE RESTRICT,
   profile_id INTEGER NOT NULL REFERENCES public.payroll_rate_profiles(id) ON DELETE RESTRICT,
   profile_version INTEGER NOT NULL,
