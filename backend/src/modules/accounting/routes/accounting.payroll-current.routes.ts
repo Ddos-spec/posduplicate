@@ -19,10 +19,12 @@ import {
   materializePayrollOfficial,
   upsertPayrollAccountingSettings,
 } from '../controllers/accounting.payroll-official.controller';
+import { getPayrollCurrentContext } from '../controllers/accounting.payroll-current-context.controller';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
 
+router.get('/context', requireCapability('workforce.payroll.read'), getPayrollCurrentContext);
 router.get('/statutory-settings', requireCapability('workforce.payroll.read'), getPayrollStatutorySettings);
 router.put('/statutory-settings/:employeeId', requireCapability('workforce.payroll.manage'), upsertPayrollStatutorySetting);
 router.get('/accounting-settings', requireCapability('workforce.payroll.read'), getPayrollAccountingSettings);

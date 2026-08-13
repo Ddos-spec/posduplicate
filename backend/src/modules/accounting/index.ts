@@ -26,6 +26,7 @@ import accountingPayrollRoutes from './routes/accounting.payroll.routes';
 import accountingPayrollRateRoutes from './routes/accounting.payroll-rate.routes';
 import accountingPayrollCurrentRoutes from './routes/accounting.payroll-current.routes';
 import { rejectLegacyPayrollMutation } from './controllers/accounting.payroll-rate-profile.controller';
+import { createPayrollPeriodSafely } from './controllers/accounting.payroll-current-context.controller';
 
 const router = Router();
 
@@ -52,8 +53,16 @@ router.use('/attachments', accountingAttachmentRoutes);
 router.use('/payroll/rates', accountingPayrollRateRoutes);
 router.use('/payroll/current', accountingPayrollCurrentRoutes);
 
-// Temporary safety barrier: the legacy payroll controller still embeds stale TER/BPJS constants.
-// Keep mutating payroll operations fail-closed until the verified current-law engine is wired end-to-end.
+// Current-law period creation is serialized and checked for any overlap shape before the legacy payroll router sees the request.
+router.post(
+  '/payroll/periods',
+  authMiddleware,
+  tenantMiddleware,
+  requireCapability('workforce.payroll.manage'),
+  createPayrollPeriodSafely,
+);
+
+// Safety barrier: official payroll mutations are C1-C3 endpoints above; legacy calculate/finalize remain fail-closed.
 router.post(
   '/payroll/periods/:periodId/calculate',
   authMiddleware,

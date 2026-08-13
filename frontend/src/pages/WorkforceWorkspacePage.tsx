@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarDays, Clock3, FolderKanban, LogIn, LogOut, RefreshCw, Star, UserSearch, Users } from 'lucide-react';
+import { ArrowLeft, Banknote, CalendarDays, Clock3, FolderKanban, LogIn, LogOut, RefreshCw, Star, UserSearch, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -18,8 +18,9 @@ import TimeOffPanel from './workforce/TimeOffPanel';
 import RecruitmentPanel from './workforce/RecruitmentPanel';
 import AppraisalsPanel from './workforce/AppraisalsPanel';
 import ServicesProjectPanel from './workforce/ServicesProjectPanel';
+import PayrollCurrentPanel from './workforce/PayrollCurrentPanel';
 
-type WorkforceTab = 'attendance' | 'leave' | 'recruitment' | 'appraisals' | 'services';
+type WorkforceTab = 'attendance' | 'leave' | 'recruitment' | 'appraisals' | 'services' | 'payroll';
 
 const dt = (value?: string | null) => value ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '—';
 const duration = (minutes?: number | null) => minutes === null || minutes === undefined ? 'Sedang bekerja' : `${Math.floor(minutes / 60)}j ${minutes % 60}m`;
@@ -95,19 +96,20 @@ export default function WorkforceWorkspacePage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/module-selector')} className="rounded-xl border border-slate-700 p-2 hover:bg-slate-800" aria-label="Back"><ArrowLeft size={18} /></button>
-            <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">P2 Workforce & Services</p><h1 className="text-xl font-black">People & Service Operations</h1><p className="hidden text-xs text-slate-500 md:block">Attendance · Time Off · Recruitment · Appraisals · Projects · Timesheets · Planning</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">P2 Workforce & Services</p><h1 className="text-xl font-black">People, Service & Payroll Operations</h1><p className="hidden text-xs text-slate-500 md:block">Attendance · Time Off · Recruitment · Appraisals · Services · Current-law Payroll</p></div>
           </div>
           {tab === 'attendance' && <button onClick={() => void load()} disabled={loading} className="rounded-xl border border-slate-700 p-2 hover:bg-slate-800"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>}
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
-        <nav className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-2 md:grid-cols-5" aria-label="Workforce and Services sections">
+        <nav className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-2 md:grid-cols-3 xl:grid-cols-6" aria-label="Workforce, Services and Payroll sections">
           <button onClick={() => setTab('attendance')} className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === 'attendance' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><Clock3 size={17} /> Attendance</button>
           <button onClick={() => setTab('leave')} className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === 'leave' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><CalendarDays size={17} /> Time Off</button>
           <button onClick={() => setTab('recruitment')} className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === 'recruitment' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><UserSearch size={17} /> Recruitment</button>
           <button onClick={() => setTab('appraisals')} className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === 'appraisals' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><Star size={17} /> Appraisals</button>
-          <button onClick={() => setTab('services')} className={`col-span-2 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition md:col-span-1 ${tab === 'services' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><FolderKanban size={17} /> Projects & Time</button>
+          <button onClick={() => setTab('services')} className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === 'services' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><FolderKanban size={17} /> Services</button>
+          <button onClick={() => setTab('payroll')} className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${tab === 'payroll' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><Banknote size={17} /> Payroll</button>
         </nav>
 
         {tab === 'attendance' && <>
@@ -144,6 +146,7 @@ export default function WorkforceWorkspacePage() {
         {tab === 'recruitment' && <RecruitmentPanel employees={employees} />}
         {tab === 'appraisals' && <AppraisalsPanel employees={employees} />}
         {tab === 'services' && <ServicesProjectPanel employees={employees} />}
+        {tab === 'payroll' && <PayrollCurrentPanel />}
       </main>
     </div>
   );
