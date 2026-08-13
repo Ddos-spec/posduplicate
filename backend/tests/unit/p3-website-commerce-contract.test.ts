@@ -111,4 +111,7 @@ describe('P3.2 eCommerce order integrity and cancellation hardening', () => {
     expect(routes).toContain("requireCapability('digital.commerce.manage')");
     expect(routes).toContain("router.patch('/orders/:id/status'");
   });
+  test('public catalog is scoped to the site fulfillment outlet only', () => {
+    expect(controller).toContain('AND i.outlet_id=s.fulfillment_outlet_id');
+  });
 });

@@ -8,6 +8,7 @@ export interface CmsDocument { blocks: CmsBlock[]; }
 export interface WebsiteSite {
   id: number; tenant_id: number; code: string; name: string; public_slug: string;
   status: WebsiteStatus; default_locale: string; theme_config: Record<string, unknown>;
+  fulfillment_outlet_id?: number | null;
   page_count?: number; catalog_count?: number; published_at?: string | null; archived_at?: string | null;
 }
 
@@ -45,7 +46,7 @@ const unwrap = <T>(response: { data: { data: T } }): T => response.data.data;
 export const getWebsiteSites = async () => unwrap<WebsiteSite[]>(await api.get('/digital/sites'));
 export const createWebsiteSite = async (payload: { code: string; name: string; publicSlug: string; defaultLocale?: string; themeConfig?: Record<string, unknown> }) =>
   unwrap<WebsiteSite>(await api.post('/digital/sites', payload));
-export const updateWebsiteSite = async (id: number, payload: { name: string; defaultLocale?: string; themeConfig?: Record<string, unknown> }) =>
+export const updateWebsiteSite = async (id: number, payload: { name: string; fulfillmentOutletId: number; defaultLocale?: string; themeConfig?: Record<string, unknown> }) =>
   unwrap<WebsiteSite>(await api.put(`/digital/sites/${id}`, payload));
 export const updateWebsiteSiteStatus = async (id: number, status: WebsiteStatus) =>
   unwrap<WebsiteSite>(await api.patch(`/digital/sites/${id}/status`, { status }));
