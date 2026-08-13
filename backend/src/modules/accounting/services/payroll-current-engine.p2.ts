@@ -31,6 +31,11 @@ export interface PayrollEmployeeVerificationInput {
     bpjsHealthEnabled: boolean;
     jkkRiskLevel: JkkRiskLevel;
   };
+  tax?: {
+    ptkpStatusYearStart?: string | null;
+    taxSubjectiveCase?: string | null;
+    zakatViaEmployerMonthly?: number;
+  };
 }
 
 const assertMoney = (value: number, code: string, label: string) => {
@@ -55,18 +60,10 @@ export const sumPayrollAllowances = (allowances: unknown): number => {
 };
 
 /**
- * Verification engine for active, ongoing employees in a NON-FINAL tax period.
- *
- * Tax gross follows PMK 168/2023 for permanent employees: cash earnings plus
- * employer-paid JKK, JKM and health-insurance contributions. Employer JHT/JP are
- * intentionally excluded from TER gross because pension/old-age contributions
- * paid by the employer are excluded from PPh 21 income under PMK 168/2023.
- *
- * Overtime remuneration itself remains a compensation-policy concern. Until a
- * verified overtime compensation policy is wired, any non-zero overtime hours
- * fail closed rather than reusing the legacy 1.5x shortcut.
+ * Tax-independent monthly components shared by non-final TER and final-period reconciliation.
+ * Overtime remains fail-closed until a separately verified compensation policy is wired.
  */
-export const calculateNonFinalPayrollVerification = (input: PayrollEmployeeVerificationInput) => {
+export const calculateMonthlyPayrollComponents = (input: PayrollEmployeeVerificationInput) => {
   if (!input.nik?.trim()) {
     throw new PayrollCurrentEngineError(
       'EMPLOYEE_NIK_REQUIRED_FOR_VERIFICATION',
@@ -76,6 +73,8 @@ export const calculateNonFinalPayrollVerification = (input: PayrollEmployeeVerif
 
   assertMoney(input.basicSalary, 'INVALID_BASIC_SALARY', 'Basic salary');
   assertMoney(input.statutory.fixedAllowanceMonthly, 'INVALID_FIXED_ALLOWANCE', 'Fixed allowance');
+  const zakatViaEmployerMonthly = Number(input.tax?.zakatViaEmployerMonthly || 0);
+  assertMoney(zakatViaEmployerMonthly, 'INVALID_ZAKAT_AMOUNT', 'Zakat via employer');
 
   const overtimeHours = Number(input.overtimeHours || 0);
   assertMoney(overtimeHours, 'INVALID_OVERTIME_HOURS', 'Overtime hours');
@@ -102,20 +101,14 @@ export const calculateNonFinalPayrollVerification = (input: PayrollEmployeeVerif
     statutory.components.jkk.employer +
     statutory.components.jkm.employer +
     statutory.components.health.employer;
-
-  const monthlyTerGross = cashGross + taxableEmployerBenefits;
-  const pph21 = calculateBaseMonthlyTerPph21(monthlyTerGross, input.ptkpStatus || 'TK/0');
-
-  const employeeStatutoryDeduction = statutory.employeeTotal;
-  const totalDeductions = employeeStatutoryDeduction + pph21.basePph21;
-  const netCashSalary = cashGross - totalDeductions;
-  const employerCost = cashGross + statutory.employerTotal;
+  const taxableGross = cashGross + taxableEmployerBenefits;
+  const employeePensionOldAgeDeduction =
+    statutory.components.jht.employee + statutory.components.jp.employee;
 
   return {
     employeeId: input.employeeId,
     employeeCode: input.employeeCode,
     name: input.name,
-    ptkpStatus: input.ptkpStatus || 'TK/0',
     earnings: {
       basicSalary: input.basicSalary,
       totalAllowance,
@@ -127,10 +120,46 @@ export const calculateNonFinalPayrollVerification = (input: PayrollEmployeeVerif
       ...statutory,
       fixedAllowanceMonthly: input.statutory.fixedAllowanceMonthly,
     },
-    tax: {
+    taxComponents: {
       taxableEmployerBenefits,
-      monthlyTerGross,
+      taxableGross,
+      employeePensionOldAgeDeduction,
+      zakatViaEmployerMonthly,
+    },
+    employerCost: cashGross + statutory.employerTotal,
+  };
+};
+
+/**
+ * Verification engine for active, ongoing employees in a NON-FINAL tax period.
+ * TER gross includes employer-paid JKK, JKM and health contributions; employer JHT/JP
+ * are excluded from taxable gross. This function never mutates official payroll details.
+ */
+export const calculateNonFinalPayrollVerification = (input: PayrollEmployeeVerificationInput) => {
+  const components = calculateMonthlyPayrollComponents(input);
+  const ptkpStatus = input.tax?.ptkpStatusYearStart || input.ptkpStatus || 'TK/0';
+  const pph21 = calculateBaseMonthlyTerPph21(components.taxComponents.taxableGross, ptkpStatus);
+
+  const employeeStatutoryDeduction = components.statutory.employeeTotal;
+  const totalDeductions = employeeStatutoryDeduction + pph21.basePph21;
+  const netCashSalary = components.earnings.cashGross - totalDeductions;
+
+  return {
+    employeeId: input.employeeId,
+    employeeCode: input.employeeCode,
+    name: input.name,
+    ptkpStatus,
+    earnings: components.earnings,
+    statutory: components.statutory,
+    tax: {
+      taxableEmployerBenefits: components.taxComponents.taxableEmployerBenefits,
+      monthlyTerGross: components.taxComponents.taxableGross,
       pph21,
+    },
+    taxInput: {
+      ptkpStatusYearStart: input.tax?.ptkpStatusYearStart || null,
+      taxSubjectiveCase: input.tax?.taxSubjectiveCase || 'unverified',
+      zakatViaEmployerMonthly: components.taxComponents.zakatViaEmployerMonthly,
     },
     deductions: {
       employeeStatutory: employeeStatutoryDeduction,
@@ -138,7 +167,7 @@ export const calculateNonFinalPayrollVerification = (input: PayrollEmployeeVerif
       total: totalDeductions,
     },
     netCashSalary,
-    employerCost,
+    employerCost: components.employerCost,
     rulesets: {
       pph21: PPH21_BASE_RULESET.id,
       statutory: PPU_STATUTORY_RULESET.id,
