@@ -69,12 +69,12 @@ describe('P2.7 Helpdesk contracts', () => {
     expect(verifier).toContain('helpdesk message DELETE');
     expect(verifier).toContain('helpdesk event UPDATE');
     expect(verifier).toContain('helpdesk event DELETE');
-    expect(verifier).toContain('16 blocked mutations');
+    expect(verifier).toContain('18 blocked mutations');
   });
 
-  test('suite deployment retains Helpdesk after migration fifteen', () => {
+  test('suite deployment retains Helpdesk after migration sixteen', () => {
     expect(runner).toContain('20260813060000_p2_helpdesk_core');
-    expect(verifier).toContain('Expected 15 suite migration ledger entries');
+    expect(verifier).toContain('Expected 16 suite migration ledger entries');
     expect(verifier).toContain('service_helpdesk_sla_policies');
     expect(verifier).toContain('service_helpdesk_tickets');
     expect(verifier).toContain('service_helpdesk_messages');
