@@ -1,0 +1,59 @@
+name: P3 Subscription Frontend Wire Once
+
+on:
+  push:
+    branches: [feat/odoo-complete-suite]
+    paths:
+      - '.github/workflows/p3-subscription-frontend-wire-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/odoo-complete-suite
+          fetch-depth: 0
+      - name: Wire subscriptions route and blueprint path
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          app=Path('frontend/src/App.tsx')
+          text=app.read_text()
+          if "SubscriptionsWorkspacePage" not in text:
+              text=text.replace("const DigitalWebsiteWorkspacePage = lazy(() => import('./pages/DigitalWebsiteWorkspacePage'));\n", "const DigitalWebsiteWorkspacePage = lazy(() => import('./pages/DigitalWebsiteWorkspacePage'));\nconst SubscriptionsWorkspacePage = lazy(() => import('./pages/SubscriptionsWorkspacePage'));\n", 1)
+              text=text.replace("          <Route path=\"/digital\" element={<TenantModuleRoute moduleKey=\"commerSocial\"><OwnerRoute><DigitalWebsiteWorkspacePage /></OwnerRoute></TenantModuleRoute>} />\n", "          <Route path=\"/digital\" element={<TenantModuleRoute moduleKey=\"commerSocial\"><OwnerRoute><DigitalWebsiteWorkspacePage /></OwnerRoute></TenantModuleRoute>} />\n          <Route path=\"/subscriptions\" element={<TenantModuleRoute moduleKey=\"accounting\"><ProtectedRoute><SubscriptionsWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />\n", 1)
+              app.write_text(text)
+          catalog=Path('frontend/src/config/suiteCatalog.ts')
+          text=catalog.read_text()
+          old="{ id: 'subscriptions', category: 'sales', name: 'Subscriptions', description: 'Recurring plans, renewal lifecycle, recurring billing, and subscription analytics.', icon: Repeat2, bundle: 'accounting', status: 'blueprint', capabilities: ['Plans', 'Recurring Billing', 'Renewals', 'MRR'] }"
+          new="{ id: 'subscriptions', category: 'sales', name: 'Subscriptions', description: 'Recurring plans, renewal lifecycle, recurring billing, and subscription analytics.', icon: Repeat2, bundle: 'accounting', status: 'blueprint', path: '/subscriptions', capabilities: ['Plans', 'Recurring Billing', 'Renewals', 'MRR'] }"
+          if old in text:
+              catalog.write_text(text.replace(old,new,1))
+          elif "id: 'subscriptions'" not in text or "path: '/subscriptions'" not in text:
+              raise SystemExit('subscription catalog anchor missing')
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Frontend production build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build:check
+      - name: Commit and rebase before push
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add frontend/src/App.tsx frontend/src/config/suiteCatalog.ts
+          git diff --cached --quiet || git commit -m "feat(p3): wire subscriptions workspace"
+          git pull --rebase origin feat/odoo-complete-suite
+          git push origin HEAD:feat/odoo-complete-suite
