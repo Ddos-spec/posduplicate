@@ -88,8 +88,8 @@ export const getPublicStorefrontPage = async (publicSlug: string, pageSlug: stri
   unwrap<PublicStorefrontPage>(await api.get(`/digital/storefront/${encodeURIComponent(publicSlug)}/pages/${encodeURIComponent(pageSlug)}`));
 export const getPublicStorefrontCatalog = async (publicSlug: string) =>
   unwrap<PublicCatalogItem[]>(await api.get(`/digital/storefront/${encodeURIComponent(publicSlug)}/catalog`));
-export const createPublicStorefrontOrder = async (publicSlug: string, payload: PublicOrderCreateInput) =>
-  unwrap<PublicOrderReceipt>(await api.post(`/digital/storefront/${encodeURIComponent(publicSlug)}/orders`, payload));
+export const createPublicStorefrontOrder = async (publicSlug: string, payload: PublicOrderCreateInput, token: string) =>
+  unwrap<PublicOrderReceipt>(await api.post(`/digital/storefront/${encodeURIComponent(publicSlug)}/orders`, payload, { headers: { 'x-order-token': token } }));
 export const getPublicStorefrontOrderStatus = async (publicSlug: string, orderNumber: string, token: string) =>
   unwrap<PublicOrderStatusRecord>(await api.get(`/digital/storefront/${encodeURIComponent(publicSlug)}/orders/${encodeURIComponent(orderNumber)}`, { headers: { 'x-order-token': token } }));
 export const getEcommerceOrders = async () => unwrap<EcommerceOrder[]>(await api.get('/digital/orders'));
