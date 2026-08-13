@@ -26,7 +26,7 @@ describe('P3.3 subscription renewal retry', () => {
     };
     queryRaw.mockResolvedValueOnce([subscription]).mockResolvedValueOnce([renewal]);
 
-    await expect(materializeSubscriptionRenewal(4, 3, 9)).resolves.toEqual({ renewal, reused: true });
+    await expect(materializeSubscriptionRenewal(4, 3, 9, '2026-08-01')).resolves.toEqual({ renewal, reused: true });
     expect(queryRaw).toHaveBeenCalledTimes(2);
     expect(executeRaw).not.toHaveBeenCalled();
   });
