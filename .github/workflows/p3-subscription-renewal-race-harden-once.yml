@@ -1,0 +1,81 @@
+name: P3 Subscription Renewal Race Harden Once
+
+on:
+  push:
+    branches: [feat/p3-subscription-auto-renew]
+    paths:
+      - '.github/workflows/p3-subscription-renewal-race-harden-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p3-subscription-auto-renew
+          fetch-depth: 0
+      - name: Harden calendar and retry semantics
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          def swap(path, old, new):
+              p=Path(path); text=p.read_text()
+              if old not in text: raise SystemExit(f'anchor missing: {path}')
+              p.write_text(text.replace(old,new,1))
+
+          swap('backend/src/modules/fnb/services/subscription.p3.service.ts',
+          "const advanceDate = (dateValue: string, unit: SubscriptionIntervalUnit, count: number) => {\n  const date = new Date(`${dateValue}T00:00:00Z`);\n  if (unit === 'day') date.setUTCDate(date.getUTCDate() + count);\n  else if (unit === 'week') date.setUTCDate(date.getUTCDate() + (count * 7));\n  else if (unit === 'month') date.setUTCMonth(date.getUTCMonth() + count);\n  else date.setUTCFullYear(date.getUTCFullYear() + count);\n  return date.toISOString().slice(0, 10);\n};",
+          "export const advanceSubscriptionDate = (dateValue: string, unit: SubscriptionIntervalUnit, count: number) => {\n  const [year, month, day] = dateValue.split('-').map(Number);\n  if (unit === 'day' || unit === 'week') {\n    const date = new Date(Date.UTC(year, month - 1, day));\n    date.setUTCDate(date.getUTCDate() + (unit === 'week' ? count * 7 : count));\n    return date.toISOString().slice(0, 10);\n  }\n  const totalMonths = (year * 12) + (month - 1) + (unit === 'year' ? count * 12 : count);\n  const targetYear = Math.floor(totalMonths / 12);\n  const targetMonth = totalMonths % 12;\n  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();\n  return `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`;\n};")
+
+          swap('backend/src/modules/fnb/services/subscription.p3.service.ts',
+            "export const materializeSubscriptionRenewal = async (tenantId: number, userId: number, subscriptionIdValue: unknown) => {\n  const subscriptionId = positiveInt(subscriptionIdValue, 'INVALID_SUBSCRIPTION_ID');",
+            "export const materializeSubscriptionRenewal = async (tenantId: number, userId: number, subscriptionIdValue: unknown, expectedRenewalAtValue: unknown) => {\n  const subscriptionId = positiveInt(subscriptionIdValue, 'INVALID_SUBSCRIPTION_ID');\n  const expectedRenewalAt = dateOnly(expectedRenewalAtValue);")
+          swap('backend/src/modules/fnb/services/subscription.p3.service.ts',
+            "    const periodStart = dateOnly(subscription.next_renewal_at);\n    const { unit, count } = normalizeInterval(subscription.interval_unit, subscription.interval_count);\n    const periodEnd = advanceDate(periodStart, unit, count);\n    const idempotencyKey = `subscription:${subscriptionId}:${periodStart}:${periodEnd}`;",
+            "    const currentRenewalAt = dateOnly(subscription.next_renewal_at);\n    const { unit, count } = normalizeInterval(subscription.interval_unit, subscription.interval_count);\n    if (currentRenewalAt !== expectedRenewalAt) {\n      const expectedPeriodEnd = advanceSubscriptionDate(expectedRenewalAt, unit, count);\n      const previousRows = await tx.$queryRaw<any[]>(Prisma.sql`\n        SELECT * FROM public.subscription_renewals\n        WHERE tenant_id=${tenantId} AND subscription_id=${subscriptionId}\n          AND period_start=CAST(${expectedRenewalAt} AS date) AND period_end=CAST(${expectedPeriodEnd} AS date)\n        LIMIT 1\n      `);\n      if (previousRows[0]?.status === 'materialized') return { renewal: previousRows[0], reused: true };\n      throw domainError('Subscription renewal attempt is stale', 'SUBSCRIPTION_RENEWAL_STALE', 409);\n    }\n    const periodStart = currentRenewalAt;\n    const periodEnd = advanceSubscriptionDate(periodStart, unit, count);\n    const idempotencyKey = `subscription:${subscriptionId}:${periodStart}:${periodEnd}`;")
+
+          swap('backend/src/modules/fnb/controllers/subscription.p3.controller.ts', "materializeSubscriptionRenewal(tenantId, userId, req.params.id)", "materializeSubscriptionRenewal(tenantId, userId, req.params.id, req.body.expectedRenewalAt)")
+          swap('frontend/src/services/subscriptionService.ts', "export const renewCustomerSubscription = async (id: number) => unwrap<{", "export const renewCustomerSubscription = async (id: number, expectedRenewalAt: string) => unwrap<{")
+          swap('frontend/src/services/subscriptionService.ts', "}>(await api.post(`/subscriptions/${id}/renew`));", "}>(await api.post(`/subscriptions/${id}/renew`, { expectedRenewalAt }));")
+          swap('frontend/src/pages/SubscriptionsWorkspacePage.tsx', "const renew = async (id: number) => {", "const renew = async (id: number, expectedRenewalAt: string) => {")
+          swap('frontend/src/pages/SubscriptionsWorkspacePage.tsx', "try { await renewCustomerSubscription(id); await reload(); }", "try { await renewCustomerSubscription(id, expectedRenewalAt); await reload(); }")
+          swap('frontend/src/pages/SubscriptionsWorkspacePage.tsx', "onClick={() => void renew(row.id)}", "onClick={() => void renew(row.id, String(row.next_renewal_at).slice(0, 10))}")
+
+          p=Path('backend/tests/unit/p3-subscription-renewal-retry.test.ts')
+          p.write_text(p.read_text().replace("materializeSubscriptionRenewal(4, 3, 9)", "materializeSubscriptionRenewal(4, 3, 9, '2026-08-01')"))
+          Path('backend/tests/unit/p3-subscription-calendar.test.ts').write_text("import { advanceSubscriptionDate } from '../../src/modules/fnb/services/subscription.p3.service';\n\ndescribe('P3.3 subscription calendar boundaries', () => {\n  test('clamps month end instead of overflowing', () => {\n    expect(advanceSubscriptionDate('2026-01-31', 'month', 1)).toBe('2026-02-28');\n    expect(advanceSubscriptionDate('2028-01-31', 'month', 1)).toBe('2028-02-29');\n    expect(advanceSubscriptionDate('2026-03-31', 'month', 1)).toBe('2026-04-30');\n  });\n  test('clamps leap day annual renewal', () => {\n    expect(advanceSubscriptionDate('2028-02-29', 'year', 1)).toBe('2029-02-28');\n  });\n});\n")
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Backend tests and build
+        working-directory: backend
+        run: |
+          npm ci
+          npm test -- --runInBand tests/unit/p3-subscription-renewal-retry.test.ts tests/unit/p3-subscription-calendar.test.ts
+          npm run build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Frontend build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build:check
+      - name: Commit hardening
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add backend/src/modules/fnb/services/subscription.p3.service.ts backend/src/modules/fnb/controllers/subscription.p3.controller.ts backend/tests/unit/p3-subscription-renewal-retry.test.ts backend/tests/unit/p3-subscription-calendar.test.ts frontend/src/services/subscriptionService.ts frontend/src/pages/SubscriptionsWorkspacePage.tsx
+          git commit -m "fix(p3): harden subscription renewal retries"
+          git push origin HEAD:feat/p3-subscription-auto-renew
