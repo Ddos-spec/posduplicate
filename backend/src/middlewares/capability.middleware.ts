@@ -30,6 +30,9 @@ export type SuiteCapability =
   | 'workforce.leave.self'
   | 'workforce.recruitment.read'
   | 'workforce.recruitment.manage'
+  | 'workforce.appraisal.read'
+  | 'workforce.appraisal.manage'
+  | 'workforce.appraisal.self'
   | 'workforce.payroll.read'
   | 'workforce.payroll.manage';
 
@@ -53,6 +56,7 @@ const ROLE_PRESETS: Record<string, SuiteCapability[] | '*'> = {
     'workforce.employee.read',
     'workforce.attendance.self',
     'workforce.leave.self',
+    'workforce.appraisal.self',
     'workforce.payroll.read',
   ],
   cashier: [
@@ -60,6 +64,7 @@ const ROLE_PRESETS: Record<string, SuiteCapability[] | '*'> = {
     'revenue.loyalty.read',
     'workforce.attendance.self',
     'workforce.leave.self',
+    'workforce.appraisal.self',
   ],
 };
 
