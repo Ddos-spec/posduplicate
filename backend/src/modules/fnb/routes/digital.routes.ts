@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { createPublicStorefrontOrder } from '../controllers/ecommerce-create.p3.controller';
 import { getPublicStorefrontOrderStatus } from '../controllers/ecommerce-status.p3.controller';
+import { getEcommerceOrders } from '../controllers/ecommerce-orders-list.p3.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { requireCapability } from '../../../middlewares/capability.middleware';
@@ -31,6 +32,7 @@ router.get('/storefront/:publicSlug/orders/:orderNumber', getPublicStorefrontOrd
 
 router.use(authMiddleware, tenantMiddleware);
 
+router.get('/orders', requireCapability('digital.commerce.read'), getEcommerceOrders);
 router.get('/sites', requireCapability('digital.website.read'), getWebsiteSites);
 router.post('/sites', requireCapability('digital.website.manage'), createWebsiteSite);
 router.put('/sites/:id', requireCapability('digital.website.manage'), updateWebsiteSite);
