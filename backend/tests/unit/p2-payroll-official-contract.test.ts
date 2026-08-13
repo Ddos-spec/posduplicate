@@ -44,6 +44,7 @@ describe('Payroll-C3 official posting contracts', () => {
     expect(migration).toContain('trg_payroll_official_materialization_append_only');
     expect(migration).toContain('trg_payroll_official_posting_append_only');
     expect(controller).toContain('OFFICIAL_PERIOD_ALREADY_MATERIALIZED');
+    expect(controller).toContain('OFFICIAL_MATERIALIZATION_REQUIRED');
     expect(controller).toContain('idempotent: true');
   });
 
