@@ -78,6 +78,8 @@ describe('P3.1 Website/CMS + storefront catalog contract', () => {
     expect(website).toContain("status: 'partial'");
     expect(website).toContain("path: '/digital'");
     expect(ecommerce).toContain("status: 'blueprint'");
+    expect(ecommerce).toContain("bundle: 'commerSocial'");
+    expect(ecommerce).toContain("path: '/digital'");
   });
 });
 
@@ -91,6 +93,20 @@ describe('P3.2 eCommerce order integrity and cancellation hardening', () => {
     expect(reservationMigration).toContain('CHECK (reserved_stock_quantity >= 0 AND reserved_stock_quantity <= quantity)');
     expect(reservationV2Service).toContain('const reservedStock = item.track_stock ? requested.quantity : 0');
     expect(orderWriteService).toContain('reserved_stock_quantity)');
+  });
+  test('checkout retry idempotency is checked before catalog or inventory mutation', () => {
+    expect(ecommerceCreateController).toContain('normalizeCheckoutToken');
+    expect(ecommerceCreateController).toContain("req.header('x-order-token')");
+    expect(ecommerceCreateController).toContain('data.reused ? 200 : 201');
+    expect(reservationV2Service).toContain('findGuestOrderByTokenHash(tx, tokenHash)');
+    expect(reservationV2Service.indexOf('findGuestOrderByTokenHash(tx, tokenHash)')).toBeLessThan(reservationV2Service.indexOf('lockPublishedCatalogItem'));
+    expect(reservationV2Service).toContain('CHECKOUT_TOKEN_REUSED');
+    expect(orderWriteService).toContain('WHERE public_token_hash=${tokenHash}');
+    expect(frontendService).toContain("'x-order-token': token");
+    expect(storefront).toContain('p3-storefront-checkout-attempt');
+    expect(storefront).toContain('newCheckoutToken');
+    expect(storefront).toContain('fingerprint');
+    expect(storefront).toContain('sessionStorage.removeItem(attemptKey)');
   });
   test('cancellation accepts active non-terminal states and rejects completed orders', () => {
     expect(transitionService).toContain("reserved: ['confirmed', 'cancelled']");
