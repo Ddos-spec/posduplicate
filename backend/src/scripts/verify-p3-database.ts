@@ -23,6 +23,7 @@ async function run() {
       '20260813210000_p3_subscription_core',
       '20260813213000_p3_subscription_automation',
       '20260813220000_p3_rental_core',
+      '20260813220500_p3_rental_inventory_guard',
     ];
     assert(ledger.rows.length >= requiredMigrations.length, `Expected at least ${requiredMigrations.length} P3 migration ledger entries, found ${ledger.rows.length}`);
     for (const required of requiredMigrations) {
@@ -205,7 +206,16 @@ async function run() {
     `);
     assert(rentalImmutableTrigger.rows.length === 1, 'Rental append-only event trigger missing');
 
-    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental source-of-truth invariants verified');
+    const rentalInventoryTrigger = await client.query<{ tgname: string }>(`
+      SELECT t.tgname FROM pg_trigger t
+      JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relname='items'
+        AND t.tgname='trg_protect_rental_item_commitments' AND NOT t.tgisinternal
+    `);
+    assert(rentalInventoryTrigger.rows.length === 1, 'Rental inventory commitment trigger missing');
+
+    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental source-of-truth/inventory invariants verified');
   } finally {
     await client.end();
   }
