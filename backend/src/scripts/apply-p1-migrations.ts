@@ -23,6 +23,7 @@ const MIGRATIONS = [
   '20260813070000_p2_payroll_current_profile',
   '20260813073000_p2_payroll_calculation_runs',
   '20260813080000_p2_payroll_final_reconciliation',
+  '20260813083000_p2_payroll_official_posting',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081201;
