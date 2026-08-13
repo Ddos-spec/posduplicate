@@ -21,6 +21,7 @@ const MIGRATIONS = [
   '20260813060000_p2_helpdesk_core',
   '20260813063000_p2_appointments_core',
   '20260813070000_p2_payroll_current_profile',
+  '20260813073000_p2_payroll_calculation_runs',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081201;
