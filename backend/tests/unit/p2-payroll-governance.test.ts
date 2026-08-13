@@ -72,7 +72,7 @@ describe('P2 payroll governance safety', () => {
     expect(migration).toContain("'activationGuard'");
     expect(activationMigration).toContain('payroll_profile_activation_events');
     expect(runner).toContain('20260813080000_p2_payroll_final_reconciliation');
-    expect(verifier).toContain('Expected 16 suite migration ledger entries');
+    expect(verifier).toContain('Expected 17 suite migration ledger entries');
     expect(verifier).toContain('Global reference payroll profile v2 must remain draft');
   });
 
