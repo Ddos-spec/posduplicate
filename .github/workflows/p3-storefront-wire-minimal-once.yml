@@ -1,0 +1,79 @@
+name: P3 Storefront Wire Minimal Once
+on:
+  push:
+    branches: [feat/odoo-complete-suite]
+    paths: ['.github/workflows/p3-storefront-wire-minimal-once.yml']
+permissions:
+  contents: write
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/odoo-complete-suite
+          fetch-depth: 0
+      - name: Wire public route and browser boundary
+        run: |
+          rm -f .github/workflows/p3-harden-ecommerce-once.yml .github/workflows/p3-storefront-runtime-once.yml .github/workflows/p3-storefront-finalize-once.yml
+          python3 <<'PY'
+          from pathlib import Path
+
+          app = Path('frontend/src/App.tsx')
+          text = app.read_text()
+          lazy = "const DigitalWebsiteWorkspacePage = lazy(() => import('./pages/DigitalWebsiteWorkspacePage'));"
+          if 'const StorefrontPage' not in text:
+              if lazy not in text: raise SystemExit('App lazy marker missing')
+              text = text.replace(lazy, lazy + "\nconst StorefrontPage = lazy(() => import('./pages/StorefrontPage'));", 1)
+          route = '          <Route path="/module-selector" element={<ProtectedRoute><ModuleSelectorPage /></ProtectedRoute>} />'
+          if '<Route path="/store/:publicSlug"' not in text:
+              if route not in text: raise SystemExit('App route marker missing')
+              text = text.replace(route, '          <Route path="/store/:publicSlug" element={<StorefrontPage />} />\n' + route, 1)
+          app.write_text(text)
+
+          server = Path('backend/src/server.ts')
+          text = server.read_text()
+          if "'X-Order-Token'" not in text:
+              marker = "    'If-Modified-Since'\n"
+              if marker not in text: raise SystemExit('CORS marker missing')
+              text = text.replace(marker, "    'If-Modified-Since',\n    'X-Order-Token'\n", 1)
+          server.write_text(text)
+
+          api = Path('frontend/src/services/api.ts')
+          text = api.read_text()
+          old = "    if (error.response?.status === 401) {\n      useAuthStore.getState().logout();\n      window.location.href = '/login';\n    }"
+          if old in text:
+              new = "    const isPublicStorefrontRequest = String(error.config?.url || '').includes('/digital/storefront/');\n    if (error.response?.status === 401 && error.config?.headers?.Authorization && !isPublicStorefrontRequest) {\n      useAuthStore.getState().logout();\n      window.location.href = '/login';\n    }"
+              text = text.replace(old, new, 1)
+          api.write_text(text)
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Backend build
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npm run build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Frontend production build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build:check
+      - name: Commit storefront wiring
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --check
+          git diff --cached --quiet && exit 0
+          git commit -m "feat(p3): wire public storefront runtime"
+          git push origin HEAD:feat/odoo-complete-suite
