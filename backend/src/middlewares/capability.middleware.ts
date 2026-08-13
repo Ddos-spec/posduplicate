@@ -7,6 +7,8 @@ export type SuiteCapability =
   | 'revenue.sales.manage'
   | 'revenue.subscription.read'
   | 'revenue.subscription.manage'
+  | 'revenue.rental.read'
+  | 'revenue.rental.manage'
   | 'revenue.customer360.read'
   | 'revenue.loyalty.read'
   | 'revenue.loyalty.adjust'
