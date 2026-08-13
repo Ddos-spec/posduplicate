@@ -13,6 +13,7 @@ const MIGRATIONS = [
   '20260812140000_p1_append_only_guards',
   '20260813023000_p2_workforce_attendance',
   '20260813030000_p2_payroll_rate_profiles',
+  '20260813033000_p2_workforce_leave',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081201;
