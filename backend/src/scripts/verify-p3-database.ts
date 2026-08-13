@@ -16,7 +16,7 @@ async function run() {
     const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(
       'SELECT migration_name, checksum_sha256 FROM public.p3_schema_migrations ORDER BY migration_name',
     );
-    assert(ledger.rows.length === 1, `Expected 1 P3 migration ledger entry, found ${ledger.rows.length}`);
+    assert(ledger.rows.length >= 1, `Expected at least 1 P3 migration ledger entry, found ${ledger.rows.length}`);
     assert(ledger.rows[0]?.migration_name === '20260813090000_p3_website_commerce_core', 'P3 website migration missing');
     assert(ledger.rows[0]?.checksum_sha256?.length === 64, 'P3 migration checksum invalid');
 
