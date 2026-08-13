@@ -29,17 +29,21 @@ describe('suite immutable audit guards', () => {
     expect(runner).toContain("'20260813054000_p2_field_service_core'");
     expect(runner).toContain("'20260813060000_p2_helpdesk_core'");
     expect(runner).toContain("'20260813063000_p2_appointments_core'");
+    expect(runner).toContain("'20260813070000_p2_payroll_current_profile'");
     expect(runner).toContain('checksum_sha256');
     expect(runner).toContain('Never edit an applied suite migration');
   });
 
-  test('shared database verifier validates thirteen suite migrations and workforce/services objects', () => {
+  test('shared database verifier validates fourteen suite migrations and workforce/services objects', () => {
     const verifier = read('src/scripts/verify-p1-database-v2.ts');
     const suiteWorkflow = read('../.github/workflows/frontend-ci.yml');
     const runtimeWorkflow = read('../.github/workflows/p1-runtime-ci.yml');
-    expect(verifier).toContain('ledger.rows.length === 13');
+    expect(verifier).toContain('ledger.rows.length === 14');
     expect(verifier).toContain('workforce_attendance_sessions');
     expect(verifier).toContain('payroll_rate_profiles');
+    expect(verifier).toContain('version = 2');
+    expect(verifier).toContain('jpMaxMonthlyWage');
+    expect(verifier).toContain('bpuReliefApplied');
     expect(verifier).toContain('workforce_leave_types');
     expect(verifier).toContain('workforce_leave_allocations');
     expect(verifier).toContain('workforce_leave_requests');
