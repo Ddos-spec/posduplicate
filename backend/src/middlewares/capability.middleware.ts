@@ -28,6 +28,8 @@ export type SuiteCapability =
   | 'workforce.leave.read'
   | 'workforce.leave.manage'
   | 'workforce.leave.self'
+  | 'workforce.recruitment.read'
+  | 'workforce.recruitment.manage'
   | 'workforce.payroll.read'
   | 'workforce.payroll.manage';
 
