@@ -205,10 +205,16 @@ async function run() {
       const warehouse = await client.query<{ id: number }>(`INSERT INTO public.warehouse_stock_ledger (tenant_id, outlet_id, location_id, inventory_id, entry_type, quantity_delta, balance_before, balance_after, reference_type, reference_id, notes) VALUES (999001, 999001, $1, 999001, 'manual_adjustment', 1, 0, 1, 'verification', 'verify', 'suite immutable verification') RETURNING id`, [location.rows[0].id]);
       const procurement = await client.query<{ id: number }>(`INSERT INTO public.procurement_event_ledger (tenant_id, outlet_id, event_type, reference_type, reference_id, payload) VALUES (999001, 999001, 'verification', 'verification', 'verify', '{}'::jsonb) RETURNING id`);
 
-      const fieldOutlet = await client.query<{ id: number }>(`INSERT INTO public.outlets (tenant_id, name) VALUES (999002, 'Field Verify Outlet') RETURNING id`);
+      const fieldTenant = await client.query<{ id: number }>(`
+        INSERT INTO public.tenants (business_name, owner_name, email, subscription_status, is_active)
+        VALUES ('Field Verify Business', 'Field Verify Owner', 'field-verifier@example.invalid', 'active', TRUE)
+        RETURNING id
+      `);
+      const fieldTenantId = Number(fieldTenant.rows[0].id);
+      const fieldOutlet = await client.query<{ id: number }>(`INSERT INTO public.outlets (tenant_id, name) VALUES ($1, 'Field Verify Outlet') RETURNING id`, [fieldTenantId]);
       const fieldCustomer = await client.query<{ id: number }>(`INSERT INTO public.customers (name, outlet_id) VALUES ('Field Verify Customer', $1) RETURNING id`, [fieldOutlet.rows[0].id]);
-      const fieldOrder = await client.query<{ id: number }>(`INSERT INTO public.service_field_orders (tenant_id, outlet_id, customer_id, code, title, service_address, status) VALUES (999002, $1, $2, 'VERIFY-FIELD', 'Verify Field Order', 'Verification address', 'draft') RETURNING id`, [fieldOutlet.rows[0].id, fieldCustomer.rows[0].id]);
-      const fieldEvent = await client.query<{ id: number }>(`INSERT INTO public.service_field_events (tenant_id, field_order_id, event_type, notes) VALUES (999002, $1, 'created', 'suite immutable verification') RETURNING id`, [fieldOrder.rows[0].id]);
+      const fieldOrder = await client.query<{ id: number }>(`INSERT INTO public.service_field_orders (tenant_id, outlet_id, customer_id, code, title, service_address, status) VALUES ($1, $2, $3, 'VERIFY-FIELD', 'Verify Field Order', 'Verification address', 'draft') RETURNING id`, [fieldTenantId, fieldOutlet.rows[0].id, fieldCustomer.rows[0].id]);
+      const fieldEvent = await client.query<{ id: number }>(`INSERT INTO public.service_field_events (tenant_id, field_order_id, event_type, notes) VALUES ($1, $2, 'created', 'suite immutable verification') RETURNING id`, [fieldTenantId, fieldOrder.rows[0].id]);
 
       const checks = [
         [`UPDATE public.loyalty_ledger SET reason='tamper' WHERE id=${Number(loyalty.rows[0].id)}`, 'loyalty UPDATE'],
