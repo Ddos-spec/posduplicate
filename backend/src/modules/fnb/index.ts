@@ -26,6 +26,7 @@ import supplyChainRoutes from './routes/supply-chain.routes';
 import workforceRoutes from './routes/workforce.routes';
 import servicesRoutes from './routes/services.routes';
 import digitalRoutes from './routes/digital.routes';
+import subscriptionRoutes from './routes/subscription.p3.routes';
 
 const router = Router();
 
@@ -57,5 +58,6 @@ router.use('/supply-chain', supplyChainRoutes);
 router.use('/workforce', workforceRoutes);
 router.use('/services', servicesRoutes);
 router.use('/digital', digitalRoutes);
+router.use('/subscriptions', subscriptionRoutes);
 
 export default router;
