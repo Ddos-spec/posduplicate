@@ -29,7 +29,7 @@ describe('Payroll-C1 profile-driven verification contracts', () => {
     expect(migration).toContain('prevent_suite_ledger_mutation');
     expect(verifier).toContain('payroll calculation run UPDATE');
     expect(verifier).toContain('payroll calculation run DELETE');
-    expect(verifier).toContain('18 blocked mutations');
+    expect(verifier).toContain('22 blocked mutations');
   });
 
   test('verification engine uses correct TER gross composition and rejects legacy overtime shortcut', () => {
@@ -58,15 +58,15 @@ describe('Payroll-C1 profile-driven verification contracts', () => {
     expect(accountingIndex).toContain("router.use('/payroll/current', accountingPayrollCurrentRoutes)");
   });
 
-  test('legacy official payroll mutation remains fail-closed during C1/C2 verification', () => {
+  test('legacy official payroll mutation remains fail-closed while current official endpoints are separate', () => {
     expect(accountingIndex).toContain("'/payroll/periods/:periodId/calculate'");
     expect(accountingIndex).toContain("'/payroll/periods/:periodId/finalize'");
     expect(accountingIndex).toContain('rejectLegacyPayrollMutation');
   });
 
-  test('suite deploy path retains calculation runs through migration sixteen', () => {
+  test('suite deploy path retains calculation runs through migration seventeen', () => {
     expect(runner).toContain('20260813073000_p2_payroll_calculation_runs');
-    expect(verifier).toContain('Expected 16 suite migration ledger entries');
+    expect(verifier).toContain('Expected 17 suite migration ledger entries');
     expect(verifier).toContain('payroll_employee_statutory_settings');
     expect(verifier).toContain('payroll_calculation_runs');
     expect(verifier).toContain('trg_payroll_calculation_run_append_only');
