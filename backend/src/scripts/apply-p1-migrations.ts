@@ -16,6 +16,7 @@ const MIGRATIONS = [
   '20260813033000_p2_workforce_leave',
   '20260813040000_p2_recruitment_core',
   '20260813043000_p2_appraisals_core',
+  '20260813050000_p2_services_project_core',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081201;
