@@ -9,6 +9,7 @@ dotenv.config();
 const MIGRATIONS = [
   '20260813090000_p3_website_commerce_core',
   '20260813100000_p3_ecommerce_order_core',
+  '20260813101000_p3_ecommerce_reservation_snapshot',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081303;
