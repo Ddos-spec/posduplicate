@@ -14,10 +14,10 @@ export const transitionOrder = async (tenantId: number, userId: number, orderId:
   const rows = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.ecommerce_orders WHERE id=${orderId} AND tenant_id=${tenantId} FOR UPDATE`);
   const order = rows[0];
   if (!order) throw Object.assign(new Error('Order not found'), { status: 404, code: 'ECOMMERCE_ORDER_NOT_FOUND' });
+  if (order.status === 'cancelled' && target === 'cancelled') return order;
   if (!(TRANSITIONS[order.status] || []).includes(target)) throw Object.assign(new Error('Invalid order transition'), { status: 409, code: 'INVALID_ECOMMERCE_ORDER_TRANSITION' });
 
   if (target === 'cancelled') {
-    if (order.status === 'cancelled') return order; // idempotent: already cancelled
 
     // Restore stock from persisted reservation snapshot, aggregated by item
     const items = await tx.$queryRaw<any[]>(Prisma.sql`

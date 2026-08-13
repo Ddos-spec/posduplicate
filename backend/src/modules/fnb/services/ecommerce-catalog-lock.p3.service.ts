@@ -27,7 +27,7 @@ export const lockPublishedCatalogItem = async (
     FROM public.web_catalog_items c
     JOIN public.items i ON i.id=c.item_id
     WHERE c.tenant_id=${site.tenant_id} AND c.site_id=${site.id} AND c.item_id=${itemId}
-      AND c.is_published=TRUE AND i.outlet_id=${site.fulfillment_outlet_id}
+      AND c.is_published=TRUE AND COALESCE(i.is_active,TRUE)=TRUE AND i.outlet_id=${site.fulfillment_outlet_id}
     LIMIT 1 FOR UPDATE OF i
   `);
   if (!rows[0]) throw Object.assign(new Error('Published item unavailable'), { status: 409, code: 'STOREFRONT_ITEM_UNAVAILABLE' });

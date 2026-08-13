@@ -12,6 +12,10 @@ const runtime = read('.github/workflows/p1-runtime-ci.yml');
 const runner = read('backend/src/scripts/apply-p3-migrations.ts');
 const verifier = read('backend/src/scripts/verify-p3-database.ts');
 const reservationService = read('backend/src/modules/fnb/services/ecommerce-reservation.p3.service.ts');
+const reservationV2Service = read('backend/src/modules/fnb/services/ecommerce-reservation-v2.p3.service.ts');
+const orderWriteService = read('backend/src/modules/fnb/services/ecommerce-order-write.p3.service.ts');
+const catalogLockService = read('backend/src/modules/fnb/services/ecommerce-catalog-lock.p3.service.ts');
+const ecommerceCreateController = read('backend/src/modules/fnb/controllers/ecommerce-create.p3.controller.ts');
 const transitionService = read('backend/src/modules/fnb/services/ecommerce-transition.p3.service.ts');
 const app = read('frontend/src/App.tsx');
 const frontendService = read('frontend/src/services/digitalWebsiteService.ts');
@@ -74,11 +78,15 @@ describe('P3.1 Website/CMS + storefront catalog contract', () => {
 });
 
 describe('P3.2 eCommerce order integrity and cancellation hardening', () => {
+  test('public checkout uses the canonical V2 reservation path', () => {
+    expect(ecommerceCreateController).toContain('reserveGuestOrderV2({');
+    expect(reservationService).toContain('reserveGuestOrderV2 as reserveGuestOrder');
+  });
   test('reservation persists exact stock snapshot independently of track_stock configuration', () => {
     expect(reservationMigration).toContain('reserved_stock_quantity NUMERIC(15,3) NOT NULL DEFAULT 0');
     expect(reservationMigration).toContain('CHECK (reserved_stock_quantity >= 0 AND reserved_stock_quantity <= quantity)');
-    expect(reservationService).toContain('const reservedQty = item.track_stock ? item.quantity : 0');
-    expect(reservationService).toContain('reserved_stock_quantity)');
+    expect(reservationV2Service).toContain('const reservedStock = item.track_stock ? requested.quantity : 0');
+    expect(orderWriteService).toContain('reserved_stock_quantity)');
   });
   test('cancellation accepts active non-terminal states and rejects completed orders', () => {
     expect(transitionService).toContain("reserved: ['confirmed', 'cancelled']");
@@ -94,7 +102,7 @@ describe('P3.2 eCommerce order integrity and cancellation hardening', () => {
   });
   test('cancellation is idempotent and concurrency-safe with row locking', () => {
     expect(transitionService).toContain('FOR UPDATE');
-    expect(transitionService).toContain("if (order.status === 'cancelled') return order");
+    expect(transitionService).toContain("if (order.status === 'cancelled' && target === 'cancelled') return order");
     expect(transitionService).toContain('ECOMMERCE_ORDER_CONCURRENT_UPDATE');
   });
   test('cancellation sets timestamp and appends single lifecycle event with actor', () => {
@@ -113,5 +121,6 @@ describe('P3.2 eCommerce order integrity and cancellation hardening', () => {
   });
   test('public catalog is scoped to the site fulfillment outlet only', () => {
     expect(controller).toContain('AND i.outlet_id=s.fulfillment_outlet_id');
+    expect(catalogLockService).toContain('COALESCE(i.is_active,TRUE)=TRUE');
   });
 });

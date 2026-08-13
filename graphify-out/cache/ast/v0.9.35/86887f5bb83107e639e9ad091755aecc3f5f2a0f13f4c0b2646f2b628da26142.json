@@ -1,1 +1,0 @@
-{"nodes": [{"id": "$graphify-root$_backend_prisma_manual_20260504_create_missing_social_tables_sql", "label": "20260504_create_missing_social_tables.sql", "file_type": "code", "source_file": "backend/prisma/manual/20260504_create_missing_social_tables.sql", "source_location": null}], "edges": []}

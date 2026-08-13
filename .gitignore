@@ -55,3 +55,6 @@ coverage/
 .gemini/
 CLAUDE.md
 .vercel
+
+# Generated code-graph analysis
+graphify-out/
