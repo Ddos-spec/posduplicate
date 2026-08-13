@@ -16,6 +16,7 @@ const prismaMock: any = {
         findFirst: jest.fn(),
         create: jest.fn(),
     },
+    $queryRaw: jest.fn().mockResolvedValue([]),
     $transaction: jest.fn((callback: any) => callback(prismaMock)),
 };
 
@@ -32,6 +33,7 @@ describe('Accounting Module - Unit Tests', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        prismaMock.$queryRaw.mockResolvedValue([]);
     });
 
     describe('Journal Utils', () => {
@@ -76,16 +78,30 @@ describe('Accounting Module - Unit Tests', () => {
             await expect(postJournalToLedger(1, 1, 1)).rejects.toThrow('Journal is not balanced');
         });
 
-        it('should post balanced journal successfully', async () => {
-            prismaMock.journal_entries.findUnique.mockResolvedValue({
+        it('should post balanced journal successfully under the tenant GL lock', async () => {
+            const journal = {
                 id: 1,
                 tenant_id: 1,
+                outlet_id: null,
                 status: 'draft',
+                transaction_date: new Date('2025-01-01'),
+                description: 'Balanced journal',
                 journal_entry_lines: [
-                    { account_id: 1, debit_amount: new Decimal(100), credit_amount: new Decimal(0), chart_of_accounts: { normal_balance: 'DEBIT' } },
-                    { account_id: 2, debit_amount: new Decimal(0), credit_amount: new Decimal(100), chart_of_accounts: { normal_balance: 'CREDIT' } }
+                    {
+                        account_id: 1,
+                        debit_amount: new Decimal(100),
+                        credit_amount: new Decimal(0),
+                        chart_of_accounts: { id: 1, tenant_id: 1, is_active: true, normal_balance: 'DEBIT' }
+                    },
+                    {
+                        account_id: 2,
+                        debit_amount: new Decimal(0),
+                        credit_amount: new Decimal(100),
+                        chart_of_accounts: { id: 2, tenant_id: 1, is_active: true, normal_balance: 'CREDIT' }
+                    }
                 ]
-            });
+            };
+            prismaMock.journal_entries.findUnique.mockResolvedValue(journal);
 
             // Mock Ledger findFirst to return previous balance
             prismaMock.general_ledger.findFirst.mockResolvedValue({ balance: new Decimal(0) });
@@ -93,6 +109,7 @@ describe('Accounting Module - Unit Tests', () => {
             const result = await postJournalToLedger(1, 1, 1);
 
             expect(result).toEqual({ success: true });
+            expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
             expect(prismaMock.general_ledger.create).toHaveBeenCalledTimes(2);
             expect(prismaMock.journal_entries.update).toHaveBeenCalledWith({
                 where: { id: 1 },
