@@ -11,6 +11,7 @@ const REQUIRED_TABLES = [
   'purchase_rfq_supplier_items', 'procurement_event_ledger',
   'workforce_attendance_sessions', 'payroll_rate_profiles',
   'payroll_employee_statutory_settings', 'payroll_calculation_runs', 'payroll_profile_activation_events',
+  'payroll_accounting_settings', 'payroll_official_materializations', 'payroll_official_postings',
   'workforce_leave_types', 'workforce_leave_allocations', 'workforce_leave_requests',
   'workforce_recruitment_vacancies', 'workforce_recruitment_applicants',
   'workforce_recruitment_interviews', 'workforce_recruitment_offers',
@@ -31,6 +32,9 @@ const REQUIRED_TRIGGERS = [
   'trg_service_appointment_event_append_only',
   'trg_payroll_calculation_run_append_only',
   'trg_payroll_profile_activation_event_append_only',
+  'trg_payroll_official_detail_immutable',
+  'trg_payroll_official_materialization_append_only',
+  'trg_payroll_official_posting_append_only',
 ] as const;
 
 const REQUIRED_INDEXES = [
@@ -42,6 +46,11 @@ const REQUIRED_INDEXES = [
   'idx_payroll_calculation_run_profile',
   'idx_payroll_profile_activation_tenant',
   'ux_payroll_profile_activation_run',
+  'ux_payroll_official_materialization_period',
+  'ux_payroll_official_materialization_run',
+  'ux_payroll_official_posting_period',
+  'ux_payroll_official_posting_run',
+  'ux_payroll_official_posting_journal',
   'idx_workforce_leave_allocation_employee',
   'idx_workforce_leave_request_scope',
   'idx_workforce_leave_request_employee',
@@ -117,7 +126,7 @@ async function run() {
     const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(
       `SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`,
     );
-    assert(ledger.rows.length === 16, `Expected 16 suite migration ledger entries, found ${ledger.rows.length}`);
+    assert(ledger.rows.length === 17, `Expected 17 suite migration ledger entries, found ${ledger.rows.length}`);
     assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid suite migration checksum');
 
     const migrationNames = [
@@ -133,6 +142,7 @@ async function run() {
       '20260813070000_p2_payroll_current_profile',
       '20260813073000_p2_payroll_calculation_runs',
       '20260813080000_p2_payroll_final_reconciliation',
+      '20260813083000_p2_payroll_official_posting',
     ];
     for (const migrationName of migrationNames) {
       assert(ledger.rows.some((row) => row.migration_name === migrationName), `${migrationName} missing from ledger`);
@@ -145,6 +155,13 @@ async function run() {
     const indexSet = new Set(indexes.rows.map((row) => row.indexname));
     const missingIndexes = REQUIRED_INDEXES.filter((name) => !indexSet.has(name));
     assert(missingIndexes.length === 0, `Missing suite indexes: ${missingIndexes.join(', ')}`);
+
+    const accountingIndexes = await client.query<{ indexname: string }>(`
+      SELECT indexname FROM pg_indexes
+      WHERE schemaname = 'accounting'
+        AND indexname IN ('ux_payroll_details_period_employee','idx_payroll_details_source_run','ux_journal_payroll_period_reference')
+    `);
+    assert(accountingIndexes.rows.length === 3, 'Payroll official accounting indexes are incomplete');
 
     const profileV1 = await client.query<any>(
       `SELECT * FROM public.payroll_rate_profiles WHERE tenant_id IS NULL AND profile_code = 'ID-PAYROLL-2026' AND version = 1 LIMIT 1`,
@@ -210,6 +227,49 @@ async function run() {
           OR (ccu.table_schema = 'public' AND ccu.table_name = 'payroll_calculation_runs' AND ccu.column_name = 'id'))
     `);
     assert(activationForeignKeys.rows.length >= 3, 'Payroll activation audit must reference source profile, activated profile and verification run');
+
+    const officialDetailColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'accounting' AND table_name = 'payroll_details'
+        AND column_name IN ('source_calculation_run_id','source_profile_id','source_profile_version','pph21_refund')
+    `);
+    assert(officialDetailColumns.rows.length === 4, 'Payroll official detail evidence columns are incomplete');
+
+    const officialDetailForeignKeys = await client.query<{ constraint_name: string }>(`
+      SELECT tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.constraint_schema
+      WHERE tc.table_schema = 'accounting'
+        AND tc.table_name = 'payroll_details'
+        AND tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_schema = 'public'
+        AND ccu.table_name IN ('payroll_calculation_runs','payroll_rate_profiles')
+    `);
+    assert(officialDetailForeignKeys.rows.length >= 2, 'Official payroll details must reference immutable run and profile evidence');
+
+    const payrollAccountingForeignKeys = await client.query<{ constraint_name: string }>(`
+      SELECT tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.constraint_schema
+      WHERE tc.table_schema = 'public'
+        AND tc.table_name = 'payroll_accounting_settings'
+        AND tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_schema = 'accounting'
+        AND ccu.table_name = 'chart_of_accounts'
+    `);
+    assert(payrollAccountingForeignKeys.rows.length >= 5, 'Payroll accounting settings must reference five chart-of-account mappings');
+
+    const officialEvidenceForeignKeys = await client.query<{ constraint_name: string }>(`
+      SELECT tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.constraint_schema
+      WHERE tc.table_schema = 'public'
+        AND tc.table_name IN ('payroll_official_materializations','payroll_official_postings')
+        AND tc.constraint_type = 'FOREIGN KEY'
+        AND ((ccu.table_schema = 'accounting' AND ccu.table_name IN ('payroll_periods','journal_entries'))
+          OR (ccu.table_schema = 'public' AND ccu.table_name IN ('payroll_calculation_runs','payroll_rate_profiles','payroll_official_materializations')))
+    `);
+    assert(officialEvidenceForeignKeys.rows.length >= 8, 'Payroll official materialization/posting evidence FKs are incomplete');
 
     const leaveColumns = await client.query<{ column_name: string }>(`
       SELECT column_name FROM information_schema.columns
@@ -380,6 +440,20 @@ async function run() {
       const tenantProfile = await client.query<{ id: number }>(`INSERT INTO public.payroll_rate_profiles (tenant_id, profile_code, version, country_code, effective_from, status, tax_method, tax_rule_reference, configuration, source_references, notes) VALUES ($1, 'ID-PAYROLL-2026', 2, 'ID', DATE '2026-01-01', 'active', 'PPH21_TER', 'verification fixture', '{}'::jsonb, '[]'::jsonb, 'tenant activation verifier') RETURNING id`, [fieldTenantId]);
       const activationEvent = await client.query<{ id: number }>(`INSERT INTO public.payroll_profile_activation_events (tenant_id, source_profile_id, activated_profile_id, verification_run_id, effective_from, payload) VALUES ($1, $2, $3, $4, DATE '2026-01-01', '{}'::jsonb) RETURNING id`, [fieldTenantId, profileV2.rows[0].id, tenantProfile.rows[0].id, payrollFinalRun.rows[0].id]);
 
+      const officialDetail = await client.query<{ id: number }>(`
+        INSERT INTO accounting.payroll_details
+          (tenant_id, period_id, employee_id, basic_salary, total_allowance, gross_salary, pph21,
+           total_deductions, net_salary, employer_cost, source_calculation_run_id, source_profile_id, source_profile_version)
+        VALUES ($1, $2, $3, 1000000, 0, 1000000, 0, 0, 1000000, 1000000, $4, $5, 2)
+        RETURNING id
+      `, [fieldTenantId, payrollPeriod.rows[0].id, fieldEmployee.rows[0].id, payrollRun.rows[0].id, tenantProfile.rows[0].id]);
+      const officialMaterialization = await client.query<{ id: number }>(`
+        INSERT INTO public.payroll_official_materializations
+          (tenant_id, period_id, calculation_run_id, profile_id, profile_version, tax_period_kind, detail_count, totals)
+        VALUES ($1, $2, $3, $4, 2, 'non_final', 1, '{}'::jsonb)
+        RETURNING id
+      `, [fieldTenantId, payrollPeriod.rows[0].id, payrollRun.rows[0].id, tenantProfile.rows[0].id]);
+
       const checks = [
         [`UPDATE public.loyalty_ledger SET reason='tamper' WHERE id=${Number(loyalty.rows[0].id)}`, 'loyalty UPDATE'],
         [`DELETE FROM public.loyalty_ledger WHERE id=${Number(loyalty.rows[0].id)}`, 'loyalty DELETE'],
@@ -399,6 +473,10 @@ async function run() {
         [`DELETE FROM public.payroll_calculation_runs WHERE id=${Number(payrollRun.rows[0].id)}`, 'payroll calculation run DELETE'],
         [`UPDATE public.payroll_profile_activation_events SET effective_from=DATE '2026-02-01' WHERE id=${Number(activationEvent.rows[0].id)}`, 'payroll activation event UPDATE'],
         [`DELETE FROM public.payroll_profile_activation_events WHERE id=${Number(activationEvent.rows[0].id)}`, 'payroll activation event DELETE'],
+        [`UPDATE accounting.payroll_details SET net_salary=999999 WHERE id=${Number(officialDetail.rows[0].id)}`, 'official payroll detail UPDATE'],
+        [`DELETE FROM accounting.payroll_details WHERE id=${Number(officialDetail.rows[0].id)}`, 'official payroll detail DELETE'],
+        [`UPDATE public.payroll_official_materializations SET detail_count=2 WHERE id=${Number(officialMaterialization.rows[0].id)}`, 'payroll materialization UPDATE'],
+        [`DELETE FROM public.payroll_official_materializations WHERE id=${Number(officialMaterialization.rows[0].id)}`, 'payroll materialization DELETE'],
       ] as const;
       for (let index = 0; index < checks.length; index += 1) {
         await expectMutationBlocked(client, checks[index][0], checks[index][1], index);
@@ -409,7 +487,7 @@ async function run() {
       throw error;
     }
 
-    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, payroll current profile v2 global draft present, payroll verification snapshots present, payroll final-tax settings present, tenant activation audit present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, appointments scheduling/lifecycle present, 18 blocked mutations.`);
+    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} public suite indexes, payroll governance draft present, payroll current profile v2 global draft present, payroll verification snapshots present, payroll final-tax settings present, tenant activation audit present, official payroll evidence/account mapping present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, appointments scheduling/lifecycle present, 22 blocked mutations.`);
   } finally {
     await client.end();
   }
