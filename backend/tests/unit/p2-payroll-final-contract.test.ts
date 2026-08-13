@@ -67,12 +67,12 @@ describe('Payroll-C2 final reconciliation and activation contracts', () => {
     expect(migration).toContain('prevent_suite_ledger_mutation');
     expect(verifier).toContain('payroll activation event UPDATE');
     expect(verifier).toContain('payroll activation event DELETE');
-    expect(verifier).toContain('18 blocked mutations');
+    expect(verifier).toContain('22 blocked mutations');
   });
 
-  test('suite deployment includes final reconciliation as migration sixteen', () => {
+  test('suite deployment retains final reconciliation through migration seventeen', () => {
     expect(runner).toContain('20260813080000_p2_payroll_final_reconciliation');
-    expect(verifier).toContain('Expected 16 suite migration ledger entries');
+    expect(verifier).toContain('Expected 17 suite migration ledger entries');
     expect(verifier).toContain('payroll_profile_activation_events');
     expect(verifier).toContain('idx_payroll_profile_activation_tenant');
     expect(verifier).toContain('ux_payroll_profile_activation_run');
