@@ -19,6 +19,7 @@ const MIGRATIONS = [
   '20260813050000_p2_services_project_core',
   '20260813054000_p2_field_service_core',
   '20260813060000_p2_helpdesk_core',
+  '20260813063000_p2_appointments_core',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081201;
