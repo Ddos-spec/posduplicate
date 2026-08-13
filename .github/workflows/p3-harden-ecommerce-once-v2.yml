@@ -1,0 +1,130 @@
+name: P3 Harden Ecommerce Once V2
+on:
+  push:
+    branches: [feat/odoo-complete-suite]
+    paths: ['.github/workflows/p3-harden-ecommerce-once-v2.yml']
+permissions:
+  contents: write
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/odoo-complete-suite
+          fetch-depth: 0
+      - name: Clean generated artifacts and harden ecommerce lifecycle
+        run: |
+          rm -rf graphify-out
+          python3 <<'PY'
+          from pathlib import Path
+          gitignore = Path('.gitignore')
+          text = gitignore.read_text()
+          if 'graphify-out/' not in text:
+              gitignore.write_text(text.rstrip() + '\n\n# Generated code-graph analysis\ngraphify-out/\n')
+          transition = Path('backend/src/modules/fnb/services/ecommerce-transition.p3.service.ts')
+          text = transition.read_text()
+          old = "  if (!(TRANSITIONS[order.status] || []).includes(target)) throw Object.assign(new Error('Invalid order transition'), { status: 409, code: 'INVALID_ECOMMERCE_ORDER_TRANSITION' });\n\n  if (target === 'cancelled') {\n    if (order.status === 'cancelled') return order; // idempotent: already cancelled\n"
+          new = "  if (order.status === 'cancelled' && target === 'cancelled') return order;\n  if (!(TRANSITIONS[order.status] || []).includes(target)) throw Object.assign(new Error('Invalid order transition'), { status: 409, code: 'INVALID_ECOMMERCE_ORDER_TRANSITION' });\n\n  if (target === 'cancelled') {\n"
+          if old not in text:
+              raise SystemExit('transition marker missing')
+          transition.write_text(text.replace(old, new, 1))
+          controller = Path('backend/src/modules/fnb/controllers/ecommerce-create.p3.controller.ts')
+          text = controller.read_text()
+          old_import = "import { reserveGuestOrder } from '../services/ecommerce-reservation.p3.service';"
+          if old_import not in text:
+              raise SystemExit('reservation controller import marker missing')
+          controller.write_text(text.replace(old_import, "import { reserveGuestOrderV2 } from '../services/ecommerce-reservation-v2.p3.service';", 1).replace('const data = await reserveGuestOrder({', 'const data = await reserveGuestOrderV2({', 1))
+          Path('backend/src/modules/fnb/services/ecommerce-reservation.p3.service.ts').write_text("// Compatibility alias. The V2 implementation is the single canonical reservation path.\nexport { reserveGuestOrderV2 as reserveGuestOrder } from './ecommerce-reservation-v2.p3.service';\nexport type { GuestReservationInput as GuestOrderInput } from './ecommerce-reservation-v2.p3.service';\n")
+          lock = Path('backend/src/modules/fnb/services/ecommerce-catalog-lock.p3.service.ts')
+          text = lock.read_text()
+          old = "      AND c.is_published=TRUE AND i.outlet_id=${site.fulfillment_outlet_id}\n"
+          new = "      AND c.is_published=TRUE AND COALESCE(i.is_active,TRUE)=TRUE AND i.outlet_id=${site.fulfillment_outlet_id}\n"
+          if old not in text:
+              raise SystemExit('catalog lock marker missing')
+          lock.write_text(text.replace(old, new, 1))
+          contract = Path('backend/tests/unit/p3-website-commerce-contract.test.ts')
+          text = contract.read_text()
+          marker = "const reservationService = read('backend/src/modules/fnb/services/ecommerce-reservation.p3.service.ts');\n"
+          additions = marker + "const reservationV2Service = read('backend/src/modules/fnb/services/ecommerce-reservation-v2.p3.service.ts');\nconst orderWriteService = read('backend/src/modules/fnb/services/ecommerce-order-write.p3.service.ts');\nconst catalogLockService = read('backend/src/modules/fnb/services/ecommerce-catalog-lock.p3.service.ts');\nconst ecommerceCreateController = read('backend/src/modules/fnb/controllers/ecommerce-create.p3.controller.ts');\n"
+          if 'const reservationV2Service' not in text:
+              if marker not in text:
+                  raise SystemExit('contract reservation marker missing')
+              text = text.replace(marker, additions, 1)
+          text = text.replace("    expect(reservationService).toContain('const reservedQty = item.track_stock ? item.quantity : 0');\n    expect(reservationService).toContain('reserved_stock_quantity)');", "    expect(reservationV2Service).toContain('const reservedStock = item.track_stock ? requested.quantity : 0');\n    expect(orderWriteService).toContain('reserved_stock_quantity)');")
+          text = text.replace("    expect(transitionService).toContain(\"if (order.status === 'cancelled') return order\");", "    expect(transitionService).toContain(\"if (order.status === 'cancelled' && target === 'cancelled') return order\");")
+          needle = "    expect(controller).toContain('AND i.outlet_id=s.fulfillment_outlet_id');\n"
+          if "catalogLockService).toContain('COALESCE(i.is_active,TRUE)=TRUE')" not in text:
+              text = text.replace(needle, needle + "    expect(catalogLockService).toContain('COALESCE(i.is_active,TRUE)=TRUE');\n")
+          if "public checkout uses the canonical V2 reservation path" not in text:
+              insert = "  test('public checkout uses the canonical V2 reservation path', () => {\n    expect(ecommerceCreateController).toContain('reserveGuestOrderV2({');\n    expect(reservationService).toContain('reserveGuestOrderV2 as reserveGuestOrder');\n  });\n"
+              text = text.replace("describe('P3.2 eCommerce order integrity and cancellation hardening', () => {\n", "describe('P3.2 eCommerce order integrity and cancellation hardening', () => {\n" + insert, 1)
+          contract.write_text(text)
+          behavior = Path('backend/tests/unit/p3-ecommerce-transition-behavior.test.ts')
+          behavior.write_text('\n'.join([
+              "import { transitionOrder } from '../../src/modules/fnb/services/ecommerce-transition.p3.service';",
+              "import prisma from '../../src/utils/prisma';",
+              "",
+              "jest.mock('../../src/utils/prisma', () => ({ __esModule: true, default: { $transaction: jest.fn() } }));",
+              "const db = prisma as any;",
+              "",
+              "describe('P3.2 ecommerce transition behavior', () => {",
+              "  beforeEach(() => jest.clearAllMocks());",
+              "  test('repeating cancelled -> cancelled is a no-op without double restock or duplicate event', async () => {",
+              "    const cancelled = { id: 41, tenant_id: 7, outlet_id: 3, status: 'cancelled' };",
+              "    const tx = { $queryRaw: jest.fn().mockResolvedValueOnce([cancelled]), $executeRaw: jest.fn() };",
+              "    db.$transaction.mockImplementation(async (callback: any) => callback(tx));",
+              "    await expect(transitionOrder(7, 99, 41, 'cancelled')).resolves.toEqual(cancelled);",
+              "    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);",
+              "    expect(tx.$executeRaw).not.toHaveBeenCalled();",
+              "  });",
+              "  test('completed -> cancelled is rejected before any stock mutation', async () => {",
+              "    const tx = { $queryRaw: jest.fn().mockResolvedValueOnce([{ id: 42, tenant_id: 7, outlet_id: 3, status: 'completed' }]), $executeRaw: jest.fn() };",
+              "    db.$transaction.mockImplementation(async (callback: any) => callback(tx));",
+              "    await expect(transitionOrder(7, 99, 42, 'cancelled')).rejects.toMatchObject({ code: 'INVALID_ECOMMERCE_ORDER_TRANSITION' });",
+              "    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);",
+              "    expect(tx.$executeRaw).not.toHaveBeenCalled();",
+              "  });",
+              "});",
+              "",
+          ]))
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Backend install and Prisma client
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+      - name: P3 ecommerce regression tests
+        working-directory: backend
+        run: npx jest tests/unit/p3-ecommerce-transition-behavior.test.ts tests/unit/p3-website-commerce-contract.test.ts --runInBand
+      - name: Backend TypeScript build
+        working-directory: backend
+        run: npm run build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Frontend production build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build:check
+      - name: Commit hardened tranche
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git ls-files 'graphify-out/**' | grep -q .; then
+            echo 'graphify-out remains tracked' >&2
+            exit 1
+          fi
+          git diff --check
+          git diff --cached --quiet && exit 0
+          git commit -m "fix(p3): harden ecommerce reservation and cancellation"
+          git push origin HEAD:feat/odoo-complete-suite
