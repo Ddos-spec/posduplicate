@@ -48,11 +48,14 @@ export interface CustomerSubscription {
   renewal_count: number;
 }
 
+export interface SubscriptionSummary { active_plans: number; active_contracts: number; monthly_recurring_revenue: number | string; billed_total: number | string; }
+
 export interface CustomerOption { id: number; name: string; phone?: string | null; outlet_id?: number | null; }
 export interface ItemOption { id: number; name: string; sku?: string | null; price: number | string; outlet_id?: number | null; is_active?: boolean; }
 
 const unwrap = <T>(response: { data: { data: T } }): T => response.data.data;
 
+export const getSubscriptionSummary = async () => unwrap<SubscriptionSummary>(await api.get('/subscriptions/summary'));
 export const getSubscriptionPlans = async () => unwrap<SubscriptionPlan[]>(await api.get('/subscriptions/plans'));
 export const createSubscriptionPlan = async (payload: {
   code: string; name: string; description?: string; intervalUnit: SubscriptionIntervalUnit; intervalCount: number; currency?: string;

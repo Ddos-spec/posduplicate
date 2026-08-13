@@ -8,6 +8,7 @@ import {
   getSubscriptionCustomers,
   getSubscriptionItems,
   getSubscriptionPlans,
+  getSubscriptionSummary,
   renewCustomerSubscription,
   setCustomerSubscriptionStatus,
   setSubscriptionPlanStatus,
@@ -16,6 +17,7 @@ import {
   type ItemOption,
   type SubscriptionIntervalUnit,
   type SubscriptionPlan,
+  type SubscriptionSummary,
 } from '../services/subscriptionService';
 
 const money = (value: number | string) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value || 0));
@@ -30,6 +32,7 @@ export default function SubscriptionsWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [summary, setSummary] = useState<SubscriptionSummary>({ active_plans: 0, active_contracts: 0, monthly_recurring_revenue: 0, billed_total: 0 });
   const [tab, setTab] = useState<'contracts' | 'plans'>('contracts');
   const [planForm, setPlanForm] = useState({ code: '', name: '', intervalUnit: 'month' as SubscriptionIntervalUnit, intervalCount: 1, itemId: 0, quantity: 1, unitPrice: 0 });
   const [contractForm, setContractForm] = useState({ planId: 0, customerId: 0, startsOn: today(), notes: '' });
@@ -38,13 +41,14 @@ export default function SubscriptionsWorkspacePage() {
     setLoading(true);
     setError('');
     try {
-      const [planRows, subscriptionRows, customerRows, itemRows] = await Promise.all([
-        getSubscriptionPlans(), getCustomerSubscriptions(), getSubscriptionCustomers(), getSubscriptionItems(),
+      const [planRows, subscriptionRows, customerRows, itemRows, summaryRow] = await Promise.all([
+        getSubscriptionPlans(), getCustomerSubscriptions(), getSubscriptionCustomers(), getSubscriptionItems(), getSubscriptionSummary(),
       ]);
       setPlans(planRows);
       setSubscriptions(subscriptionRows);
       setCustomers(customerRows);
       setItems(itemRows.filter((item) => item.is_active !== false));
+      setSummary(summaryRow);
     } catch {
       setError('Subscription data belum dapat dimuat.');
     } finally {
@@ -56,7 +60,6 @@ export default function SubscriptionsWorkspacePage() {
 
   const activePlans = useMemo(() => plans.filter((plan) => plan.status === 'active'), [plans]);
   const activeSubscriptions = useMemo(() => subscriptions.filter((row) => row.status === 'active'), [subscriptions]);
-  const billedTotal = useMemo(() => subscriptions.reduce((sum, row) => sum + Number(row.billed_total || 0), 0), [subscriptions]);
 
   const submitPlan = async () => {
     if (!planForm.code.trim() || !planForm.name.trim() || !planForm.itemId || planForm.quantity <= 0) return;
@@ -111,10 +114,11 @@ export default function SubscriptionsWorkspacePage() {
         <button onClick={() => void reload()} className="rounded-lg border bg-white p-2" aria-label="Refresh"><RefreshCw size={18} /></button>
       </div>
 
-      <section className="mt-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border bg-white p-4"><p className="text-xs font-bold uppercase text-slate-500">Active contracts</p><p className="mt-1 text-2xl font-black">{activeSubscriptions.length}</p></div>
-        <div className="rounded-2xl border bg-white p-4"><p className="text-xs font-bold uppercase text-slate-500">Active plans</p><p className="mt-1 text-2xl font-black">{activePlans.length}</p></div>
-        <div className="rounded-2xl border bg-white p-4"><p className="text-xs font-bold uppercase text-slate-500">Materialized billing</p><p className="mt-1 text-2xl font-black">{money(billedTotal)}</p></div>
+      <section className="mt-6 grid gap-3 sm:grid-cols-4">
+        <div className="rounded-2xl border bg-white p-4"><p className="text-xs font-bold uppercase text-slate-500">Active contracts</p><p className="mt-1 text-2xl font-black">{summary.active_contracts || activeSubscriptions.length}</p></div>
+        <div className="rounded-2xl border bg-white p-4"><p className="text-xs font-bold uppercase text-slate-500">Active plans</p><p className="mt-1 text-2xl font-black">{summary.active_plans || activePlans.length}</p></div>
+        <div className="rounded-2xl border bg-white p-4"><p className="text-xs font-bold uppercase text-slate-500">Normalized MRR</p><p className="mt-1 text-2xl font-black">{money(summary.monthly_recurring_revenue)}</p></div>
+        <div className="rounded-2xl border bg-white p-4"><p className="text-xs font-bold uppercase text-slate-500">Materialized billing</p><p className="mt-1 text-2xl font-black">{money(summary.billed_total)}</p></div>
       </section>
 
       {error && <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</div>}

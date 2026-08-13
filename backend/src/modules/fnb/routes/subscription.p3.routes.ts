@@ -4,6 +4,7 @@ import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { requireCapability } from '../../../middlewares/capability.middleware';
 import {
   getCustomerSubscriptions,
+  getSubscriptionMetrics,
   getSubscriptionPlans,
   patchCustomerSubscriptionStatus,
   patchSubscriptionPlanStatus,
@@ -15,6 +16,7 @@ import {
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
 
+router.get('/summary', requireCapability('revenue.subscription.read'), getSubscriptionMetrics);
 router.get('/plans', requireCapability('revenue.subscription.read'), getSubscriptionPlans);
 router.post('/plans', requireCapability('revenue.subscription.manage'), postSubscriptionPlan);
 router.patch('/plans/:id/status', requireCapability('revenue.subscription.manage'), patchSubscriptionPlanStatus);
