@@ -132,7 +132,10 @@ export const updateWebsiteSite = async (req: Request, res: Response, next: NextF
     const tenantId=requireTenant(req), userId=requireUser(req), siteId=positiveInt(req.params.id,'INVALID_SITE_ID');
     const name=cleanText(req.body.name,180); if(!name) return res.status(400).json({success:false,error:{code:'WEBSITE_SITE_NAME_REQUIRED',message:'Name is required'}});
     const theme=encodeDocument(req.body.themeConfig ?? {},false);
-    const rows=await prisma.$queryRaw<any[]>(Prisma.sql`UPDATE public.website_sites SET name=${name},default_locale=${cleanText(req.body.defaultLocale,16)||'id-ID'},theme_config=CAST(${theme} AS jsonb),updated_by=${userId},updated_at=NOW() WHERE id=${siteId} AND tenant_id=${tenantId} AND status<>'archived' RETURNING *`);
+    const fulfillmentOutletId=positiveInt(req.body.fulfillmentOutletId,'INVALID_FULFILLMENT_OUTLET_ID');
+    const outlet=await prisma.$queryRaw<any[]>(Prisma.sql`SELECT id FROM public.outlets WHERE id=${fulfillmentOutletId} AND tenant_id=${tenantId} LIMIT 1`);
+    if(!outlet[0]) return res.status(404).json({success:false,error:{code:'FULFILLMENT_OUTLET_NOT_FOUND',message:'Outlet not found in tenant'}});
+    const rows=await prisma.$queryRaw<any[]>(Prisma.sql`UPDATE public.website_sites SET name=${name},default_locale=${cleanText(req.body.defaultLocale,16)||'id-ID'},theme_config=CAST(${theme} AS jsonb),fulfillment_outlet_id=${fulfillmentOutletId},updated_by=${userId},updated_at=NOW() WHERE id=${siteId} AND tenant_id=${tenantId} AND status<>'archived' RETURNING *`);
     if(!rows[0]) return res.status(404).json({success:false,error:{code:'WEBSITE_SITE_NOT_EDITABLE',message:'Website not found or archived'}});
     return res.json({success:true,data:rows[0]});
   } catch(error){ next(error); }

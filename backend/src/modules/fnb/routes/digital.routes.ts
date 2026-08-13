@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { createPublicStorefrontOrder } from '../controllers/ecommerce-create.p3.controller';
+import { getPublicStorefrontOrderStatus } from '../controllers/ecommerce-status.p3.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { requireCapability } from '../../../middlewares/capability.middleware';
@@ -24,6 +26,8 @@ const router = Router();
 router.get('/storefront/:publicSlug', getPublicStorefront);
 router.get('/storefront/:publicSlug/pages/:slug', getPublicStorefrontPage);
 router.get('/storefront/:publicSlug/catalog', getPublicStorefrontCatalog);
+router.post('/storefront/:publicSlug/orders', createPublicStorefrontOrder);
+router.get('/storefront/:publicSlug/orders/:orderNumber', getPublicStorefrontOrderStatus);
 
 router.use(authMiddleware, tenantMiddleware);
 
