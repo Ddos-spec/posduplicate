@@ -24,6 +24,7 @@ import accountingPsakRoutes from './routes/accounting.psak.routes';
 import accountingAttachmentRoutes from './routes/accounting.attachment.routes';
 import accountingPayrollRoutes from './routes/accounting.payroll.routes';
 import accountingPayrollRateRoutes from './routes/accounting.payroll-rate.routes';
+import accountingPayrollCurrentRoutes from './routes/accounting.payroll-current.routes';
 import { rejectLegacyPayrollMutation } from './controllers/accounting.payroll-rate-profile.controller';
 
 const router = Router();
@@ -49,6 +50,7 @@ router.use('/approval', accountingApprovalRoutes);
 router.use('/psak', accountingPsakRoutes);
 router.use('/attachments', accountingAttachmentRoutes);
 router.use('/payroll/rates', accountingPayrollRateRoutes);
+router.use('/payroll/current', accountingPayrollCurrentRoutes);
 
 // Temporary safety barrier: the legacy payroll controller still embeds stale TER/BPJS constants.
 // Keep mutating payroll operations fail-closed until the verified current-law engine is wired end-to-end.
