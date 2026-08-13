@@ -113,8 +113,8 @@ router.post('/appointments/:id/complete', requireCapability('services.appointmen
 router.post('/appointments/:id/no-show', requireCapability('services.appointment.manage'), markAppointmentNoShow);
 router.post('/appointments/:id/cancel', requireCapability('services.appointment.manage'), cancelAppointment);
 router.get('/appointments/:id/events', requireCapability('services.appointment.read'), getAppointmentEvents);
-router.get('/appointments-self/me', requireCapability('services.appointment.self'), getMyAppointments);
-router.post('/appointments-self/:id/check-in', requireCapability('services.appointment.self'), checkInMyAppointment);
-router.post('/appointments-self/:id/complete', requireCapability('services.appointment.self'), completeMyAppointment);
+router.get('/appointments/me', requireCapability('services.appointment.self'), getMyAppointments);
+router.post('/appointments/me/:id/check-in', requireCapability('services.appointment.self'), checkInMyAppointment);
+router.post('/appointments/me/:id/complete', requireCapability('services.appointment.self'), completeMyAppointment);
 
 export default router;
