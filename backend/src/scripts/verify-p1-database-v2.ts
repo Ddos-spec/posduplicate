@@ -10,6 +10,7 @@ const REQUIRED_TABLES = [
   'purchase_rfqs', 'purchase_rfq_items', 'purchase_rfq_suppliers',
   'purchase_rfq_supplier_items', 'procurement_event_ledger',
   'workforce_attendance_sessions', 'payroll_rate_profiles',
+  'payroll_employee_statutory_settings', 'payroll_calculation_runs',
   'workforce_leave_types', 'workforce_leave_allocations', 'workforce_leave_requests',
   'workforce_recruitment_vacancies', 'workforce_recruitment_applicants',
   'workforce_recruitment_interviews', 'workforce_recruitment_offers',
@@ -28,12 +29,16 @@ const REQUIRED_TRIGGERS = [
   'trg_service_helpdesk_message_append_only',
   'trg_service_helpdesk_event_append_only',
   'trg_service_appointment_event_append_only',
+  'trg_payroll_calculation_run_append_only',
 ] as const;
 
 const REQUIRED_INDEXES = [
   'ux_workforce_attendance_open_employee',
   'ux_payroll_rate_profile_global_version',
   'ux_payroll_rate_profile_tenant_version',
+  'idx_payroll_employee_statutory_tenant',
+  'idx_payroll_calculation_run_period',
+  'idx_payroll_calculation_run_profile',
   'idx_workforce_leave_allocation_employee',
   'idx_workforce_leave_request_scope',
   'idx_workforce_leave_request_employee',
@@ -109,7 +114,7 @@ async function run() {
     const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(
       `SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`,
     );
-    assert(ledger.rows.length === 14, `Expected 14 suite migration ledger entries, found ${ledger.rows.length}`);
+    assert(ledger.rows.length === 15, `Expected 15 suite migration ledger entries, found ${ledger.rows.length}`);
     assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid suite migration checksum');
 
     const migrationNames = [
@@ -123,6 +128,7 @@ async function run() {
       '20260813060000_p2_helpdesk_core',
       '20260813063000_p2_appointments_core',
       '20260813070000_p2_payroll_current_profile',
+      '20260813073000_p2_payroll_calculation_runs',
     ];
     for (const migrationName of migrationNames) {
       assert(ledger.rows.some((row) => row.migration_name === migrationName), `${migrationName} missing from ledger`);
@@ -147,11 +153,36 @@ async function run() {
       `SELECT * FROM public.payroll_rate_profiles WHERE tenant_id IS NULL AND profile_code = 'ID-PAYROLL-2026' AND version = 2 LIMIT 1`,
     );
     assert(profileV2.rows[0], 'Verified-component payroll profile v2 missing');
-    assert(profileV2.rows[0].status === 'draft', 'Payroll profile v2 must remain draft until profile-driven period calculation is wired');
+    assert(profileV2.rows[0].status === 'draft', 'Payroll profile v2 must remain draft until final-tax-period reconciliation is wired');
     assert(profileV2.rows[0].configuration?.verificationStatus === 'verified-components-awaiting-engine-wiring', 'Payroll profile v2 verification marker missing');
     assert(Number(profileV2.rows[0].configuration?.bpjsKetenagakerjaan?.jpMaxMonthlyWage) === 10547400, 'Payroll profile v2 JP ceiling mismatch');
     assert(Number(profileV2.rows[0].configuration?.bpjsKesehatan?.maxMonthlyWage) === 12000000, 'Payroll profile v2 BPJS Kesehatan ceiling mismatch');
     assert(profileV2.rows[0].configuration?.bpjsKetenagakerjaan?.bpuReliefApplied === false, 'BPU relief must not leak into PPU payroll profile');
+
+    const payrollSettingEmployeeForeignKey = await client.query<{ constraint_name: string }>(`
+      SELECT tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.constraint_schema
+      WHERE tc.table_schema = 'public'
+        AND tc.table_name = 'payroll_employee_statutory_settings'
+        AND tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_schema = 'accounting'
+        AND ccu.table_name = 'employees'
+        AND ccu.column_name = 'id'
+    `);
+    assert(payrollSettingEmployeeForeignKey.rows.length >= 1, 'Payroll statutory settings must reuse accounting.employees');
+
+    const payrollRunForeignKeys = await client.query<{ constraint_name: string }>(`
+      SELECT tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.constraint_schema
+      WHERE tc.table_schema = 'public'
+        AND tc.table_name = 'payroll_calculation_runs'
+        AND tc.constraint_type = 'FOREIGN KEY'
+        AND ((ccu.table_schema = 'accounting' AND ccu.table_name = 'payroll_periods' AND ccu.column_name = 'id')
+          OR (ccu.table_schema = 'public' AND ccu.table_name = 'payroll_rate_profiles' AND ccu.column_name = 'id'))
+    `);
+    assert(payrollRunForeignKeys.rows.length >= 2, 'Payroll calculation runs must reference payroll period and rate profile');
 
     const leaveColumns = await client.query<{ column_name: string }>(`
       SELECT column_name FROM information_schema.columns
@@ -314,6 +345,9 @@ async function run() {
       const appointment = await client.query<{ id: number }>(`INSERT INTO public.service_appointments (tenant_id, outlet_id, appointment_type_id, customer_id, assigned_employee_id, planning_allocation_id, code, title, status, scheduled_start, scheduled_end, duration_minutes, buffer_before_minutes, buffer_after_minutes) VALUES ($1, $2, $3, $4, $5, $6, 'VERIFY-APT', 'Verify Appointment', 'booked', NOW() + INTERVAL '1 day', NOW() + INTERVAL '1 day' + INTERVAL '30 minutes', 30, 5, 10) RETURNING id`, [fieldTenantId, fieldOutlet.rows[0].id, appointmentType.rows[0].id, fieldCustomer.rows[0].id, fieldEmployee.rows[0].id, appointmentPlanning.rows[0].id]);
       const appointmentEvent = await client.query<{ id: number }>(`INSERT INTO public.service_appointment_events (tenant_id, appointment_id, event_type, actor_employee_id, notes, payload) VALUES ($1, $2, 'booked', $3, 'suite immutable verification', '{}'::jsonb) RETURNING id`, [fieldTenantId, appointment.rows[0].id, fieldEmployee.rows[0].id]);
 
+      const payrollPeriod = await client.query<{ id: number }>(`INSERT INTO accounting.payroll_periods (tenant_id, period_start, period_end, description, status) VALUES ($1, DATE '2026-08-01', DATE '2026-08-31', 'Payroll immutable verification', 'draft') RETURNING id`, [fieldTenantId]);
+      const payrollRun = await client.query<{ id: number }>(`INSERT INTO public.payroll_calculation_runs (tenant_id, period_id, profile_id, profile_code, profile_version, run_mode, tax_period_kind, rules_snapshot, input_snapshot, output_snapshot) VALUES ($1, $2, $3, 'ID-PAYROLL-2026', 2, 'verification_preview', 'non_final', '{}'::jsonb, '{}'::jsonb, '{}'::jsonb) RETURNING id`, [fieldTenantId, payrollPeriod.rows[0].id, profileV2.rows[0].id]);
+
       const checks = [
         [`UPDATE public.loyalty_ledger SET reason='tamper' WHERE id=${Number(loyalty.rows[0].id)}`, 'loyalty UPDATE'],
         [`DELETE FROM public.loyalty_ledger WHERE id=${Number(loyalty.rows[0].id)}`, 'loyalty DELETE'],
@@ -329,6 +363,8 @@ async function run() {
         [`DELETE FROM public.service_helpdesk_events WHERE id=${Number(helpdeskEvent.rows[0].id)}`, 'helpdesk event DELETE'],
         [`UPDATE public.service_appointment_events SET notes='tamper' WHERE id=${Number(appointmentEvent.rows[0].id)}`, 'appointment event UPDATE'],
         [`DELETE FROM public.service_appointment_events WHERE id=${Number(appointmentEvent.rows[0].id)}`, 'appointment event DELETE'],
+        [`UPDATE public.payroll_calculation_runs SET run_mode='verification_preview' WHERE id=${Number(payrollRun.rows[0].id)}`, 'payroll calculation run UPDATE'],
+        [`DELETE FROM public.payroll_calculation_runs WHERE id=${Number(payrollRun.rows[0].id)}`, 'payroll calculation run DELETE'],
       ] as const;
       for (let index = 0; index < checks.length; index += 1) {
         await expectMutationBlocked(client, checks[index][0], checks[index][1], index);
@@ -339,7 +375,7 @@ async function run() {
       throw error;
     }
 
-    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, payroll current profile v2 draft present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, appointments scheduling/lifecycle present, 14 blocked mutations.`);
+    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, payroll current profile v2 draft present, payroll verification snapshots present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, appointments scheduling/lifecycle present, 16 blocked mutations.`);
   } finally {
     await client.end();
   }
