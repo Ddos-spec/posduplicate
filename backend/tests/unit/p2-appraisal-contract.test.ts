@@ -57,6 +57,6 @@ describe('P2 appraisal contracts', () => {
     expect(dbVerifier).toContain('workforce_appraisal_cycles');
     expect(dbVerifier).toContain('workforce_appraisals');
     expect(dbVerifier).toContain('workforce_appraisal_goals');
-    expect(dbVerifier).toContain('Expected 11 suite migration ledger entries');
+    expect(dbVerifier).toContain('Expected 12 suite migration ledger entries');
   });
 });
