@@ -10,6 +10,10 @@ const capabilities = read('backend/src/middlewares/capability.middleware.ts');
 const runtime = read('.github/workflows/p1-runtime-ci.yml');
 const runner = read('backend/src/scripts/apply-p3-migrations.ts');
 const verifier = read('backend/src/scripts/verify-p3-database.ts');
+const app = read('frontend/src/App.tsx');
+const frontendService = read('frontend/src/services/digitalWebsiteService.ts');
+const workspace = read('frontend/src/pages/DigitalWebsiteWorkspacePage.tsx');
+const suiteCatalog = read('frontend/src/config/suiteCatalog.ts');
 
 describe('P3.1 Website/CMS + storefront catalog contract', () => {
   test('catalog projects the existing item source of truth with tenant isolation through outlet ownership', () => {
@@ -45,5 +49,22 @@ describe('P3.1 Website/CMS + storefront catalog contract', () => {
     expect(verifier).toContain('Storefront catalog must reuse public.items');
     expect(runtime).toContain('node dist/scripts/apply-p3-migrations.js');
     expect(runtime).toContain('node dist/scripts/verify-p3-database.js');
+  });
+  test('frontend workspace is tenant-owner gated and uses the P3 API contract', () => {
+    expect(app).toContain('path="/digital"');
+    expect(app).toContain('moduleKey="commerSocial"');
+    expect(app).toContain('<OwnerRoute><DigitalWebsiteWorkspacePage /></OwnerRoute>');
+    expect(frontendService).toContain("api.get('/digital/sites')");
+    expect(frontendService).toContain('/digital/storefront/');
+    expect(workspace).toContain('SiteManager');
+    expect(workspace).toContain('PageManager');
+    expect(workspace).toContain('CatalogManager');
+  });
+  test('suite metadata reflects partial website scope without pretending checkout exists', () => {
+    const website = suiteCatalog.split('\n').find((line) => line.includes("{ id: 'website'"));
+    const ecommerce = suiteCatalog.split('\n').find((line) => line.includes("{ id: 'ecommerce'"));
+    expect(website).toContain("status: 'partial'");
+    expect(website).toContain("path: '/digital'");
+    expect(ecommerce).toContain("status: 'blueprint'");
   });
 });
