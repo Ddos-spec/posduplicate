@@ -70,7 +70,7 @@ describe('P2 payroll governance safety', () => {
     expect(migration).toContain('APPLICABLE_UMK_OR_UMP_REQUIRED');
     expect(migration).toContain("'activationGuard'");
     expect(runner).toContain('20260813070000_p2_payroll_current_profile');
-    expect(verifier).toContain('Expected 14 suite migration ledger entries');
+    expect(verifier).toContain('Expected 15 suite migration ledger entries');
     expect(verifier).toContain('Payroll profile v2 must remain draft');
   });
 
