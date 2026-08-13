@@ -20,8 +20,9 @@ async function run() {
       '20260813090000_p3_website_commerce_core',
       '20260813100000_p3_ecommerce_order_core',
       '20260813101000_p3_ecommerce_reservation_snapshot',
+      '20260813210000_p3_subscription_core',
     ];
-    assert(ledger.rows.length >= 3, `Expected at least 3 P3 migration ledger entries, found ${ledger.rows.length}`);
+    assert(ledger.rows.length >= requiredMigrations.length, `Expected at least ${requiredMigrations.length} P3 migration ledger entries, found ${ledger.rows.length}`);
     for (const required of requiredMigrations) {
       const found = ledger.rows.find((r) => r.migration_name === required);
       assert(found, `P3 migration ${required} missing`);
@@ -94,7 +95,68 @@ async function run() {
     `);
     assert(eventColumns.rows.length === 4, 'eCommerce order event lifecycle columns are incomplete');
 
-    console.log('[P3 database verifier] website/CMS + storefront catalog + eCommerce order invariants verified');
+    const subscriptionTables = await client.query<{ tablename: string }>(`
+      SELECT tablename FROM pg_tables
+      WHERE schemaname = 'public'
+        AND tablename IN (
+          'subscription_plans','subscription_plan_items','customer_subscriptions',
+          'customer_subscription_items','subscription_renewals','subscription_events'
+        )
+    `);
+    assert(subscriptionTables.rows.length === 6, 'P3.3 subscription tables are incomplete');
+
+    const subscriptionColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='customer_subscriptions'
+        AND column_name IN ('tenant_id','outlet_id','customer_id','plan_id','status','next_renewal_at','current_period_start','current_period_end')
+    `);
+    assert(subscriptionColumns.rows.length === 8, 'Subscription lifecycle/scope columns are incomplete');
+
+    const renewalColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='subscription_renewals'
+        AND column_name IN ('tenant_id','subscription_id','period_start','period_end','sales_order_id','receivable_id','idempotency_key','status')
+    `);
+    assert(renewalColumns.rows.length === 8, 'Subscription renewal idempotency/materialization columns are incomplete');
+
+    const reuseFks = await client.query<{ source_table: string; target_schema: string; target_table: string }>(`
+      SELECT tc.table_name AS source_table, ccu.table_schema AS target_schema, ccu.table_name AS target_table
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu
+        ON ccu.constraint_name=tc.constraint_name AND ccu.constraint_schema=tc.constraint_schema
+      WHERE tc.constraint_type='FOREIGN KEY'
+        AND tc.table_schema='public'
+        AND (
+          (tc.table_name='subscription_plan_items' AND ccu.table_schema='public' AND ccu.table_name='items') OR
+          (tc.table_name='customer_subscriptions' AND ccu.table_schema='public' AND ccu.table_name='customers') OR
+          (tc.table_name='subscription_renewals' AND ccu.table_schema='public' AND ccu.table_name='sales_orders') OR
+          (tc.table_name='subscription_renewals' AND ccu.table_schema='accounting' AND ccu.table_name='accounts_receivable')
+        )
+    `);
+    const fkKeys = new Set(reuseFks.rows.map((row) => `${row.source_table}:${row.target_schema}.${row.target_table}`));
+    for (const key of [
+      'subscription_plan_items:public.items',
+      'customer_subscriptions:public.customers',
+      'subscription_renewals:public.sales_orders',
+      'subscription_renewals:accounting.accounts_receivable',
+    ]) assert(fkKeys.has(key), `Subscription source-of-truth FK missing: ${key}`);
+
+    const renewalUnique = await client.query<{ constraint_name: string }>(`
+      SELECT constraint_name FROM information_schema.table_constraints
+      WHERE table_schema='public' AND table_name='subscription_renewals'
+        AND constraint_type='UNIQUE' AND constraint_name IN ('ux_subscription_renewal_period','ux_subscription_renewal_key')
+    `);
+    assert(renewalUnique.rows.length === 2, 'Subscription renewal idempotency constraints are incomplete');
+
+    const immutableTrigger = await client.query<{ tgname: string }>(`
+      SELECT tgname FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relname='subscription_events'
+        AND t.tgname='trg_subscription_events_immutable' AND NOT t.tgisinternal
+    `);
+    assert(immutableTrigger.rows.length === 1, 'Subscription event ledger immutability trigger missing');
+
+    console.log('[P3 database verifier] website/CMS + eCommerce + subscription source-of-truth invariants verified');
   } finally {
     await client.end();
   }
