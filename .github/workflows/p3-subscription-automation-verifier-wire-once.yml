@@ -1,0 +1,70 @@
+name: P3 Subscription Automation Verifier Wire Once
+
+on:
+  push:
+    branches: [feat/p3-subscription-automation]
+    paths:
+      - '.github/workflows/p3-subscription-automation-verifier-wire-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p3-subscription-automation
+          fetch-depth: 0
+      - name: Extend P3 database verifier
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('backend/src/scripts/verify-p3-database.ts')
+          text=p.read_text()
+          if '20260813213000_p3_subscription_automation' not in text:
+              text=text.replace("      '20260813210000_p3_subscription_core',\n", "      '20260813210000_p3_subscription_core',\n      '20260813213000_p3_subscription_automation',\n",1)
+          anchor="    console.log('[P3 database verifier] website/CMS + eCommerce + subscription source-of-truth invariants verified');"
+          if 'Subscription automation settings columns are incomplete' not in text:
+              block="""    const automationColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='subscription_automation_settings'
+        AND column_name IN ('tenant_id','enabled','automation_user_id','max_renewals_per_run','last_run_at','last_success_at','last_error','updated_by')
+    `);
+    assert(automationColumns.rows.length === 8, 'Subscription automation settings columns are incomplete');
+
+    const automationChecks = await client.query<{ constraint_name: string }>(`
+      SELECT constraint_name FROM information_schema.table_constraints
+      WHERE table_schema='public' AND table_name='subscription_automation_settings'
+        AND constraint_type='CHECK'
+        AND constraint_name IN ('subscription_automation_batch_valid','subscription_automation_actor_required')
+    `);
+    assert(automationChecks.rows.length === 2, 'Subscription automation safety constraints are incomplete');
+
+"""
+              if anchor not in text: raise SystemExit('verifier anchor missing')
+              text=text.replace(anchor, block+"    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + automation invariants verified');",1)
+          p.write_text(text)
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Backend build
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+      - name: Commit verifier wiring
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add backend/src/scripts/verify-p3-database.ts
+          git commit -m "test(p3): verify subscription automation schema"
+          git pull --rebase origin feat/p3-subscription-automation
+          git push origin HEAD:feat/p3-subscription-automation
