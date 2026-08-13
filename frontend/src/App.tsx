@@ -59,6 +59,7 @@ const RevenueWorkspacePage = lazy(() => import('./pages/RevenueWorkspacePage'));
 const SupplyChainWorkspacePage = lazy(() => import('./pages/SupplyChainWorkspacePage'));
 const WorkforceWorkspacePage = lazy(() => import('./pages/WorkforceWorkspacePage'));
 const DigitalWebsiteWorkspacePage = lazy(() => import('./pages/DigitalWebsiteWorkspacePage'));
+const StorefrontPage = lazy(() => import('./pages/StorefrontPage'));
 
 // Accounting Module Pages
 const AccountingLayout = lazy(() => import('./components/accounting/AccountingLayout'));
@@ -246,6 +247,7 @@ function App() {
             <Route index element={<Navigate to="/demo/medsos/dashboard" />} />
           </Route>
 
+          <Route path="/store/:publicSlug" element={<StorefrontPage />} />
           <Route path="/module-selector" element={<ProtectedRoute><ModuleSelectorPage /></ProtectedRoute>} />
           <Route path="/revenue" element={<OwnerRoute><RevenueWorkspacePage /></OwnerRoute>} />
           <Route path="/supply-chain" element={<TenantModuleRoute moduleKey="inventory"><OwnerRoute><SupplyChainWorkspacePage /></OwnerRoute></TenantModuleRoute>} />

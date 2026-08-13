@@ -88,7 +88,8 @@ app.use(cors({
     'Cache-Control',
     'Pragma',
     'Expires',
-    'If-Modified-Since'
+    'If-Modified-Since',
+    'X-Order-Token'
   ]
 }));
 app.use(express.json());

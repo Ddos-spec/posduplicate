@@ -96,7 +96,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isPublicStorefrontRequest = String(error.config?.url || '').includes('/digital/storefront/');
+    if (error.response?.status === 401 && error.config?.headers?.Authorization && !isPublicStorefrontRequest) {
       useAuthStore.getState().logout();
       window.location.href = '/login';
     }
