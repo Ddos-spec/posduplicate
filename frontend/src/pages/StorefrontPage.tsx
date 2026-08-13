@@ -14,6 +14,7 @@ import {
 } from '../services/digitalWebsiteService';
 
 const terminalStatuses = new Set(['completed', 'cancelled']);
+const newCheckoutToken = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) => byte.toString(16).padStart(2, '0')).join('');
 const formatMoney = (value: number | string) => new Intl.NumberFormat('id-ID', {
   style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
 }).format(Number(value || 0));
@@ -30,6 +31,7 @@ export default function StorefrontPage() {
   const [orderStatus, setOrderStatus] = useState<PublicOrderStatusRecord | null>(null);
   const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', notes: '' });
   const storageKey = `p3-storefront-order:${publicSlug}`;
+  const attemptKey = `p3-storefront-checkout-attempt:${publicSlug}`;
 
   useEffect(() => {
     let active = true;
@@ -100,23 +102,41 @@ export default function StorefrontPage() {
   const checkout = async (event: FormEvent) => {
     event.preventDefault();
     if (!cartLines.length || !form.name.trim() || !form.phone.trim()) return;
+    const payload = {
+      customerName: form.name.trim(),
+      customerPhone: form.phone.trim(),
+      customerEmail: form.email.trim() || undefined,
+      deliveryAddress: form.address.trim() ? { address: form.address.trim() } : {},
+      notes: form.notes.trim() || undefined,
+      items: cartLines.map(({ item, quantity }) => ({ itemId: item.item_id, quantity })),
+    };
+    const fingerprint = JSON.stringify(payload);
+    let checkoutToken = '';
+    try {
+      const savedAttempt = sessionStorage.getItem(attemptKey);
+      if (savedAttempt) {
+        const parsed = JSON.parse(savedAttempt) as { token?: string; fingerprint?: string };
+        if (parsed.fingerprint === fingerprint && parsed.token) checkoutToken = parsed.token;
+      }
+    } catch {
+      sessionStorage.removeItem(attemptKey);
+    }
+    if (!checkoutToken) {
+      checkoutToken = newCheckoutToken();
+      sessionStorage.setItem(attemptKey, JSON.stringify({ token: checkoutToken, fingerprint }));
+    }
+
     setSubmitting(true);
     setError('');
     try {
-      const created = await createPublicStorefrontOrder(publicSlug, {
-        customerName: form.name.trim(),
-        customerPhone: form.phone.trim(),
-        customerEmail: form.email.trim() || undefined,
-        deliveryAddress: form.address.trim() ? { address: form.address.trim() } : {},
-        notes: form.notes.trim() || undefined,
-        items: cartLines.map(({ item, quantity }) => ({ itemId: item.item_id, quantity })),
-      });
+      const created = await createPublicStorefrontOrder(publicSlug, payload, checkoutToken);
       setReceipt(created);
       setOrderStatus(null);
       sessionStorage.setItem(storageKey, JSON.stringify(created));
+      sessionStorage.removeItem(attemptKey);
       setCart({});
     } catch {
-      setError('Checkout gagal. Stok atau konfigurasi outlet mungkin berubah; muat ulang katalog lalu coba lagi.');
+      setError('Checkout gagal. Coba lagi untuk attempt yang sama, atau ubah cart untuk membuat attempt baru.');
     } finally {
       setSubmitting(false);
     }
