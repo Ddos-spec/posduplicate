@@ -5,8 +5,12 @@ import { rentalApi } from '../../services/rentalApi';
 type RentalItem = { item_id: number; item_name: string; status: string; rate_unit: string; rate_amount: number | string; deposit_amount: number | string };
 type Customer = { id: number; name: string };
 
-const defaultStart = () => { const date = new Date(Date.now() + 3600000); date.setMinutes(0, 0, 0); return date.toISOString().slice(0, 16); };
-const defaultEnd = () => { const date = new Date(Date.now() + 25 * 3600000); date.setMinutes(0, 0, 0); return date.toISOString().slice(0, 16); };
+const localDateTimeValue = (date: Date) => {
+  const offsetMs = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+};
+const defaultStart = () => { const date = new Date(Date.now() + 3600000); date.setMinutes(0, 0, 0); return localDateTimeValue(date); };
+const defaultEnd = () => { const date = new Date(Date.now() + 25 * 3600000); date.setMinutes(0, 0, 0); return localDateTimeValue(date); };
 const money = (value: number | string) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value || 0));
 
 export default function RentalCreateBookingPanel({ refreshKey = 0, onCreated }: { refreshKey?: number; onCreated?: () => void }) {
