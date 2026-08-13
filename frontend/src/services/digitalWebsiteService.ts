@@ -26,7 +26,7 @@ export interface WebsiteCatalogItem {
 }
 
 export interface PublicStorefrontMeta {
-  site: Pick<WebsiteSite, 'id' | 'tenant_id' | 'code' | 'name' | 'public_slug' | 'default_locale' | 'theme_config' | 'published_at'>;
+  site: Pick<WebsiteSite, 'id' | 'code' | 'name' | 'public_slug' | 'default_locale' | 'theme_config' | 'published_at'>;
   navigation: Array<Pick<WebsitePage, 'slug' | 'title' | 'seo_title' | 'seo_description' | 'sort_order'>>;
 }
 
