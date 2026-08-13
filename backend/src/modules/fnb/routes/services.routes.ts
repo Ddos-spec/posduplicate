@@ -28,6 +28,20 @@ import {
   getMyFieldServiceOrders,
   scheduleFieldServiceOrder,
 } from '../controllers/services-field-service.p2.controller';
+import {
+  addHelpdeskMessage,
+  assignHelpdeskTicket,
+  createHelpdeskSlaPolicy,
+  createHelpdeskTicket,
+  getHelpdeskEvents,
+  getHelpdeskMessages,
+  getHelpdeskSlaPolicies,
+  getHelpdeskTickets,
+  getMyHelpdeskTickets,
+  replyMyHelpdeskTicket,
+  updateHelpdeskTicketStatus,
+  updateMyHelpdeskTicketStatus,
+} from '../controllers/services-helpdesk.p2.controller';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
@@ -58,5 +72,18 @@ router.get('/field-service/me', requireCapability('services.field_service.self')
 router.post('/field-service/:id/depart', requireCapability('services.field_service.self'), departMyFieldServiceOrder);
 router.post('/field-service/:id/arrive', requireCapability('services.field_service.self'), arriveMyFieldServiceOrder);
 router.post('/field-service/:id/complete', requireCapability('services.field_service.self'), completeMyFieldServiceOrder);
+
+router.get('/helpdesk/slas', requireCapability('services.helpdesk.read'), getHelpdeskSlaPolicies);
+router.post('/helpdesk/slas', requireCapability('services.helpdesk.manage'), createHelpdeskSlaPolicy);
+router.get('/helpdesk/tickets', requireCapability('services.helpdesk.read'), getHelpdeskTickets);
+router.post('/helpdesk/tickets', requireCapability('services.helpdesk.manage'), createHelpdeskTicket);
+router.post('/helpdesk/tickets/:id/assign', requireCapability('services.helpdesk.manage'), assignHelpdeskTicket);
+router.patch('/helpdesk/tickets/:id/status', requireCapability('services.helpdesk.manage'), updateHelpdeskTicketStatus);
+router.get('/helpdesk/tickets/:id/messages', requireCapability('services.helpdesk.read'), getHelpdeskMessages);
+router.post('/helpdesk/tickets/:id/messages', requireCapability('services.helpdesk.manage'), addHelpdeskMessage);
+router.get('/helpdesk/tickets/:id/events', requireCapability('services.helpdesk.read'), getHelpdeskEvents);
+router.get('/helpdesk/me', requireCapability('services.helpdesk.self'), getMyHelpdeskTickets);
+router.post('/helpdesk/me/:id/reply', requireCapability('services.helpdesk.self'), replyMyHelpdeskTicket);
+router.patch('/helpdesk/me/:id/status', requireCapability('services.helpdesk.self'), updateMyHelpdeskTicketStatus);
 
 export default router;
