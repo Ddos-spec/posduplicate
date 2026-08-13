@@ -52,11 +52,11 @@ describe('P2 appraisal contracts', () => {
     expect(controller).toContain("status NOT IN ('completed','cancelled')");
   });
 
-  test('migration runner and database verifier include appraisal schema', () => {
+  test('migration runner and database verifier include appraisal schema through migration seventeen', () => {
     expect(migrationRunner).toContain('20260813043000_p2_appraisals_core');
     expect(dbVerifier).toContain('workforce_appraisal_cycles');
     expect(dbVerifier).toContain('workforce_appraisals');
     expect(dbVerifier).toContain('workforce_appraisal_goals');
-    expect(dbVerifier).toContain('Expected 16 suite migration ledger entries');
+    expect(dbVerifier).toContain('Expected 17 suite migration ledger entries');
   });
 });
