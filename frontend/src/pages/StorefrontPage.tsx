@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import { Loader2, Minus, Plus, RefreshCw, ShoppingBag } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import {
