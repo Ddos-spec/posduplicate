@@ -17,6 +17,17 @@ import {
   updateServiceProjectStatus,
   updateServiceTaskStatus,
 } from '../controllers/services-project.p2.controller';
+import {
+  arriveMyFieldServiceOrder,
+  cancelFieldServiceOrder,
+  completeMyFieldServiceOrder,
+  createFieldServiceOrder,
+  departMyFieldServiceOrder,
+  getFieldServiceEvents,
+  getFieldServiceOrders,
+  getMyFieldServiceOrders,
+  scheduleFieldServiceOrder,
+} from '../controllers/services-field-service.p2.controller';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
@@ -37,5 +48,15 @@ router.post('/timesheets/:id/decision', requireCapability('services.timesheet.ma
 router.get('/planning', requireCapability('services.planning.read'), getServicePlanning);
 router.post('/planning', requireCapability('services.planning.manage'), createServicePlanning);
 router.patch('/planning/:id/status', requireCapability('services.planning.manage'), updateServicePlanningStatus);
+
+router.get('/field-service/orders', requireCapability('services.field_service.read'), getFieldServiceOrders);
+router.post('/field-service/orders', requireCapability('services.field_service.manage'), createFieldServiceOrder);
+router.post('/field-service/orders/:id/schedule', requireCapability('services.field_service.manage'), scheduleFieldServiceOrder);
+router.post('/field-service/orders/:id/cancel', requireCapability('services.field_service.manage'), cancelFieldServiceOrder);
+router.get('/field-service/orders/:id/events', requireCapability('services.field_service.read'), getFieldServiceEvents);
+router.get('/field-service/me', requireCapability('services.field_service.self'), getMyFieldServiceOrders);
+router.post('/field-service/:id/depart', requireCapability('services.field_service.self'), departMyFieldServiceOrder);
+router.post('/field-service/:id/arrive', requireCapability('services.field_service.self'), arriveMyFieldServiceOrder);
+router.post('/field-service/:id/complete', requireCapability('services.field_service.self'), completeMyFieldServiceOrder);
 
 export default router;
