@@ -20,6 +20,10 @@ const transitionService = read('backend/src/modules/fnb/services/ecommerce-trans
 const app = read('frontend/src/App.tsx');
 const frontendService = read('frontend/src/services/digitalWebsiteService.ts');
 const workspace = read('frontend/src/pages/DigitalWebsiteWorkspacePage.tsx');
+const storefront = read('frontend/src/pages/StorefrontPage.tsx');
+const orderManager = read('frontend/src/pages/digital/EcommerceOrderManager.tsx');
+const frontendApi = read('frontend/src/services/api.ts');
+const server = read('backend/src/server.ts');
 const suiteCatalog = read('frontend/src/config/suiteCatalog.ts');
 
 describe('P3.1 Website/CMS + storefront catalog contract', () => {
@@ -68,7 +72,7 @@ describe('P3.1 Website/CMS + storefront catalog contract', () => {
     expect(workspace).toContain('PageManager');
     expect(workspace).toContain('CatalogManager');
   });
-  test('suite metadata reflects partial website scope without pretending checkout exists', () => {
+  test('suite metadata reflects partial website scope while ecommerce awaits final promotion', () => {
     const website = suiteCatalog.split('\n').find((line) => line.includes("{ id: 'website'"));
     const ecommerce = suiteCatalog.split('\n').find((line) => line.includes("{ id: 'ecommerce'"));
     expect(website).toContain("status: 'partial'");
@@ -122,5 +126,22 @@ describe('P3.2 eCommerce order integrity and cancellation hardening', () => {
   test('public catalog is scoped to the site fulfillment outlet only', () => {
     expect(controller).toContain('AND i.outlet_id=s.fulfillment_outlet_id');
     expect(catalogLockService).toContain('COALESCE(i.is_active,TRUE)=TRUE');
+  });
+  test('public browser runtime covers catalog, cart, checkout and status without auth redirect', () => {
+    expect(app).toContain('<Route path="/store/:publicSlug" element={<StorefrontPage />} />');
+    expect(app.indexOf('<Route path="/store/:publicSlug"')).toBeLessThan(app.indexOf('<Route path="/module-selector"'));
+    expect(storefront).toContain('createPublicStorefrontOrder');
+    expect(storefront).toContain('getPublicStorefrontOrderStatus');
+    expect(storefront).toContain('sessionStorage');
+    expect(frontendService).toContain("'x-order-token': token");
+    expect(server).toContain("'X-Order-Token'");
+    expect(frontendApi).toContain('isPublicStorefrontRequest');
+    expect(frontendApi).toContain('!isPublicStorefrontRequest');
+  });
+  test('merchant runtime exposes the finite-state ecommerce order queue', () => {
+    expect(workspace).toContain('EcommerceOrderManager');
+    expect(orderManager).toContain('getEcommerceOrders');
+    expect(orderManager).toContain('progressEcommerceOrder');
+    expect(orderManager).toContain("ready: ['completed', 'cancelled']");
   });
 });
