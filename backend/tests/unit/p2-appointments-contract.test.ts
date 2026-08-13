@@ -85,12 +85,12 @@ describe('P2.8 Appointments contracts', () => {
     expect(migration).toContain('prevent_suite_ledger_mutation');
     expect(verifier).toContain('appointment event UPDATE');
     expect(verifier).toContain('appointment event DELETE');
-    expect(verifier).toContain('18 blocked mutations');
+    expect(verifier).toContain('22 blocked mutations');
   });
 
-  test('suite deployment includes Appointments before payroll migration sixteen', () => {
+  test('suite deployment retains Appointments through migration seventeen', () => {
     expect(runner).toContain('20260813063000_p2_appointments_core');
-    expect(verifier).toContain('Expected 16 suite migration ledger entries');
+    expect(verifier).toContain('Expected 17 suite migration ledger entries');
     expect(verifier).toContain('service_appointment_types');
     expect(verifier).toContain('service_appointments');
     expect(verifier).toContain('service_appointment_events');
