@@ -32,20 +32,24 @@ describe('suite immutable audit guards', () => {
     expect(runner).toContain("'20260813070000_p2_payroll_current_profile'");
     expect(runner).toContain("'20260813073000_p2_payroll_calculation_runs'");
     expect(runner).toContain("'20260813080000_p2_payroll_final_reconciliation'");
+    expect(runner).toContain("'20260813083000_p2_payroll_official_posting'");
     expect(runner).toContain('checksum_sha256');
     expect(runner).toContain('Never edit an applied suite migration');
   });
 
-  test('shared database verifier validates sixteen suite migrations and workforce/services objects', () => {
+  test('shared database verifier validates seventeen suite migrations and workforce/services objects', () => {
     const verifier = read('src/scripts/verify-p1-database-v2.ts');
     const suiteWorkflow = read('../.github/workflows/frontend-ci.yml');
     const runtimeWorkflow = read('../.github/workflows/p1-runtime-ci.yml');
-    expect(verifier).toContain('ledger.rows.length === 16');
+    expect(verifier).toContain('ledger.rows.length === 17');
     expect(verifier).toContain('workforce_attendance_sessions');
     expect(verifier).toContain('payroll_rate_profiles');
     expect(verifier).toContain('payroll_employee_statutory_settings');
     expect(verifier).toContain('payroll_calculation_runs');
     expect(verifier).toContain('payroll_profile_activation_events');
+    expect(verifier).toContain('payroll_accounting_settings');
+    expect(verifier).toContain('payroll_official_materializations');
+    expect(verifier).toContain('payroll_official_postings');
     expect(verifier).toContain('version = 2');
     expect(verifier).toContain('jpMaxMonthlyWage');
     expect(verifier).toContain('bpuReliefApplied');
@@ -81,6 +85,8 @@ describe('suite immutable audit guards', () => {
     expect(verifier).toContain('idx_payroll_calculation_run_period');
     expect(verifier).toContain('idx_payroll_profile_activation_tenant');
     expect(verifier).toContain('ux_payroll_profile_activation_run');
+    expect(verifier).toContain('ux_payroll_official_materialization_period');
+    expect(verifier).toContain('ux_payroll_official_posting_period');
     expect(verifier).toContain('idx_workforce_leave_request_scope');
     expect(verifier).toContain('ux_workforce_recruitment_applicant_email_vacancy');
     expect(verifier).toContain('ux_workforce_recruitment_hired_employee');
@@ -107,7 +113,10 @@ describe('suite immutable audit guards', () => {
     expect(verifier).toContain('trg_service_appointment_event_append_only');
     expect(verifier).toContain('trg_payroll_calculation_run_append_only');
     expect(verifier).toContain('trg_payroll_profile_activation_event_append_only');
-    expect(verifier).toContain('18 blocked mutations');
+    expect(verifier).toContain('trg_payroll_official_detail_immutable');
+    expect(verifier).toContain('trg_payroll_official_materialization_append_only');
+    expect(verifier).toContain('trg_payroll_official_posting_append_only');
+    expect(verifier).toContain('22 blocked mutations');
     expect(verifier).toContain("error?.code === '55000'");
     expect(suiteWorkflow).toContain('node dist/scripts/verify-p1-database-v2.js');
     expect(runtimeWorkflow).toContain('node dist/scripts/verify-p1-database-v2.js');
