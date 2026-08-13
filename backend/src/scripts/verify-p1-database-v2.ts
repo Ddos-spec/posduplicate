@@ -16,6 +16,7 @@ const REQUIRED_TABLES = [
   'workforce_appraisal_cycles', 'workforce_appraisals', 'workforce_appraisal_goals',
   'service_projects', 'service_project_tasks', 'service_timesheet_entries', 'service_planning_allocations',
   'service_field_orders', 'service_field_events',
+  'service_helpdesk_sla_policies', 'service_helpdesk_tickets', 'service_helpdesk_messages', 'service_helpdesk_events',
 ] as const;
 
 const REQUIRED_TRIGGERS = [
@@ -23,6 +24,8 @@ const REQUIRED_TRIGGERS = [
   'trg_warehouse_stock_ledger_append_only',
   'trg_procurement_event_ledger_append_only',
   'trg_service_field_event_append_only',
+  'trg_service_helpdesk_message_append_only',
+  'trg_service_helpdesk_event_append_only',
 ] as const;
 
 const REQUIRED_INDEXES = [
@@ -53,6 +56,13 @@ const REQUIRED_INDEXES = [
   'idx_service_field_order_employee',
   'idx_service_field_order_customer',
   'idx_service_field_event_order',
+  'idx_helpdesk_sla_scope',
+  'idx_helpdesk_ticket_scope',
+  'idx_helpdesk_ticket_assignee',
+  'idx_helpdesk_ticket_customer',
+  'idx_helpdesk_ticket_sla_due',
+  'idx_helpdesk_message_ticket',
+  'idx_helpdesk_event_ticket',
 ] as const;
 
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
@@ -82,7 +92,7 @@ async function run() {
     assert(missingTables.length === 0, `Missing suite tables: ${missingTables.join(', ')}`);
 
     const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(`SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`);
-    assert(ledger.rows.length === 11, `Expected 11 suite migration ledger entries, found ${ledger.rows.length}`);
+    assert(ledger.rows.length === 12, `Expected 12 suite migration ledger entries, found ${ledger.rows.length}`);
     assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid suite migration checksum');
     assert(ledger.rows.some((row) => row.migration_name === '20260813023000_p2_workforce_attendance'), 'P2 workforce migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813030000_p2_payroll_rate_profiles'), 'P2 payroll profile migration missing from ledger');
@@ -91,6 +101,7 @@ async function run() {
     assert(ledger.rows.some((row) => row.migration_name === '20260813043000_p2_appraisals_core'), 'P2 appraisals migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813050000_p2_services_project_core'), 'P2 services project migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813054000_p2_field_service_core'), 'P2 field service migration missing from ledger');
+    assert(ledger.rows.some((row) => row.migration_name === '20260813060000_p2_helpdesk_core'), 'P2 helpdesk migration missing from ledger');
 
     const indexes = await client.query<{ indexname: string }>(`SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = ANY($1::text[])`, [REQUIRED_INDEXES]);
     const indexSet = new Set(indexes.rows.map((row) => row.indexname));
@@ -192,6 +203,41 @@ async function run() {
     `);
     assert(fieldPlanningForeignKey.rows.length >= 1, 'Field Service must reuse Services Planning allocations');
 
+    const helpdeskColumns = await client.query<{ table_name: string; column_name: string }>(`
+      SELECT table_name, column_name FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND ((table_name = 'service_helpdesk_sla_policies' AND column_name IN ('priority','first_response_minutes','resolution_minutes','is_active'))
+          OR (table_name = 'service_helpdesk_tickets' AND column_name IN ('customer_id','project_id','field_order_id','sla_policy_id','assigned_employee_id','status','first_response_due_at','resolution_due_at','first_responded_at','resolution_note'))
+          OR (table_name = 'service_helpdesk_messages' AND column_name IN ('ticket_id','author_employee_id','direction','visibility','body'))
+          OR (table_name = 'service_helpdesk_events' AND column_name IN ('ticket_id','event_type','employee_id','payload')))
+    `);
+    assert(helpdeskColumns.rows.length === 23, 'Helpdesk SLA/ticket/conversation lifecycle columns are incomplete');
+
+    const helpdeskEmployeeForeignKeys = await client.query<{ constraint_name: string }>(`
+      SELECT tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.constraint_schema
+      WHERE tc.table_schema = 'public'
+        AND tc.table_name IN ('service_helpdesk_tickets','service_helpdesk_messages','service_helpdesk_events')
+        AND tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_schema = 'accounting'
+        AND ccu.table_name = 'employees'
+        AND ccu.column_name = 'id'
+    `);
+    assert(helpdeskEmployeeForeignKeys.rows.length >= 3, 'Helpdesk must reuse accounting.employees source of truth');
+
+    const helpdeskSourceForeignKeys = await client.query<{ constraint_name: string }>(`
+      SELECT tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.constraint_schema
+      WHERE tc.table_schema = 'public'
+        AND tc.table_name = 'service_helpdesk_tickets'
+        AND tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_schema = 'public'
+        AND ccu.table_name IN ('customers','service_projects','service_field_orders','service_helpdesk_sla_policies')
+    `);
+    assert(helpdeskSourceForeignKeys.rows.length >= 4, 'Helpdesk must reuse customer/project/Field Service/SLA sources');
+
     const triggers = await client.query<{ tgname: string }>(`SELECT tgname FROM pg_trigger WHERE NOT tgisinternal AND tgname = ANY($1::text[])`, [REQUIRED_TRIGGERS]);
     const triggerSet = new Set(triggers.rows.map((row) => row.tgname));
     const missingTriggers = REQUIRED_TRIGGERS.filter((name) => !triggerSet.has(name));
@@ -216,6 +262,11 @@ async function run() {
       const fieldOrder = await client.query<{ id: number }>(`INSERT INTO public.service_field_orders (tenant_id, outlet_id, customer_id, code, title, service_address, status) VALUES ($1, $2, $3, 'VERIFY-FIELD', 'Verify Field Order', 'Verification address', 'draft') RETURNING id`, [fieldTenantId, fieldOutlet.rows[0].id, fieldCustomer.rows[0].id]);
       const fieldEvent = await client.query<{ id: number }>(`INSERT INTO public.service_field_events (tenant_id, field_order_id, event_type, notes) VALUES ($1, $2, 'created', 'suite immutable verification') RETURNING id`, [fieldTenantId, fieldOrder.rows[0].id]);
 
+      const helpdeskSla = await client.query<{ id: number }>(`INSERT INTO public.service_helpdesk_sla_policies (tenant_id, name, priority, first_response_minutes, resolution_minutes) VALUES ($1, 'Verify SLA', 'normal', 30, 240) RETURNING id`, [fieldTenantId]);
+      const helpdeskTicket = await client.query<{ id: number }>(`INSERT INTO public.service_helpdesk_tickets (tenant_id, outlet_id, customer_id, field_order_id, sla_policy_id, code, subject, channel, priority, status) VALUES ($1, $2, $3, $4, $5, 'VERIFY-HELP', 'Verify Helpdesk Ticket', 'internal', 'normal', 'new') RETURNING id`, [fieldTenantId, fieldOutlet.rows[0].id, fieldCustomer.rows[0].id, fieldOrder.rows[0].id, helpdeskSla.rows[0].id]);
+      const helpdeskMessage = await client.query<{ id: number }>(`INSERT INTO public.service_helpdesk_messages (tenant_id, ticket_id, direction, visibility, body) VALUES ($1, $2, 'internal', 'internal', 'suite immutable verification') RETURNING id`, [fieldTenantId, helpdeskTicket.rows[0].id]);
+      const helpdeskEvent = await client.query<{ id: number }>(`INSERT INTO public.service_helpdesk_events (tenant_id, ticket_id, event_type, payload) VALUES ($1, $2, 'created', '{}'::jsonb) RETURNING id`, [fieldTenantId, helpdeskTicket.rows[0].id]);
+
       const checks = [
         [`UPDATE public.loyalty_ledger SET reason='tamper' WHERE id=${Number(loyalty.rows[0].id)}`, 'loyalty UPDATE'],
         [`DELETE FROM public.loyalty_ledger WHERE id=${Number(loyalty.rows[0].id)}`, 'loyalty DELETE'],
@@ -225,12 +276,16 @@ async function run() {
         [`DELETE FROM public.procurement_event_ledger WHERE id=${Number(procurement.rows[0].id)}`, 'procurement DELETE'],
         [`UPDATE public.service_field_events SET notes='tamper' WHERE id=${Number(fieldEvent.rows[0].id)}`, 'field event UPDATE'],
         [`DELETE FROM public.service_field_events WHERE id=${Number(fieldEvent.rows[0].id)}`, 'field event DELETE'],
+        [`UPDATE public.service_helpdesk_messages SET body='tamper' WHERE id=${Number(helpdeskMessage.rows[0].id)}`, 'helpdesk message UPDATE'],
+        [`DELETE FROM public.service_helpdesk_messages WHERE id=${Number(helpdeskMessage.rows[0].id)}`, 'helpdesk message DELETE'],
+        [`UPDATE public.service_helpdesk_events SET event_type='tamper' WHERE id=${Number(helpdeskEvent.rows[0].id)}`, 'helpdesk event UPDATE'],
+        [`DELETE FROM public.service_helpdesk_events WHERE id=${Number(helpdeskEvent.rows[0].id)}`, 'helpdesk event DELETE'],
       ] as const;
       for (let index = 0; index < checks.length; index += 1) await expectMutationBlocked(client, checks[index][0], checks[index][1], index);
       await client.query('ROLLBACK');
     } catch (error) { await client.query('ROLLBACK'); throw error; }
 
-    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, 8 blocked mutations.`);
+    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, 12 blocked mutations.`);
   } finally { await client.end(); }
 }
 
