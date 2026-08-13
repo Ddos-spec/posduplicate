@@ -6,6 +6,12 @@ import {
   PayrollRuleError,
   PPH21_BASE_RULESET,
 } from '../services/payroll-current-law.p2';
+import {
+  calculatePpuStatutoryContributions,
+  JkkRiskLevel,
+  PPU_STATUTORY_RULESET,
+  StatutoryContributionError,
+} from '../services/payroll-statutory.p2';
 
 export const getPayrollRateProfiles = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -76,6 +82,51 @@ export const getBaseMonthlyTerPreview = async (req: Request, res: Response, next
     });
   } catch (error) {
     if (error instanceof PayrollRuleError) {
+      return res.status(400).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+    }
+    next(error);
+  }
+};
+
+const queryFlag = (value: unknown, defaultValue: boolean) => {
+  if (value === undefined) return defaultValue;
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  throw new StatutoryContributionError('INVALID_BOOLEAN_FLAG', `Flag boolean tidak valid: ${String(value)}`);
+};
+
+export const getPpuStatutoryPreview = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const reportedFixedWage = Number(req.query.reportedFixedWage);
+    const jkkRiskLevel = Number(req.query.jkkRiskLevel || 1) as JkkRiskLevel;
+    const bpjsEmploymentEnabled = queryFlag(req.query.bpjsEmploymentEnabled, true);
+    const bpjsHealthEnabled = queryFlag(req.query.bpjsHealthEnabled, true);
+    const applicableHealthMinimumWage = req.query.applicableHealthMinimumWage === undefined
+      ? undefined
+      : Number(req.query.applicableHealthMinimumWage);
+
+    const result = calculatePpuStatutoryContributions({
+      reportedFixedWage,
+      jkkRiskLevel,
+      bpjsEmploymentEnabled,
+      bpjsHealthEnabled,
+      applicableHealthMinimumWage,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        ...result,
+        ruleset: PPU_STATUTORY_RULESET,
+        complianceNotice: 'Preview PPU memakai reported fixed wage; BPJS Kesehatan memerlukan UMK/UMP yang berlaku. Relief khusus BPU tidak diterapkan.',
+      },
+    });
+  } catch (error) {
+    if (error instanceof StatutoryContributionError) {
       return res.status(400).json({
         success: false,
         error: { code: error.code, message: error.message },
