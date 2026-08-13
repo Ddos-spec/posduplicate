@@ -1,0 +1,14 @@
+---
+source_file: "frontend/src/services/settingsService.ts"
+type: "code"
+community: "Community 5"
+location: "L51"
+tags:
+  - graphify/code
+  - graphify/EXTRACTED
+  - community/Community_5
+---
+
+# ApprovalSettings
+
+#graphify/code #graphify/EXTRACTED #community/Community_5

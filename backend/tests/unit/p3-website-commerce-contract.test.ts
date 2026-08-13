@@ -4,12 +4,15 @@ import path from 'path';
 const repoRoot = path.resolve(__dirname, '../../..');
 const read = (relativePath: string) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 const migration = read('backend/prisma/migrations/20260813090000_p3_website_commerce_core/migration.sql');
+const reservationMigration = read('backend/prisma/migrations/20260813101000_p3_ecommerce_reservation_snapshot/migration.sql');
 const controller = read('backend/src/modules/fnb/controllers/digital-website.p3.controller.ts');
 const routes = read('backend/src/modules/fnb/routes/digital.routes.ts');
 const capabilities = read('backend/src/middlewares/capability.middleware.ts');
 const runtime = read('.github/workflows/p1-runtime-ci.yml');
 const runner = read('backend/src/scripts/apply-p3-migrations.ts');
 const verifier = read('backend/src/scripts/verify-p3-database.ts');
+const reservationService = read('backend/src/modules/fnb/services/ecommerce-reservation.p3.service.ts');
+const transitionService = read('backend/src/modules/fnb/services/ecommerce-transition.p3.service.ts');
 const app = read('frontend/src/App.tsx');
 const frontendService = read('frontend/src/services/digitalWebsiteService.ts');
 const workspace = read('frontend/src/pages/DigitalWebsiteWorkspacePage.tsx');
@@ -67,5 +70,45 @@ describe('P3.1 Website/CMS + storefront catalog contract', () => {
     expect(website).toContain("status: 'partial'");
     expect(website).toContain("path: '/digital'");
     expect(ecommerce).toContain("status: 'blueprint'");
+  });
+});
+
+describe('P3.2 eCommerce order integrity and cancellation hardening', () => {
+  test('reservation persists exact stock snapshot independently of track_stock configuration', () => {
+    expect(reservationMigration).toContain('reserved_stock_quantity NUMERIC(15,3) NOT NULL DEFAULT 0');
+    expect(reservationMigration).toContain('CHECK (reserved_stock_quantity >= 0 AND reserved_stock_quantity <= quantity)');
+    expect(reservationService).toContain('const reservedQty = item.track_stock ? item.quantity : 0');
+    expect(reservationService).toContain('reserved_stock_quantity)');
+  });
+  test('cancellation accepts active non-terminal states and rejects completed orders', () => {
+    expect(transitionService).toContain("reserved: ['confirmed', 'cancelled']");
+    expect(transitionService).toContain("confirmed: ['preparing', 'cancelled']");
+    expect(transitionService).toContain("preparing: ['ready', 'cancelled']");
+    expect(transitionService).toContain("ready: ['completed', 'cancelled']");
+    expect(transitionService).toContain("completed: []");
+  });
+  test('cancellation restores stock from persisted snapshot, not mutable track_stock flag', () => {
+    expect(transitionService).toContain('reserved_stock_quantity > 0');
+    expect(transitionService).toContain('SUM(reserved_stock_quantity) as total_reserved');
+    expect(transitionService).toContain('stock = stock + ${Number(row.total_reserved)}');
+  });
+  test('cancellation is idempotent and concurrency-safe with row locking', () => {
+    expect(transitionService).toContain('FOR UPDATE');
+    expect(transitionService).toContain("if (order.status === 'cancelled') return order");
+    expect(transitionService).toContain('ECOMMERCE_ORDER_CONCURRENT_UPDATE');
+  });
+  test('cancellation sets timestamp and appends single lifecycle event with actor', () => {
+    expect(transitionService).toContain("cancelled_at=CASE WHEN ${target}='cancelled' THEN NOW() ELSE cancelled_at END");
+    expect(transitionService).toContain("'status_changed'");
+    expect(transitionService).toContain('actor_user_id');
+  });
+  test('cancellation aggregates duplicate item lines and scopes to tenant/outlet', () => {
+    expect(transitionService).toContain('GROUP BY item_id');
+    expect(transitionService).toContain('tenant_id=${tenantId}');
+    expect(transitionService).toContain('outlet_id=${order.outlet_id}');
+  });
+  test('cancellation is capability-gated and routed through manager workflow', () => {
+    expect(routes).toContain("requireCapability('digital.commerce.manage')");
+    expect(routes).toContain("router.patch('/orders/:id/status'");
   });
 });

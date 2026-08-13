@@ -1,0 +1,13 @@
+---
+source_file: ""
+type: "code"
+community: "Community 121"
+tags:
+  - graphify/code
+  - graphify/EXTRACTED
+  - community/Community_121
+---
+
+# "accounting"."general_ledger"
+
+#graphify/code #graphify/EXTRACTED #community/Community_121

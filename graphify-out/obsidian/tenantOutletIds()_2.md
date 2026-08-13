@@ -1,0 +1,14 @@
+---
+source_file: "backend/src/modules/fnb/controllers/supplier.controller.ts"
+type: "code"
+community: "Community 97"
+location: "L5"
+tags:
+  - graphify/code
+  - graphify/EXTRACTED
+  - community/Community_97
+---
+
+# tenantOutletIds()
+
+#graphify/code #graphify/EXTRACTED #community/Community_97

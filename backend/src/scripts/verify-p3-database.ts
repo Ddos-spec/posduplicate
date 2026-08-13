@@ -16,9 +16,17 @@ async function run() {
     const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(
       'SELECT migration_name, checksum_sha256 FROM public.p3_schema_migrations ORDER BY migration_name',
     );
-    assert(ledger.rows.length >= 1, `Expected at least 1 P3 migration ledger entry, found ${ledger.rows.length}`);
-    assert(ledger.rows[0]?.migration_name === '20260813090000_p3_website_commerce_core', 'P3 website migration missing');
-    assert(ledger.rows[0]?.checksum_sha256?.length === 64, 'P3 migration checksum invalid');
+    const requiredMigrations = [
+      '20260813090000_p3_website_commerce_core',
+      '20260813100000_p3_ecommerce_order_core',
+      '20260813101000_p3_ecommerce_reservation_snapshot',
+    ];
+    assert(ledger.rows.length >= 3, `Expected at least 3 P3 migration ledger entries, found ${ledger.rows.length}`);
+    for (const required of requiredMigrations) {
+      const found = ledger.rows.find((r) => r.migration_name === required);
+      assert(found, `P3 migration ${required} missing`);
+      assert(found.checksum_sha256?.length === 64, `P3 migration ${required} checksum invalid`);
+    }
 
     const tables = await client.query<{ tablename: string }>(`
       SELECT tablename FROM pg_tables
@@ -58,7 +66,35 @@ async function run() {
     `);
     assert(pageColumns.rows.length === 6, 'CMS page lifecycle/content columns are incomplete');
 
-    console.log('[P3 database verifier] website/CMS + storefront catalog invariants verified');
+    const ecommerceTables = await client.query<{ tablename: string }>(`
+      SELECT tablename FROM pg_tables
+      WHERE schemaname = 'public'
+        AND tablename IN ('ecommerce_orders','ecommerce_order_items','ecommerce_order_events')
+    `);
+    assert(ecommerceTables.rows.length === 3, 'P3.2 eCommerce tables are incomplete');
+
+    const orderColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'ecommerce_orders'
+        AND column_name IN ('tenant_id','id','status','cancelled_at')
+    `);
+    assert(orderColumns.rows.length === 4, 'eCommerce order lifecycle columns are incomplete');
+
+    const itemColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'ecommerce_order_items'
+        AND column_name IN ('tenant_id','order_id','reserved_stock_quantity','quantity')
+    `);
+    assert(itemColumns.rows.length === 4, 'eCommerce order item reservation columns are incomplete');
+
+    const eventColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'ecommerce_order_events'
+        AND column_name IN ('tenant_id','order_id','event_type','actor_user_id')
+    `);
+    assert(eventColumns.rows.length === 4, 'eCommerce order event lifecycle columns are incomplete');
+
+    console.log('[P3 database verifier] website/CMS + storefront catalog + eCommerce order invariants verified');
   } finally {
     await client.end();
   }

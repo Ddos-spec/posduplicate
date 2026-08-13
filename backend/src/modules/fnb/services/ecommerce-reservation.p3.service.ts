@@ -63,9 +63,10 @@ export const reserveGuestOrder = async (input: GuestOrderInput) => {
     const orderRow = created[0];
 
     for (const item of lines) {
+      const reservedQty = item.track_stock ? item.quantity : 0;
       await tx.$executeRaw(Prisma.sql`
-        INSERT INTO public.ecommerce_order_items (tenant_id,order_id,item_id,item_name,sku,unit_price,quantity,subtotal)
-        VALUES (${site.tenant_id},${orderRow.id},${item.id},${item.name},${item.sku || null},${item.unitPrice},${item.quantity},${item.lineSubtotal})
+        INSERT INTO public.ecommerce_order_items (tenant_id,order_id,item_id,item_name,sku,unit_price,quantity,subtotal,reserved_stock_quantity)
+        VALUES (${site.tenant_id},${orderRow.id},${item.id},${item.name},${item.sku || null},${item.unitPrice},${item.quantity},${item.lineSubtotal},${reservedQty})
       `);
       if (item.track_stock) {
         const changed = await tx.$queryRaw<any[]>(Prisma.sql`
