@@ -3,7 +3,9 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const assert = (condition: unknown, message: string): asserts condition => { if (!condition) throw new Error(message); };
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
 
 const run = async () => {
   const databaseUrl = process.env.DATABASE_URL;
