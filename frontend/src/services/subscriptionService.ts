@@ -69,12 +69,12 @@ export const createCustomerSubscription = async (payload: { planId: number; cust
   unwrap<CustomerSubscription>(await api.post('/subscriptions', payload));
 export const setCustomerSubscriptionStatus = async (id: number, status: CustomerSubscriptionStatus) =>
   unwrap<CustomerSubscription>(await api.patch(`/subscriptions/${id}/status`, { status }));
-export const renewCustomerSubscription = async (id: number) => unwrap<{
+export const renewCustomerSubscription = async (id: number, expectedRenewalAt: string) => unwrap<{
   reused: boolean;
   renewal: { id: number; status: string; amount: number | string; sales_order_id?: number; receivable_id?: number };
   salesOrder?: { id: number; sales_order_number: string };
   receivable?: { id: number; invoice_number: string };
-}>(await api.post(`/subscriptions/${id}/renew`));
+}>(await api.post(`/subscriptions/${id}/renew`, { expectedRenewalAt }));
 
 export const getSubscriptionCustomers = async () => unwrap<CustomerOption[]>(await api.get('/customers'));
 export const getSubscriptionItems = async () => unwrap<ItemOption[]>(await api.get('/products'));

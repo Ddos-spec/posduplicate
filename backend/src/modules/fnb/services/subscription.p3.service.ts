@@ -42,13 +42,18 @@ const dateOnly = (value: unknown, fallback = new Date()) => {
   return raw;
 };
 
-const advanceDate = (dateValue: string, unit: SubscriptionIntervalUnit, count: number) => {
-  const date = new Date(`${dateValue}T00:00:00Z`);
-  if (unit === 'day') date.setUTCDate(date.getUTCDate() + count);
-  else if (unit === 'week') date.setUTCDate(date.getUTCDate() + (count * 7));
-  else if (unit === 'month') date.setUTCMonth(date.getUTCMonth() + count);
-  else date.setUTCFullYear(date.getUTCFullYear() + count);
-  return date.toISOString().slice(0, 10);
+export const advanceSubscriptionDate = (dateValue: string, unit: SubscriptionIntervalUnit, count: number) => {
+  const [year, month, day] = dateValue.split('-').map(Number);
+  if (unit === 'day' || unit === 'week') {
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() + (unit === 'week' ? count * 7 : count));
+    return date.toISOString().slice(0, 10);
+  }
+  const totalMonths = (year * 12) + (month - 1) + (unit === 'year' ? count * 12 : count);
+  const targetYear = Math.floor(totalMonths / 12);
+  const targetMonth = totalMonths % 12;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  return `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`;
 };
 
 const normalizeInterval = (unit: unknown, countValue: unknown) => {
@@ -232,8 +237,9 @@ export const updateCustomerSubscriptionStatus = async (tenantId: number, userId:
   });
 };
 
-export const materializeSubscriptionRenewal = async (tenantId: number, userId: number, subscriptionIdValue: unknown) => {
+export const materializeSubscriptionRenewal = async (tenantId: number, userId: number, subscriptionIdValue: unknown, expectedRenewalAtValue: unknown) => {
   const subscriptionId = positiveInt(subscriptionIdValue, 'INVALID_SUBSCRIPTION_ID');
+  const expectedRenewalAt = dateOnly(expectedRenewalAtValue);
   return prisma.$transaction(async (tx) => {
     const rows = await tx.$queryRaw<any[]>(Prisma.sql`
       SELECT s.*,c.name AS customer_name
@@ -247,9 +253,21 @@ export const materializeSubscriptionRenewal = async (tenantId: number, userId: n
     if (!subscription) throw domainError('Subscription not found', 'SUBSCRIPTION_NOT_FOUND', 404);
     if (subscription.status !== 'active') throw domainError('Subscription must be active before renewal', 'SUBSCRIPTION_NOT_ACTIVE', 409);
 
-    const periodStart = dateOnly(subscription.next_renewal_at);
+    const currentRenewalAt = dateOnly(subscription.next_renewal_at);
     const { unit, count } = normalizeInterval(subscription.interval_unit, subscription.interval_count);
-    const periodEnd = advanceDate(periodStart, unit, count);
+    if (currentRenewalAt !== expectedRenewalAt) {
+      const expectedPeriodEnd = advanceSubscriptionDate(expectedRenewalAt, unit, count);
+      const previousRows = await tx.$queryRaw<any[]>(Prisma.sql`
+        SELECT * FROM public.subscription_renewals
+        WHERE tenant_id=${tenantId} AND subscription_id=${subscriptionId}
+          AND period_start=CAST(${expectedRenewalAt} AS date) AND period_end=CAST(${expectedPeriodEnd} AS date)
+        LIMIT 1
+      `);
+      if (previousRows[0]?.status === 'materialized') return { renewal: previousRows[0], reused: true };
+      throw domainError('Subscription renewal attempt is stale', 'SUBSCRIPTION_RENEWAL_STALE', 409);
+    }
+    const periodStart = currentRenewalAt;
+    const periodEnd = advanceSubscriptionDate(periodStart, unit, count);
     const idempotencyKey = `subscription:${subscriptionId}:${periodStart}:${periodEnd}`;
 
     const existing = await tx.$queryRaw<any[]>(Prisma.sql`

@@ -35,5 +35,5 @@ export const patchCustomerSubscriptionStatus = async (req: Request, res: Respons
   try { const { tenantId, userId } = context(req); const data = await updateCustomerSubscriptionStatus(tenantId, userId, req.params.id, req.body.status); return res.json({ success: true, data }); } catch (error) { return next(error); }
 };
 export const postSubscriptionRenewal = async (req: Request, res: Response, next: NextFunction) => {
-  try { const { tenantId, userId } = context(req); const data = await materializeSubscriptionRenewal(tenantId, userId, req.params.id); return res.status(data.reused ? 200 : 201).json({ success: true, data }); } catch (error) { return next(error); }
+  try { const { tenantId, userId } = context(req); const data = await materializeSubscriptionRenewal(tenantId, userId, req.params.id, req.body.expectedRenewalAt); return res.status(data.reused ? 200 : 201).json({ success: true, data }); } catch (error) { return next(error); }
 };
