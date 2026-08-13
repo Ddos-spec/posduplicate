@@ -1,0 +1,53 @@
+name: P3 Subscription Scheduler Wire Once
+
+on:
+  push:
+    branches: [feat/p3-subscription-automation]
+    paths:
+      - '.github/workflows/p3-subscription-scheduler-wire-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p3-subscription-automation
+          fetch-depth: 0
+      - name: Wire subscription scheduler
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('backend/src/services/scheduler.service.ts')
+          text=p.read_text()
+          if "subscriptionAutomationScheduler" not in text:
+              text=text.replace("import type { ScheduledTask as SchedulerTask } from 'node-cron';\n", "import type { ScheduledTask as SchedulerTask } from 'node-cron';\nimport { subscriptionAutomationScheduler } from './subscriptionAutomationScheduler.service';\n",1)
+              text=text.replace("  autoReorder: autoReorderScheduler,\n", "  autoReorder: autoReorderScheduler,\n  subscriptions: subscriptionAutomationScheduler,\n",1)
+              text=text.replace("    autoReorderScheduler.start();\n", "    autoReorderScheduler.start();\n    subscriptionAutomationScheduler.start();\n",1)
+              text=text.replace("    autoReorderScheduler.stop();\n", "    autoReorderScheduler.stop();\n    subscriptionAutomationScheduler.stop();\n",1)
+              p.write_text(text)
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Backend build
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+      - name: Commit scheduler wiring
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add backend/src/services/scheduler.service.ts
+          git commit -m "feat(p3): schedule subscription auto-renew"
+          git pull --rebase origin feat/p3-subscription-automation
+          git push origin HEAD:feat/p3-subscription-automation
