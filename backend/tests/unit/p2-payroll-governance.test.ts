@@ -58,8 +58,9 @@ describe('P2 payroll governance safety', () => {
     expect(rules).toContain('BPU-specific temporary relief');
   });
 
-  test('verified component profile v2 remains draft and activation-blocked', () => {
+  test('global verified component profile v2 stays draft while tenant activation is controlled', () => {
     const migration = read('prisma/migrations/20260813070000_p2_payroll_current_profile/migration.sql');
+    const activationMigration = read('prisma/migrations/20260813080000_p2_payroll_final_reconciliation/migration.sql');
     const runner = read('src/scripts/apply-p1-migrations.ts');
     const verifier = read('src/scripts/verify-p1-database-v2.ts');
     expect(migration).toContain("'ID-PAYROLL-2026'");
@@ -69,9 +70,10 @@ describe('P2 payroll governance safety', () => {
     expect(migration).toContain("'bpuReliefApplied', false");
     expect(migration).toContain('APPLICABLE_UMK_OR_UMP_REQUIRED');
     expect(migration).toContain("'activationGuard'");
-    expect(runner).toContain('20260813070000_p2_payroll_current_profile');
-    expect(verifier).toContain('Expected 15 suite migration ledger entries');
-    expect(verifier).toContain('Payroll profile v2 must remain draft');
+    expect(activationMigration).toContain('payroll_profile_activation_events');
+    expect(runner).toContain('20260813080000_p2_payroll_final_reconciliation');
+    expect(verifier).toContain('Expected 16 suite migration ledger entries');
+    expect(verifier).toContain('Global reference payroll profile v2 must remain draft');
   });
 
   test('legacy payroll calculate and finalize stay capability-gated and fail closed', () => {
