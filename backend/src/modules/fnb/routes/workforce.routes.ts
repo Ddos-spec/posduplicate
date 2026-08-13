@@ -36,6 +36,17 @@ import {
   updateRecruitmentOfferStatus,
   updateRecruitmentVacancyStatus,
 } from '../controllers/workforce-recruitment.p2.controller';
+import {
+  cancelAppraisal,
+  createAppraisal,
+  createAppraisalCycle,
+  finalizeAppraisal,
+  getAppraisalCycles,
+  getAppraisals,
+  getMyAppraisals,
+  submitMyAppraisal,
+  updateAppraisalCycleStatus,
+} from '../controllers/workforce-appraisal.p2.controller';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
@@ -74,5 +85,15 @@ router.post('/recruitment/interviews/:id/cancel', requireCapability('workforce.r
 
 router.get('/recruitment/offers', requireCapability('workforce.recruitment.read'), getRecruitmentOffers);
 router.patch('/recruitment/offers/:id/status', requireCapability('workforce.recruitment.manage'), updateRecruitmentOfferStatus);
+
+router.get('/appraisals/cycles', requireCapability('workforce.appraisal.read'), getAppraisalCycles);
+router.post('/appraisals/cycles', requireCapability('workforce.appraisal.manage'), createAppraisalCycle);
+router.patch('/appraisals/cycles/:id/status', requireCapability('workforce.appraisal.manage'), updateAppraisalCycleStatus);
+router.get('/appraisals', requireCapability('workforce.appraisal.read'), getAppraisals);
+router.post('/appraisals', requireCapability('workforce.appraisal.manage'), createAppraisal);
+router.get('/appraisals/me', requireCapability('workforce.appraisal.self'), getMyAppraisals);
+router.post('/appraisals/:id/self-submit', requireCapability('workforce.appraisal.self'), submitMyAppraisal);
+router.post('/appraisals/:id/finalize', requireCapability('workforce.appraisal.manage'), finalizeAppraisal);
+router.post('/appraisals/:id/cancel', requireCapability('workforce.appraisal.manage'), cancelAppraisal);
 
 export default router;
