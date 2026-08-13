@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import { authMiddleware } from '../../middlewares/auth.middleware';
+import { tenantMiddleware } from '../../middlewares/tenant.middleware';
+import { requireCapability } from '../../middlewares/capability.middleware';
 import accountingCoaRoutes from './routes/accounting.coa.routes';
 import accountingJournalRoutes from './routes/accounting.journal.routes';
 import accountingReportRoutes from './routes/accounting.report.routes';
@@ -21,6 +24,7 @@ import accountingPsakRoutes from './routes/accounting.psak.routes';
 import accountingAttachmentRoutes from './routes/accounting.attachment.routes';
 import accountingPayrollRoutes from './routes/accounting.payroll.routes';
 import accountingPayrollRateRoutes from './routes/accounting.payroll-rate.routes';
+import { rejectLegacyPayrollMutation } from './controllers/accounting.payroll-rate-profile.controller';
 
 const router = Router();
 
@@ -45,6 +49,24 @@ router.use('/approval', accountingApprovalRoutes);
 router.use('/psak', accountingPsakRoutes);
 router.use('/attachments', accountingAttachmentRoutes);
 router.use('/payroll/rates', accountingPayrollRateRoutes);
+
+// Temporary safety barrier: the legacy payroll controller still embeds stale TER/BPJS constants.
+// Keep mutating payroll operations fail-closed until the verified current-law engine is wired end-to-end.
+router.post(
+  '/payroll/periods/:periodId/calculate',
+  authMiddleware,
+  tenantMiddleware,
+  requireCapability('workforce.payroll.manage'),
+  rejectLegacyPayrollMutation,
+);
+router.post(
+  '/payroll/periods/:periodId/finalize',
+  authMiddleware,
+  tenantMiddleware,
+  requireCapability('workforce.payroll.manage'),
+  rejectLegacyPayrollMutation,
+);
+
 router.use('/payroll', accountingPayrollRoutes);
 
 export default router;
