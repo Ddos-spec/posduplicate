@@ -25,6 +25,7 @@ import revenueRoutes from './routes/revenue.routes';
 import supplyChainRoutes from './routes/supply-chain.routes';
 import workforceRoutes from './routes/workforce.routes';
 import servicesRoutes from './routes/services.routes';
+import digitalRoutes from './routes/digital.routes';
 
 const router = Router();
 
@@ -55,5 +56,6 @@ router.use('/revenue', revenueRoutes);
 router.use('/supply-chain', supplyChainRoutes);
 router.use('/workforce', workforceRoutes);
 router.use('/services', servicesRoutes);
+router.use('/digital', digitalRoutes);
 
 export default router;

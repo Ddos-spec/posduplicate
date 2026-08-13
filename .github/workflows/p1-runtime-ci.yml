@@ -71,21 +71,33 @@ jobs:
         working-directory: backend
         run: npx prisma db push --skip-generate
 
-      - name: Apply P1 forward migrations
+      - name: Apply P1/P2 forward migrations
         working-directory: backend
         run: node dist/scripts/apply-p1-migrations.js
 
-      - name: Prove migration idempotency
+      - name: Prove P1/P2 migration idempotency
         working-directory: backend
         run: node dist/scripts/apply-p1-migrations.js
+
+      - name: Apply P3 forward migrations
+        working-directory: backend
+        run: node dist/scripts/apply-p3-migrations.js
+
+      - name: Prove P3 migration idempotency
+        working-directory: backend
+        run: node dist/scripts/apply-p3-migrations.js
 
       - name: Backend tests
         working-directory: backend
         run: npm test -- --runInBand
 
-      - name: Verify P1 database behavior
+      - name: Verify P1/P2 database behavior
         working-directory: backend
         run: node dist/scripts/verify-p1-database-v2.js
+
+      - name: Verify P3 database behavior
+        working-directory: backend
+        run: node dist/scripts/verify-p3-database.js
 
       - name: Frontend install
         working-directory: frontend
