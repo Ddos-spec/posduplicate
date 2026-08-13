@@ -33,6 +33,7 @@ describe('P3.1 Website/CMS + storefront catalog contract', () => {
     expect(controller).toContain('CMS_RAW_MARKUP_REJECTED');
     expect(controller).toContain('CMS_URL_REJECTED');
     expect(controller).toContain('INVALID_CMS_BLOCK_TYPE');
+    expect(workspace).not.toContain('dangerouslySetInnerHTML');
   });
   test('admin lifecycle is capability gated and row locked', () => {
     for (const capability of ['digital.website.read','digital.website.manage','digital.commerce.read','digital.commerce.manage']) expect(capabilities).toContain(`'${capability}'`);
