@@ -42,6 +42,22 @@ import {
   updateHelpdeskTicketStatus,
   updateMyHelpdeskTicketStatus,
 } from '../controllers/services-helpdesk.p2.controller';
+import {
+  cancelAppointment,
+  checkInAppointment,
+  checkInMyAppointment,
+  completeAppointment,
+  completeMyAppointment,
+  confirmAppointment,
+  createAppointment,
+  createAppointmentType,
+  getAppointmentEvents,
+  getAppointments,
+  getAppointmentTypes,
+  getMyAppointments,
+  markAppointmentNoShow,
+  rescheduleAppointment,
+} from '../controllers/services-appointments.p2.controller';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
@@ -85,5 +101,20 @@ router.get('/helpdesk/tickets/:id/events', requireCapability('services.helpdesk.
 router.get('/helpdesk/me', requireCapability('services.helpdesk.self'), getMyHelpdeskTickets);
 router.post('/helpdesk/me/:id/reply', requireCapability('services.helpdesk.self'), replyMyHelpdeskTicket);
 router.patch('/helpdesk/me/:id/status', requireCapability('services.helpdesk.self'), updateMyHelpdeskTicketStatus);
+
+router.get('/appointments/types', requireCapability('services.appointment.read'), getAppointmentTypes);
+router.post('/appointments/types', requireCapability('services.appointment.manage'), createAppointmentType);
+router.get('/appointments', requireCapability('services.appointment.read'), getAppointments);
+router.post('/appointments', requireCapability('services.appointment.manage'), createAppointment);
+router.post('/appointments/:id/confirm', requireCapability('services.appointment.manage'), confirmAppointment);
+router.post('/appointments/:id/reschedule', requireCapability('services.appointment.manage'), rescheduleAppointment);
+router.post('/appointments/:id/check-in', requireCapability('services.appointment.manage'), checkInAppointment);
+router.post('/appointments/:id/complete', requireCapability('services.appointment.manage'), completeAppointment);
+router.post('/appointments/:id/no-show', requireCapability('services.appointment.manage'), markAppointmentNoShow);
+router.post('/appointments/:id/cancel', requireCapability('services.appointment.manage'), cancelAppointment);
+router.get('/appointments/:id/events', requireCapability('services.appointment.read'), getAppointmentEvents);
+router.get('/appointments-self/me', requireCapability('services.appointment.self'), getMyAppointments);
+router.post('/appointments-self/:id/check-in', requireCapability('services.appointment.self'), checkInMyAppointment);
+router.post('/appointments-self/:id/complete', requireCapability('services.appointment.self'), completeMyAppointment);
 
 export default router;
