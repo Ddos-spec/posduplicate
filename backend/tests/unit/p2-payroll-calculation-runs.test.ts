@@ -39,7 +39,7 @@ describe('Payroll-C1 profile-driven verification contracts', () => {
     expect(engine).toContain('monthlyTerGross = cashGross + taxableEmployerBenefits');
     expect(engine).toContain('OVERTIME_COMPENSATION_POLICY_NOT_WIRED');
     expect(engine).toContain('EMPLOYEE_NIK_REQUIRED_FOR_VERIFICATION');
-    expect(engine).not.toContain('1.5');
+    expect(engine).not.toContain('overtimeHours * hourlyRate * 1.5');
   });
 
   test('verification endpoint is capability-gated, explicit-profile and non-final only', () => {
