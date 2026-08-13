@@ -20,6 +20,22 @@ import {
   getMyLeave,
   requestLeaveSelf,
 } from '../controllers/workforce-leave.p2.controller';
+import {
+  cancelRecruitmentInterview,
+  completeRecruitmentInterview,
+  createRecruitmentApplicant,
+  createRecruitmentOffer,
+  createRecruitmentVacancy,
+  getRecruitmentApplicants,
+  getRecruitmentInterviews,
+  getRecruitmentOffers,
+  getRecruitmentVacancies,
+  hireRecruitmentApplicant,
+  moveRecruitmentApplicantStage,
+  scheduleRecruitmentInterview,
+  updateRecruitmentOfferStatus,
+  updateRecruitmentVacancyStatus,
+} from '../controllers/workforce-recruitment.p2.controller';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
@@ -40,5 +56,23 @@ router.post('/leave/requests/:id/decision', requireCapability('workforce.leave.m
 router.get('/leave/me', requireCapability('workforce.leave.self'), getMyLeave);
 router.post('/leave/request', requireCapability('workforce.leave.self'), requestLeaveSelf);
 router.post('/leave/requests/:id/cancel', requireCapability('workforce.leave.self'), cancelMyLeaveRequest);
+
+router.get('/recruitment/vacancies', requireCapability('workforce.recruitment.read'), getRecruitmentVacancies);
+router.post('/recruitment/vacancies', requireCapability('workforce.recruitment.manage'), createRecruitmentVacancy);
+router.patch('/recruitment/vacancies/:id/status', requireCapability('workforce.recruitment.manage'), updateRecruitmentVacancyStatus);
+
+router.get('/recruitment/applicants', requireCapability('workforce.recruitment.read'), getRecruitmentApplicants);
+router.post('/recruitment/applicants', requireCapability('workforce.recruitment.manage'), createRecruitmentApplicant);
+router.patch('/recruitment/applicants/:id/stage', requireCapability('workforce.recruitment.manage'), moveRecruitmentApplicantStage);
+router.post('/recruitment/applicants/:id/interviews', requireCapability('workforce.recruitment.manage'), scheduleRecruitmentInterview);
+router.post('/recruitment/applicants/:id/offers', requireCapability('workforce.recruitment.manage'), createRecruitmentOffer);
+router.post('/recruitment/applicants/:id/hire', requireCapability('workforce.recruitment.manage'), hireRecruitmentApplicant);
+
+router.get('/recruitment/interviews', requireCapability('workforce.recruitment.read'), getRecruitmentInterviews);
+router.post('/recruitment/interviews/:id/complete', requireCapability('workforce.recruitment.manage'), completeRecruitmentInterview);
+router.post('/recruitment/interviews/:id/cancel', requireCapability('workforce.recruitment.manage'), cancelRecruitmentInterview);
+
+router.get('/recruitment/offers', requireCapability('workforce.recruitment.read'), getRecruitmentOffers);
+router.patch('/recruitment/offers/:id/status', requireCapability('workforce.recruitment.manage'), updateRecruitmentOfferStatus);
 
 export default router;
