@@ -34,7 +34,14 @@ export type SuiteCapability =
   | 'workforce.appraisal.manage'
   | 'workforce.appraisal.self'
   | 'workforce.payroll.read'
-  | 'workforce.payroll.manage';
+  | 'workforce.payroll.manage'
+  | 'services.project.read'
+  | 'services.project.manage'
+  | 'services.timesheet.read'
+  | 'services.timesheet.manage'
+  | 'services.timesheet.self'
+  | 'services.planning.read'
+  | 'services.planning.manage';
 
 type FeatureRecord = Record<string, unknown>;
 
@@ -58,6 +65,8 @@ const ROLE_PRESETS: Record<string, SuiteCapability[] | '*'> = {
     'workforce.leave.self',
     'workforce.appraisal.self',
     'workforce.payroll.read',
+    'services.project.read',
+    'services.timesheet.self',
   ],
   cashier: [
     'revenue.customer360.read',
@@ -65,6 +74,7 @@ const ROLE_PRESETS: Record<string, SuiteCapability[] | '*'> = {
     'workforce.attendance.self',
     'workforce.leave.self',
     'workforce.appraisal.self',
+    'services.timesheet.self',
   ],
 };
 
