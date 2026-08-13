@@ -99,7 +99,7 @@ describe('P3.2 eCommerce order integrity and cancellation hardening', () => {
     expect(ecommerceCreateController).toContain("req.header('x-order-token')");
     expect(ecommerceCreateController).toContain('data.reused ? 200 : 201');
     expect(reservationV2Service).toContain('findGuestOrderByTokenHash(tx, tokenHash)');
-    expect(reservationV2Service.indexOf('findGuestOrderByTokenHash(tx, tokenHash)')).toBeLessThan(reservationV2Service.indexOf('lockPublishedCatalogItem'));
+    expect(reservationV2Service.indexOf('findGuestOrderByTokenHash(tx, tokenHash)')).toBeLessThan(reservationV2Service.indexOf('const item = await lockPublishedCatalogItem'));
     expect(reservationV2Service).toContain('CHECKOUT_TOKEN_REUSED');
     expect(orderWriteService).toContain('WHERE public_token_hash=${tokenHash}');
     expect(frontendService).toContain("'x-order-token': token");
