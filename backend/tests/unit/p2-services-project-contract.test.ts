@@ -60,7 +60,7 @@ describe('P2 project/timesheet/planning contracts', () => {
 
   test('suite deployment and DB verification include services migration', () => {
     expect(runner).toContain('20260813050000_p2_services_project_core');
-    expect(verifier).toContain('Expected 12 suite migration ledger entries');
+    expect(verifier).toContain('Expected 13 suite migration ledger entries');
     expect(verifier).toContain('service_projects');
     expect(verifier).toContain('service_timesheet_entries');
     expect(verifier).toContain('service_planning_allocations');
