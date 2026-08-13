@@ -1,0 +1,98 @@
+name: P3 Subscription MRR Wire Once
+
+on:
+  push:
+    branches: [feat/odoo-complete-suite]
+    paths:
+      - '.github/workflows/p3-subscription-mrr-wire-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/odoo-complete-suite
+          fetch-depth: 0
+      - name: Wire MRR summary endpoint and UI
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p=Path(path); text=p.read_text()
+              if old not in text: raise SystemExit(f'anchor missing: {path}')
+              p.write_text(text.replace(old,new,1))
+
+          replace('backend/src/modules/fnb/controllers/subscription.p3.controller.ts',
+            "} from '../services/subscription.p3.service';\n",
+            "} from '../services/subscription.p3.service';\nimport { getSubscriptionSummary } from '../services/subscription-summary.p3.service';\n")
+          replace('backend/src/modules/fnb/controllers/subscription.p3.controller.ts',
+            "export const postSubscriptionPlan = async",
+            "export const getSubscriptionMetrics = async (req: Request, res: Response, next: NextFunction) => {\n  try { const { tenantId } = context(req); const data = await getSubscriptionSummary(tenantId); return res.json({ success: true, data }); } catch (error) { return next(error); }\n};\nexport const postSubscriptionPlan = async")
+
+          replace('backend/src/modules/fnb/routes/subscription.p3.routes.ts',
+            "  getCustomerSubscriptions,\n  getSubscriptionPlans,",
+            "  getCustomerSubscriptions,\n  getSubscriptionMetrics,\n  getSubscriptionPlans,")
+          replace('backend/src/modules/fnb/routes/subscription.p3.routes.ts',
+            "router.get('/plans', requireCapability('revenue.subscription.read'), getSubscriptionPlans);",
+            "router.get('/summary', requireCapability('revenue.subscription.read'), getSubscriptionMetrics);\nrouter.get('/plans', requireCapability('revenue.subscription.read'), getSubscriptionPlans);")
+
+          service=Path('frontend/src/services/subscriptionService.ts')
+          text=service.read_text()
+          marker="export interface CustomerOption"
+          if marker not in text: raise SystemExit('frontend service type anchor missing')
+          text=text.replace(marker,"export interface SubscriptionSummary { active_plans: number; active_contracts: number; monthly_recurring_revenue: number | string; billed_total: number | string; }\n\n"+marker,1)
+          anchor="export const getSubscriptionPlans = async () => unwrap<SubscriptionPlan[]>(await api.get('/subscriptions/plans'));"
+          if anchor not in text: raise SystemExit('frontend service function anchor missing')
+          text=text.replace(anchor,"export const getSubscriptionSummary = async () => unwrap<SubscriptionSummary>(await api.get('/subscriptions/summary'));\n"+anchor,1)
+          service.write_text(text)
+
+          page=Path('frontend/src/pages/SubscriptionsWorkspacePage.tsx')
+          text=page.read_text()
+          text=text.replace("  getSubscriptionItems,\n  getSubscriptionPlans,", "  getSubscriptionItems,\n  getSubscriptionPlans,\n  getSubscriptionSummary,")
+          text=text.replace("  type SubscriptionPlan,\n", "  type SubscriptionPlan,\n  type SubscriptionSummary,\n")
+          text=text.replace("  const [error, setError] = useState('');\n", "  const [error, setError] = useState('');\n  const [summary, setSummary] = useState<SubscriptionSummary>({ active_plans: 0, active_contracts: 0, monthly_recurring_revenue: 0, billed_total: 0 });\n")
+          text=text.replace("      const [planRows, subscriptionRows, customerRows, itemRows] = await Promise.all([\n        getSubscriptionPlans(), getCustomerSubscriptions(), getSubscriptionCustomers(), getSubscriptionItems(),\n      ]);", "      const [planRows, subscriptionRows, customerRows, itemRows, summaryRow] = await Promise.all([\n        getSubscriptionPlans(), getCustomerSubscriptions(), getSubscriptionCustomers(), getSubscriptionItems(), getSubscriptionSummary(),\n      ]);")
+          text=text.replace("      setItems(itemRows.filter((item) => item.is_active !== false));\n", "      setItems(itemRows.filter((item) => item.is_active !== false));\n      setSummary(summaryRow);\n")
+          text=text.replace("  const billedTotal = useMemo(() => subscriptions.reduce((sum, row) => sum + Number(row.billed_total || 0), 0), [subscriptions]);\n", "")
+          text=text.replace("      <section className=\"mt-6 grid gap-3 sm:grid-cols-3\">", "      <section className=\"mt-6 grid gap-3 sm:grid-cols-4\">")
+          text=text.replace("<p className=\"mt-1 text-2xl font-black\">{activeSubscriptions.length}</p>", "<p className=\"mt-1 text-2xl font-black\">{summary.active_contracts || activeSubscriptions.length}</p>",1)
+          text=text.replace("<p className=\"mt-1 text-2xl font-black\">{activePlans.length}</p>", "<p className=\"mt-1 text-2xl font-black\">{summary.active_plans || activePlans.length}</p>",1)
+          text=text.replace("        <div className=\"rounded-2xl border bg-white p-4\"><p className=\"text-xs font-bold uppercase text-slate-500\">Materialized billing</p><p className=\"mt-1 text-2xl font-black\">{money(billedTotal)}</p></div>", "        <div className=\"rounded-2xl border bg-white p-4\"><p className=\"text-xs font-bold uppercase text-slate-500\">Normalized MRR</p><p className=\"mt-1 text-2xl font-black\">{money(summary.monthly_recurring_revenue)}</p></div>\n        <div className=\"rounded-2xl border bg-white p-4\"><p className=\"text-xs font-bold uppercase text-slate-500\">Materialized billing</p><p className=\"mt-1 text-2xl font-black\">{money(summary.billed_total)}</p></div>")
+          page.write_text(text)
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Backend build
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Frontend build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build:check
+      - name: Commit and rebase before push
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add backend/src/modules/fnb/controllers/subscription.p3.controller.ts backend/src/modules/fnb/routes/subscription.p3.routes.ts frontend/src/services/subscriptionService.ts frontend/src/pages/SubscriptionsWorkspacePage.tsx
+          git diff --cached --quiet || git commit -m "feat(p3): expose subscription MRR summary"
+          git pull --rebase origin feat/odoo-complete-suite
+          git push origin HEAD:feat/odoo-complete-suite
