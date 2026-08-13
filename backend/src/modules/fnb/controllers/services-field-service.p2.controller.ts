@@ -38,18 +38,14 @@ const timestamp = (value: unknown, code: string) => {
 const optionalCoordinate = (value: unknown, min: number, max: number, code: string) => {
   if (value === undefined || value === null || value === '') return null;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
-    throw Object.assign(new Error(`${code} tidak valid`), { status: 400, code });
-  }
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) throw Object.assign(new Error(`${code} tidak valid`), { status: 400, code });
   return parsed;
 };
 
 const coordinates = (body: any) => {
   const latitude = optionalCoordinate(body?.latitude, -90, 90, 'INVALID_FIELD_LATITUDE');
   const longitude = optionalCoordinate(body?.longitude, -180, 180, 'INVALID_FIELD_LONGITUDE');
-  if ((latitude === null) !== (longitude === null)) {
-    throw Object.assign(new Error('Latitude dan longitude harus dikirim berpasangan'), { status: 400, code: 'FIELD_COORDINATE_PAIR_REQUIRED' });
-  }
+  if ((latitude === null) !== (longitude === null)) throw Object.assign(new Error('Latitude dan longitude harus dikirim berpasangan'), { status: 400, code: 'FIELD_COORDINATE_PAIR_REQUIRED' });
   return { latitude, longitude };
 };
 
@@ -63,12 +59,8 @@ const getSelfEmployee = async (tenantId: number, userId: number) => {
 };
 
 const assertEmployee = async (tenantId: number, employeeId: number) => {
-  const employee = await prisma.employees.findFirst({
-    where: { id: employeeId, tenant_id: tenantId, status: 'active' },
-    select: { id: true, employee_id: true, name: true },
-  });
+  const employee = await prisma.employees.findFirst({ where: { id: employeeId, tenant_id: tenantId, status: 'active' }, select: { id: true } });
   if (!employee) throw Object.assign(new Error('Employee aktif tidak ditemukan pada tenant ini'), { status: 404, code: 'FIELD_EMPLOYEE_NOT_FOUND' });
-  return employee;
 };
 
 const getTenantCustomer = async (tenantId: number, customerId: number) => {
@@ -91,41 +83,30 @@ const assertTenantOutlet = async (tenantId: number, outletId: number) => {
 const assertProjectTask = async (client: any, tenantId: number, projectId: number | null, taskId: number | null) => {
   if (taskId && !projectId) throw Object.assign(new Error('Task Field Service membutuhkan projectId'), { status: 400, code: 'FIELD_PROJECT_REQUIRED' });
   if (projectId) {
-    const projects = await client.$queryRaw<any[]>(Prisma.sql`
+    const projects = (await client.$queryRaw(Prisma.sql`
       SELECT id, status FROM public.service_projects
       WHERE id = ${projectId} AND tenant_id = ${tenantId}
       LIMIT 1
-    `);
+    `)) as any[];
     if (!projects[0]) throw Object.assign(new Error('Project tidak ditemukan'), { status: 404, code: 'SERVICE_PROJECT_NOT_FOUND' });
     if (['completed', 'cancelled'].includes(projects[0].status)) throw Object.assign(new Error('Field Service tidak dapat memakai project terminal'), { status: 409, code: 'PROJECT_TERMINAL' });
   }
   if (taskId) {
-    const tasks = await client.$queryRaw<any[]>(Prisma.sql`
+    const tasks = (await client.$queryRaw(Prisma.sql`
       SELECT id, status FROM public.service_project_tasks
       WHERE id = ${taskId} AND tenant_id = ${tenantId} AND project_id = ${projectId}
       LIMIT 1
-    `);
+    `)) as any[];
     if (!tasks[0]) throw Object.assign(new Error('Task tidak ditemukan pada project ini'), { status: 404, code: 'SERVICE_TASK_NOT_FOUND' });
     if (['done', 'cancelled'].includes(tasks[0].status)) throw Object.assign(new Error('Field Service tidak dapat memakai task terminal'), { status: 409, code: 'TASK_TERMINAL' });
   }
 };
 
-const insertFieldEvent = async (
-  client: any,
-  tenantId: number,
-  fieldOrderId: number,
-  eventType: string,
-  actorUserId: number,
-  employeeId: number | null,
-  notes: string | null,
-  latitude: number | null = null,
-  longitude: number | null = null,
-) => {
+const insertFieldEvent = async (client: any, tenantId: number, fieldOrderId: number, eventType: string, actorUserId: number, employeeId: number | null, notes: string | null, latitude: number | null = null, longitude: number | null = null) => {
   await client.$executeRaw(Prisma.sql`
     INSERT INTO public.service_field_events
       (tenant_id, field_order_id, event_type, actor_user_id, employee_id, notes, latitude, longitude)
-    VALUES
-      (${tenantId}, ${fieldOrderId}, ${eventType}, ${actorUserId}, ${employeeId}, ${notes}, ${latitude}, ${longitude})
+    VALUES (${tenantId}, ${fieldOrderId}, ${eventType}, ${actorUserId}, ${employeeId}, ${notes}, ${latitude}, ${longitude})
   `);
 };
 
@@ -177,9 +158,7 @@ export const getFieldServiceEvents = async (req: Request, res: Response, next: N
   try {
     const tenantId = requireTenant(req);
     const id = positiveInt(req.params.id, 'INVALID_FIELD_ORDER_ID');
-    const orders = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id FROM public.service_field_orders WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1
-    `);
+    const orders = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT id FROM public.service_field_orders WHERE id = ${id} AND tenant_id = ${tenantId} LIMIT 1`);
     if (!orders[0]) return res.status(404).json({ success: false, error: { code: 'FIELD_ORDER_NOT_FOUND', message: 'Field Service order tidak ditemukan' } });
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT ev.*, u.name AS actor_name, e.name AS employee_name
@@ -208,7 +187,6 @@ export const createFieldServiceOrder = async (req: Request, res: Response, next:
     const projectId = optionalPositiveInt(req.body.projectId, 'INVALID_PROJECT_ID');
     const taskId = optionalPositiveInt(req.body.taskId, 'INVALID_TASK_ID');
     await assertProjectTask(prisma, tenantId, projectId, taskId);
-
     const serviceAddress = cleanText(req.body.serviceAddress, 2000) || cleanText(customer.address, 2000);
     if (!serviceAddress) return res.status(400).json({ success: false, error: { code: 'FIELD_SERVICE_ADDRESS_REQUIRED', message: 'Alamat layanan wajib tersedia pada request atau customer' } });
     const priority = String(req.body.priority || 'normal').trim();
@@ -218,12 +196,11 @@ export const createFieldServiceOrder = async (req: Request, res: Response, next:
       const created = await prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<any[]>(Prisma.sql`
           INSERT INTO public.service_field_orders
-            (tenant_id, outlet_id, customer_id, project_id, task_id, code, title, description,
-             service_address, contact_name, contact_phone, priority, status, created_by, updated_by)
+            (tenant_id, outlet_id, customer_id, project_id, task_id, code, title, description, service_address, contact_name, contact_phone, priority, status, created_by, updated_by)
           VALUES
-            (${tenantId}, ${outletId}, ${customerId}, ${projectId}, ${taskId}, ${code}, ${title}, ${cleanText(req.body.description)},
-             ${serviceAddress}, ${cleanText(req.body.contactName, 160) || cleanText(customer.name, 160)},
-             ${cleanText(req.body.contactPhone, 60) || cleanText(customer.phone, 60)}, ${priority}, 'draft', ${userId}, ${userId})
+            (${tenantId}, ${outletId}, ${customerId}, ${projectId}, ${taskId}, ${code}, ${title}, ${cleanText(req.body.description)}, ${serviceAddress},
+             ${cleanText(req.body.contactName, 160) || cleanText(customer.name, 160)}, ${cleanText(req.body.contactPhone, 60) || cleanText(customer.phone, 60)},
+             ${priority}, 'draft', ${userId}, ${userId})
           RETURNING *
         `);
         const order = rows[0];
@@ -251,16 +228,11 @@ export const scheduleFieldServiceOrder = async (req: Request, res: Response, nex
 
     const scheduled = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(${tenantId}, 74001)`);
-      const rows = await tx.$queryRaw<any[]>(Prisma.sql`
-        SELECT * FROM public.service_field_orders
-        WHERE id = ${id} AND tenant_id = ${tenantId}
-        FOR UPDATE
-      `);
+      const rows = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.service_field_orders WHERE id = ${id} AND tenant_id = ${tenantId} FOR UPDATE`);
       const current = rows[0];
       if (!current) throw Object.assign(new Error('Field Service order tidak ditemukan'), { status: 404, code: 'FIELD_ORDER_NOT_FOUND' });
       if (current.status !== 'draft') throw Object.assign(new Error('Hanya Field Service draft yang dapat dijadwalkan'), { status: 409, code: 'FIELD_ORDER_NOT_DRAFT' });
       await assertProjectTask(tx, tenantId, current.project_id ? Number(current.project_id) : null, current.task_id ? Number(current.task_id) : null);
-
       const overlap = await tx.$queryRaw<any[]>(Prisma.sql`
         SELECT id FROM public.service_planning_allocations
         WHERE tenant_id = ${tenantId} AND employee_id = ${employeeId}
@@ -269,21 +241,19 @@ export const scheduleFieldServiceOrder = async (req: Request, res: Response, nex
         LIMIT 1
       `);
       if (overlap[0]) throw Object.assign(new Error('Employee sudah memiliki planning yang overlap'), { status: 409, code: 'PLANNING_OVERLAP' });
-
       const allocations = await tx.$queryRaw<any[]>(Prisma.sql`
         INSERT INTO public.service_planning_allocations
           (tenant_id, project_id, task_id, employee_id, start_at, end_at, status, notes, created_by, updated_by)
         VALUES
-          (${tenantId}, ${current.project_id ? Number(current.project_id) : null}, ${current.task_id ? Number(current.task_id) : null},
-           ${employeeId}, ${startAt}, ${endAt}, 'confirmed', ${`Field Service ${current.code}: ${current.title}`}, ${userId}, ${userId})
+          (${tenantId}, ${current.project_id ? Number(current.project_id) : null}, ${current.task_id ? Number(current.task_id) : null}, ${employeeId},
+           ${startAt}, ${endAt}, 'confirmed', ${`Field Service ${current.code}: ${current.title}`}, ${userId}, ${userId})
         RETURNING *
       `);
       const allocation = allocations[0];
       const changed = await tx.$queryRaw<any[]>(Prisma.sql`
         UPDATE public.service_field_orders
-        SET assigned_employee_id = ${employeeId}, planning_allocation_id = ${Number(allocation.id)},
-            scheduled_start = ${startAt}, scheduled_end = ${endAt}, status = 'scheduled',
-            updated_by = ${userId}, updated_at = NOW()
+        SET assigned_employee_id = ${employeeId}, planning_allocation_id = ${Number(allocation.id)}, scheduled_start = ${startAt}, scheduled_end = ${endAt},
+            status = 'scheduled', updated_by = ${userId}, updated_at = NOW()
         WHERE id = ${id} AND tenant_id = ${tenantId} AND status = 'draft'
         RETURNING *
       `);
@@ -302,26 +272,20 @@ export const cancelFieldServiceOrder = async (req: Request, res: Response, next:
     const id = positiveInt(req.params.id, 'INVALID_FIELD_ORDER_ID');
     const reason = cleanText(req.body.reason);
     if (!reason) return res.status(400).json({ success: false, error: { code: 'FIELD_CANCELLATION_REASON_REQUIRED', message: 'Alasan cancellation wajib diisi' } });
-
     const cancelled = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(${tenantId}, 74001)`);
-      const rows = await tx.$queryRaw<any[]>(Prisma.sql`
-        SELECT * FROM public.service_field_orders WHERE id = ${id} AND tenant_id = ${tenantId} FOR UPDATE
-      `);
+      const rows = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.service_field_orders WHERE id = ${id} AND tenant_id = ${tenantId} FOR UPDATE`);
       const current = rows[0];
       if (!current) throw Object.assign(new Error('Field Service order tidak ditemukan'), { status: 404, code: 'FIELD_ORDER_NOT_FOUND' });
       if (['completed', 'cancelled'].includes(current.status)) throw Object.assign(new Error('Field Service order sudah terminal'), { status: 409, code: 'FIELD_ORDER_TERMINAL' });
       const changed = await tx.$queryRaw<any[]>(Prisma.sql`
-        UPDATE public.service_field_orders
-        SET status = 'cancelled', cancelled_at = NOW(), updated_by = ${userId}, updated_at = NOW()
-        WHERE id = ${id} AND tenant_id = ${tenantId} AND status = ${String(current.status)}
-        RETURNING *
+        UPDATE public.service_field_orders SET status = 'cancelled', cancelled_at = NOW(), updated_by = ${userId}, updated_at = NOW()
+        WHERE id = ${id} AND tenant_id = ${tenantId} AND status = ${String(current.status)} RETURNING *
       `);
       if (!changed[0]) throw Object.assign(new Error('Field Service order berubah saat cancellation'), { status: 409, code: 'FIELD_ORDER_CONCURRENT_UPDATE' });
       if (current.planning_allocation_id) {
         await tx.$executeRaw(Prisma.sql`
-          UPDATE public.service_planning_allocations
-          SET status = 'cancelled', updated_by = ${userId}, updated_at = NOW()
+          UPDATE public.service_planning_allocations SET status = 'cancelled', updated_by = ${userId}, updated_at = NOW()
           WHERE id = ${Number(current.planning_allocation_id)} AND tenant_id = ${tenantId} AND status IN ('planned','confirmed')
         `);
       }
@@ -332,39 +296,23 @@ export const cancelFieldServiceOrder = async (req: Request, res: Response, next:
   } catch (error) { next(error); }
 };
 
-const technicianTransition = async (
-  req: Request,
-  targetStatus: 'en_route' | 'on_site' | 'completed',
-  eventType: 'departed' | 'arrived' | 'completed',
-) => {
+const technicianTransition = async (req: Request, targetStatus: 'en_route' | 'on_site' | 'completed', eventType: 'departed' | 'arrived' | 'completed') => {
   const tenantId = requireTenant(req);
   const userId = requireUser(req);
   const id = positiveInt(req.params.id, 'INVALID_FIELD_ORDER_ID');
   const employee = await getSelfEmployee(tenantId, userId);
   const { latitude, longitude } = coordinates(req.body);
   const resolution = targetStatus === 'completed' ? cleanText(req.body.resolution) : null;
-  if (targetStatus === 'completed' && !resolution) {
-    throw Object.assign(new Error('Resolution note wajib diisi saat completion'), { status: 400, code: 'FIELD_RESOLUTION_REQUIRED' });
-  }
+  if (targetStatus === 'completed' && !resolution) throw Object.assign(new Error('Resolution note wajib diisi saat completion'), { status: 400, code: 'FIELD_RESOLUTION_REQUIRED' });
 
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(${tenantId}, 74001)`);
-    const rows = await tx.$queryRaw<any[]>(Prisma.sql`
-      SELECT * FROM public.service_field_orders WHERE id = ${id} AND tenant_id = ${tenantId} FOR UPDATE
-    `);
+    const rows = await tx.$queryRaw<any[]>(Prisma.sql`SELECT * FROM public.service_field_orders WHERE id = ${id} AND tenant_id = ${tenantId} FOR UPDATE`);
     const current = rows[0];
     if (!current) throw Object.assign(new Error('Field Service order tidak ditemukan'), { status: 404, code: 'FIELD_ORDER_NOT_FOUND' });
-    if (Number(current.assigned_employee_id || 0) !== employee.id) {
-      throw Object.assign(new Error('Field Service order bukan assignment employee ini'), { status: 403, code: 'FIELD_ASSIGNMENT_MISMATCH' });
-    }
-
-    const allowed = targetStatus === 'en_route'
-      ? current.status === 'scheduled'
-      : targetStatus === 'on_site'
-        ? ['scheduled', 'en_route'].includes(current.status)
-        : current.status === 'on_site';
+    if (Number(current.assigned_employee_id || 0) !== employee.id) throw Object.assign(new Error('Field Service order bukan assignment employee ini'), { status: 403, code: 'FIELD_ASSIGNMENT_MISMATCH' });
+    const allowed = targetStatus === 'en_route' ? current.status === 'scheduled' : targetStatus === 'on_site' ? ['scheduled', 'en_route'].includes(current.status) : current.status === 'on_site';
     if (!allowed) throw Object.assign(new Error(`Transition Field Service ${current.status} -> ${targetStatus} tidak diizinkan`), { status: 409, code: 'INVALID_FIELD_ORDER_TRANSITION' });
-
     const changed = await tx.$queryRaw<any[]>(Prisma.sql`
       UPDATE public.service_field_orders
       SET status = ${targetStatus},
@@ -377,11 +325,9 @@ const technicianTransition = async (
       RETURNING *
     `);
     if (!changed[0]) throw Object.assign(new Error('Field Service order berubah saat transition'), { status: 409, code: 'FIELD_ORDER_CONCURRENT_UPDATE' });
-
     if (targetStatus === 'completed' && current.planning_allocation_id) {
       await tx.$executeRaw(Prisma.sql`
-        UPDATE public.service_planning_allocations
-        SET status = 'done', updated_by = ${userId}, updated_at = NOW()
+        UPDATE public.service_planning_allocations SET status = 'done', updated_by = ${userId}, updated_at = NOW()
         WHERE id = ${Number(current.planning_allocation_id)} AND tenant_id = ${tenantId} AND status IN ('planned','confirmed')
       `);
     }
@@ -391,16 +337,13 @@ const technicianTransition = async (
 };
 
 export const departMyFieldServiceOrder = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json({ success: true, data: await technicianTransition(req, 'en_route', 'departed') }); }
-  catch (error) { next(error); }
+  try { res.json({ success: true, data: await technicianTransition(req, 'en_route', 'departed') }); } catch (error) { next(error); }
 };
 
 export const arriveMyFieldServiceOrder = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json({ success: true, data: await technicianTransition(req, 'on_site', 'arrived') }); }
-  catch (error) { next(error); }
+  try { res.json({ success: true, data: await technicianTransition(req, 'on_site', 'arrived') }); } catch (error) { next(error); }
 };
 
 export const completeMyFieldServiceOrder = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json({ success: true, data: await technicianTransition(req, 'completed', 'completed') }); }
-  catch (error) { next(error); }
+  try { res.json({ success: true, data: await technicianTransition(req, 'completed', 'completed') }); } catch (error) { next(error); }
 };
