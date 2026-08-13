@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Loader2, PackageCheck, RefreshCw, Undo2, XCircle } from 'lucide-react';
+import { CheckCircle2, Loader2, PackageCheck, RefreshCw, Undo2, WalletCards, XCircle } from 'lucide-react';
 import { rentalApi } from '../../services/rentalApi';
 
 type Booking = {
@@ -11,9 +11,11 @@ type Booking = {
   ends_at: string;
   subtotal: number | string;
   deposit_amount: number | string;
-  deposit_status: string;
+  deposit_status: 'not_required' | 'pending' | 'held' | 'released' | 'forfeited' | string;
   items?: Array<{ item_name: string; quantity: number | string }>;
 };
+
+type DepositMethod = 'cash' | 'bank_transfer' | 'qris';
 
 const money = (value: number | string) => new Intl.NumberFormat('id-ID', {
   style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
@@ -24,6 +26,7 @@ export default function RentalBookingsPanel() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [depositMethods, setDepositMethods] = useState<Record<number, DepositMethod>>({});
 
   const reload = async () => {
     setLoading(true); setError('');
@@ -41,30 +44,71 @@ export default function RentalBookingsPanel() {
     finally { setBusy(false); }
   };
 
+  const holdDeposit = async (id: number) => {
+    setBusy(true); setError('');
+    try {
+      await rentalApi.holdDeposit(id, { paymentMethod: depositMethods[id] || 'cash' });
+      await reload();
+    } catch { setError('Deposit gagal dicatat. Pastikan akun kas/bank dan liability tersedia.'); }
+    finally { setBusy(false); }
+  };
+
+  const releaseDeposit = async (id: number) => {
+    setBusy(true); setError('');
+    try { await rentalApi.releaseDeposit(id); await reload(); }
+    catch { setError('Deposit gagal direlease. Booking harus sudah returned atau cancelled.'); }
+    finally { setBusy(false); }
+  };
+
   return <section className="rounded-2xl border bg-white p-5">
     <div className="flex items-center justify-between gap-3">
-      <div><h2 className="font-black">Bookings</h2><p className="text-sm text-slate-600">Reservation → confirmation → pickup → return.</p></div>
+      <div><h2 className="font-black">Bookings</h2><p className="text-sm text-slate-600">Reservation → confirmation → deposit → pickup → return → deposit release.</p></div>
       <button onClick={() => void reload()} className="rounded-lg border p-2" aria-label="Refresh bookings"><RefreshCw size={17} /></button>
     </div>
     {error && <p className="mt-3 rounded-lg bg-red-50 p-2 text-sm font-semibold text-red-700">{error}</p>}
     {loading ? <div className="grid min-h-40 place-items-center"><Loader2 className="animate-spin" /></div> :
-      <div className="mt-4 space-y-3">{rows.map((row) => <div key={row.id} className="rounded-xl border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><strong>{row.booking_number}</strong><p className="text-sm text-slate-600">{row.customer_name || 'Customer'} · {new Date(row.starts_at).toLocaleString('id-ID')} → {new Date(row.ends_at).toLocaleString('id-ID')}</p></div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase">{row.status}</span>
-        </div>
-        <p className="mt-2 text-sm">{row.items?.map((item) => `${item.item_name} × ${Number(item.quantity)}`).join(', ') || 'Rental items'} · {money(row.subtotal)} · deposit {money(row.deposit_amount)} ({row.deposit_status})</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {row.status === 'reserved' && <>
-            <button disabled={busy} onClick={() => void change(row.id, 'confirmed')} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-bold"><CheckCircle2 size={15} /> Confirm</button>
-            <button disabled={busy} onClick={() => void change(row.id, 'cancelled')} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-bold"><XCircle size={15} /> Cancel</button>
-          </>}
-          {row.status === 'confirmed' && <>
-            <button disabled={busy} onClick={() => void change(row.id, 'picked_up')} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-bold"><PackageCheck size={15} /> Pickup</button>
-            <button disabled={busy} onClick={() => void change(row.id, 'cancelled')} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-bold"><XCircle size={15} /> Cancel</button>
-          </>}
-          {row.status === 'picked_up' && <button disabled={busy} onClick={() => void change(row.id, 'returned')} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-bold"><Undo2 size={15} /> Return</button>}
-        </div>
-      </div>)}</div>}
+      <div className="mt-4 space-y-3">{rows.map((row) => {
+        const depositRequired = Number(row.deposit_amount || 0) > 0;
+        const pickupBlocked = depositRequired && row.deposit_status !== 'held';
+        const canHoldDeposit = depositRequired && row.deposit_status === 'pending' && ['reserved', 'confirmed'].includes(row.status);
+        const canReleaseDeposit = depositRequired && row.deposit_status === 'held' && ['returned', 'cancelled'].includes(row.status);
+        return <div key={row.id} className="rounded-xl border p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><strong>{row.booking_number}</strong><p className="text-sm text-slate-600">{row.customer_name || 'Customer'} · {new Date(row.starts_at).toLocaleString('id-ID')} → {new Date(row.ends_at).toLocaleString('id-ID')}</p></div>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase">{row.status}</span>
+          </div>
+          <p className="mt-2 text-sm">{row.items?.map((item) => `${item.item_name} × ${Number(item.quantity)}`).join(', ') || 'Rental items'} · {money(row.subtotal)} · deposit {money(row.deposit_amount)} ({row.deposit_status})</p>
+
+          {canHoldDeposit && <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 p-3">
+            <WalletCards size={17} />
+            <select
+              value={depositMethods[row.id] || 'cash'}
+              onChange={(event) => setDepositMethods((current) => ({ ...current, [row.id]: event.target.value as DepositMethod }))}
+              className="rounded-lg border bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="cash">Cash</option>
+              <option value="bank_transfer">Bank transfer</option>
+              <option value="qris">QRIS</option>
+            </select>
+            <button disabled={busy} onClick={() => void holdDeposit(row.id)} className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-bold text-white">Hold deposit</button>
+          </div>}
+
+          {canReleaseDeposit && <div className="mt-3 rounded-xl bg-emerald-50 p-3">
+            <button disabled={busy} onClick={() => void releaseDeposit(row.id)} className="inline-flex items-center gap-1 rounded-lg border bg-white px-3 py-1.5 text-sm font-bold"><WalletCards size={15} /> Release deposit</button>
+          </div>}
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {row.status === 'reserved' && <>
+              <button disabled={busy} onClick={() => void change(row.id, 'confirmed')} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-bold"><CheckCircle2 size={15} /> Confirm</button>
+              <button disabled={busy} onClick={() => void change(row.id, 'cancelled')} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-bold"><XCircle size={15} /> Cancel</button>
+            </>}
+            {row.status === 'confirmed' && <>
+              <button disabled={busy || pickupBlocked} title={pickupBlocked ? 'Hold required deposit before pickup' : undefined} onClick={() => void change(row.id, 'picked_up')} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-bold disabled:opacity-50"><PackageCheck size={15} /> Pickup</button>
+              <button disabled={busy} onClick={() => void change(row.id, 'cancelled')} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-bold"><XCircle size={15} /> Cancel</button>
+            </>}
+            {row.status === 'picked_up' && <button disabled={busy} onClick={() => void change(row.id, 'returned')} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-bold"><Undo2 size={15} /> Return</button>}
+          </div>
+        </div>;
+      })}</div>}
   </section>;
 }
