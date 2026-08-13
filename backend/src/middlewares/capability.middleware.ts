@@ -5,6 +5,8 @@ export type SuiteCapability =
   | 'revenue.crm.manage'
   | 'revenue.sales.read'
   | 'revenue.sales.manage'
+  | 'revenue.subscription.read'
+  | 'revenue.subscription.manage'
   | 'revenue.customer360.read'
   | 'revenue.loyalty.read'
   | 'revenue.loyalty.adjust'
@@ -69,6 +71,7 @@ const ROLE_PRESETS: Record<string, SuiteCapability[] | '*'> = {
   manager: '*',
   accountant: [
     'revenue.sales.read',
+    'revenue.subscription.read',
     'revenue.customer360.read',
     'revenue.loyalty.read',
     'supply.procurement.read',
