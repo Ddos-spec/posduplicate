@@ -41,6 +41,23 @@ export interface PublicCatalogItem {
   stock: number | string; category?: string | null; seo_title?: string | null; seo_description?: string | null; sort_order: number;
 }
 
+export type EcommerceOrderStatus = 'reserved' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
+export interface PublicOrderCreateInput {
+  customerName: string; customerPhone: string; customerEmail?: string; deliveryAddress: Record<string, unknown>;
+  notes?: string; items: Array<{ itemId: number; quantity: number }>;
+}
+export interface PublicOrderReceipt {
+  orderNumber: string; token: string; status: EcommerceOrderStatus; total: number | string;
+}
+export interface PublicOrderStatusRecord {
+  order_number: string; status: EcommerceOrderStatus; total: number | string; created_at: string;
+  confirmed_at?: string | null; ready_at?: string | null; completed_at?: string | null; cancelled_at?: string | null;
+}
+export interface EcommerceOrder extends PublicOrderStatusRecord {
+  id: number; site_id: number; outlet_id: number; customer_name: string; customer_phone: string;
+  customer_email?: string | null; site_name: string; outlet_name: string;
+}
+
 const unwrap = <T>(response: { data: { data: T } }): T => response.data.data;
 
 export const getWebsiteSites = async () => unwrap<WebsiteSite[]>(await api.get('/digital/sites'));
@@ -71,3 +88,10 @@ export const getPublicStorefrontPage = async (publicSlug: string, pageSlug: stri
   unwrap<PublicStorefrontPage>(await api.get(`/digital/storefront/${encodeURIComponent(publicSlug)}/pages/${encodeURIComponent(pageSlug)}`));
 export const getPublicStorefrontCatalog = async (publicSlug: string) =>
   unwrap<PublicCatalogItem[]>(await api.get(`/digital/storefront/${encodeURIComponent(publicSlug)}/catalog`));
+export const createPublicStorefrontOrder = async (publicSlug: string, payload: PublicOrderCreateInput) =>
+  unwrap<PublicOrderReceipt>(await api.post(`/digital/storefront/${encodeURIComponent(publicSlug)}/orders`, payload));
+export const getPublicStorefrontOrderStatus = async (publicSlug: string, orderNumber: string, token: string) =>
+  unwrap<PublicOrderStatusRecord>(await api.get(`/digital/storefront/${encodeURIComponent(publicSlug)}/orders/${encodeURIComponent(orderNumber)}`, { headers: { 'x-order-token': token } }));
+export const getEcommerceOrders = async () => unwrap<EcommerceOrder[]>(await api.get('/digital/orders'));
+export const progressEcommerceOrder = async (id: number, status: EcommerceOrderStatus) =>
+  unwrap<EcommerceOrder>(await api.patch(`/digital/orders/${id}/status`, { status }));
