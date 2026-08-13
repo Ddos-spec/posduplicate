@@ -29,7 +29,7 @@ describe('P2 payroll governance safety', () => {
     expect(routes).not.toMatch(/router\.(post|put|patch|delete)\(/);
     expect(controller).toContain('calculateBaseMonthlyTerPph21');
     expect(controller).toContain('calculatePpuStatutoryContributions');
-    expect(controller).toContain('HEALTH_MINIMUM_WAGE_REQUIRED');
+    expect(controller).toContain('StatutoryContributionError');
     expect(controller).toContain('complianceNotice');
     expect(controller).toContain('NO_ACTIVE_PAYROLL_RATE_PROFILE');
     expect(controller).toContain("status = 'active'");
