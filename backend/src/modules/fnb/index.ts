@@ -24,6 +24,7 @@ import inventoryAnalyticsRoutes from './routes/inventory-analytics.routes';
 import revenueRoutes from './routes/revenue.routes';
 import supplyChainRoutes from './routes/supply-chain.routes';
 import workforceRoutes from './routes/workforce.routes';
+import servicesRoutes from './routes/services.routes';
 
 const router = Router();
 
@@ -53,5 +54,6 @@ router.use('/inventory-analytics', inventoryAnalyticsRoutes);
 router.use('/revenue', revenueRoutes);
 router.use('/supply-chain', supplyChainRoutes);
 router.use('/workforce', workforceRoutes);
+router.use('/services', servicesRoutes);
 
 export default router;
