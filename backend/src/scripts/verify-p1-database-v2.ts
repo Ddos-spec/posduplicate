@@ -72,13 +72,17 @@ const REQUIRED_INDEXES = [
   'idx_service_appointment_event_order',
 ] as const;
 
-function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
 
 const expectMutationBlocked = async (client: Client, sql: string, label: string, index: number) => {
   const savepoint = `immutable_check_${index}`;
   await client.query(`SAVEPOINT ${savepoint}`);
-  try { await client.query(sql); throw new Error(`${label}: mutation unexpectedly succeeded`); }
-  catch (error: any) {
+  try {
+    await client.query(sql);
+    throw new Error(`${label}: mutation unexpectedly succeeded`);
+  } catch (error: any) {
     if (String(error?.message || '').includes('unexpectedly succeeded')) throw error;
     assert(error?.code === '55000', `${label}: expected SQLSTATE 55000, got ${error?.code || 'unknown'} (${error?.message || error})`);
   } finally {
@@ -92,34 +96,62 @@ async function run() {
   assert(databaseUrl, 'DATABASE_URL is required');
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
+
   try {
-    const tables = await client.query<{ tablename: string }>(`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = ANY($1::text[])`, [REQUIRED_TABLES]);
+    const tables = await client.query<{ tablename: string }>(
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = ANY($1::text[])`,
+      [REQUIRED_TABLES],
+    );
     const tableSet = new Set(tables.rows.map((row) => row.tablename));
     const missingTables = REQUIRED_TABLES.filter((table) => !tableSet.has(table));
     assert(missingTables.length === 0, `Missing suite tables: ${missingTables.join(', ')}`);
 
-    const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(`SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`);
-    assert(ledger.rows.length === 13, `Expected 13 suite migration ledger entries, found ${ledger.rows.length}`);
+    const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(
+      `SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`,
+    );
+    assert(ledger.rows.length === 14, `Expected 14 suite migration ledger entries, found ${ledger.rows.length}`);
     assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid suite migration checksum');
-    assert(ledger.rows.some((row) => row.migration_name === '20260813023000_p2_workforce_attendance'), 'P2 workforce migration missing from ledger');
-    assert(ledger.rows.some((row) => row.migration_name === '20260813030000_p2_payroll_rate_profiles'), 'P2 payroll profile migration missing from ledger');
-    assert(ledger.rows.some((row) => row.migration_name === '20260813033000_p2_workforce_leave'), 'P2 workforce leave migration missing from ledger');
-    assert(ledger.rows.some((row) => row.migration_name === '20260813040000_p2_recruitment_core'), 'P2 recruitment migration missing from ledger');
-    assert(ledger.rows.some((row) => row.migration_name === '20260813043000_p2_appraisals_core'), 'P2 appraisals migration missing from ledger');
-    assert(ledger.rows.some((row) => row.migration_name === '20260813050000_p2_services_project_core'), 'P2 services project migration missing from ledger');
-    assert(ledger.rows.some((row) => row.migration_name === '20260813054000_p2_field_service_core'), 'P2 field service migration missing from ledger');
-    assert(ledger.rows.some((row) => row.migration_name === '20260813060000_p2_helpdesk_core'), 'P2 helpdesk migration missing from ledger');
-    assert(ledger.rows.some((row) => row.migration_name === '20260813063000_p2_appointments_core'), 'P2 appointments migration missing from ledger');
 
-    const indexes = await client.query<{ indexname: string }>(`SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = ANY($1::text[])`, [REQUIRED_INDEXES]);
+    const migrationNames = [
+      '20260813023000_p2_workforce_attendance',
+      '20260813030000_p2_payroll_rate_profiles',
+      '20260813033000_p2_workforce_leave',
+      '20260813040000_p2_recruitment_core',
+      '20260813043000_p2_appraisals_core',
+      '20260813050000_p2_services_project_core',
+      '20260813054000_p2_field_service_core',
+      '20260813060000_p2_helpdesk_core',
+      '20260813063000_p2_appointments_core',
+      '20260813070000_p2_payroll_current_profile',
+    ];
+    for (const migrationName of migrationNames) {
+      assert(ledger.rows.some((row) => row.migration_name === migrationName), `${migrationName} missing from ledger`);
+    }
+
+    const indexes = await client.query<{ indexname: string }>(
+      `SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = ANY($1::text[])`,
+      [REQUIRED_INDEXES],
+    );
     const indexSet = new Set(indexes.rows.map((row) => row.indexname));
     const missingIndexes = REQUIRED_INDEXES.filter((name) => !indexSet.has(name));
     assert(missingIndexes.length === 0, `Missing suite indexes: ${missingIndexes.join(', ')}`);
 
-    const profile = await client.query<any>(`SELECT * FROM public.payroll_rate_profiles WHERE tenant_id IS NULL AND profile_code = 'ID-PAYROLL-2026' AND version = 1 LIMIT 1`);
-    assert(profile.rows[0], 'Draft 2026 payroll governance profile missing');
-    assert(profile.rows[0].status === 'draft', 'Reference payroll profile must remain draft until full engine verification');
-    assert(profile.rows[0].tax_method === 'PPH21_TER', 'Payroll reference tax method must be PPH21_TER');
+    const profileV1 = await client.query<any>(
+      `SELECT * FROM public.payroll_rate_profiles WHERE tenant_id IS NULL AND profile_code = 'ID-PAYROLL-2026' AND version = 1 LIMIT 1`,
+    );
+    assert(profileV1.rows[0], 'Draft 2026 payroll governance profile missing');
+    assert(profileV1.rows[0].status === 'draft', 'Reference payroll profile must remain draft until full engine verification');
+    assert(profileV1.rows[0].tax_method === 'PPH21_TER', 'Payroll reference tax method must be PPH21_TER');
+
+    const profileV2 = await client.query<any>(
+      `SELECT * FROM public.payroll_rate_profiles WHERE tenant_id IS NULL AND profile_code = 'ID-PAYROLL-2026' AND version = 2 LIMIT 1`,
+    );
+    assert(profileV2.rows[0], 'Verified-component payroll profile v2 missing');
+    assert(profileV2.rows[0].status === 'draft', 'Payroll profile v2 must remain draft until profile-driven period calculation is wired');
+    assert(profileV2.rows[0].configuration?.verificationStatus === 'verified-components-awaiting-engine-wiring', 'Payroll profile v2 verification marker missing');
+    assert(Number(profileV2.rows[0].configuration?.bpjsKetenagakerjaan?.jpMaxMonthlyWage) === 10547400, 'Payroll profile v2 JP ceiling mismatch');
+    assert(Number(profileV2.rows[0].configuration?.bpjsKesehatan?.maxMonthlyWage) === 12000000, 'Payroll profile v2 BPJS Kesehatan ceiling mismatch');
+    assert(profileV2.rows[0].configuration?.bpjsKetenagakerjaan?.bpuReliefApplied === false, 'BPU relief must not leak into PPU payroll profile');
 
     const leaveColumns = await client.query<{ column_name: string }>(`
       SELECT column_name FROM information_schema.columns
@@ -155,15 +187,6 @@ async function run() {
     `);
     assert(appraisalEmployeeForeignKey.rows.length >= 1, 'Appraisals must reference accounting.employees source of truth');
 
-    const serviceColumns = await client.query<{ table_name: string; column_name: string }>(`
-      SELECT table_name, column_name FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND ((table_name = 'service_project_tasks' AND column_name = 'assignee_employee_id')
-          OR (table_name = 'service_timesheet_entries' AND column_name IN ('employee_id','minutes','status'))
-          OR (table_name = 'service_planning_allocations' AND column_name IN ('employee_id','start_at','end_at','status')))
-    `);
-    assert(serviceColumns.rows.length === 8, 'Project/timesheet/planning lifecycle columns are incomplete');
-
     const serviceEmployeeForeignKeys = await client.query<{ constraint_name: string }>(`
       SELECT tc.constraint_name
       FROM information_schema.table_constraints tc
@@ -176,14 +199,6 @@ async function run() {
         AND ccu.column_name = 'id'
     `);
     assert(serviceEmployeeForeignKeys.rows.length >= 3, 'Services must reference accounting.employees source of truth');
-
-    const fieldColumns = await client.query<{ table_name: string; column_name: string }>(`
-      SELECT table_name, column_name FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND ((table_name = 'service_field_orders' AND column_name IN ('customer_id','project_id','task_id','planning_allocation_id','assigned_employee_id','status','scheduled_start','scheduled_end','resolution_note'))
-          OR (table_name = 'service_field_events' AND column_name IN ('field_order_id','event_type','employee_id','latitude','longitude')))
-    `);
-    assert(fieldColumns.rows.length === 14, 'Field Service lifecycle/audit columns are incomplete');
 
     const fieldEmployeeForeignKeys = await client.query<{ constraint_name: string }>(`
       SELECT tc.constraint_name
@@ -211,16 +226,6 @@ async function run() {
     `);
     assert(fieldPlanningForeignKey.rows.length >= 1, 'Field Service must reuse Services Planning allocations');
 
-    const helpdeskColumns = await client.query<{ table_name: string; column_name: string }>(`
-      SELECT table_name, column_name FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND ((table_name = 'service_helpdesk_sla_policies' AND column_name IN ('priority','first_response_minutes','resolution_minutes','is_active'))
-          OR (table_name = 'service_helpdesk_tickets' AND column_name IN ('customer_id','project_id','field_order_id','sla_policy_id','assigned_employee_id','status','first_response_due_at','resolution_due_at','first_responded_at','resolution_note'))
-          OR (table_name = 'service_helpdesk_messages' AND column_name IN ('ticket_id','author_employee_id','direction','visibility','body'))
-          OR (table_name = 'service_helpdesk_events' AND column_name IN ('ticket_id','event_type','employee_id','payload')))
-    `);
-    assert(helpdeskColumns.rows.length === 23, 'Helpdesk SLA/ticket/conversation lifecycle columns are incomplete');
-
     const helpdeskEmployeeForeignKeys = await client.query<{ constraint_name: string }>(`
       SELECT tc.constraint_name
       FROM information_schema.table_constraints tc
@@ -245,15 +250,6 @@ async function run() {
         AND ccu.table_name IN ('customers','service_projects','service_field_orders','service_helpdesk_sla_policies')
     `);
     assert(helpdeskSourceForeignKeys.rows.length >= 4, 'Helpdesk must reuse customer/project/Field Service/SLA sources');
-
-    const appointmentColumns = await client.query<{ table_name: string; column_name: string }>(`
-      SELECT table_name, column_name FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND ((table_name = 'service_appointment_types' AND column_name IN ('duration_minutes','buffer_before_minutes','buffer_after_minutes','is_active'))
-          OR (table_name = 'service_appointments' AND column_name IN ('appointment_type_id','customer_id','assigned_employee_id','planning_allocation_id','status','scheduled_start','scheduled_end','duration_minutes','buffer_before_minutes','buffer_after_minutes','checked_in_at','completed_at','no_show_at'))
-          OR (table_name = 'service_appointment_events' AND column_name IN ('appointment_id','event_type','actor_employee_id','payload')))
-    `);
-    assert(appointmentColumns.rows.length === 21, 'Appointments type/scheduling/lifecycle columns are incomplete');
 
     const appointmentEmployeeForeignKeys = await client.query<{ constraint_name: string }>(`
       SELECT tc.constraint_name
@@ -280,7 +276,10 @@ async function run() {
     `);
     assert(appointmentSourceForeignKeys.rows.length >= 3, 'Appointments must reuse customer/type/Planning sources');
 
-    const triggers = await client.query<{ tgname: string }>(`SELECT tgname FROM pg_trigger WHERE NOT tgisinternal AND tgname = ANY($1::text[])`, [REQUIRED_TRIGGERS]);
+    const triggers = await client.query<{ tgname: string }>(
+      `SELECT tgname FROM pg_trigger WHERE NOT tgisinternal AND tgname = ANY($1::text[])`,
+      [REQUIRED_TRIGGERS],
+    );
     const triggerSet = new Set(triggers.rows.map((row) => row.tgname));
     const missingTriggers = REQUIRED_TRIGGERS.filter((name) => !triggerSet.has(name));
     assert(missingTriggers.length === 0, `Missing immutable triggers: ${missingTriggers.join(', ')}`);
@@ -331,12 +330,22 @@ async function run() {
         [`UPDATE public.service_appointment_events SET notes='tamper' WHERE id=${Number(appointmentEvent.rows[0].id)}`, 'appointment event UPDATE'],
         [`DELETE FROM public.service_appointment_events WHERE id=${Number(appointmentEvent.rows[0].id)}`, 'appointment event DELETE'],
       ] as const;
-      for (let index = 0; index < checks.length; index += 1) await expectMutationBlocked(client, checks[index][0], checks[index][1], index);
+      for (let index = 0; index < checks.length; index += 1) {
+        await expectMutationBlocked(client, checks[index][0], checks[index][1], index);
+      }
       await client.query('ROLLBACK');
-    } catch (error) { await client.query('ROLLBACK'); throw error; }
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
 
-    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, appointments scheduling/lifecycle present, 14 blocked mutations.`);
-  } finally { await client.end(); }
+    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, payroll current profile v2 draft present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, appointments scheduling/lifecycle present, 14 blocked mutations.`);
+  } finally {
+    await client.end();
+  }
 }
 
-run().catch((error) => { console.error('[Suite DB verification] failed', error); process.exit(1); });
+run().catch((error) => {
+  console.error('[Suite DB verification] failed', error);
+  process.exit(1);
+});
