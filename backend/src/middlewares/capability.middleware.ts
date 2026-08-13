@@ -41,7 +41,10 @@ export type SuiteCapability =
   | 'services.timesheet.manage'
   | 'services.timesheet.self'
   | 'services.planning.read'
-  | 'services.planning.manage';
+  | 'services.planning.manage'
+  | 'services.field_service.read'
+  | 'services.field_service.manage'
+  | 'services.field_service.self';
 
 type FeatureRecord = Record<string, unknown>;
 
