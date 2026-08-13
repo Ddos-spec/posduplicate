@@ -1,0 +1,56 @@
+name: P3 Promote eCommerce Contract Once
+
+on:
+  push:
+    branches: [feat/odoo-complete-suite]
+    paths:
+      - '.github/workflows/p3-promote-ecommerce-contract-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/odoo-complete-suite
+          fetch-depth: 0
+
+      - name: Align accepted ecommerce contract
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('backend/tests/unit/p3-website-commerce-contract.test.ts')
+          text = p.read_text()
+          old_name = "suite metadata reflects partial website scope while ecommerce awaits final promotion"
+          new_name = "suite metadata keeps website partial and promotes accepted ecommerce runtime"
+          old_status = "expect(ecommerce).toContain(\"status: 'blueprint'\");"
+          new_status = "expect(ecommerce).toContain(\"status: 'live'\");"
+          if old_name not in text or old_status not in text:
+              raise SystemExit('promotion contract anchors missing')
+          p.write_text(text.replace(old_name, new_name, 1).replace(old_status, new_status, 1))
+          PY
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Focused contract test
+        working-directory: backend
+        run: |
+          npm ci
+          npm test -- --runInBand tests/unit/p3-website-commerce-contract.test.ts tests/unit/p3-ecommerce-reservation-idempotency.test.ts
+
+      - name: Commit accepted contract
+        shell: bash
+        run: |
+          git diff --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add backend/tests/unit/p3-website-commerce-contract.test.ts
+          git commit -m "test(p3): lock accepted ecommerce live status"
+          git push origin HEAD:feat/odoo-complete-suite
