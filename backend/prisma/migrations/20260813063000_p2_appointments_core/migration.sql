@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS public.service_appointments (
   status VARCHAR(24) NOT NULL DEFAULT 'booked',
   scheduled_start TIMESTAMPTZ NOT NULL,
   scheduled_end TIMESTAMPTZ NOT NULL,
+  duration_minutes INTEGER NOT NULL,
+  buffer_before_minutes INTEGER NOT NULL DEFAULT 0,
+  buffer_after_minutes INTEGER NOT NULL DEFAULT 0,
   confirmed_at TIMESTAMPTZ,
   checked_in_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
@@ -52,6 +55,9 @@ CREATE TABLE IF NOT EXISTS public.service_appointments (
   CONSTRAINT service_appointment_code_not_blank CHECK (length(trim(code)) > 0),
   CONSTRAINT service_appointment_title_not_blank CHECK (length(trim(title)) > 0),
   CONSTRAINT service_appointment_period_valid CHECK (scheduled_end > scheduled_start),
+  CONSTRAINT service_appointment_duration_valid CHECK (duration_minutes > 0 AND duration_minutes <= 1440),
+  CONSTRAINT service_appointment_buffer_before_valid CHECK (buffer_before_minutes >= 0 AND buffer_before_minutes <= 1440),
+  CONSTRAINT service_appointment_buffer_after_valid CHECK (buffer_after_minutes >= 0 AND buffer_after_minutes <= 1440),
   CONSTRAINT service_appointment_status_valid CHECK (status IN ('booked','confirmed','checked_in','completed','no_show','cancelled')),
   CONSTRAINT ux_service_appointment_code UNIQUE (tenant_id, code)
 );
@@ -86,6 +92,6 @@ BEFORE UPDATE OR DELETE ON public.service_appointment_events
 FOR EACH ROW EXECUTE FUNCTION public.prevent_suite_ledger_mutation();
 
 COMMENT ON TABLE public.service_appointments IS
-  'P2 Appointments. Scheduling is represented by the linked service_planning_allocations row so all service workloads share one overlap guard.';
+  'P2 Appointments. Scheduling is represented by the linked service_planning_allocations row so all service workloads share one overlap guard. Duration and buffers are snapshotted per booking.';
 COMMENT ON TABLE public.service_appointment_events IS
   'Immutable appointment lifecycle audit trail protected by the suite append-only trigger.';
