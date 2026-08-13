@@ -131,7 +131,7 @@ export const SUITE_APPS: SuiteAppDefinition[] = [
   { id: 'rental', category: 'sales', name: 'Rental', description: 'Rental products, booking periods, pickup/return, deposit, and availability.', icon: KeyRound, bundle: 'pos', status: 'blueprint', capabilities: ['Booking', 'Availability', 'Deposit', 'Returns'] },
 
   // Websites
-  { id: 'website', category: 'websites', name: 'Website', description: 'Business website, landing pages, forms, lead capture, and publish workflow.', icon: Globe2, bundle: 'commerSocial', status: 'blueprint', capabilities: ['Pages', 'Forms', 'CMS', 'Analytics'] },
+  { id: 'website', category: 'websites', name: 'Website', description: 'Business website, landing pages, forms, lead capture, and publish workflow.', icon: Globe2, bundle: 'commerSocial', status: 'partial', path: '/digital', capabilities: ['Pages', 'Forms', 'CMS', 'Analytics'] },
   { id: 'ecommerce', category: 'websites', name: 'eCommerce', description: 'Online catalog, cart, checkout, customer accounts, delivery, and order lifecycle.', icon: ShoppingBag, bundle: 'pos', status: 'blueprint', capabilities: ['Catalog', 'Cart', 'Checkout', 'Fulfillment'] },
   { id: 'elearning', category: 'websites', name: 'eLearning', description: 'Courses, lessons, completion tracking, assessments, and learner portal.', icon: GraduationCap, bundle: 'commerSocial', status: 'blueprint', capabilities: ['Courses', 'Lessons', 'Quiz', 'Certificates'] },
   { id: 'forum', category: 'websites', name: 'Forum', description: 'Community Q&A, moderation, tags, reputation, and knowledge discovery.', icon: MessagesSquare, bundle: 'commerSocial', status: 'blueprint', capabilities: ['Q&A', 'Moderation', 'Tags', 'Reputation'] },

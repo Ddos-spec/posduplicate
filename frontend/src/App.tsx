@@ -58,6 +58,7 @@ const ModuleSelectorPage = lazy(() => import('./pages/ModuleSelectorPage'));
 const RevenueWorkspacePage = lazy(() => import('./pages/RevenueWorkspacePage'));
 const SupplyChainWorkspacePage = lazy(() => import('./pages/SupplyChainWorkspacePage'));
 const WorkforceWorkspacePage = lazy(() => import('./pages/WorkforceWorkspacePage'));
+const DigitalWebsiteWorkspacePage = lazy(() => import('./pages/DigitalWebsiteWorkspacePage'));
 
 // Accounting Module Pages
 const AccountingLayout = lazy(() => import('./components/accounting/AccountingLayout'));
@@ -249,6 +250,7 @@ function App() {
           <Route path="/revenue" element={<OwnerRoute><RevenueWorkspacePage /></OwnerRoute>} />
           <Route path="/supply-chain" element={<TenantModuleRoute moduleKey="inventory"><OwnerRoute><SupplyChainWorkspacePage /></OwnerRoute></TenantModuleRoute>} />
           <Route path="/workforce" element={<TenantModuleRoute moduleKey="accounting"><ProtectedRoute><WorkforceWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />
+          <Route path="/digital" element={<TenantModuleRoute moduleKey="commerSocial"><OwnerRoute><DigitalWebsiteWorkspacePage /></OwnerRoute></TenantModuleRoute>} />
 
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route path="dashboard" element={<SuperAdminOmniPage />} />
