@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { createRentalBooking, listRentalBookings, updateRentalBookingStatus } from '../services/rental-booking.p3.service';
+import { holdRentalDeposit, releaseRentalDeposit } from '../services/rental-deposit.p3.service';
 
 const tenantContext = (req: Request) => {
   const tenantId = Number(req.tenantId);
@@ -30,5 +31,24 @@ export const patchRentalBookingStatus = async (req: Request, res: Response, next
     const { tenantId, userId } = tenantContext(req);
     const data = await updateRentalBookingStatus(tenantId, userId, req.params.id, req.body.status);
     return res.json({ success: true, data });
+  } catch (error) { return next(error); }
+};
+
+export const postRentalDepositHold = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { tenantId, userId } = tenantContext(req);
+    const data = await holdRentalDeposit(tenantId, userId, req.params.id, {
+      paymentMethod: req.body.paymentMethod,
+      referenceNumber: req.body.referenceNumber ?? null,
+    });
+    return res.status(data.reused ? 200 : 201).json({ success: true, data });
+  } catch (error) { return next(error); }
+};
+
+export const postRentalDepositRelease = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { tenantId, userId } = tenantContext(req);
+    const data = await releaseRentalDeposit(tenantId, userId, req.params.id);
+    return res.status(data.reused ? 200 : 201).json({ success: true, data });
   } catch (error) { return next(error); }
 };
