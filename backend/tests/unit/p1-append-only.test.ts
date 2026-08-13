@@ -27,15 +27,16 @@ describe('suite immutable audit guards', () => {
     expect(runner).toContain("'20260813043000_p2_appraisals_core'");
     expect(runner).toContain("'20260813050000_p2_services_project_core'");
     expect(runner).toContain("'20260813054000_p2_field_service_core'");
+    expect(runner).toContain("'20260813060000_p2_helpdesk_core'");
     expect(runner).toContain('checksum_sha256');
     expect(runner).toContain('Never edit an applied suite migration');
   });
 
-  test('shared database verifier validates eleven suite migrations and workforce/services objects', () => {
+  test('shared database verifier validates twelve suite migrations and workforce/services objects', () => {
     const verifier = read('src/scripts/verify-p1-database-v2.ts');
     const suiteWorkflow = read('../.github/workflows/frontend-ci.yml');
     const runtimeWorkflow = read('../.github/workflows/p1-runtime-ci.yml');
-    expect(verifier).toContain('ledger.rows.length === 11');
+    expect(verifier).toContain('ledger.rows.length === 12');
     expect(verifier).toContain('workforce_attendance_sessions');
     expect(verifier).toContain('payroll_rate_profiles');
     expect(verifier).toContain('workforce_leave_types');
@@ -54,6 +55,10 @@ describe('suite immutable audit guards', () => {
     expect(verifier).toContain('service_planning_allocations');
     expect(verifier).toContain('service_field_orders');
     expect(verifier).toContain('service_field_events');
+    expect(verifier).toContain('service_helpdesk_sla_policies');
+    expect(verifier).toContain('service_helpdesk_tickets');
+    expect(verifier).toContain('service_helpdesk_messages');
+    expect(verifier).toContain('service_helpdesk_events');
     expect(verifier).toContain('reserved_days');
     expect(verifier).toContain('used_days');
     expect(verifier).toContain('hired_employee_id');
@@ -71,10 +76,15 @@ describe('suite immutable audit guards', () => {
     expect(verifier).toContain('idx_service_planning_employee');
     expect(verifier).toContain('idx_service_field_order_scope');
     expect(verifier).toContain('idx_service_field_event_order');
+    expect(verifier).toContain('idx_helpdesk_ticket_scope');
+    expect(verifier).toContain('idx_helpdesk_message_ticket');
+    expect(verifier).toContain('idx_helpdesk_event_ticket');
     expect(verifier).toContain('trg_loyalty_ledger_append_only');
     expect(verifier).toContain('trg_warehouse_stock_ledger_append_only');
     expect(verifier).toContain('trg_procurement_event_ledger_append_only');
     expect(verifier).toContain('trg_service_field_event_append_only');
+    expect(verifier).toContain('trg_service_helpdesk_message_append_only');
+    expect(verifier).toContain('trg_service_helpdesk_event_append_only');
     expect(verifier).toContain("error?.code === '55000'");
     expect(suiteWorkflow).toContain('node dist/scripts/verify-p1-database-v2.js');
     expect(runtimeWorkflow).toContain('node dist/scripts/verify-p1-database-v2.js');
