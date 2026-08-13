@@ -32,6 +32,9 @@ describe('business-suite contracts', () => {
     expect(workforceRoutes).toContain("requireCapability('workforce.employee.read')");
     expect(workforceRoutes).toContain("requireCapability('workforce.attendance.read')");
     expect(workforceRoutes).toContain("requireCapability('workforce.attendance.self')");
+    expect(workforceRoutes).toContain("requireCapability('workforce.leave.read')");
+    expect(workforceRoutes).toContain("requireCapability('workforce.leave.manage')");
+    expect(workforceRoutes).toContain("requireCapability('workforce.leave.self')");
     expect(payrollRoutes).toContain("requireCapability('workforce.employee.manage')");
     expect(payrollRoutes).toContain("requireCapability('workforce.payroll.read')");
     expect(payrollRoutes).toContain("requireCapability('workforce.payroll.manage')");
@@ -70,7 +73,7 @@ describe('business-suite contracts', () => {
     expect(runner).toContain('suite_schema_migrations');
     expect(runner).toContain('checksum_sha256');
     expect(runner).toContain('Never edit an applied suite migration');
-    for (const migration of ['20260812103000_p1_revenue_core','20260812112000_p1_supply_chain_core','20260812130000_p1_procurement_rfq','20260812140000_p1_append_only_guards','20260813023000_p2_workforce_attendance','20260813030000_p2_payroll_rate_profiles']) expect(runner).toContain(`'${migration}'`);
+    for (const migration of ['20260812103000_p1_revenue_core','20260812112000_p1_supply_chain_core','20260812130000_p1_procurement_rfq','20260812140000_p1_append_only_guards','20260813023000_p2_workforce_attendance','20260813030000_p2_payroll_rate_profiles','20260813033000_p2_workforce_leave']) expect(runner).toContain(`'${migration}'`);
     expect(dockerfile).toContain('node:22-alpine');
     expect(dockerfile).toContain('node dist/scripts/apply-p1-migrations.js && exec node dist/server.js');
   });
