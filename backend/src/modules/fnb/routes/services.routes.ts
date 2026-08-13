@@ -43,6 +43,7 @@ import {
   updateHelpdeskTicketStatus,
   updateMyHelpdeskTicketStatus,
 } from '../controllers/services-helpdesk.p2.controller';
+import { getMyHelpdeskMessages } from '../controllers/services-helpdesk-self-messages.p2.controller';
 import {
   cancelAppointment,
   checkInAppointment,
@@ -59,6 +60,11 @@ import {
   markAppointmentNoShow,
   rescheduleAppointment,
 } from '../controllers/services-appointments.p2.controller';
+import {
+  getAppointmentContext,
+  getFieldServiceContext,
+  getHelpdeskContext,
+} from '../controllers/services-operations-context.p2.controller';
 
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
@@ -81,6 +87,7 @@ router.get('/planning', requireCapability('services.planning.read'), getServiceP
 router.post('/planning', requireCapability('services.planning.manage'), createServicePlanning);
 router.patch('/planning/:id/status', requireCapability('services.planning.manage'), updateServicePlanningStatus);
 
+router.get('/field-service/context', requireCapability('services.field_service.manage'), getFieldServiceContext);
 router.get('/field-service/orders', requireCapability('services.field_service.read'), getFieldServiceOrders);
 router.post('/field-service/orders', requireCapability('services.field_service.manage'), createFieldServiceOrder);
 router.post('/field-service/orders/:id/schedule', requireCapability('services.field_service.manage'), scheduleFieldServiceOrder);
@@ -91,6 +98,7 @@ router.post('/field-service/:id/depart', requireCapability('services.field_servi
 router.post('/field-service/:id/arrive', requireCapability('services.field_service.self'), arriveMyFieldServiceOrder);
 router.post('/field-service/:id/complete', requireCapability('services.field_service.self'), completeMyFieldServiceOrder);
 
+router.get('/helpdesk/context', requireCapability('services.helpdesk.manage'), getHelpdeskContext);
 router.get('/helpdesk/slas', requireCapability('services.helpdesk.read'), getHelpdeskSlaPolicies);
 router.post('/helpdesk/slas', requireCapability('services.helpdesk.manage'), createHelpdeskSlaPolicy);
 router.get('/helpdesk/tickets', requireCapability('services.helpdesk.read'), getHelpdeskTickets);
@@ -101,9 +109,11 @@ router.get('/helpdesk/tickets/:id/messages', requireCapability('services.helpdes
 router.post('/helpdesk/tickets/:id/messages', requireCapability('services.helpdesk.manage'), addHelpdeskMessage);
 router.get('/helpdesk/tickets/:id/events', requireCapability('services.helpdesk.read'), getHelpdeskEvents);
 router.get('/helpdesk/me', requireCapability('services.helpdesk.self'), getMyHelpdeskTickets);
+router.get('/helpdesk/me/:id/messages', requireCapability('services.helpdesk.self'), getMyHelpdeskMessages);
 router.post('/helpdesk/me/:id/reply', requireCapability('services.helpdesk.self'), replyMyHelpdeskTicket);
 router.patch('/helpdesk/me/:id/status', requireCapability('services.helpdesk.self'), updateMyHelpdeskTicketStatus);
 
+router.get('/appointments/context', requireCapability('services.appointment.manage'), getAppointmentContext);
 router.get('/appointments/types', requireCapability('services.appointment.read'), getAppointmentTypes);
 router.post('/appointments/types', requireCapability('services.appointment.manage'), createAppointmentType);
 router.get('/appointments', requireCapability('services.appointment.read'), getAppointments);
