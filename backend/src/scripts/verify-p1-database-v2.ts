@@ -11,6 +11,8 @@ const REQUIRED_TABLES = [
   'purchase_rfq_supplier_items', 'procurement_event_ledger',
   'workforce_attendance_sessions', 'payroll_rate_profiles',
   'workforce_leave_types', 'workforce_leave_allocations', 'workforce_leave_requests',
+  'workforce_recruitment_vacancies', 'workforce_recruitment_applicants',
+  'workforce_recruitment_interviews', 'workforce_recruitment_offers',
 ] as const;
 
 const REQUIRED_TRIGGERS = [
@@ -26,6 +28,11 @@ const REQUIRED_INDEXES = [
   'idx_workforce_leave_allocation_employee',
   'idx_workforce_leave_request_scope',
   'idx_workforce_leave_request_employee',
+  'idx_workforce_recruitment_vacancy_scope',
+  'idx_workforce_recruitment_applicant_scope',
+  'ux_workforce_recruitment_applicant_email_vacancy',
+  'ux_workforce_recruitment_hired_employee',
+  'ux_workforce_recruitment_offer_accepted',
 ] as const;
 
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
@@ -55,11 +62,12 @@ async function run() {
     assert(missingTables.length === 0, `Missing suite tables: ${missingTables.join(', ')}`);
 
     const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(`SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`);
-    assert(ledger.rows.length === 7, `Expected 7 suite migration ledger entries, found ${ledger.rows.length}`);
+    assert(ledger.rows.length === 8, `Expected 8 suite migration ledger entries, found ${ledger.rows.length}`);
     assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid suite migration checksum');
     assert(ledger.rows.some((row) => row.migration_name === '20260813023000_p2_workforce_attendance'), 'P2 workforce migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813030000_p2_payroll_rate_profiles'), 'P2 payroll profile migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813033000_p2_workforce_leave'), 'P2 workforce leave migration missing from ledger');
+    assert(ledger.rows.some((row) => row.migration_name === '20260813040000_p2_recruitment_core'), 'P2 recruitment migration missing from ledger');
 
     const indexes = await client.query<{ indexname: string }>(`SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = ANY($1::text[])`, [REQUIRED_INDEXES]);
     const indexSet = new Set(indexes.rows.map((row) => row.indexname));
@@ -77,6 +85,13 @@ async function run() {
         AND column_name IN ('allocated_days','reserved_days','used_days')
     `);
     assert(leaveColumns.rows.length === 3, 'Workforce leave allocation balance columns are incomplete');
+
+    const recruitmentColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'workforce_recruitment_applicants'
+        AND column_name IN ('vacancy_id','stage','hired_employee_id','hired_at')
+    `);
+    assert(recruitmentColumns.rows.length === 4, 'Recruitment applicant lifecycle columns are incomplete');
 
     const triggers = await client.query<{ tgname: string }>(`SELECT tgname FROM pg_trigger WHERE NOT tgisinternal AND tgname = ANY($1::text[])`, [REQUIRED_TRIGGERS]);
     const triggerSet = new Set(triggers.rows.map((row) => row.tgname));
@@ -102,7 +117,7 @@ async function run() {
       await client.query('ROLLBACK');
     } catch (error) { await client.query('ROLLBACK'); throw error; }
 
-    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, workforce leave balances present, 6 blocked mutations.`);
+    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, workforce leave balances present, recruitment lifecycle present, 6 blocked mutations.`);
   } finally { await client.end(); }
 }
 
