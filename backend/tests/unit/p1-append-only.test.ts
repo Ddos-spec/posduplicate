@@ -17,31 +17,40 @@ describe('suite immutable audit guards', () => {
     expect(migration).toContain("ERRCODE = '55000'");
   });
 
-  test('production migration runner includes P2 workforce, payroll governance and leave migrations', () => {
+  test('production migration runner includes P2 workforce, payroll, leave and recruitment migrations', () => {
     const runner = read('src/scripts/apply-p1-migrations.ts');
     expect(runner).toContain("'20260812140000_p1_append_only_guards'");
     expect(runner).toContain("'20260813023000_p2_workforce_attendance'");
     expect(runner).toContain("'20260813030000_p2_payroll_rate_profiles'");
     expect(runner).toContain("'20260813033000_p2_workforce_leave'");
+    expect(runner).toContain("'20260813040000_p2_recruitment_core'");
     expect(runner).toContain('checksum_sha256');
     expect(runner).toContain('Never edit an applied suite migration');
   });
 
-  test('shared database verifier validates seven suite migrations, workforce/payroll indexes and immutable triggers', () => {
+  test('shared database verifier validates eight suite migrations and workforce objects', () => {
     const verifier = read('src/scripts/verify-p1-database-v2.ts');
     const suiteWorkflow = read('../.github/workflows/frontend-ci.yml');
     const runtimeWorkflow = read('../.github/workflows/p1-runtime-ci.yml');
-    expect(verifier).toContain('ledger.rows.length === 7');
+    expect(verifier).toContain('ledger.rows.length === 8');
     expect(verifier).toContain('workforce_attendance_sessions');
     expect(verifier).toContain('payroll_rate_profiles');
     expect(verifier).toContain('workforce_leave_types');
     expect(verifier).toContain('workforce_leave_allocations');
     expect(verifier).toContain('workforce_leave_requests');
+    expect(verifier).toContain('workforce_recruitment_vacancies');
+    expect(verifier).toContain('workforce_recruitment_applicants');
+    expect(verifier).toContain('workforce_recruitment_interviews');
+    expect(verifier).toContain('workforce_recruitment_offers');
     expect(verifier).toContain('reserved_days');
     expect(verifier).toContain('used_days');
+    expect(verifier).toContain('hired_employee_id');
     expect(verifier).toContain('ux_workforce_attendance_open_employee');
     expect(verifier).toContain('ux_payroll_rate_profile_global_version');
     expect(verifier).toContain('idx_workforce_leave_request_scope');
+    expect(verifier).toContain('ux_workforce_recruitment_applicant_email_vacancy');
+    expect(verifier).toContain('ux_workforce_recruitment_hired_employee');
+    expect(verifier).toContain('ux_workforce_recruitment_offer_accepted');
     expect(verifier).toContain('trg_loyalty_ledger_append_only');
     expect(verifier).toContain('trg_warehouse_stock_ledger_append_only');
     expect(verifier).toContain('trg_procurement_event_ledger_append_only');
