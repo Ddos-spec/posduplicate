@@ -17,6 +17,7 @@ const REQUIRED_TABLES = [
   'service_projects', 'service_project_tasks', 'service_timesheet_entries', 'service_planning_allocations',
   'service_field_orders', 'service_field_events',
   'service_helpdesk_sla_policies', 'service_helpdesk_tickets', 'service_helpdesk_messages', 'service_helpdesk_events',
+  'service_appointment_types', 'service_appointments', 'service_appointment_events',
 ] as const;
 
 const REQUIRED_TRIGGERS = [
@@ -26,6 +27,7 @@ const REQUIRED_TRIGGERS = [
   'trg_service_field_event_append_only',
   'trg_service_helpdesk_message_append_only',
   'trg_service_helpdesk_event_append_only',
+  'trg_service_appointment_event_append_only',
 ] as const;
 
 const REQUIRED_INDEXES = [
@@ -63,6 +65,11 @@ const REQUIRED_INDEXES = [
   'idx_helpdesk_ticket_sla_due',
   'idx_helpdesk_message_ticket',
   'idx_helpdesk_event_ticket',
+  'idx_service_appointment_type_scope',
+  'idx_service_appointment_scope',
+  'idx_service_appointment_employee',
+  'idx_service_appointment_customer',
+  'idx_service_appointment_event_order',
 ] as const;
 
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
@@ -92,7 +99,7 @@ async function run() {
     assert(missingTables.length === 0, `Missing suite tables: ${missingTables.join(', ')}`);
 
     const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(`SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`);
-    assert(ledger.rows.length === 12, `Expected 12 suite migration ledger entries, found ${ledger.rows.length}`);
+    assert(ledger.rows.length === 13, `Expected 13 suite migration ledger entries, found ${ledger.rows.length}`);
     assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid suite migration checksum');
     assert(ledger.rows.some((row) => row.migration_name === '20260813023000_p2_workforce_attendance'), 'P2 workforce migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813030000_p2_payroll_rate_profiles'), 'P2 payroll profile migration missing from ledger');
@@ -102,6 +109,7 @@ async function run() {
     assert(ledger.rows.some((row) => row.migration_name === '20260813050000_p2_services_project_core'), 'P2 services project migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813054000_p2_field_service_core'), 'P2 field service migration missing from ledger');
     assert(ledger.rows.some((row) => row.migration_name === '20260813060000_p2_helpdesk_core'), 'P2 helpdesk migration missing from ledger');
+    assert(ledger.rows.some((row) => row.migration_name === '20260813063000_p2_appointments_core'), 'P2 appointments migration missing from ledger');
 
     const indexes = await client.query<{ indexname: string }>(`SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = ANY($1::text[])`, [REQUIRED_INDEXES]);
     const indexSet = new Set(indexes.rows.map((row) => row.indexname));
@@ -238,6 +246,40 @@ async function run() {
     `);
     assert(helpdeskSourceForeignKeys.rows.length >= 4, 'Helpdesk must reuse customer/project/Field Service/SLA sources');
 
+    const appointmentColumns = await client.query<{ table_name: string; column_name: string }>(`
+      SELECT table_name, column_name FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND ((table_name = 'service_appointment_types' AND column_name IN ('duration_minutes','buffer_before_minutes','buffer_after_minutes','is_active'))
+          OR (table_name = 'service_appointments' AND column_name IN ('appointment_type_id','customer_id','assigned_employee_id','planning_allocation_id','status','scheduled_start','scheduled_end','duration_minutes','buffer_before_minutes','buffer_after_minutes','checked_in_at','completed_at','no_show_at'))
+          OR (table_name = 'service_appointment_events' AND column_name IN ('appointment_id','event_type','actor_employee_id','payload')))
+    `);
+    assert(appointmentColumns.rows.length === 21, 'Appointments type/scheduling/lifecycle columns are incomplete');
+
+    const appointmentEmployeeForeignKeys = await client.query<{ constraint_name: string }>(`
+      SELECT tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.constraint_schema
+      WHERE tc.table_schema = 'public'
+        AND tc.table_name IN ('service_appointments','service_appointment_events')
+        AND tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_schema = 'accounting'
+        AND ccu.table_name = 'employees'
+        AND ccu.column_name = 'id'
+    `);
+    assert(appointmentEmployeeForeignKeys.rows.length >= 2, 'Appointments must reuse accounting.employees source of truth');
+
+    const appointmentSourceForeignKeys = await client.query<{ constraint_name: string }>(`
+      SELECT tc.constraint_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.constraint_schema = tc.constraint_schema
+      WHERE tc.table_schema = 'public'
+        AND tc.table_name = 'service_appointments'
+        AND tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_schema = 'public'
+        AND ccu.table_name IN ('customers','service_appointment_types','service_planning_allocations')
+    `);
+    assert(appointmentSourceForeignKeys.rows.length >= 3, 'Appointments must reuse customer/type/Planning sources');
+
     const triggers = await client.query<{ tgname: string }>(`SELECT tgname FROM pg_trigger WHERE NOT tgisinternal AND tgname = ANY($1::text[])`, [REQUIRED_TRIGGERS]);
     const triggerSet = new Set(triggers.rows.map((row) => row.tgname));
     const missingTriggers = REQUIRED_TRIGGERS.filter((name) => !triggerSet.has(name));
@@ -259,6 +301,7 @@ async function run() {
       const fieldTenantId = Number(fieldTenant.rows[0].id);
       const fieldOutlet = await client.query<{ id: number }>(`INSERT INTO public.outlets (tenant_id, name) VALUES ($1, 'Field Verify Outlet') RETURNING id`, [fieldTenantId]);
       const fieldCustomer = await client.query<{ id: number }>(`INSERT INTO public.customers (name, outlet_id) VALUES ('Field Verify Customer', $1) RETURNING id`, [fieldOutlet.rows[0].id]);
+      const fieldEmployee = await client.query<{ id: number }>(`INSERT INTO accounting.employees (tenant_id, employee_id, name, status) VALUES ($1, 'VERIFY-EMP', 'Verify Employee', 'active') RETURNING id`, [fieldTenantId]);
       const fieldOrder = await client.query<{ id: number }>(`INSERT INTO public.service_field_orders (tenant_id, outlet_id, customer_id, code, title, service_address, status) VALUES ($1, $2, $3, 'VERIFY-FIELD', 'Verify Field Order', 'Verification address', 'draft') RETURNING id`, [fieldTenantId, fieldOutlet.rows[0].id, fieldCustomer.rows[0].id]);
       const fieldEvent = await client.query<{ id: number }>(`INSERT INTO public.service_field_events (tenant_id, field_order_id, event_type, notes) VALUES ($1, $2, 'created', 'suite immutable verification') RETURNING id`, [fieldTenantId, fieldOrder.rows[0].id]);
 
@@ -266,6 +309,11 @@ async function run() {
       const helpdeskTicket = await client.query<{ id: number }>(`INSERT INTO public.service_helpdesk_tickets (tenant_id, outlet_id, customer_id, field_order_id, sla_policy_id, code, subject, channel, priority, status) VALUES ($1, $2, $3, $4, $5, 'VERIFY-HELP', 'Verify Helpdesk Ticket', 'internal', 'normal', 'new') RETURNING id`, [fieldTenantId, fieldOutlet.rows[0].id, fieldCustomer.rows[0].id, fieldOrder.rows[0].id, helpdeskSla.rows[0].id]);
       const helpdeskMessage = await client.query<{ id: number }>(`INSERT INTO public.service_helpdesk_messages (tenant_id, ticket_id, direction, visibility, body) VALUES ($1, $2, 'internal', 'internal', 'suite immutable verification') RETURNING id`, [fieldTenantId, helpdeskTicket.rows[0].id]);
       const helpdeskEvent = await client.query<{ id: number }>(`INSERT INTO public.service_helpdesk_events (tenant_id, ticket_id, event_type, payload) VALUES ($1, $2, 'created', '{}'::jsonb) RETURNING id`, [fieldTenantId, helpdeskTicket.rows[0].id]);
+
+      const appointmentType = await client.query<{ id: number }>(`INSERT INTO public.service_appointment_types (tenant_id, outlet_id, code, name, duration_minutes, buffer_before_minutes, buffer_after_minutes) VALUES ($1, $2, 'VERIFY-APT-TYPE', 'Verify Appointment', 30, 5, 10) RETURNING id`, [fieldTenantId, fieldOutlet.rows[0].id]);
+      const appointmentPlanning = await client.query<{ id: number }>(`INSERT INTO public.service_planning_allocations (tenant_id, employee_id, start_at, end_at, status, notes) VALUES ($1, $2, NOW() + INTERVAL '1 day' - INTERVAL '5 minutes', NOW() + INTERVAL '1 day' + INTERVAL '40 minutes', 'planned', 'appointment verifier') RETURNING id`, [fieldTenantId, fieldEmployee.rows[0].id]);
+      const appointment = await client.query<{ id: number }>(`INSERT INTO public.service_appointments (tenant_id, outlet_id, appointment_type_id, customer_id, assigned_employee_id, planning_allocation_id, code, title, status, scheduled_start, scheduled_end, duration_minutes, buffer_before_minutes, buffer_after_minutes) VALUES ($1, $2, $3, $4, $5, $6, 'VERIFY-APT', 'Verify Appointment', 'booked', NOW() + INTERVAL '1 day', NOW() + INTERVAL '1 day' + INTERVAL '30 minutes', 30, 5, 10) RETURNING id`, [fieldTenantId, fieldOutlet.rows[0].id, appointmentType.rows[0].id, fieldCustomer.rows[0].id, fieldEmployee.rows[0].id, appointmentPlanning.rows[0].id]);
+      const appointmentEvent = await client.query<{ id: number }>(`INSERT INTO public.service_appointment_events (tenant_id, appointment_id, event_type, actor_employee_id, notes, payload) VALUES ($1, $2, 'booked', $3, 'suite immutable verification', '{}'::jsonb) RETURNING id`, [fieldTenantId, appointment.rows[0].id, fieldEmployee.rows[0].id]);
 
       const checks = [
         [`UPDATE public.loyalty_ledger SET reason='tamper' WHERE id=${Number(loyalty.rows[0].id)}`, 'loyalty UPDATE'],
@@ -280,12 +328,14 @@ async function run() {
         [`DELETE FROM public.service_helpdesk_messages WHERE id=${Number(helpdeskMessage.rows[0].id)}`, 'helpdesk message DELETE'],
         [`UPDATE public.service_helpdesk_events SET event_type='tamper' WHERE id=${Number(helpdeskEvent.rows[0].id)}`, 'helpdesk event UPDATE'],
         [`DELETE FROM public.service_helpdesk_events WHERE id=${Number(helpdeskEvent.rows[0].id)}`, 'helpdesk event DELETE'],
+        [`UPDATE public.service_appointment_events SET notes='tamper' WHERE id=${Number(appointmentEvent.rows[0].id)}`, 'appointment event UPDATE'],
+        [`DELETE FROM public.service_appointment_events WHERE id=${Number(appointmentEvent.rows[0].id)}`, 'appointment event DELETE'],
       ] as const;
       for (let index = 0; index < checks.length; index += 1) await expectMutationBlocked(client, checks[index][0], checks[index][1], index);
       await client.query('ROLLBACK');
     } catch (error) { await client.query('ROLLBACK'); throw error; }
 
-    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, 12 blocked mutations.`);
+    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} suite indexes, payroll governance draft present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, appointments scheduling/lifecycle present, 14 blocked mutations.`);
   } finally { await client.end(); }
 }
 
