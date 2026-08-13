@@ -149,6 +149,10 @@ export const getRentalAvailability = async (tenantId: number, input: { itemId: n
     `);
     const setting = rows[0];
     if (!setting || setting.is_active === false || setting.track_stock !== true) throw rentalError('Rental item is unavailable', 'RENTAL_ITEM_UNAVAILABLE', 404);
+    const rateUnit = String(setting.rate_unit) as RentalRateUnit;
+    const durationUnits = rentalDurationUnits(startsAt, endsAt, rateUnit);
+    if (durationUnits < Number(setting.minimum_duration)) throw rentalError('Rental period is below the item minimum', 'RENTAL_PERIOD_BELOW_MINIMUM', 409);
+    if (setting.maximum_duration != null && durationUnits > Number(setting.maximum_duration)) throw rentalError('Rental period exceeds the item maximum', 'RENTAL_PERIOD_ABOVE_MAXIMUM', 409);
     const totalStock = Math.max(0, Math.floor(Number(setting.stock || 0)));
     const reserved = await reservedRentalQuantity(tx, {
       tenantId,
@@ -158,5 +162,16 @@ export const getRentalAvailability = async (tenantId: number, input: { itemId: n
       endsAt,
       bufferMinutes: Number(setting.buffer_minutes || 0),
     });
-    return { itemId, totalStock, reserved, available: Math.max(0, totalStock - reserved), startsAt, endsAt };
+    return {
+      itemId,
+      rateUnit,
+      durationUnits,
+      minimumDuration: Number(setting.minimum_duration),
+      maximumDuration: setting.maximum_duration == null ? null : Number(setting.maximum_duration),
+      totalStock,
+      reserved,
+      available: Math.max(0, totalStock - reserved),
+      startsAt,
+      endsAt,
+    };
   });
