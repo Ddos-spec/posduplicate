@@ -58,9 +58,9 @@ describe('P2 project/timesheet/planning contracts', () => {
     expect(migration).toContain('service_planning_period_valid');
   });
 
-  test('suite deployment and DB verification include services migration', () => {
+  test('suite deployment and DB verification retain services through migration seventeen', () => {
     expect(runner).toContain('20260813050000_p2_services_project_core');
-    expect(verifier).toContain('Expected 16 suite migration ledger entries');
+    expect(verifier).toContain('Expected 17 suite migration ledger entries');
     expect(verifier).toContain('service_projects');
     expect(verifier).toContain('service_timesheet_entries');
     expect(verifier).toContain('service_planning_allocations');
