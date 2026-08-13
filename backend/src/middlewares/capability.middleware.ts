@@ -44,7 +44,10 @@ export type SuiteCapability =
   | 'services.planning.manage'
   | 'services.field_service.read'
   | 'services.field_service.manage'
-  | 'services.field_service.self';
+  | 'services.field_service.self'
+  | 'services.helpdesk.read'
+  | 'services.helpdesk.manage'
+  | 'services.helpdesk.self';
 
 type FeatureRecord = Record<string, unknown>;
 
