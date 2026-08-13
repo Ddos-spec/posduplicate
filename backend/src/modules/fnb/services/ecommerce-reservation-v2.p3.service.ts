@@ -1,20 +1,25 @@
 import prisma from '../../../utils/prisma';
 import { lockPublishedCatalogItem, lockPublishedStorefront } from './ecommerce-catalog-lock.p3.service';
-import { hashOrderToken, newOrderNumber, newOrderToken, RequestedOrderItem } from './ecommerce-order.p3.service';
-import { appendOrderEvent, decrementReservedStock, insertGuestOrder, insertReservedOrderLine } from './ecommerce-order-write.p3.service';
+import { hashOrderToken, newOrderNumber, RequestedOrderItem } from './ecommerce-order.p3.service';
+import { appendOrderEvent, decrementReservedStock, findGuestOrderByTokenHash, insertGuestOrder, insertReservedOrderLine } from './ecommerce-order-write.p3.service';
 
 export type GuestReservationInput = {
-  publicSlug: string; customerName: string; customerPhone: string; customerEmail: string | null;
+  publicSlug: string; token: string; customerName: string; customerPhone: string; customerEmail: string | null;
   deliveryAddress: Record<string, unknown>; notes: string | null; items: RequestedOrderItem[];
 };
 
 export const reserveGuestOrderV2 = async (input: GuestReservationInput) => {
-  const token = newOrderToken();
-  const orderNumber = newOrderNumber();
+  const token = input.token;
   const tokenHash = hashOrderToken(token);
 
-  const order = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const site = await lockPublishedStorefront(tx, input.publicSlug);
+    const existing = await findGuestOrderByTokenHash(tx, tokenHash);
+    if (existing) {
+      if (Number(existing.tenant_id) !== Number(site.tenant_id) || Number(existing.site_id) !== Number(site.id)) throw Object.assign(new Error('Checkout token was already used for another storefront'), { status: 409, code: 'CHECKOUT_TOKEN_REUSED' });
+      return { row: existing, reused: true };
+    }
+    const orderNumber = newOrderNumber();
     const lines: Array<{ item: any; quantity: number; unitPrice: number; subtotal: number; reservedStock: number }> = [];
     let total = 0;
 
@@ -43,8 +48,8 @@ export const reserveGuestOrderV2 = async (input: GuestReservationInput) => {
       await decrementReservedStock(tx, Number(line.item.id), line.reservedStock);
     }
     await appendOrderEvent(tx, { tenantId: Number(site.tenant_id), orderId: Number(row.id), eventType: 'reserved', toStatus: 'reserved' });
-    return row;
+    return { row, reused: false };
   });
 
-  return { orderNumber, token, status: order.status, total: order.total };
+  return { orderNumber: String(result.row.order_number), token, status: result.row.status, total: result.row.total, reused: result.reused };
 };

@@ -1,5 +1,10 @@
 import { Prisma } from '@prisma/client';
 
+export const findGuestOrderByTokenHash = async (tx: Prisma.TransactionClient, tokenHash: string) => {
+  const rows = await tx.$queryRaw<any[]>(Prisma.sql`SELECT id,tenant_id,site_id,order_number,status,total FROM public.ecommerce_orders WHERE public_token_hash=${tokenHash} LIMIT 1`);
+  return rows[0] ?? null;
+};
+
 export const insertGuestOrder = async (tx: Prisma.TransactionClient, input: {
   tenantId: number; siteId: number; outletId: number; orderNumber: string; tokenHash: string;
   customerName: string; customerPhone: string; customerEmail: string | null;
@@ -10,7 +15,7 @@ export const insertGuestOrder = async (tx: Prisma.TransactionClient, input: {
     INSERT INTO public.ecommerce_orders
       (tenant_id,site_id,outlet_id,order_number,public_token_hash,customer_name,customer_phone,customer_email,delivery_address,notes,subtotal,total)
     VALUES (${input.tenantId},${input.siteId},${input.outletId},${input.orderNumber},${input.tokenHash},${input.customerName},${input.customerPhone},${input.customerEmail},CAST(${addressJson} AS jsonb),${input.notes},${input.total},${input.total})
-    RETURNING id,status,total
+    RETURNING id,order_number,status,total
   `);
   return rows[0];
 };

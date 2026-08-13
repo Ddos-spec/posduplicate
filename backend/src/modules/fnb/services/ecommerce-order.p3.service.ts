@@ -7,6 +7,12 @@ export const hashOrderToken = (value: string) => crypto.createHash('sha256').upd
 export const newOrderToken = () => crypto.randomBytes(32).toString('base64url');
 export const newOrderNumber = () => `WEB-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
+export const normalizeCheckoutToken = (value: unknown) => {
+  const token = String(value ?? '').trim();
+  if (!/^[A-Za-z0-9_-]{32,128}$/.test(token)) throw Object.assign(new Error('Invalid checkout token'), { status: 400, code: 'INVALID_CHECKOUT_TOKEN' });
+  return token;
+};
+
 export const normalizeOrderItems = (value: unknown): RequestedOrderItem[] => {
   if (!Array.isArray(value) || value.length === 0 || value.length > 50) throw Object.assign(new Error('Order must contain 1-50 items'), { status: 400, code: 'INVALID_ORDER_ITEMS' });
   const merged = new Map<number, number>();
