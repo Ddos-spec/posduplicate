@@ -72,12 +72,12 @@ describe('P3.1 Website/CMS + storefront catalog contract', () => {
     expect(workspace).toContain('PageManager');
     expect(workspace).toContain('CatalogManager');
   });
-  test('suite metadata reflects partial website scope while ecommerce awaits final promotion', () => {
+  test('suite metadata keeps website partial and promotes accepted ecommerce runtime', () => {
     const website = suiteCatalog.split('\n').find((line) => line.includes("{ id: 'website'"));
     const ecommerce = suiteCatalog.split('\n').find((line) => line.includes("{ id: 'ecommerce'"));
     expect(website).toContain("status: 'partial'");
     expect(website).toContain("path: '/digital'");
-    expect(ecommerce).toContain("status: 'blueprint'");
+    expect(ecommerce).toContain("status: 'live'");
     expect(ecommerce).toContain("bundle: 'commerSocial'");
     expect(ecommerce).toContain("path: '/digital'");
   });
