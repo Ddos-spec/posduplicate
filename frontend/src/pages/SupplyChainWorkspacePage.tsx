@@ -6,7 +6,6 @@ import {
   ArrowRightLeft,
   Barcode,
   Boxes,
-  CheckCircle2,
   ClipboardCheck,
   Factory,
   Loader2,

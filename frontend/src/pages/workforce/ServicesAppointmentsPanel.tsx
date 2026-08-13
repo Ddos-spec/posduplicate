@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, CalendarClock, CheckCircle2, Clock3, RefreshCw, UserRoundCheck, XCircle } from 'lucide-react';
+import { CalendarCheck, CalendarClock, Clock3, RefreshCw, UserRoundCheck, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   cancelAppointment,

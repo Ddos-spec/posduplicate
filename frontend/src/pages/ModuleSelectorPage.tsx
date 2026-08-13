@@ -70,6 +70,30 @@ const resolveRuntimeApp = <T extends { id: string; path?: string; status: SuiteI
   return { ...app, path: app.path ? (LEGACY_ROUTE_ALIASES[app.path] ?? app.path) : app.path, runtimeWorkspace: null as string | null };
 };
 
+type McsPermissionSet = Partial<Record<'inbox' | 'analytics' | 'content' | 'ads' | 'settings' | 'marketplace', boolean>>;
+
+const canMcsMemberAccessPath = (path: string | undefined, permissions: McsPermissionSet | undefined) => {
+  if (!path || !permissions) return false;
+  if (path === '/medsos/marketplace' || path.startsWith('/medsos/marketplace/')) return permissions.marketplace === true;
+  if (
+    path === '/medsos/calendar'
+    || path === '/medsos/create'
+    || path === '/medsos/crm/planner'
+    || path.startsWith('/medsos/crm/content/')
+  ) return permissions.content === true;
+  if (
+    path === '/medsos/crm'
+    || path === '/medsos/broadcasts'
+    || path === '/medsos/automations'
+    || path === '/medsos/inbox'
+    || path.startsWith('/medsos/inbox/')
+  ) return permissions.inbox === true;
+  if (path.startsWith('/medsos/analytics/')) return permissions.analytics === true;
+  if (path === '/medsos/ads' || path.startsWith('/medsos/ads/')) return permissions.ads === true;
+  if (path === '/medsos/settings' || path.startsWith('/medsos/settings/')) return permissions.settings === true;
+  return false;
+};
+
 export default function ModuleSelectorPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -81,6 +105,8 @@ export default function ModuleSelectorPage() {
 
   const roleName = (user?.roles?.name || user?.role?.name || '').toLowerCase();
   const isSuperAdmin = roleName === 'super admin' || roleName === 'super_admin' || roleName === 'admin';
+  const isMcsMember = roleName === 'mcs_member';
+  const mcsPermissions = user?.dashboard_preferences?.mcs;
   const tenantId = user?.tenant?.id ?? user?.tenant_id ?? null;
 
   useEffect(() => {
@@ -95,8 +121,13 @@ export default function ModuleSelectorPage() {
   const runtimeApps = useMemo(() => SUITE_APPS.map(resolveRuntimeApp), []);
 
   const accessibleApps = useMemo(
-    () => runtimeApps.filter((app) => isSuperAdmin || enabledModules[app.bundle]),
-    [enabledModules, isSuperAdmin, runtimeApps]
+    () => runtimeApps.filter((app) => {
+      if (isSuperAdmin) return true;
+      if (!enabledModules[app.bundle]) return false;
+      if (!isMcsMember || app.bundle !== 'commerSocial' || !app.path || app.status === 'blueprint') return true;
+      return canMcsMemberAccessPath(app.path, mcsPermissions);
+    }),
+    [enabledModules, isMcsMember, isSuperAdmin, mcsPermissions, runtimeApps]
   );
 
   const filteredApps = useMemo(() => {
@@ -124,6 +155,8 @@ export default function ModuleSelectorPage() {
 
   const openApp = (app: typeof runtimeApps[number]) => {
     if (!app.path || app.status === 'blueprint') return;
+    if (!isSuperAdmin && !enabledModules[app.bundle]) return;
+    if (!isSuperAdmin && isMcsMember && app.bundle === 'commerSocial' && !canMcsMemberAccessPath(app.path, mcsPermissions)) return;
     navigate(app.path);
   };
 

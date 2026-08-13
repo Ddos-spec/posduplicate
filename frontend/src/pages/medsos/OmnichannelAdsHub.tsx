@@ -15,7 +15,6 @@ import {
   decideZernioAdsAgentAction,
   disconnectZernioAccount,
   getZernioAdsAgentActions,
-  invalidateMcsRequestCache,
   getZernioAdAnalytics,
   getZernioAdsByCampaign,
   getZernioAccounts,
@@ -911,7 +910,7 @@ export default function OmnichannelAdsHub() {
         setAdsAgentActions((current) => current.map((item) => item.id === action.id ? {
           ...item,
           status: nextStatus,
-          executionStatus: decision === 'approve' ? 'ready_for_manual_execution' : nextStatus,
+          executionStatus: decision === 'approve' ? 'ready_for_manual_execution' : decision === 'revise' ? 'revision_requested' : 'deferred',
           decidedAt: new Date().toISOString(),
         } : item));
         return;
