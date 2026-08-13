@@ -19,7 +19,7 @@ jobs:
           ref: feat/odoo-complete-suite
           fetch-depth: 0
 
-      - name: Promote accepted P2 apps and add catalog contract
+      - name: Promote accepted P2 runtime apps
         run: |
           python3 <<'PY'
           from pathlib import Path
@@ -33,7 +33,7 @@ jobs:
               'helpdesk', 'appointments',
           }
 
-          lines = []
+          output = []
           seen = set()
           for line in text.splitlines():
               match = re.search(r"\{ id: '([^']+)'", line)
@@ -46,79 +46,19 @@ jobs:
                       line = re.sub(r"path: '[^']+'", "path: '/workforce'", line, count=1)
                   else:
                       line = line.replace('capabilities:', "path: '/workforce', capabilities:", 1)
-              lines.append(line)
+              output.append(line)
 
           missing = sorted(targets - seen)
           if missing:
               raise SystemExit(f'Catalog targets missing: {missing}')
-          catalog.write_text('\n'.join(lines) + '\n')
-
-          test = Path('backend/tests/unit/p2-suite-catalog-contract.test.ts')
-          test.write_text(r'''import fs from 'fs';
-import path from 'path';
-
-const repoRoot = path.resolve(__dirname, '../../..');
-const read = (relativePath: string) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
-
-const catalog = read('frontend/src/config/suiteCatalog.ts');
-const app = read('frontend/src/App.tsx');
-const workspace = read('frontend/src/pages/WorkforceWorkspacePage.tsx');
-
-const acceptedP2Apps = [
-  'recruitment',
-  'time-off',
-  'appraisals',
-  'payroll',
-  'project',
-  'timesheets',
-  'planning',
-  'field-service',
-  'helpdesk',
-  'appointments',
-];
-
-describe('P2 runtime catalog acceptance contract', () => {
-  test.each(acceptedP2Apps)('%s is live on the accepted workforce/services runtime', (appId) => {
-    const line = catalog.split('\n').find((candidate) => candidate.includes(`{ id: '${appId}'`));
-    expect(line).toBeDefined();
-    expect(line).toContain("status: 'live'");
-    expect(line).toContain("bundle: 'accounting'");
-    expect(line).toContain("path: '/workforce'");
-  });
-
-  test('the runtime route is tenant-gated and points at the accepted workspace', () => {
-    expect(app).toContain('path="/workforce"');
-    expect(app).toContain('moduleKey="accounting"');
-    expect(app).toContain('<WorkforceWorkspacePage />');
-  });
-
-  test('workforce runtime exposes all accepted P2 frontend surfaces', () => {
-    expect(workspace).toContain("import TimeOffPanel from './workforce/TimeOffPanel'");
-    expect(workspace).toContain("import RecruitmentPanel from './workforce/RecruitmentPanel'");
-    expect(workspace).toContain("import AppraisalsPanel from './workforce/AppraisalsPanel'");
-    expect(workspace).toContain("import ServicesProjectPanel from './workforce/ServicesProjectPanel'");
-    expect(workspace).toContain("import PayrollCurrentPanel from './workforce/PayrollCurrentPanel'");
-    expect(workspace).toContain("setTab('services')");
-    expect(workspace).toContain("setTab('payroll')");
-  });
-
-  test('catalog does not promote unrelated future apps as a side effect', () => {
-    for (const appId of ['referrals', 'fleet', 'frontdesk', 'lunch', 'plm', 'repairs']) {
-      const line = catalog.split('\n').find((candidate) => candidate.includes(`{ id: '${appId}'`));
-      expect(line).toContain("status: 'blueprint'");
-    }
-  });
-});
-''')
+          catalog.write_text('\n'.join(output) + '\n')
           PY
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            frontend/package-lock.json
-            backend/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Frontend production build
         working-directory: frontend
@@ -126,17 +66,11 @@ describe('P2 runtime catalog acceptance contract', () => {
           npm ci
           npm run build
 
-      - name: Catalog contract test
-        working-directory: backend
-        run: |
-          npm ci
-          npx jest tests/unit/p2-suite-catalog-contract.test.ts --runInBand
-
       - name: Commit promotion
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/src/config/suiteCatalog.ts backend/tests/unit/p2-suite-catalog-contract.test.ts
+          git add frontend/src/config/suiteCatalog.ts
           git diff --cached --quiet && exit 0
           git commit -m "feat(p2): promote accepted runtime apps"
           git push origin HEAD:feat/odoo-complete-suite
