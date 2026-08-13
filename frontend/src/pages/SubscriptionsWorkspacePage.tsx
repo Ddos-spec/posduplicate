@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Loader2, Pause, Play, Plus, RefreshCw, Repeat2, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import SubscriptionAutomationPanel from './subscriptions/SubscriptionAutomationPanel';
 import {
   createCustomerSubscription,
   createSubscriptionPlan,
@@ -122,6 +123,7 @@ export default function SubscriptionsWorkspacePage() {
       </section>
 
       {error && <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</div>}
+      <div className="mt-5"><SubscriptionAutomationPanel /></div>
       <div className="mt-6 flex gap-2"><button onClick={() => setTab('contracts')} className={`rounded-lg px-4 py-2 text-sm font-bold ${tab === 'contracts' ? 'bg-slate-900 text-white' : 'border bg-white'}`}>Contracts</button><button onClick={() => setTab('plans')} className={`rounded-lg px-4 py-2 text-sm font-bold ${tab === 'plans' ? 'bg-slate-900 text-white' : 'border bg-white'}`}>Plans</button></div>
 
       {tab === 'plans' ? <div className="mt-4 grid gap-5 lg:grid-cols-[380px_1fr]">
