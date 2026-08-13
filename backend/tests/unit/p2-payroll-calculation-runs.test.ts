@@ -29,14 +29,14 @@ describe('Payroll-C1 profile-driven verification contracts', () => {
     expect(migration).toContain('prevent_suite_ledger_mutation');
     expect(verifier).toContain('payroll calculation run UPDATE');
     expect(verifier).toContain('payroll calculation run DELETE');
-    expect(verifier).toContain('16 blocked mutations');
+    expect(verifier).toContain('18 blocked mutations');
   });
 
   test('verification engine uses correct TER gross composition and rejects legacy overtime shortcut', () => {
     expect(engine).toContain('statutory.components.jkk.employer');
     expect(engine).toContain('statutory.components.jkm.employer');
     expect(engine).toContain('statutory.components.health.employer');
-    expect(engine).toContain('monthlyTerGross = cashGross + taxableEmployerBenefits');
+    expect(engine).toContain('taxableGross = cashGross + taxableEmployerBenefits');
     expect(engine).toContain('OVERTIME_COMPENSATION_POLICY_NOT_WIRED');
     expect(engine).toContain('EMPLOYEE_NIK_REQUIRED_FOR_VERIFICATION');
     expect(engine).not.toContain('overtimeHours * hourlyRate * 1.5');
@@ -50,22 +50,23 @@ describe('Payroll-C1 profile-driven verification contracts', () => {
     expect(controller).toContain('confirmNonFinalTaxPeriod');
     expect(controller).toContain('NON_FINAL_TAX_PERIOD_CONFIRMATION_REQUIRED');
     expect(controller).toContain('FINAL_TAX_PERIOD_RECONCILIATION_REQUIRED');
-    expect(controller).toContain("profile.profile_code !== 'ID-PAYROLL-2026'");
+    expect(controller).toContain('VERIFIED_PROFILE_CODE');
+    expect(controller).toContain('VERIFIED_PROFILE_VERSION');
     expect(controller).toContain('EMPLOYEE_STATUTORY_SETTINGS_REQUIRED');
     expect(controller).toContain('VERIFICATION_ONLY_NO_PAYROLL_DETAILS_WRITTEN');
     expect(controller).not.toContain('tx.payroll_details');
     expect(accountingIndex).toContain("router.use('/payroll/current', accountingPayrollCurrentRoutes)");
   });
 
-  test('legacy official payroll mutation remains fail-closed during C1', () => {
+  test('legacy official payroll mutation remains fail-closed during C1/C2 verification', () => {
     expect(accountingIndex).toContain("'/payroll/periods/:periodId/calculate'");
     expect(accountingIndex).toContain("'/payroll/periods/:periodId/finalize'");
     expect(accountingIndex).toContain('rejectLegacyPayrollMutation');
   });
 
-  test('suite deploy path includes migration fifteen and DB verifier accepts it', () => {
+  test('suite deploy path retains calculation runs through migration sixteen', () => {
     expect(runner).toContain('20260813073000_p2_payroll_calculation_runs');
-    expect(verifier).toContain('Expected 15 suite migration ledger entries');
+    expect(verifier).toContain('Expected 16 suite migration ledger entries');
     expect(verifier).toContain('payroll_employee_statutory_settings');
     expect(verifier).toContain('payroll_calculation_runs');
     expect(verifier).toContain('trg_payroll_calculation_run_append_only');
