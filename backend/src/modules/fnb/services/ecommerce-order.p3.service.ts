@@ -15,7 +15,9 @@ export const normalizeOrderItems = (value: unknown): RequestedOrderItem[] => {
     const quantity = Number((row as any)?.quantity);
     if (!Number.isInteger(itemId) || itemId <= 0) throw Object.assign(new Error('Invalid item id'), { status: 400, code: 'INVALID_ITEM_ID' });
     if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 1000) throw Object.assign(new Error('Invalid quantity'), { status: 400, code: 'INVALID_QUANTITY' });
-    merged.set(itemId, Math.round(((merged.get(itemId) || 0) + quantity) * 1000) / 1000);
+    const mergedQuantity = Math.round(((merged.get(itemId) || 0) + quantity) * 1000) / 1000;
+    if (mergedQuantity > 1000) throw Object.assign(new Error('Merged item quantity exceeds limit'), { status: 400, code: 'INVALID_QUANTITY' });
+    merged.set(itemId, mergedQuantity);
   }
   return [...merged.entries()].map(([itemId, quantity]) => ({ itemId, quantity }));
 };
