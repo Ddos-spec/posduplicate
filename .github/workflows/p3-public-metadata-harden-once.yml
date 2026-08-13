@@ -1,0 +1,64 @@
+name: P3 Public Metadata Harden Once
+on:
+  push:
+    branches: [feat/odoo-complete-suite]
+    paths: ['.github/workflows/p3-public-metadata-harden-once.yml']
+permissions:
+  contents: write
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/odoo-complete-suite
+          fetch-depth: 0
+      - name: Remove internal tenant identifier from public storefront response
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          controller = Path('backend/src/modules/fnb/controllers/digital-website.p3.controller.ts')
+          text = controller.read_text()
+          old = "const pages=await prisma.$queryRaw<any[]>(Prisma.sql`SELECT slug,title,seo_title,seo_description,sort_order FROM public.website_pages WHERE tenant_id=${Number(site.tenant_id)} AND site_id=${Number(site.id)} AND status='published' ORDER BY sort_order,id`); return res.json({success:true,data:{site,navigation:pages}});"
+          new = "const pages=await prisma.$queryRaw<any[]>(Prisma.sql`SELECT slug,title,seo_title,seo_description,sort_order FROM public.website_pages WHERE tenant_id=${Number(site.tenant_id)} AND site_id=${Number(site.id)} AND status='published' ORDER BY sort_order,id`); const publicSite={id:site.id,code:site.code,name:site.name,public_slug:site.public_slug,default_locale:site.default_locale,theme_config:site.theme_config,published_at:site.published_at}; return res.json({success:true,data:{site:publicSite,navigation:pages}});"
+          if old not in text:
+              raise SystemExit('public storefront response marker missing')
+          controller.write_text(text.replace(old, new, 1))
+
+          service = Path('frontend/src/services/digitalWebsiteService.ts')
+          text = service.read_text()
+          text = text.replace("Pick<WebsiteSite, 'id' | 'tenant_id' | 'code' | 'name' | 'public_slug' | 'default_locale' | 'theme_config' | 'published_at'>", "Pick<WebsiteSite, 'id' | 'code' | 'name' | 'public_slug' | 'default_locale' | 'theme_config' | 'published_at'>", 1)
+          service.write_text(text)
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Backend P3 contract and build
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npx jest tests/unit/p3-website-commerce-contract.test.ts --runInBand
+          npm run build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Frontend production build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build:check
+      - name: Commit public metadata hardening
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --check
+          git diff --cached --quiet && exit 0
+          git commit -m "fix(p3): hide tenant id from public storefront metadata"
+          git push origin HEAD:feat/odoo-complete-suite
