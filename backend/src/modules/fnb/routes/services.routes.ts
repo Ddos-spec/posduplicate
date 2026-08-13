@@ -17,6 +17,7 @@ import {
   updateServiceProjectStatus,
   updateServiceTaskStatus,
 } from '../controllers/services-project.p2.controller';
+import { getMyServiceTimesheetContext } from '../controllers/services-timesheet-self-context.p2.controller';
 import {
   arriveMyFieldServiceOrder,
   cancelFieldServiceOrder,
@@ -71,6 +72,7 @@ router.post('/tasks', requireCapability('services.project.manage'), createServic
 router.patch('/tasks/:id/status', requireCapability('services.project.manage'), updateServiceTaskStatus);
 
 router.get('/timesheets', requireCapability('services.timesheet.read'), getServiceTimesheets);
+router.get('/timesheets/me/context', requireCapability('services.timesheet.self'), getMyServiceTimesheetContext);
 router.get('/timesheets/me', requireCapability('services.timesheet.self'), getMyServiceTimesheets);
 router.post('/timesheets/me', requireCapability('services.timesheet.self'), submitMyServiceTimesheet);
 router.post('/timesheets/:id/decision', requireCapability('services.timesheet.manage'), decideServiceTimesheet);
