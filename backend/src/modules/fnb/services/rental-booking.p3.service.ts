@@ -163,7 +163,7 @@ export const updateRentalBookingStatus = async (tenantId: number, userId: number
 
   return prisma.$transaction(async (tx) => {
     const rows = await tx.$queryRaw<any[]>(Prisma.sql`
-      SELECT id::int AS id,tenant_id,outlet_id,status,starts_at,ends_at
+      SELECT id::int AS id,tenant_id,outlet_id,status,starts_at,ends_at,deposit_amount,deposit_status
       FROM public.rental_bookings
       WHERE id=${bookingId} AND tenant_id=${tenantId}
       FOR UPDATE
@@ -172,6 +172,9 @@ export const updateRentalBookingStatus = async (tenantId: number, userId: number
     if (!booking) throw rentalError('Rental booking not found', 'RENTAL_BOOKING_NOT_FOUND', 404);
     if (booking.status === target) return booking;
     if (!(transitions[String(booking.status) as RentalStatus] || []).includes(target)) throw rentalError('Invalid rental booking transition', 'INVALID_RENTAL_TRANSITION', 409);
+    if (target === 'picked_up' && Number(booking.deposit_amount || 0) > 0 && String(booking.deposit_status) !== 'held') {
+      throw rentalError('Required rental deposit must be held before pickup', 'RENTAL_DEPOSIT_REQUIRED_BEFORE_PICKUP', 409);
+    }
 
     const changedRows = await tx.$queryRaw<any[]>(Prisma.sql`
       UPDATE public.rental_bookings SET
@@ -181,7 +184,7 @@ export const updateRentalBookingStatus = async (tenantId: number, userId: number
         cancelled_at=CASE WHEN ${target}='cancelled' THEN COALESCE(cancelled_at,NOW()) ELSE cancelled_at END,
         updated_by=${userId},updated_at=NOW()
       WHERE id=${bookingId} AND tenant_id=${tenantId} AND status=${String(booking.status)}
-      RETURNING id::int AS id,tenant_id,outlet_id,status,starts_at,ends_at,picked_up_at,returned_at,cancelled_at,updated_at
+      RETURNING id::int AS id,tenant_id,outlet_id,status,starts_at,ends_at,deposit_amount,deposit_status,picked_up_at,returned_at,cancelled_at,updated_at
     `);
     const changed = changedRows[0];
     if (!changed) throw rentalError('Concurrent rental booking update', 'RENTAL_BOOKING_CONCURRENT_UPDATE', 409);
