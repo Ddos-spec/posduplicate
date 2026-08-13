@@ -21,6 +21,8 @@ async function run() {
       '20260813100000_p3_ecommerce_order_core',
       '20260813101000_p3_ecommerce_reservation_snapshot',
       '20260813210000_p3_subscription_core',
+      '20260813213000_p3_subscription_automation',
+      '20260813220000_p3_rental_core',
     ];
     assert(ledger.rows.length >= requiredMigrations.length, `Expected at least ${requiredMigrations.length} P3 migration ledger entries, found ${ledger.rows.length}`);
     for (const required of requiredMigrations) {
@@ -156,7 +158,54 @@ async function run() {
     `);
     assert(immutableTrigger.rows.length === 1, 'Subscription event ledger immutability trigger missing');
 
-    console.log('[P3 database verifier] website/CMS + eCommerce + subscription source-of-truth invariants verified');
+    const rentalTables = await client.query<{ tablename: string }>(`
+      SELECT tablename FROM pg_tables WHERE schemaname='public'
+        AND tablename IN ('rental_item_settings','rental_bookings','rental_booking_items','rental_events')
+    `);
+    assert(rentalTables.rows.length === 4, 'P3.4 rental tables are incomplete');
+
+    const rentalBookingColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='rental_bookings'
+        AND column_name IN ('tenant_id','outlet_id','customer_id','status','starts_at','ends_at','deposit_status','picked_up_at','returned_at','cancelled_at')
+    `);
+    assert(rentalBookingColumns.rows.length === 10, 'Rental booking lifecycle/scope columns are incomplete');
+
+    const rentalReferences = await client.query<{ source_table: string; target_table: string }>(`
+      SELECT tc.table_name AS source_table, ccu.table_name AS target_table
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu
+        ON ccu.constraint_name=tc.constraint_name AND ccu.constraint_schema=tc.constraint_schema
+      WHERE tc.table_schema='public' AND tc.constraint_type='FOREIGN KEY'
+        AND (
+          (tc.table_name='rental_item_settings' AND ccu.table_name='items') OR
+          (tc.table_name='rental_bookings' AND ccu.table_name='customers') OR
+          (tc.table_name='rental_bookings' AND ccu.table_name='outlets') OR
+          (tc.table_name='rental_booking_items' AND ccu.table_name='items')
+        )
+    `);
+    const rentalFkKeys = new Set(rentalReferences.rows.map((row) => `${row.source_table}:${row.target_table}`));
+    for (const key of ['rental_item_settings:items','rental_bookings:customers','rental_bookings:outlets','rental_booking_items:items']) {
+      assert(rentalFkKeys.has(key), `Rental source-of-truth FK missing: ${key}`);
+    }
+
+    const rentalUniques = await client.query<{ constraint_name: string }>(`
+      SELECT constraint_name FROM information_schema.table_constraints
+      WHERE table_schema='public' AND constraint_type='UNIQUE'
+        AND constraint_name IN ('ux_rental_item_setting','ux_rental_booking_number','ux_rental_booking_item')
+    `);
+    assert(rentalUniques.rows.length === 3, 'Rental uniqueness constraints are incomplete');
+
+    const rentalImmutableTrigger = await client.query<{ tgname: string }>(`
+      SELECT t.tgname FROM pg_trigger t
+      JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relname='rental_events'
+        AND t.tgname='trg_rental_events_immutable' AND NOT t.tgisinternal
+    `);
+    assert(rentalImmutableTrigger.rows.length === 1, 'Rental append-only event trigger missing');
+
+    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental source-of-truth invariants verified');
   } finally {
     await client.end();
   }
