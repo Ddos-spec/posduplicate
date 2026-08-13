@@ -1,6 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
+import {
+  calculateBaseMonthlyTerPph21,
+  PayrollRuleError,
+  PPH21_BASE_RULESET,
+} from '../services/payroll-current-law.p2';
 
 export const getPayrollRateProfiles = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -55,3 +60,35 @@ export const getEffectivePayrollRateProfile = async (req: Request, res: Response
     next(error);
   }
 };
+
+export const getBaseMonthlyTerPreview = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const grossMonthly = Number(req.query.grossMonthly);
+    const ptkpStatus = String(req.query.ptkpStatus || '');
+    const result = calculateBaseMonthlyTerPph21(grossMonthly, ptkpStatus);
+    res.json({
+      success: true,
+      data: {
+        ...result,
+        ruleset: PPH21_BASE_RULESET,
+        complianceNotice: 'Preview ini hanya base TER untuk masa pajak selain masa pajak terakhir; DTP/stimulus, identity/NPWP treatment, BPJS, dan rekonsiliasi masa pajak terakhir belum diterapkan.',
+      },
+    });
+  } catch (error) {
+    if (error instanceof PayrollRuleError) {
+      return res.status(400).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+    }
+    next(error);
+  }
+};
+
+export const rejectLegacyPayrollMutation = (_req: Request, res: Response) => res.status(409).json({
+  success: false,
+  error: {
+    code: 'CURRENT_PAYROLL_ENGINE_NOT_WIRED',
+    message: 'Payroll calculate/finalize legacy diblokir sampai current-law rate profile, BPJS, dan engine PPh 21 terverifikasi terhubung end-to-end.',
+  },
+});
