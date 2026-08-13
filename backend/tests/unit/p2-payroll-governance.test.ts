@@ -27,7 +27,7 @@ describe('P2 payroll governance safety', () => {
     expect(routes).toContain("router.get('/pph21/ter/monthly'");
     expect(routes).not.toMatch(/router\.(post|put|patch|delete)\(/);
     expect(controller).toContain('calculateBaseMonthlyTerPph21');
-    expect(controller).toContain('BASE_MONTHLY_TER_NON_FINAL_TAX_PERIOD');
+    expect(controller).toContain('complianceNotice');
     expect(controller).toContain('NO_ACTIVE_PAYROLL_RATE_PROFILE');
     expect(controller).toContain("status = 'active'");
     expect(accountingIndex).toContain("router.use('/payroll/rates', accountingPayrollRateRoutes)");
@@ -49,6 +49,7 @@ describe('P2 payroll governance safety', () => {
   test('verified TER rules are externalized away from the legacy payroll controller', () => {
     const rules = read('src/modules/accounting/services/payroll-current-law.p2.ts');
     expect(rules).toContain('ID-PPH21-BASE-PP58-2023');
+    expect(rules).toContain('BASE_MONTHLY_TER_NON_FINAL_TAX_PERIOD');
     expect(rules).toContain('30_050_000');
     expect(rules).toContain('27_700_000');
     expect(rules).toContain('32_600_000');
