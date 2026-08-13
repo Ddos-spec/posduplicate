@@ -25,6 +25,9 @@ export type SuiteCapability =
   | 'workforce.attendance.read'
   | 'workforce.attendance.manage'
   | 'workforce.attendance.self'
+  | 'workforce.leave.read'
+  | 'workforce.leave.manage'
+  | 'workforce.leave.self'
   | 'workforce.payroll.read'
   | 'workforce.payroll.manage';
 
@@ -47,12 +50,14 @@ const ROLE_PRESETS: Record<string, SuiteCapability[] | '*'> = {
     'supply.warehouse.read',
     'workforce.employee.read',
     'workforce.attendance.self',
+    'workforce.leave.self',
     'workforce.payroll.read',
   ],
   cashier: [
     'revenue.customer360.read',
     'revenue.loyalty.read',
     'workforce.attendance.self',
+    'workforce.leave.self',
   ],
 };
 
