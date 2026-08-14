@@ -28,6 +28,9 @@ async function run() {
       '20260813231000_p3_marketing_public_idempotency',
       '20260813240000_p3_productivity_docs_knowledge_sign_core',
       '20260813241000_p3_productivity_sign_version_guard',
+      '20260813250000_p3_learning_community_core',
+      '20260813251000_p3_learning_community_scope_guard',
+      '20260813252000_p3_learning_community_public_access',
     ];
     assert(ledger.rows.length >= requiredMigrations.length, `Expected at least ${requiredMigrations.length} P3 migration ledger entries, found ${ledger.rows.length}`);
     for (const required of requiredMigrations) {
@@ -381,7 +384,189 @@ async function run() {
       'Signature request must be pinned by FK to exact tenant/document/version tuple',
     );
 
-    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental + marketing engagement + productivity source-of-truth/inventory/audit/idempotency/version invariants verified');
+    const learningCommunityTables = await client.query<{ tablename: string }>(`
+      SELECT tablename FROM pg_tables WHERE schemaname='public'
+        AND tablename IN (
+          'learning_courses','learning_lessons','learning_assessments','learning_assessment_questions',
+          'learning_enrollments','learning_progress','learning_attempts','learning_attempt_answers',
+          'learning_certificates','learning_events','community_forums','community_topics',
+          'community_replies','community_votes','community_events'
+        )
+    `);
+    assert(learningCommunityTables.rows.length === 15, 'P3.7 learning/community tables are incomplete');
+
+    const learningScopeColumns = await client.query<{ table_name: string; column_name: string }>(`
+      SELECT table_name,column_name FROM information_schema.columns
+      WHERE table_schema='public' AND (
+        (table_name='learning_courses' AND column_name IN ('tenant_id','site_id','status','visibility','created_by')) OR
+        (table_name='learning_progress' AND column_name IN ('tenant_id','course_id','enrollment_id','lesson_id')) OR
+        (table_name='learning_attempts' AND column_name IN ('tenant_id','course_id','enrollment_id','assessment_id')) OR
+        (table_name='learning_attempt_answers' AND column_name IN ('tenant_id','assessment_id','attempt_id','question_id')) OR
+        (table_name='community_forums' AND column_name IN ('tenant_id','site_id','status','visibility','created_by'))
+      )
+    `);
+    const learningScopeColumnKeys = new Set(
+      learningScopeColumns.rows.map((row) => `${row.table_name}:${row.column_name}`),
+    );
+    for (const key of [
+      'learning_courses:tenant_id','learning_courses:site_id','learning_courses:status',
+      'learning_courses:visibility','learning_courses:created_by',
+      'learning_progress:tenant_id','learning_progress:course_id',
+      'learning_progress:enrollment_id','learning_progress:lesson_id',
+      'learning_attempts:tenant_id','learning_attempts:course_id',
+      'learning_attempts:enrollment_id','learning_attempts:assessment_id',
+      'learning_attempt_answers:tenant_id','learning_attempt_answers:assessment_id',
+      'learning_attempt_answers:attempt_id','learning_attempt_answers:question_id',
+      'community_forums:tenant_id','community_forums:site_id','community_forums:status',
+      'community_forums:visibility','community_forums:created_by',
+    ]) assert(learningScopeColumnKeys.has(key), `Learning/community scope column missing: ${key}`);
+
+    const learningSiteScopeFks = await client.query<{
+      conname: string;
+      source_table: string;
+      source_columns: string;
+      target_table: string;
+      target_columns: string;
+      delete_action: string;
+    }>(`
+      SELECT c.conname,
+             sc.relname AS source_table,
+             string_agg(sa.attname::text, ',' ORDER BY src.ord) AS source_columns,
+             tc.relname AS target_table,
+             string_agg(ta.attname::text, ',' ORDER BY src.ord) AS target_columns,
+             c.confdeltype::text AS delete_action
+      FROM pg_constraint c
+      JOIN pg_class sc ON sc.oid=c.conrelid
+      JOIN pg_namespace sn ON sn.oid=sc.relnamespace
+      JOIN pg_class tc ON tc.oid=c.confrelid
+      JOIN pg_namespace tn ON tn.oid=tc.relnamespace
+      CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS src(attnum,ord)
+      JOIN LATERAL unnest(c.confkey) WITH ORDINALITY AS tgt(attnum,ord) ON tgt.ord=src.ord
+      JOIN pg_attribute sa ON sa.attrelid=sc.oid AND sa.attnum=src.attnum
+      JOIN pg_attribute ta ON ta.attrelid=tc.oid AND ta.attnum=tgt.attnum
+      WHERE sn.nspname='public' AND tn.nspname='public' AND c.contype='f'
+        AND c.conname IN ('fk_learning_course_site_scope','fk_community_forum_site_scope')
+      GROUP BY c.conname,sc.relname,tc.relname,c.confdeltype
+    `);
+    assert(learningSiteScopeFks.rows.length === 2, 'Learning/community published-site scope FKs are incomplete');
+    for (const row of learningSiteScopeFks.rows) {
+      assert(row.source_columns === 'tenant_id,site_id', `${row.conname} must include tenant and site`);
+      assert(row.target_table === 'website_sites' && row.target_columns === 'tenant_id,id', `${row.conname} must reuse tenant-scoped website_sites`);
+      assert(row.delete_action === 'r', `${row.conname} must restrict deletion of an assigned publishing site`);
+    }
+
+    const learningSourceFks = await client.query<{ source_table: string; source_column: string; target_table: string }>(`
+      SELECT tc.table_name AS source_table,kcu.column_name AS source_column,ccu.table_name AS target_table
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON kcu.constraint_name=tc.constraint_name AND kcu.constraint_schema=tc.constraint_schema
+      JOIN information_schema.constraint_column_usage ccu
+        ON ccu.constraint_name=tc.constraint_name AND ccu.constraint_schema=tc.constraint_schema
+      WHERE tc.table_schema='public' AND tc.constraint_type='FOREIGN KEY' AND (
+        (tc.table_name='learning_enrollments' AND kcu.column_name='customer_id' AND ccu.table_name='customers') OR
+        (tc.table_name='learning_courses' AND kcu.column_name='created_by' AND ccu.table_name='users') OR
+        (tc.table_name='community_forums' AND kcu.column_name='created_by' AND ccu.table_name='users')
+      )
+    `);
+    const learningSourceFkKeys = new Set(
+      learningSourceFks.rows.map((row) => `${row.source_table}:${row.source_column}:${row.target_table}`),
+    );
+    for (const key of [
+      'learning_enrollments:customer_id:customers',
+      'learning_courses:created_by:users',
+      'community_forums:created_by:users',
+    ]) assert(learningSourceFkKeys.has(key), `Learning/community source-of-truth FK missing: ${key}`);
+
+    const learningScopeFks = await client.query<{ constraint_name: string }>(`
+      SELECT constraint_name FROM information_schema.table_constraints
+      WHERE table_schema='public' AND constraint_type='FOREIGN KEY'
+        AND constraint_name IN (
+          'fk_learning_assessment_lesson_scope',
+          'fk_learning_progress_enrollment_scope','fk_learning_progress_lesson_scope',
+          'fk_learning_attempt_enrollment_scope','fk_learning_attempt_assessment_scope',
+          'fk_learning_attempt_answer_attempt_scope','fk_learning_attempt_answer_question_scope',
+          'fk_community_reply_parent_scope','fk_community_vote_topic_scope','fk_community_vote_reply_scope'
+        )
+    `);
+    assert(learningScopeFks.rows.length === 10, 'Learning/community cross-record scope FKs are incomplete');
+
+    const learningCommunityIndexes = await client.query<{ indexname: string; indexdef: string }>(`
+      SELECT indexname,indexdef FROM pg_indexes
+      WHERE schemaname='public' AND indexname IN (
+        'ux_learning_course_slug','ux_learning_lesson_position','ux_learning_lesson_slug',
+        'ux_learning_enrollment_customer','ux_learning_progress_lesson','ux_learning_attempt_number',
+        'ux_learning_attempt_answer_question','ux_learning_certificate_enrollment','ux_learning_certificate_number',
+        'ux_community_forum_slug','ux_community_topic_slug','ux_community_vote_topic_customer',
+        'ux_community_vote_reply_customer','ux_learning_enrollment_access_token',
+        'ux_community_topic_submission_key','ux_community_reply_submission_key'
+      )
+    `);
+    assert(learningCommunityIndexes.rows.length === 16, 'Learning/community uniqueness indexes are incomplete');
+    for (const row of learningCommunityIndexes.rows) {
+      assert(row.indexdef.includes('CREATE UNIQUE INDEX'), `Learning/community index ${row.indexname} must be unique`);
+      if ([
+        'ux_community_vote_topic_customer','ux_community_vote_reply_customer',
+        'ux_learning_enrollment_access_token','ux_community_topic_submission_key',
+        'ux_community_reply_submission_key',
+      ].includes(row.indexname)) {
+        assert(row.indexdef.includes('WHERE'), `Learning/community sparse identity index ${row.indexname} must remain partial`);
+      }
+    }
+
+    const publicSecretColumns = await client.query<{
+      table_name: string;
+      column_name: string;
+      character_maximum_length: number | null;
+    }>(`
+      SELECT table_name,column_name,character_maximum_length
+      FROM information_schema.columns
+      WHERE table_schema='public' AND (
+        (table_name='learning_enrollments' AND column_name IN ('access_token_hash','access_token')) OR
+        (table_name='community_topics' AND column_name IN ('submission_key_hash','submission_key')) OR
+        (table_name='community_replies' AND column_name IN ('submission_key_hash','submission_key'))
+      )
+    `);
+    const publicSecretColumnKeys = new Map(
+      publicSecretColumns.rows.map((row) => [`${row.table_name}:${row.column_name}`, row.character_maximum_length]),
+    );
+    for (const key of [
+      'learning_enrollments:access_token_hash',
+      'community_topics:submission_key_hash',
+      'community_replies:submission_key_hash',
+    ]) assert(publicSecretColumnKeys.get(key) === 64, `Public learning/community secret hash must be CHAR(64): ${key}`);
+    for (const key of [
+      'learning_enrollments:access_token',
+      'community_topics:submission_key',
+      'community_replies:submission_key',
+    ]) assert(!publicSecretColumnKeys.has(key), `Raw public learning/community secret column must not exist: ${key}`);
+
+    const learningCommunityImmutableTriggers = await client.query<{ tgname: string }>(`
+      SELECT t.tgname FROM pg_trigger t
+      JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND NOT t.tgisinternal
+        AND t.tgname IN (
+          'trg_learning_certificates_immutable',
+          'trg_learning_events_immutable',
+          'trg_community_events_immutable'
+        )
+    `);
+    assert(learningCommunityImmutableTriggers.rows.length === 3, 'Learning certificate and audit ledgers are not fully immutable');
+
+    const learningCommunityChecks = await client.query<{ constraint_name: string }>(`
+      SELECT constraint_name FROM information_schema.table_constraints
+      WHERE table_schema='public' AND constraint_type='CHECK'
+        AND constraint_name IN (
+          'learning_course_status_valid','learning_course_visibility_valid',
+          'learning_assessment_passing_score_valid','learning_assessment_max_attempts_valid',
+          'learning_certificate_hash_valid','community_forum_status_valid',
+          'community_forum_visibility_valid','community_topic_status_valid',
+          'community_reply_status_valid','community_vote_target_valid','community_vote_value_valid'
+        )
+    `);
+    assert(learningCommunityChecks.rows.length === 11, 'Learning/community lifecycle, evidence, and vote checks are incomplete');
+
+    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental + marketing engagement + productivity + learning/community source-of-truth/scope/audit/idempotency/version invariants verified');
   } finally {
     await client.end();
   }

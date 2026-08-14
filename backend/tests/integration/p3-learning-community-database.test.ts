@@ -74,7 +74,6 @@ describeDb('P3.7 learning/community database invariants', () => {
         )
     `);
     const keys = new Set(rows.rows.map((row) => `${row.source_table}:${row.target_table}`));
-    expect(keys).toEqual(expect.objectContaining ? keys : keys);
     for (const key of ['learning_courses:website_sites','community_forums:website_sites','learning_enrollments:customers','learning_courses:users','community_forums:users']) {
       expect(keys.has(key)).toBe(true);
     }

@@ -2,7 +2,9 @@ import fs from 'fs';
 import path from 'path';
 
 const repoRoot = path.resolve(__dirname, '../../..');
-const source = fs.readFileSync(path.join(repoRoot, 'frontend/src/pages/ModuleSelectorPage.tsx'), 'utf8');
+const source = fs
+  .readFileSync(path.join(repoRoot, 'frontend/src/pages/ModuleSelectorPage.tsx'), 'utf8')
+  .replace(/\r\n/g, '\n');
 
 describe('ModuleSelector MCS member access contract', () => {
   test('tenant entitlement remains mandatory before per-user MCS permissions', () => {

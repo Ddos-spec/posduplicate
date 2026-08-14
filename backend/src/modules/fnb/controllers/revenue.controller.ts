@@ -106,7 +106,7 @@ const normalizeQuoteItems = async (tenantId: number, items: QuoteItemInput[]) =>
 
     let description = String(raw.description || '').trim();
     let unitPrice = numberValue(raw.unitPrice);
-    let itemId: number | null = raw.itemId ? Number(raw.itemId) : null;
+    const itemId: number | null = raw.itemId ? Number(raw.itemId) : null;
 
     if (itemId) {
       const item = await prisma.items.findFirst({

@@ -7,6 +7,7 @@ const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
 const core = read('backend/prisma/migrations/20260813250000_p3_learning_community_core/migration.sql');
 const guard = read('backend/prisma/migrations/20260813251000_p3_learning_community_scope_guard/migration.sql');
 const runner = read('backend/src/scripts/apply-p3-migrations.ts');
+const verifier = read('backend/src/scripts/verify-p3-database.ts');
 const capabilities = read('backend/src/middlewares/capability.middleware.ts');
 const catalog = read('frontend/src/config/suiteCatalog.ts');
 
@@ -45,9 +46,15 @@ describe('P3.7 learning and community contracts', () => {
     expect(core).toContain('ux_community_vote_reply_customer');
   });
 
-  test('canonical runner includes both P3.7 forward migrations', () => {
+  test('canonical runner and verifier include every P3.7 forward migration', () => {
     expect(runner).toContain('20260813250000_p3_learning_community_core');
     expect(runner).toContain('20260813251000_p3_learning_community_scope_guard');
+    expect(runner).toContain('20260813252000_p3_learning_community_public_access');
+    expect(verifier).toContain('20260813250000_p3_learning_community_core');
+    expect(verifier).toContain('20260813251000_p3_learning_community_scope_guard');
+    expect(verifier).toContain('20260813252000_p3_learning_community_public_access');
+    expect(verifier).toContain('P3.7 learning/community tables are incomplete');
+    expect(verifier).toContain('Raw public learning/community secret column must not exist');
   });
 
   test('learning and community admin capabilities are named and explicit', () => {
