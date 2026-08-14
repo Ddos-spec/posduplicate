@@ -346,16 +346,16 @@ async function run() {
 
     const signVersionFk = await client.query<{
       conname: string;
-      source_columns: string[];
+      source_columns: string;
       target_schema: string;
       target_table: string;
-      target_columns: string[];
+      target_columns: string;
     }>(`
       SELECT c.conname,
-             array_agg(sa.attname ORDER BY src.ord) AS source_columns,
+             string_agg(sa.attname::text, ',' ORDER BY src.ord) AS source_columns,
              tn.nspname AS target_schema,
              tc.relname AS target_table,
-             array_agg(ta.attname ORDER BY src.ord) AS target_columns
+             string_agg(ta.attname::text, ',' ORDER BY src.ord) AS target_columns
       FROM pg_constraint c
       JOIN pg_class sc ON sc.oid=c.conrelid
       JOIN pg_namespace sn ON sn.oid=sc.relnamespace
@@ -376,8 +376,8 @@ async function run() {
     assert(
       signVersionConstraint.target_schema === 'public' &&
       signVersionConstraint.target_table === 'business_document_versions' &&
-      signVersionConstraint.source_columns.join(',') === 'tenant_id,document_version_id,document_id' &&
-      signVersionConstraint.target_columns.join(',') === 'tenant_id,id,document_id',
+      signVersionConstraint.source_columns === 'tenant_id,document_version_id,document_id' &&
+      signVersionConstraint.target_columns === 'tenant_id,id,document_id',
       'Signature request must be pinned by FK to exact tenant/document/version tuple',
     );
 
