@@ -5,14 +5,18 @@ import { requireCapability } from '../../../middlewares/capability.middleware';
 import {
   getMarketingEventRegistrations,
   getMarketingEvents,
+  getMarketingJourneyById,
+  getMarketingJourneys,
   getMarketingSurveyById,
   getMarketingSurveyResponses,
   getMarketingSurveys,
   patchMarketingEventRegistrationStatus,
   patchMarketingEventStatus,
+  patchMarketingJourneyStatus,
   patchMarketingSurveyStatus,
   postMarketingEvent,
   postMarketingEventRegistration,
+  postMarketingJourney,
   postMarketingSurvey,
   postMarketingSurveyResponse,
 } from '../controllers/marketingEngagement.p3.controller';
@@ -20,6 +24,11 @@ import {
 const router = Router();
 router.use(authMiddleware);
 router.use(tenantMiddleware);
+
+router.get('/journeys', requireCapability('digital.marketing.read'), getMarketingJourneys);
+router.get('/journeys/:id', requireCapability('digital.marketing.read'), getMarketingJourneyById);
+router.post('/journeys', requireCapability('digital.marketing.manage'), postMarketingJourney);
+router.patch('/journeys/:id/status', requireCapability('digital.marketing.manage'), patchMarketingJourneyStatus);
 
 router.get('/events', requireCapability('digital.marketing.read'), getMarketingEvents);
 router.post('/events', requireCapability('digital.marketing.manage'), postMarketingEvent);
