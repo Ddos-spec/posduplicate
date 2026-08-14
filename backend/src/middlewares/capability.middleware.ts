@@ -70,7 +70,14 @@ export type SuiteCapability =
   | 'productivity.knowledge.read'
   | 'productivity.knowledge.manage'
   | 'productivity.sign.read'
-  | 'productivity.sign.manage';
+  | 'productivity.sign.manage'
+  | 'platform.studio.read'
+  | 'platform.studio.manage'
+  | 'intelligence.read'
+  | 'intelligence.run'
+  | 'intelligence.actions.request'
+  | 'intelligence.actions.approve'
+  | 'intelligence.actions.execute';
 
 type FeatureRecord = Record<string, unknown>;
 
@@ -97,6 +104,8 @@ const ROLE_PRESETS: Record<string, SuiteCapability[] | '*'> = {
     'workforce.payroll.read',
     'services.project.read',
     'services.timesheet.self',
+    'platform.studio.read',
+    'intelligence.read',
   ],
   cashier: [
     'revenue.customer360.read',

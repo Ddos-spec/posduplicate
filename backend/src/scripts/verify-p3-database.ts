@@ -32,6 +32,8 @@ async function run() {
       '20260813251000_p3_learning_community_scope_guard',
       '20260813252000_p3_learning_community_public_access',
       '20260813253000_p3_learning_customer_scope_guard',
+      '20260814123000_p3_studio_config',
+      '20260814130000_p4_intelligence_actions',
     ];
     assert(ledger.rows.length >= requiredMigrations.length, `Expected at least ${requiredMigrations.length} P3 migration ledger entries, found ${ledger.rows.length}`);
     for (const required of requiredMigrations) {
@@ -580,7 +582,57 @@ async function run() {
     `);
     assert(learningCommunityChecks.rows.length === 11, 'Learning/community lifecycle, evidence, and vote checks are incomplete');
 
-    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental + marketing engagement + productivity + learning/community source-of-truth/scope/audit/idempotency/version invariants verified');
+    const studioTables = await client.query<{ tablename: string }>(`
+      SELECT tablename FROM pg_tables WHERE schemaname='public'
+        AND tablename IN (
+          'studio_fields','studio_record_values','studio_workflow_rules',
+          'studio_rule_executions','studio_events'
+        )
+    `);
+    assert(studioTables.rows.length === 5, 'P3.8 Studio tables are incomplete');
+
+    const intelligenceTables = await client.query<{ tablename: string }>(`
+      SELECT tablename FROM pg_tables WHERE schemaname='public'
+        AND tablename IN (
+          'intelligence_runs','intelligence_findings',
+          'agent_action_requests','agent_action_events'
+        )
+    `);
+    assert(intelligenceTables.rows.length === 4, 'P4 intelligence/action tables are incomplete');
+
+    const studioIntelligenceScopeFks = await client.query<{ constraint_name: string }>(`
+      SELECT constraint_name FROM information_schema.table_constraints
+      WHERE table_schema='public' AND constraint_type='FOREIGN KEY'
+        AND constraint_name IN (
+          'fk_studio_record_value_field_scope','fk_studio_execution_rule_scope',
+          'fk_intelligence_finding_run_scope','fk_agent_action_finding_scope',
+          'fk_agent_action_event_scope'
+        )
+    `);
+    assert(studioIntelligenceScopeFks.rows.length === 5, 'Studio/intelligence tenant-scope FKs are incomplete');
+
+    const studioIntelligenceTriggers = await client.query<{ tgname: string }>(`
+      SELECT t.tgname FROM pg_trigger t
+      JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND NOT t.tgisinternal
+        AND t.tgname IN (
+          'trg_studio_rule_executions_immutable','trg_studio_events_immutable',
+          'trg_intelligence_runs_immutable','trg_intelligence_findings_immutable',
+          'trg_agent_action_events_immutable','trg_agent_action_requests_no_delete',
+          'trg_agent_action_transition'
+        )
+    `);
+    assert(studioIntelligenceTriggers.rows.length === 7, 'Studio/intelligence audit and action-transition triggers are incomplete');
+
+    const actionIdempotency = await client.query<{ constraint_name: string }>(`
+      SELECT constraint_name FROM information_schema.table_constraints
+      WHERE table_schema='public' AND table_name='agent_action_requests'
+        AND constraint_type='UNIQUE' AND constraint_name='ux_agent_action_idempotency'
+    `);
+    assert(actionIdempotency.rows.length === 1, 'Agent action idempotency constraint missing');
+
+    console.log('[P3 database verifier] digital suite + Studio + intelligence/action source-of-truth/scope/audit/idempotency/version invariants verified');
   } finally {
     await client.end();
   }

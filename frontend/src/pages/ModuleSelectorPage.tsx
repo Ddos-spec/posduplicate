@@ -54,7 +54,11 @@ const resolveRuntimeApp = <T extends { id: string; path?: string; status: SuiteI
     ? 'Revenue Operations'
     : path === '/supply-chain'
       ? 'Supply Chain Operations'
-      : null;
+      : path === '/studio'
+        ? 'Studio Configuration'
+        : path === '/intelligence'
+          ? 'Decision Intelligence'
+          : null;
   return { ...app, path, runtimeWorkspace };
 };
 

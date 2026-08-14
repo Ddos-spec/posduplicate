@@ -84,7 +84,8 @@ app.use(cors({
     'X-Engagement-Token',
     'X-Sign-Token',
     'X-Learning-Token',
-    'X-Community-Token'
+    'X-Community-Token',
+    'Idempotency-Key'
   ]
 }));
 app.use(express.json());

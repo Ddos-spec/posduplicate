@@ -22,6 +22,8 @@ const MIGRATIONS = [
   '20260813251000_p3_learning_community_scope_guard',
   '20260813252000_p3_learning_community_public_access',
   '20260813253000_p3_learning_customer_scope_guard',
+  '20260814123000_p3_studio_config',
+  '20260814130000_p4_intelligence_actions',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081303;

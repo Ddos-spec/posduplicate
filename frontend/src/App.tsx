@@ -65,6 +65,8 @@ const StorefrontPage = lazy(() => import('./pages/StorefrontPage'));
 const ProductivityWorkspacePage = lazy(() => import('./pages/productivity/ProductivityWorkspacePage'));
 const PublicSignPage = lazy(() => import('./pages/PublicSignPage'));
 const LearningCommunityWorkspacePage = lazy(() => import('./pages/learning/LearningCommunityWorkspacePage'));
+const StudioWorkspacePage = lazy(() => import('./pages/StudioWorkspacePage'));
+const IntelligenceWorkspacePage = lazy(() => import('./pages/IntelligenceWorkspacePage'));
 const PublicLearningPage = lazy(() => import('./pages/learning/PublicLearningPage'));
 const PublicLearnerPage = lazy(() => import('./pages/learning/PublicLearnerPage'));
 const PublicCommunityPage = lazy(() => import('./pages/learning/PublicCommunityPage'));
@@ -269,6 +271,8 @@ function App() {
           <Route path="/rental" element={<TenantModuleRoute moduleKey="pos"><OwnerRoute><RentalWorkspacePage /></OwnerRoute></TenantModuleRoute>} />
           <Route path="/productivity" element={<TenantModuleRoute moduleKey="accounting"><ProtectedRoute><ProductivityWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />
           <Route path="/learning" element={<TenantModuleRoute moduleKey="commerSocial"><ProtectedRoute><LearningCommunityWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />
+          <Route path="/studio" element={<TenantModuleRoute moduleKey="accounting"><ProtectedRoute><StudioWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />
+          <Route path="/intelligence" element={<TenantModuleRoute moduleKey="accounting"><ProtectedRoute><IntelligenceWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />
 
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route path="dashboard" element={<SuperAdminOmniPage />} />

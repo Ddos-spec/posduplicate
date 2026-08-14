@@ -28,6 +28,8 @@ import servicesRoutes from './routes/services.routes';
 import digitalRoutes from './routes/digital.routes';
 import subscriptionRoutes from './routes/subscription.p3.routes';
 import rentalRoutes from './routes/rental.p3.routes';
+import studioRoutes from './routes/studio.p3.routes';
+import intelligenceRoutes from './routes/intelligence.p4.routes';
 import { subscriptionAutomationScheduler } from '../../services/subscriptionAutomationScheduler.service';
 
 subscriptionAutomationScheduler.start();
@@ -64,5 +66,7 @@ router.use('/services', servicesRoutes);
 router.use('/digital', digitalRoutes);
 router.use('/subscriptions', subscriptionRoutes);
 router.use('/rental', rentalRoutes);
+router.use('/studio', studioRoutes);
+router.use('/intelligence', intelligenceRoutes);
 
 export default router;
