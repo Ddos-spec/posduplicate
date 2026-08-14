@@ -49,7 +49,7 @@ export default function SignWorkspace() {
         recipients: parsedRecipients,
       });
       const origin = window.location.origin;
-      setLinks((created.recipients || []).map((recipient) => ({ id: recipient.id, name: recipient.recipient_name, email: recipient.recipient_email, order: recipient.signing_order, url: `${origin}/sign#token=${encodeURIComponent(recipient.token)}` })));
+      setLinks((created.recipients || []).map((recipient) => ({ id: recipient.id, name: recipient.recipient_name, email: recipient.recipient_email, order: recipient.signing_order, url: `${origin}/sign/entry#token=${encodeURIComponent(recipient.token)}` })));
       setForm({ documentId: '', subject: '', message: '', expiresAt: '', recipients: '' });
       toast.success('Signature request dibuat. Simpan link recipient sekarang; token raw tidak disimpan server.');
       await load();
