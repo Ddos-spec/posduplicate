@@ -8,10 +8,8 @@ import path from 'path';
 import fs from 'fs';
 import swaggerUi from 'swagger-ui-express';
 
-// Load environment variables
 dotenv.config();
 
-// Import module routers
 import fnbRoutes from './modules/fnb';
 import accountingRoutes from './modules/accounting';
 import sharedRoutes from './modules/shared';
@@ -41,42 +39,31 @@ const io = new Server(httpServer, {
   }
 });
 
-// Export io so other modules (like webhooks) can emit events
 export { io };
 
 io.on('connection', (socket) => {
   console.log(`[Socket.io] Client connected: ${socket.id}`);
-  
   socket.on('disconnect', () => {
     console.log(`[Socket.io] Client disconnected: ${socket.id}`);
   });
 });
 
-// Trust proxy (required for rate limiting behind proxies like Nginx/Easypanel)
 app.set('trust proxy', 1);
 
-// Middleware
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
     if (!origin) {
       callback(null, true);
       return;
     }
-
-    // Allow all Vercel deployments
     if (origin.includes('.vercel.app')) {
       callback(null, true);
       return;
     }
-
-    // Allow configured origins
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
       return;
     }
-
-    // Reject other origins
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -89,23 +76,18 @@ app.use(cors({
     'Pragma',
     'Expires',
     'If-Modified-Since',
-    'X-Order-Token'
+    'X-Order-Token',
+    'X-Engagement-Token'
   ]
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// Serve static files from uploads directory
-// Use process.cwd() to match the upload middleware path
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// All routes live on this router so it can be mounted both at "/" (the
-// mypos.my-aicustom.com subdomain) and at "/mypos" (the my-aicustom.com/mypos
-// reverse-proxy path, whose prefix is NOT stripped before reaching this app).
 const apiRouter: Router = Router();
 
-// Root route
 apiRouter.get('/', (_req: Request, res: Response) => {
   res.json({
     success: true,
@@ -135,7 +117,6 @@ apiRouter.get('/', (_req: Request, res: Response) => {
   });
 });
 
-// Health check
 apiRouter.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'OK',
@@ -144,35 +125,22 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// API Documentation (Swagger)
 apiRouter.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'OmniPilot AI API Documentation'
 }));
 
-// Swagger JSON endpoint
 apiRouter.get('/api-docs.json', (_req: Request, res: Response) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
 
-// API Routes - Organized by Module
-// Shared/Common Routes (Auth, Users, Tenants, Settings, etc.)
 apiRouter.use('/api', sharedRoutes);
-
-// FnB/POS Module Routes
 apiRouter.use('/api', fnbRoutes);
-
-// Accounting Module Routes
 apiRouter.use('/api/accounting', accountingRoutes);
-
-// Admin Module Routes
 apiRouter.use('/api/admin', adminRoutes);
-
-// Medsos Module Routes
 apiRouter.use('/api/medsos', medsosRoutes);
 
-// 404 Handler
 apiRouter.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
@@ -183,18 +151,12 @@ apiRouter.use((req: Request, res: Response) => {
   });
 });
 
-// Mount the router under /mypos (path-based access via my-aicustom.com/mypos,
-// whose prefix Traefik forwards verbatim) before mounting it at root
-// (subdomain access) — the root mount's "/" prefix matches every path, so it
-// must come second or it swallows /mypos/* requests before they get there.
 app.use('/mypos', apiRouter);
 app.use('/', apiRouter);
 
-// Error Handler
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   console.error('Error:', err);
 
-  // Simple File Logging for easier debugging
   try {
     const logMessage = `[${new Date().toISOString()}] ${req.method} ${req.path} - Error: ${err.message}\nStack: ${err.stack}\n\n`;
     fs.appendFileSync(path.join(__dirname, '../server-error.log'), logMessage);
@@ -212,8 +174,6 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-// Start server using httpServer to support websockets.
-// Tests import the Express app directly; do not bind a real port or start schedulers there.
 if (process.env.NODE_ENV !== 'test') {
   httpServer.listen(PORT, () => {
     scheduler.start();

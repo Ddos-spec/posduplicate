@@ -24,6 +24,8 @@ async function run() {
       '20260813213000_p3_subscription_automation',
       '20260813220000_p3_rental_core',
       '20260813220500_p3_rental_inventory_guard',
+      '20260813230000_p3_marketing_engagement_core',
+      '20260813231000_p3_marketing_public_idempotency',
     ];
     assert(ledger.rows.length >= requiredMigrations.length, `Expected at least ${requiredMigrations.length} P3 migration ledger entries, found ${ledger.rows.length}`);
     for (const required of requiredMigrations) {
@@ -215,7 +217,81 @@ async function run() {
     `);
     assert(rentalInventoryTrigger.rows.length === 1, 'Rental inventory commitment trigger missing');
 
-    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental source-of-truth/inventory invariants verified');
+    const marketingTables = await client.query<{ tablename: string }>(`
+      SELECT tablename FROM pg_tables WHERE schemaname='public'
+        AND tablename IN (
+          'marketing_journeys','marketing_journey_steps','marketing_events',
+          'marketing_event_registrations','marketing_surveys','marketing_survey_questions',
+          'marketing_survey_responses','marketing_survey_answers','marketing_engagement_events'
+        )
+    `);
+    assert(marketingTables.rows.length === 9, 'P3.5 marketing engagement tables are incomplete');
+
+    const marketingEventColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='marketing_events'
+        AND column_name IN ('tenant_id','slug','status','starts_at','ends_at','capacity','registration_open')
+    `);
+    assert(marketingEventColumns.rows.length === 7, 'Marketing event lifecycle/capacity columns are incomplete');
+
+    const marketingSurveyColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='marketing_survey_responses'
+        AND column_name IN ('tenant_id','survey_id','customer_id','status','started_at','submitted_at')
+    `);
+    assert(marketingSurveyColumns.rows.length === 6, 'Marketing survey response scope/lifecycle columns are incomplete');
+
+    const marketingCustomerFks = await client.query<{ source_table: string; target_table: string }>(`
+      SELECT tc.table_name AS source_table, ccu.table_name AS target_table
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu
+        ON ccu.constraint_name=tc.constraint_name AND ccu.constraint_schema=tc.constraint_schema
+      WHERE tc.table_schema='public' AND tc.constraint_type='FOREIGN KEY'
+        AND ccu.table_schema='public' AND ccu.table_name='customers'
+        AND tc.table_name IN ('marketing_event_registrations','marketing_survey_responses','marketing_engagement_events')
+    `);
+    const marketingCustomerFkKeys = new Set(marketingCustomerFks.rows.map((row) => `${row.source_table}:${row.target_table}`));
+    for (const key of [
+      'marketing_event_registrations:customers',
+      'marketing_survey_responses:customers',
+      'marketing_engagement_events:customers',
+    ]) assert(marketingCustomerFkKeys.has(key), `Marketing source-of-truth FK missing: ${key}`);
+
+    const marketingImmutableTrigger = await client.query<{ tgname: string }>(`
+      SELECT t.tgname FROM pg_trigger t
+      JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relname='marketing_engagement_events'
+        AND t.tgname='trg_marketing_engagement_events_immutable' AND NOT t.tgisinternal
+    `);
+    assert(marketingImmutableTrigger.rows.length === 1, 'Marketing engagement append-only event trigger missing');
+
+    const marketingRetryColumns = await client.query<{ table_name: string; column_name: string }>(`
+      SELECT table_name,column_name FROM information_schema.columns
+      WHERE table_schema='public' AND column_name='submission_key_hash'
+        AND table_name IN ('marketing_event_registrations','marketing_survey_responses')
+    `);
+    const marketingRetryColumnKeys = new Set(marketingRetryColumns.rows.map((row) => `${row.table_name}:${row.column_name}`));
+    for (const key of [
+      'marketing_event_registrations:submission_key_hash',
+      'marketing_survey_responses:submission_key_hash',
+    ]) assert(marketingRetryColumnKeys.has(key), `Marketing public retry column missing: ${key}`);
+
+    const marketingRetryIndexes = await client.query<{ indexname: string; indexdef: string }>(`
+      SELECT indexname,indexdef FROM pg_indexes
+      WHERE schemaname='public' AND indexname IN (
+        'ux_marketing_event_registration_submission_key',
+        'ux_marketing_survey_response_submission_key'
+      )
+    `);
+    assert(marketingRetryIndexes.rows.length === 2, 'Marketing public retry unique indexes are incomplete');
+    for (const row of marketingRetryIndexes.rows) {
+      assert(row.indexdef.includes('CREATE UNIQUE INDEX'), `Marketing public retry index ${row.indexname} must be unique`);
+      assert(row.indexdef.includes('submission_key_hash'), `Marketing public retry index ${row.indexname} must key submission hash`);
+      assert(row.indexdef.includes('WHERE'), `Marketing public retry index ${row.indexname} must remain partial`);
+    }
+
+    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental + marketing engagement source-of-truth/inventory/audit/idempotency invariants verified');
   } finally {
     await client.end();
   }

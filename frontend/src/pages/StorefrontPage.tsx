@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Loader2, Minus, Plus, RefreshCw, ShoppingBag } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
+import PublicEngagementPanel from '../components/marketing/PublicEngagementPanel';
 import {
   createPublicStorefrontOrder,
   getPublicStorefront,
@@ -21,6 +22,9 @@ const formatMoney = (value: number | string) => new Intl.NumberFormat('id-ID', {
 
 export default function StorefrontPage() {
   const { publicSlug = '' } = useParams();
+  const [searchParams] = useSearchParams();
+  const eventSlug = searchParams.get('event');
+  const surveySlug = searchParams.get('survey');
   const [store, setStore] = useState<PublicStorefrontMeta | null>(null);
   const [catalog, setCatalog] = useState<PublicCatalogItem[]>([]);
   const [cart, setCart] = useState<Record<number, number>>({});
@@ -142,6 +146,9 @@ export default function StorefrontPage() {
     }
   };
 
+  if (eventSlug || surveySlug) {
+    return <PublicEngagementPanel publicSlug={publicSlug} eventSlug={eventSlug} surveySlug={eventSlug ? null : surveySlug} />;
+  }
   if (loading) return <div className="min-h-screen grid place-items-center bg-slate-50"><Loader2 className="animate-spin" /></div>;
   if (!store) return <div className="min-h-screen grid place-items-center bg-slate-50 p-6"><div className="rounded-2xl border bg-white p-6 text-center"><h1 className="text-xl font-black">Storefront unavailable</h1><p className="mt-2 text-sm text-slate-600">{error}</p></div></div>;
 

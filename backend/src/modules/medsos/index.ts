@@ -8,6 +8,7 @@ import metaOAuthRoutes from './routes/metaOAuth.routes';
 import tiktokAdsRoutes from './routes/tiktokAds.routes';
 import zernioRoutes from './routes/zernio.routes';
 import mcsTeamRoutes from './routes/mcsTeam.routes';
+import marketingEngagementRoutes from './routes/marketingEngagement.p3.routes';
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.use('/meta-oauth', metaOAuthRoutes);
 router.use('/tiktok', tiktokAdsRoutes);
 router.use('/zernio', zernioRoutes);
 router.use('/team', mcsTeamRoutes);
+router.use('/engagement', marketingEngagementRoutes);
 
 export default router;
 
