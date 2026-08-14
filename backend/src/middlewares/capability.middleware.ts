@@ -60,7 +60,13 @@ export type SuiteCapability =
   | 'digital.commerce.read'
   | 'digital.commerce.manage'
   | 'digital.marketing.read'
-  | 'digital.marketing.manage';
+  | 'digital.marketing.manage'
+  | 'productivity.documents.read'
+  | 'productivity.documents.manage'
+  | 'productivity.knowledge.read'
+  | 'productivity.knowledge.manage'
+  | 'productivity.sign.read'
+  | 'productivity.sign.manage';
 
 type FeatureRecord = Record<string, unknown>;
 
