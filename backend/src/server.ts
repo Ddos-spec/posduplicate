@@ -88,7 +88,14 @@ app.use(cors({
     'Idempotency-Key'
   ]
 }));
-app.use(express.json());
+app.use(express.json({
+  verify: (request, _response, buffer) => {
+    const expressRequest = request as Request & { rawBody?: Buffer };
+    if (expressRequest.originalUrl.startsWith('/api/medsos/zernio/webhook')) {
+      expressRequest.rawBody = Buffer.from(buffer);
+    }
+  },
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 

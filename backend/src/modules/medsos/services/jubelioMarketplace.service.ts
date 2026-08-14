@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
-// Jubelio Marketplace Chat Service
-// TODO: fill in actual endpoints when Jubelio API docs confirmed
+// Jubelio Marketplace Chat remains fail-closed until the provider publishes a
+// confirmed health, webhook-signature, send-message, and handover contract.
 
 type JsonRecord = Record<string, any>;
 
@@ -14,15 +14,14 @@ export function verifyJubelioWebhookSignature(
   headers: Record<string, string | string[] | undefined>,
   secret: string,
 ): boolean {
-  if (!secret) return true;
-  // TODO: confirm exact header name from Jubelio docs
+  if (!secret) return false;
   const raw = headers['x-jubelio-signature'] || headers['jubelio-signature'] || '';
   const provided = String(Array.isArray(raw) ? raw[0] : raw).trim();
-  if (!provided) return true;
+  if (!/^[a-f0-9]{64}$/.test(provided)) return false;
   const plainText = typeof payload === 'string' ? payload : JSON.stringify(payload ?? {});
-  const expected = createHmac('sha256', secret).update(plainText).digest('hex');
+  const expected = createHmac('sha256', secret).update(plainText).digest();
   try {
-    return timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+    return timingSafeEqual(Buffer.from(provided, 'hex'), expected);
   } catch {
     return false;
   }
@@ -38,25 +37,11 @@ export async function checkJubelioConnectionStatus(
     return { reachable: false, channels: [], message: 'Kredensial Jubelio belum dikonfigurasi.' };
   }
 
-  try {
-    // TODO: replace with real Jubelio health/channel endpoint when confirmed
-    // const response = await fetch(`${getJubelioBaseUrl()}/v1/channels`, {
-    //   headers: { 'X-Auth-App-ID': appId, 'X-Auth-Secret-Key': secretKey },
-    //   signal: AbortSignal.timeout(8000),
-    // });
-    // if (!response.ok) throw new Error(`Jubelio returned ${response.status}`);
-    return {
-      reachable: true,
-      channels: [],
-      message: 'Jubelio dikonfigurasi — endpoint health check menyusul setelah API docs dikonfirmasi.',
-    };
-  } catch (error) {
-    return {
-      reachable: false,
-      channels: [],
-      message: error instanceof Error ? error.message : 'Jubelio tidak merespons.',
-    };
-  }
+  return {
+    reachable: false,
+    channels: [],
+    message: 'Kredensial tersimpan, tetapi koneksi tidak diklaim aktif karena kontrak API Jubelio belum terverifikasi.',
+  };
 }
 
 export async function sendJubelioBotMessage(_input: {

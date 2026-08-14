@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
 import { normalizeEmailIdentity } from '../../../utils/email';
 
@@ -199,7 +200,13 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     }
 
     const rawPassword = typeof password === 'string' ? password.trim() : '';
-    const tempPassword = rawPassword || `Temp${Math.floor(Math.random() * 10000)}!`;
+    if (rawPassword && rawPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'WEAK_PASSWORD', message: 'Password must contain at least 8 characters' }
+      });
+    }
+    const tempPassword = rawPassword || `Tmp!${randomBytes(12).toString('base64url')}`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
     const normalizedOutletId = outletId ? Number(outletId) : null;
 
@@ -242,9 +249,13 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
         console.error('Failed to create accounting user log:', logError);
     }
 
-    // 4. Send Email (Mock)
+    // No delivery provider is configured for this flow. Never print credentials
+    // or claim delivery; the one-time response remains the handoff mechanism.
     if (sendEmailNotification) {
-        console.log(`[Email Mock] To: ${email}, Subject: Welcome to MyAkuntan, Password: ${tempPassword}`);
+        console.info('[Accounting User] Email delivery requested but no provider is configured', {
+          tenantId,
+          userId: user.id,
+        });
     }
 
     return res.status(201).json({
@@ -256,7 +267,8 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
                 email: user.email,
                 tempPassword // Return only once
             },
-            emailSent: sendEmailNotification
+            emailSent: false,
+            emailDelivery: sendEmailNotification ? 'not_configured' : 'not_requested'
         }
     });
 

@@ -1135,7 +1135,7 @@ export default function MedsosSettings() {
               <div className="flex items-center gap-2 mb-4">
                 <Workflow size={16} className="text-emerald-500" />
                 <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Custom AI Webhook</h3>
-            <FieldHelp title="Custom AI Webhook" description="Gunakan fitur ini jika Anda memiliki sistem AI atau bot eksternal (seperti n8n atau custom server). Jika diaktifkan, semua pesan masuk akan diteruskan ke URL Webhook ini." howToUse="Aktifkan hanya kalau Anda memang punya endpoint AI eksternal yang siap menerima payload. Isi URL webhook, simpan, lalu uji dengan pesan masuk dari channel yang aktif." />
+            <FieldHelp title="Custom AI Webhook" description="Gunakan fitur ini jika Anda memiliki sistem AI atau bot eksternal (seperti n8n atau custom server). Jika diaktifkan, pesan masuk dari akun yang terhubung diteruskan dengan event ID yang stabil untuk deduplikasi." howToUse="Gunakan endpoint HTTPS, minta administrator memasukkan hostname ke allowlist produksi, simpan, lalu uji dengan pesan masuk dari channel yang aktif." />
               </div>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">

@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import { Request, Router } from 'express';
+import { createHash } from 'crypto';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { io } from '../../../server';
@@ -36,6 +37,14 @@ import {
   disconnectTikTokAdsIntegration,
   listTikTokAdsConnectedAccounts,
 } from '../services/tiktokAdsOAuth.service';
+import {
+  validateOutboundWebhookTarget,
+  verifyZernioWebhookSignature,
+} from '../services/zernioWebhookSecurity.service';
+import {
+  processZernioWebhookReceipt,
+  ZernioWebhookProcessingError,
+} from '../services/zernioWebhookReceipt.service';
 
 const router = Router();
 
@@ -43,66 +52,158 @@ import prisma from '../../../utils/prisma';
 
 // POST /api/medsos/zernio/webhook
 // This must be before authMiddleware because it's called by Zernio servers
-router.post('/webhook', async (req, res, next) => {
+router.post('/webhook', async (req, res) => {
   try {
-    const signature = req.headers['x-zernio-signature'];
-    // TODO: Verify signature using ZERNIO_WEBHOOK_SECRET
-    const payload = req.body;
-    console.log('[Webhook] Received:', payload.event, payload.id);
-    
-    // Process based on payload.event
-    // e.g. post.published, message.received, etc.
-    io.emit('zernio_event', payload);
-
-    // Forward to External Custom AI Webhook (e.g. n8n)
-    try {
-      // Zernio payload structure usually has an account or profile ID we could use to map back to a tenant.
-      // But since we are processing a global webhook, we need to find the tenant.
-      // For this implementation, we will query the first tenant with an active external webhook, 
-      // or ideally extract tenant info from the payload (e.g., from accountId).
-      // Since this is a proxy, we will broadcast it to all active webhooks for now, 
-      // or if accountId is present, find the tenant that owns the account.
-      
-      const accountId = payload.account?.accountId || payload.account?.id;
-      if (accountId) {
-         const socialAccount = await prisma.social_accounts.findFirst({
-            where: { account_id: accountId },
-            include: { tenants: true }
-         });
-
-         if (socialAccount && socialAccount.tenants?.settings) {
-            const settings = socialAccount.tenants.settings as any;
-            const extHook = settings.myCommerSocialSettings?.externalWebhook;
-            if (extHook && extHook.active && extHook.url) {
-               const logisticsSettings = normalizeLogisticsAssistantSettings(settings.myCommerSocialSettings?.logisticsAssistant);
-               const forwardedPayload = {
-                  ...payload,
-                  _myCommerSocial: {
-                    tenantId: socialAccount.tenants.id,
-                    businessName: socialAccount.tenants.business_name,
-                    tools: {
-                      logisticsAssistant: buildAutomationToolDescriptor(socialAccount.tenants.id, logisticsSettings)
-                    }
-                  }
-               };
-               console.log(`[Webhook Forwarder] Forwarding event to ${extHook.url}`);
-               fetch(extHook.url, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(forwardedPayload),
-                  signal: AbortSignal.timeout(5000)
-               }).catch(e => console.error('[Webhook Forwarder] Forward failed:', e.message));
-            }
-         }
-      }
-    } catch (fwErr) {
-      console.error('[Webhook Forwarder] Error:', fwErr);
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+    const signatureHeader = req.headers['x-zernio-signature'] || req.headers['x-late-signature'];
+    const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
+    const verification = verifyZernioWebhookSignature({
+      rawBody,
+      signature,
+      secret: process.env.ZERNIO_WEBHOOK_SECRET,
+    });
+    if (!verification.valid) {
+      const status = verification.reason === 'secret_not_configured' ? 503
+        : verification.reason === 'raw_body_missing' ? 400
+          : 401;
+      return res.status(status).json({
+        success: false,
+        error: {
+          code: `ZERNIO_WEBHOOK_${verification.reason.toUpperCase()}`,
+          message: verification.reason === 'secret_not_configured'
+            ? 'Zernio webhook verification is not configured'
+            : 'Zernio webhook verification failed',
+        },
+      });
     }
-    
-    // We acknowledge the webhook quickly.
-    return res.status(200).json({ success: true, message: 'Webhook received' });
+
+    const payload = req.body;
+    if (
+      !payload || typeof payload !== 'object'
+      || typeof payload.id !== 'string' || !payload.id.trim() || payload.id.length > 200
+      || typeof payload.event !== 'string' || !payload.event.trim() || payload.event.length > 160
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'ZERNIO_WEBHOOK_PAYLOAD_INVALID', message: 'Webhook id or event is invalid' },
+      });
+    }
+    const eventIdHeader = req.headers['x-zernio-event-id'] || req.headers['x-late-event-id'];
+    const eventId = Array.isArray(eventIdHeader) ? eventIdHeader[0] : eventIdHeader;
+    if (eventId && eventId !== payload.id) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'ZERNIO_WEBHOOK_EVENT_ID_MISMATCH', message: 'Webhook event id does not match its header' },
+      });
+    }
+    const payloadHash = createHash('sha256').update(rawBody!).digest('hex');
+    console.info('[Zernio Webhook] Verified event', {
+      event: payload.event,
+      eventId: payload.id,
+      payloadHash,
+    });
+
+    const receipt = await processZernioWebhookReceipt({
+      eventId: payload.id,
+      eventType: payload.event,
+      payloadHash,
+    }, async (tx) => {
+      const rawAccountId = payload.account?.accountId || payload.account?.id;
+      const accountId = typeof rawAccountId === 'string' ? rawAccountId.trim() : '';
+      if (accountId) {
+        const socialAccount = await tx.social_accounts.findFirst({
+          where: { account_id: accountId },
+          include: { tenants: true },
+        });
+
+        if (socialAccount?.tenants?.settings) {
+          const settings = socialAccount.tenants.settings as any;
+          const extHook = settings.myCommerSocialSettings?.externalWebhook;
+          if (extHook?.active && extHook.url) {
+            const target = validateOutboundWebhookTarget({
+              target: extHook.url,
+              allowedHosts: process.env.OUTBOUND_WEBHOOK_ALLOWED_HOSTS,
+              nodeEnv: process.env.NODE_ENV,
+            });
+            if (!target.valid) {
+              throw new ZernioWebhookProcessingError(`OUTBOUND_WEBHOOK_${target.reason.toUpperCase()}`);
+            }
+
+            const logisticsSettings = normalizeLogisticsAssistantSettings(
+              settings.myCommerSocialSettings?.logisticsAssistant,
+            );
+            const forwardedPayload = {
+              ...payload,
+              _myCommerSocial: {
+                tenantId: socialAccount.tenants.id,
+                businessName: socialAccount.tenants.business_name,
+                tools: {
+                  logisticsAssistant: buildAutomationToolDescriptor(
+                    socialAccount.tenants.id,
+                    logisticsSettings,
+                  ),
+                },
+              },
+            };
+            let forwardResponse: Response;
+            try {
+              forwardResponse = await fetch(target.url, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Idempotency-Key': `zernio-${payload.id}`,
+                  'X-Zernio-Event-Id': payload.id,
+                },
+                body: JSON.stringify(forwardedPayload),
+                signal: AbortSignal.timeout(5_000),
+              });
+            } catch {
+              throw new ZernioWebhookProcessingError('OUTBOUND_WEBHOOK_UNREACHABLE');
+            }
+            if (!forwardResponse.ok) {
+              throw new ZernioWebhookProcessingError('OUTBOUND_WEBHOOK_NON_SUCCESS');
+            }
+          }
+        }
+      }
+
+      io.emit('zernio_event', payload);
+    });
+
+    if (receipt.outcome === 'conflict') {
+      return res.status(409).json({
+        success: false,
+        error: {
+          code: 'ZERNIO_WEBHOOK_EVENT_CONFLICT',
+          message: 'Webhook event id was already used with different evidence',
+        },
+      });
+    }
+    if (receipt.outcome === 'failed') {
+      console.warn('[Zernio Webhook] Retryable processing failure', {
+        event: payload.event,
+        eventId: payload.id,
+        errorCode: receipt.errorCode,
+      });
+      return res.status(502).json({
+        success: false,
+        error: {
+          code: 'ZERNIO_WEBHOOK_PROCESSING_FAILED',
+          message: 'Webhook processing failed and may be retried',
+          retryable: true,
+        },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: receipt.outcome === 'duplicate' ? 'Webhook already processed' : 'Webhook processed',
+      data: { duplicate: receipt.outcome === 'duplicate', attemptCount: receipt.attemptCount },
+    });
   } catch (err) {
-    console.error('[Webhook] Error:', err);
+    console.error('[Zernio Webhook] Internal processing error', {
+      name: err instanceof Error ? err.name : 'UnknownError',
+    });
     return res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });

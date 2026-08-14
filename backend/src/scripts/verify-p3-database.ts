@@ -34,6 +34,7 @@ async function run() {
       '20260813253000_p3_learning_customer_scope_guard',
       '20260814123000_p3_studio_config',
       '20260814130000_p4_intelligence_actions',
+      '20260814133000_zernio_webhook_receipts',
     ];
     assert(ledger.rows.length >= requiredMigrations.length, `Expected at least ${requiredMigrations.length} P3 migration ledger entries, found ${ledger.rows.length}`);
     for (const required of requiredMigrations) {
@@ -632,7 +633,22 @@ async function run() {
     `);
     assert(actionIdempotency.rows.length === 1, 'Agent action idempotency constraint missing');
 
-    console.log('[P3 database verifier] digital suite + Studio + intelligence/action source-of-truth/scope/audit/idempotency/version invariants verified');
+    const zernioReceiptTable = await client.query<{ tablename: string }>(`
+      SELECT tablename FROM pg_tables
+      WHERE schemaname='public' AND tablename='zernio_webhook_receipts'
+    `);
+    assert(zernioReceiptTable.rows.length === 1, 'Zernio webhook receipt ledger is missing');
+
+    const zernioReceiptTrigger = await client.query<{ tgname: string }>(`
+      SELECT t.tgname FROM pg_trigger t
+      JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relname='zernio_webhook_receipts'
+        AND NOT t.tgisinternal AND t.tgname='trg_zernio_webhook_receipt_integrity'
+    `);
+    assert(zernioReceiptTrigger.rows.length === 1, 'Zernio webhook receipt integrity trigger is missing');
+
+    console.log('[P3 database verifier] digital suite + Studio + intelligence/action + webhook source-of-truth/scope/audit/idempotency/version invariants verified');
   } finally {
     await client.end();
   }

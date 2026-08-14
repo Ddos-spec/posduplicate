@@ -108,6 +108,7 @@ DROP TRIGGER IF EXISTS trg_studio_rule_executions_immutable ON public.studio_rul
 CREATE TRIGGER trg_studio_rule_executions_immutable
 BEFORE UPDATE OR DELETE ON public.studio_rule_executions
 FOR EACH ROW EXECUTE FUNCTION public.prevent_studio_audit_mutation();
+
 DROP TRIGGER IF EXISTS trg_studio_events_immutable ON public.studio_events;
 CREATE TRIGGER trg_studio_events_immutable
 BEFORE UPDATE OR DELETE ON public.studio_events

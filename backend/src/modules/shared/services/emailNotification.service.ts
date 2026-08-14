@@ -100,6 +100,8 @@ const getTransporter = () => {
       host: process.env.SMTP_HOST,
       port,
       secure,
+      disableFileAccess: true,
+      disableUrlAccess: true,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
@@ -127,7 +129,9 @@ export const sendEmail = async ({ to, subject, text, html }: SendEmailInput) => 
     to,
     subject,
     text,
-    html
+    html,
+    disableFileAccess: true,
+    disableUrlAccess: true,
   });
 };
 

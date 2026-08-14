@@ -24,10 +24,21 @@ const MIGRATIONS = [
   '20260813253000_p3_learning_customer_scope_guard',
   '20260814123000_p3_studio_config',
   '20260814130000_p4_intelligence_actions',
+  '20260814133000_zernio_webhook_receipts',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081303;
 const sha256 = (content: string) => crypto.createHash('sha256').update(content).digest('hex');
+const checksumCandidates = (content: string) => {
+  const lf = content.replace(/\r\n/g, '\n');
+  const singleTerminalNewline = `${lf.replace(/\n*$/, '')}\n`;
+  return new Set([
+    sha256(content),
+    sha256(lf),
+    sha256(singleTerminalNewline),
+    sha256(`${singleTerminalNewline}\n`),
+  ]);
+};
 
 const resolveMigrationFile = (migrationName: string) => {
   const candidates = [
@@ -57,10 +68,11 @@ const applyMigration = async (client: Client, migrationName: string) => {
     [migrationName],
   );
   if (existing.rows[0]) {
-    if (existing.rows[0].checksum_sha256 !== checksum) {
+    if (!checksumCandidates(sql).has(existing.rows[0].checksum_sha256)) {
       throw new Error(`Applied P3 migration ${migrationName} has checksum drift. Create a forward migration instead.`);
     }
-    console.log(`[P3 migration] ${migrationName}: already applied`);
+    const suffix = existing.rows[0].checksum_sha256 === checksum ? '' : ' (formatting-equivalent checksum)';
+    console.log(`[P3 migration] ${migrationName}: already applied${suffix}`);
     return;
   }
 

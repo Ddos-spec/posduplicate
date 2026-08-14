@@ -575,7 +575,7 @@ export default function CreateUserPage() {
                 </button>
               </div>
               <p className={`mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                {createdUser.emailSent ? 'Email dikirim (mock). Pastikan user menerima kredensial.' : 'Email tidak dikirim, bagikan password ini secara aman.'}
+                {createdUser.emailSent ? 'Email berhasil dikirim.' : 'Email belum dikirim; bagikan password ini melalui kanal yang aman.'}
               </p>
             </div>
 

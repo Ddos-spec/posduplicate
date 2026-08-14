@@ -5,7 +5,11 @@ import jwt from 'jsonwebtoken';
 import { createActivityLog } from './activity-log.controller';
 import { normalizeEmailIdentity } from '../../../utils/email';
 
-// const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Using inline for now as in original code
+const requireJwtSecret = () => {
+  const secret = process.env.JWT_SECRET?.trim();
+  if (!secret) throw new Error('JWT_SECRET environment variable is required');
+  return secret;
+};
 
 /**
  * Login
@@ -114,12 +118,27 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         tenantId: user.tenant_id,
         outletId: user.outlet_id
       },
-      process.env.JWT_SECRET || 'fallback-secret',
+      requireJwtSecret(),
       { expiresIn: '24h' }
     );
 
-    // Remove password hash from response
-    const { passwordHash, ...userWithoutPassword } = user as any;
+    // Use an explicit response projection so authentication material can never
+    // leak when the Prisma selection evolves.
+    const userWithoutPassword = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role_id: user.role_id,
+      tenant_id: user.tenant_id,
+      outlet_id: user.outlet_id,
+      is_active: user.is_active,
+      last_login: user.last_login,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+      roles: user.roles,
+      tenants_users_tenant_idTotenants: user.tenants_users_tenant_idTotenants,
+      outlets: user.outlets,
+    };
 
     res.json({
       success: true,

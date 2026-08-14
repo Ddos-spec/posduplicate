@@ -10,10 +10,20 @@ import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = 'admin@omnipilot.ai';
-const ADMIN_PASSWORD = 'admin123';
-const ADMIN_NAME = 'Super Admin';
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'admin@omnipilot.ai').trim().toLowerCase();
+const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || '').trim();
+const ADMIN_NAME = (process.env.ADMIN_NAME || 'Super Admin').trim();
 const SALT_ROUNDS = 10;
+
+if (
+  ADMIN_PASSWORD.length < 12
+  || !/[a-z]/.test(ADMIN_PASSWORD)
+  || !/[A-Z]/.test(ADMIN_PASSWORD)
+  || !/\d/.test(ADMIN_PASSWORD)
+  || !/[^A-Za-z0-9]/.test(ADMIN_PASSWORD)
+) {
+  throw new Error('ADMIN_PASSWORD must be at least 12 characters and include upper, lower, number, and symbol characters');
+}
 
 async function createAdminUser() {
   try {
@@ -102,12 +112,9 @@ async function createAdminUser() {
       console.log(`Role:     ${verifiedAdmin.roles.name}`);
       console.log(`Active:   ${verifiedAdmin.is_active}`);
       console.log('==========================================');
-      console.log('\n📧 Login Credentials:');
-      console.log('==========================================');
       console.log(`URL:      http://localhost:5173/admin/login`);
       console.log(`Email:    ${ADMIN_EMAIL}`);
-      console.log(`Password: ${ADMIN_PASSWORD}`);
-      console.log('==========================================\n');
+      console.log('Password: supplied through ADMIN_PASSWORD and intentionally not printed');
       console.log('🎉 Admin user is ready to use!');
     } else {
       console.error('❌ Verification failed - admin user not found!');
