@@ -49,7 +49,7 @@ export default function SignWorkspace() {
         recipients: parsedRecipients,
       });
       const origin = window.location.origin;
-      setLinks((created.recipients || []).map((recipient) => ({ id: recipient.id, name: recipient.recipient_name, email: recipient.recipient_email, order: recipient.signing_order, url: `${origin}/sign/${recipient.token}` })));
+      setLinks((created.recipients || []).map((recipient) => ({ id: recipient.id, name: recipient.recipient_name, email: recipient.recipient_email, order: recipient.signing_order, url: `${origin}/sign#token=${encodeURIComponent(recipient.token)}` })));
       setForm({ documentId: '', subject: '', message: '', expiresAt: '', recipients: '' });
       toast.success('Signature request dibuat. Simpan link recipient sekarang; token raw tidak disimpan server.');
       await load();
@@ -72,7 +72,7 @@ export default function SignWorkspace() {
   return <div className="space-y-5">
     {links.length > 0 && <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
       <h2 className="font-bold text-amber-950">Signing links — shown for this browser session</h2>
-      <p className="mt-1 text-xs text-amber-800">Server stores only SHA-256 token hashes. Copy these links before leaving this page.</p>
+      <p className="mt-1 text-xs text-amber-800">Server stores only SHA-256 token hashes. Link tokens use a URL fragment so they are not transmitted in HTTP requests or access logs.</p>
       <div className="mt-3 grid gap-2 md:grid-cols-2">{links.map((link) => <div key={link.id} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3"><div className="min-w-0"><div className="truncate text-sm font-semibold">#{link.order} {link.name}</div><div className="truncate text-xs text-slate-500">{link.email}</div></div><div className="flex gap-1"><button onClick={() => void copy(link.url)} className="rounded-lg border p-2"><Copy size={14} /></button><a href={link.url} target="_blank" rel="noreferrer" className="rounded-lg border p-2"><ExternalLink size={14} /></a></div></div>)}</div>
       <button type="button" onClick={() => setLinks([])} className="mt-3 text-xs font-semibold text-amber-900">Dismiss links</button>
     </section>}
