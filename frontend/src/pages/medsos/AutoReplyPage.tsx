@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useThemeStore } from '../../store/themeStore';
-import { Bot, CalendarDays, Loader2, MessageCircle, ShieldCheck } from 'lucide-react';
+import { Bot, CalendarDays, Loader2, MessageCircle, ShieldCheck, Workflow } from 'lucide-react';
 import { createZernioAutomation } from '../../services/medsosPostsService';
 import toast from 'react-hot-toast';
 import MarketingEngagementPage from './MarketingEngagementPage';
+import MarketingJourneysPage from './MarketingJourneysPage';
+
+type AutomationView = 'automation' | 'journeys' | 'engagement';
 
 export default function AutoReplyPage() {
   const { isDark } = useThemeStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeView = searchParams.get('view') === 'engagement' ? 'engagement' : 'automation';
+  const viewParam = searchParams.get('view');
+  const activeView: AutomationView = viewParam === 'engagement' || viewParam === 'journeys' ? viewParam : 'automation';
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [keywords, setKeywords] = useState('');
@@ -38,24 +42,19 @@ export default function AutoReplyPage() {
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className={`inline-flex rounded-2xl p-1 ${isDark ? 'bg-slate-900 ring-1 ring-white/10' : 'bg-slate-100'}`}>
-        <button
-          type="button"
-          onClick={() => setSearchParams({})}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${activeView === 'automation' ? (isDark ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 shadow-sm') : 'text-slate-500'}`}
-        >
-          <Bot size={16} /> Automation
+      <div className={`inline-flex flex-wrap rounded-2xl p-1 ${isDark ? 'bg-slate-900 ring-1 ring-white/10' : 'bg-slate-100'}`}>
+        <button type="button" onClick={() => setSearchParams({})} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${activeView === 'automation' ? (isDark ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 shadow-sm') : 'text-slate-500'}`}>
+          <Bot size={16} /> Channel Automation
         </button>
-        <button
-          type="button"
-          onClick={() => setSearchParams({ view: 'engagement' })}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${activeView === 'engagement' ? (isDark ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 shadow-sm') : 'text-slate-500'}`}
-        >
+        <button type="button" onClick={() => setSearchParams({ view: 'journeys' })} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${activeView === 'journeys' ? (isDark ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 shadow-sm') : 'text-slate-500'}`}>
+          <Workflow size={16} /> Journeys
+        </button>
+        <button type="button" onClick={() => setSearchParams({ view: 'engagement' })} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${activeView === 'engagement' ? (isDark ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 shadow-sm') : 'text-slate-500'}`}>
           <CalendarDays size={16} /> Events & Surveys
         </button>
       </div>
 
-      {activeView === 'engagement' ? <MarketingEngagementPage /> : (
+      {activeView === 'engagement' ? <MarketingEngagementPage /> : activeView === 'journeys' ? <MarketingJourneysPage /> : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(320px,0.65fr)]">
           <div className={`rounded-[28px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-sm ring-1 ring-slate-900/5'}`}>
             <div className="grid gap-4 md:grid-cols-2">
