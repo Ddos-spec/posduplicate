@@ -1,6 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { CheckCircle2, Download, Loader2, PenLine, XCircle } from 'lucide-react';
-import { useParams } from 'react-router-dom';
 import {
   declinePublicSignatureRequest,
   downloadPublicSignatureDocument,
@@ -9,8 +8,17 @@ import {
   type PublicSignatureRequest,
 } from '../services/productivityService';
 
+const consumeSignToken = () => {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const token = String(params.get('token') || '').trim();
+  if (window.location.hash) {
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+  }
+  return token;
+};
+
 export default function PublicSignPage() {
-  const { token = '' } = useParams();
+  const [token] = useState(consumeSignToken);
   const [request, setRequest] = useState<PublicSignatureRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -21,6 +29,7 @@ export default function PublicSignPage() {
 
   const load = async () => {
     setLoading(true); setError('');
+    if (!token) { setError('Signature token tidak tersedia.'); setLoading(false); return; }
     try { setRequest(await getPublicSignatureRequest(token)); }
     catch (requestError: any) { setError(requestError?.response?.data?.error?.message || 'Signature request tidak tersedia.'); }
     finally { setLoading(false); }
