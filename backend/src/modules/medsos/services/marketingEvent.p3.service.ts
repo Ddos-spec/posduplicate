@@ -120,6 +120,7 @@ export const registerMarketingEvent = async (
   userId: number | null,
   eventIdValue: unknown,
   input: { customerId?: number | null; attendeeName: string; attendeeEmail?: string | null; attendeePhone?: string | null; seats?: number },
+  submissionKeyHash: string | null = null,
 ) => prisma.$transaction(async (tx) => {
   const eventId = positiveInt(eventIdValue, 'INVALID_MARKETING_EVENT_ID');
   const seats = positiveInt(input.seats ?? 1, 'INVALID_MARKETING_EVENT_SEATS');
@@ -129,6 +130,16 @@ export const registerMarketingEvent = async (
   `);
   const event = eventRows[0];
   if (!event) throw domainError('Marketing event not found', 'MARKETING_EVENT_NOT_FOUND', 404);
+
+  if (submissionKeyHash) {
+    const existingRows = await tx.$queryRaw<any[]>(Prisma.sql`
+      SELECT * FROM public.marketing_event_registrations
+      WHERE tenant_id=${tenantId} AND event_id=${eventId} AND submission_key_hash=${submissionKeyHash}
+      LIMIT 1
+    `);
+    if (existingRows[0]) return existingRows[0];
+  }
+
   if (event.status !== 'published' || event.registration_open !== true) throw domainError('Event registration is closed', 'MARKETING_EVENT_REGISTRATION_CLOSED', 409);
   if (new Date(event.starts_at).getTime() <= Date.now()) throw domainError('Event has already started', 'MARKETING_EVENT_ALREADY_STARTED', 409);
 
@@ -155,11 +166,11 @@ export const registerMarketingEvent = async (
 
   const rows = await tx.$queryRaw<any[]>(Prisma.sql`
     INSERT INTO public.marketing_event_registrations
-      (tenant_id,event_id,customer_id,attendee_name,attendee_email,attendee_phone,seats,status,created_by)
+      (tenant_id,event_id,customer_id,attendee_name,attendee_email,attendee_phone,seats,status,created_by,submission_key_hash)
     VALUES (
       ${tenantId},${eventId},${customerId},${cleanText(input.attendeeName, 180, 'INVALID_MARKETING_ATTENDEE_NAME')},
       ${cleanText(input.attendeeEmail, 240, 'INVALID_MARKETING_ATTENDEE_EMAIL', false)},
-      ${cleanText(input.attendeePhone, 80, 'INVALID_MARKETING_ATTENDEE_PHONE', false)},${seats},'registered',${userId}
+      ${cleanText(input.attendeePhone, 80, 'INVALID_MARKETING_ATTENDEE_PHONE', false)},${seats},'registered',${userId},${submissionKeyHash}
     ) RETURNING *
   `);
   const registration = rows[0];
