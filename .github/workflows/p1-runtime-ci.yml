@@ -4,19 +4,19 @@ on:
   push:
     branches:
       - main
-      - 'feat/**'
-      - 'fix/**'
+      - "feat/**"
+      - "fix/**"
     paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - '.github/workflows/p1-runtime-ci.yml'
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/p1-runtime-ci.yml"
   pull_request:
     branches:
       - main
     paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - '.github/workflows/p1-runtime-ci.yml'
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/p1-runtime-ci.yml"
 
 permissions:
   contents: read
