@@ -273,5 +273,5 @@ export const listSurveyResponses = async (tenantId: number, surveyIdValue: unkno
     LEFT JOIN public.customers c ON c.id=r.customer_id
     WHERE r.tenant_id=${tenantId} AND r.survey_id=${surveyId} AND r.status='submitted'
     ORDER BY r.id DESC
-  `;
+  `);
 };
