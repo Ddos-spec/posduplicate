@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Award, CheckCircle2, ClipboardCheck, GraduationCap, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -10,11 +10,14 @@ import {
   type PublicLearnerWorkspace,
 } from '../../services/learningCommunityService';
 
+let transientLearnerToken = '';
+
 const consumeToken = () => {
   const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   const token = String(params.get('token') || '').trim();
+  if (token) transientLearnerToken = token;
   if (window.location.hash) window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-  return token;
+  return token || transientLearnerToken;
 };
 
 function AssessmentCard({ token, assessment, onDone }: { token: string; assessment: LearningAssessment; onDone: () => Promise<void> }) {
@@ -37,6 +40,7 @@ function AssessmentCard({ token, assessment, onDone }: { token: string; assessme
 
 export default function PublicLearnerPage() {
   const [token] = useState(consumeToken);
+  const initialLoadStarted = useRef(false);
   const [workspace, setWorkspace] = useState<PublicLearnerWorkspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -49,7 +53,12 @@ export default function PublicLearnerPage() {
     catch (requestError: any) { setError(requestError?.response?.data?.error?.message || 'Learner access unavailable.'); }
     finally { setLoading(false); }
   };
-  useEffect(() => { void load(); }, [token]);
+  useEffect(() => {
+    transientLearnerToken = '';
+    if (initialLoadStarted.current) return;
+    initialLoadStarted.current = true;
+    void load();
+  }, [token]);
 
   const completeLesson = async (lessonId: number) => {
     try { await updatePublicLearnerProgress(token, lessonId, 100); toast.success('Lesson completed'); await load(); }

@@ -24,7 +24,8 @@ const resolveEnrollment = async (tokenValue: unknown) => {
       c.visibility,c.status AS course_status,c.site_id,cu.name AS customer_name,cu.email AS customer_email
     FROM public.learning_enrollments e
     JOIN public.learning_courses c ON c.tenant_id=e.tenant_id AND c.id=e.course_id
-    JOIN public.customers cu ON cu.id=e.customer_id AND cu.tenant_id=e.tenant_id
+    JOIN public.customers cu ON cu.id=e.customer_id
+    JOIN public.outlets co ON co.id=cu.outlet_id AND co.tenant_id=e.tenant_id
     WHERE e.access_token_hash=${tokenHash}
       AND e.status IN ('active','completed')
       AND c.status='published'

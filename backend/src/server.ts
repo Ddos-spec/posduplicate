@@ -19,8 +19,10 @@ import productivityRoutes from './modules/productivity';
 import learningRoutes from './modules/learning';
 import scheduler from './services/scheduler.service';
 import { swaggerSpec } from './config/swagger';
+import { jsonBigIntReplacer } from './utils/json';
 
 const app: Express = express();
+app.set('json replacer', jsonBigIntReplacer);
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 3000;
 

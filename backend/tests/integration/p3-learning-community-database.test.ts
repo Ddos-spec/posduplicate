@@ -22,10 +22,11 @@ describeDb('P3.7 learning/community database invariants', () => {
       WHERE migration_name IN (
         '20260813250000_p3_learning_community_core',
         '20260813251000_p3_learning_community_scope_guard',
-        '20260813252000_p3_learning_community_public_access'
+        '20260813252000_p3_learning_community_public_access',
+        '20260813253000_p3_learning_customer_scope_guard'
       )
     `);
-    p3Applied = Number(migration.rows[0]?.count || 0) === 3;
+    p3Applied = Number(migration.rows[0]?.count || 0) === 4;
   });
 
   afterAll(async () => {
@@ -100,6 +101,66 @@ describeDb('P3.7 learning/community database invariants', () => {
     for (const row of indexes.rows) {
       expect(row.indexdef).toContain('CREATE UNIQUE INDEX');
       expect(row.indexdef).toContain('WHERE');
+    }
+  });
+
+  test('customer references are tenant-scoped through the canonical outlet', async () => {
+    if (!p3Applied) return;
+    const triggers = await client.query<{ tgname: string }>(`
+      SELECT t.tgname FROM pg_trigger t
+      JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND NOT t.tgisinternal
+        AND t.tgname IN (
+          'trg_learning_enrollments_customer_scope','trg_learning_events_customer_scope',
+          'trg_community_topics_customer_scope','trg_community_replies_customer_scope',
+          'trg_community_votes_customer_scope','trg_community_events_customer_scope'
+        )
+    `);
+    expect(triggers.rows).toHaveLength(6);
+
+    await client.query('BEGIN');
+    try {
+      const suffix = `${Date.now()}-${Math.random()}`;
+      const tenantA = await client.query<{ id: number }>(`
+        INSERT INTO public.tenants (business_name,owner_name,email)
+        VALUES ('Learning Scope A','Owner A',$1) RETURNING id
+      `, [`learning-scope-a-${suffix}@local.test`]);
+      const tenantB = await client.query<{ id: number }>(`
+        INSERT INTO public.tenants (business_name,owner_name,email)
+        VALUES ('Learning Scope B','Owner B',$1) RETURNING id
+      `, [`learning-scope-b-${suffix}@local.test`]);
+      const role = await client.query<{ id: number }>(`
+        INSERT INTO public.roles (name) VALUES ($1)
+        ON CONFLICT (name) DO UPDATE SET updated_at=NOW() RETURNING id
+      `, ['Learning Scope Test']);
+      const outletA = await client.query<{ id: number }>(`
+        INSERT INTO public.outlets (tenant_id,name) VALUES ($1,'Scope A Outlet') RETURNING id
+      `, [tenantA.rows[0].id]);
+      const userA = await client.query<{ id: number }>(`
+        INSERT INTO public.users (tenant_id,email,password_hash,name,role_id,outlet_id)
+        VALUES ($1,$2,'test-only-hash','Scope A User',$3,$4) RETURNING id
+      `, [tenantA.rows[0].id, `learning-scope-user-${suffix}@local.test`, role.rows[0].id, outletA.rows[0].id]);
+      const outletB = await client.query<{ id: number }>(`
+        INSERT INTO public.outlets (tenant_id,name) VALUES ($1,'Scope B Outlet') RETURNING id
+      `, [tenantB.rows[0].id]);
+      const customerB = await client.query<{ id: number }>(`
+        INSERT INTO public.customers (name,outlet_id) VALUES ('Scope B Customer',$1) RETURNING id
+      `, [outletB.rows[0].id]);
+      const courseA = await client.query<{ id: number }>(`
+        INSERT INTO public.learning_courses (tenant_id,slug,title,status,visibility,created_by)
+        VALUES ($1,$2,'Scope A Course','published','private',$3) RETURNING id
+      `, [tenantA.rows[0].id, `scope-a-${suffix}`, userA.rows[0].id]);
+
+      await expect(client.query(`
+        INSERT INTO public.learning_enrollments (tenant_id,course_id,customer_id,status)
+        VALUES ($1,$2,$3,'active')
+      `, [tenantA.rows[0].id, courseA.rows[0].id, customerB.rows[0].id])).rejects.toMatchObject({
+        code: '23514',
+        constraint: 'learning_community_customer_tenant_scope',
+      });
+    } finally {
+      await client.query('ROLLBACK');
     }
   });
 });

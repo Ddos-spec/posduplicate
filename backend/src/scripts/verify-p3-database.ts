@@ -31,6 +31,7 @@ async function run() {
       '20260813250000_p3_learning_community_core',
       '20260813251000_p3_learning_community_scope_guard',
       '20260813252000_p3_learning_community_public_access',
+      '20260813253000_p3_learning_customer_scope_guard',
     ];
     assert(ledger.rows.length >= requiredMigrations.length, `Expected at least ${requiredMigrations.length} P3 migration ledger entries, found ${ledger.rows.length}`);
     for (const required of requiredMigrations) {
@@ -552,6 +553,19 @@ async function run() {
         )
     `);
     assert(learningCommunityImmutableTriggers.rows.length === 3, 'Learning certificate and audit ledgers are not fully immutable');
+
+    const learningCustomerScopeTriggers = await client.query<{ tgname: string }>(`
+      SELECT t.tgname FROM pg_trigger t
+      JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND NOT t.tgisinternal
+        AND t.tgname IN (
+          'trg_learning_enrollments_customer_scope','trg_learning_events_customer_scope',
+          'trg_community_topics_customer_scope','trg_community_replies_customer_scope',
+          'trg_community_votes_customer_scope','trg_community_events_customer_scope'
+        )
+    `);
+    assert(learningCustomerScopeTriggers.rows.length === 6, 'Learning/community customer tenant guards are incomplete');
 
     const learningCommunityChecks = await client.query<{ constraint_name: string }>(`
       SELECT constraint_name FROM information_schema.table_constraints

@@ -10,6 +10,7 @@ const server = read('backend/src/server.ts');
 const routes = read('backend/src/modules/learning/routes/learningCommunity.p3.routes.ts');
 const learner = read('backend/src/modules/learning/services/learningPublic.p3.service.ts');
 const learning = read('backend/src/modules/learning/services/learning.p3.service.ts');
+const customerScope = read('backend/src/modules/learning/services/customerScope.p3.ts');
 const communityPublic = read('backend/src/modules/learning/services/communityPublic.p3.service.ts');
 const frontendService = read('frontend/src/services/learningCommunityService.ts');
 const learnerPage = read('frontend/src/pages/learning/PublicLearnerPage.tsx');
@@ -55,6 +56,9 @@ describe('P3.7 learning/community public runtime contracts', () => {
     expect(dynamicAt).toBeGreaterThan(entryAt);
     expect(learnerPage).toContain("window.location.hash.replace(/^#/, '')");
     expect(learnerPage).toContain("window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)");
+    expect(learnerPage).toContain('let transientLearnerToken');
+    expect(learnerPage).toContain('return token || transientLearnerToken');
+    expect(learnerPage).toContain('if (initialLoadStarted.current) return');
     expect(learnerPage).not.toContain('useParams');
   });
 
@@ -79,5 +83,14 @@ describe('P3.7 learning/community public runtime contracts', () => {
     expect(learning).toContain('ON CONFLICT (tenant_id,enrollment_id) DO NOTHING');
     expect(learning).toContain("status='completed'");
     expect(learning).toContain("crypto.createHash('sha256')");
+  });
+
+  test('canonical customers are tenant-scoped through their outlet, not a nonexistent column', () => {
+    expect(customerScope).toContain('JOIN public.outlets o ON o.id=c.outlet_id');
+    expect(customerScope).toContain('o.tenant_id=${tenantId}');
+    expect(learning).toContain('JOIN public.outlets o ON o.id=c.outlet_id AND o.tenant_id=e.tenant_id');
+    expect(learning).not.toContain('c.tenant_id=e.tenant_id');
+    expect(learner).toContain('JOIN public.outlets co ON co.id=cu.outlet_id AND co.tenant_id=e.tenant_id');
+    expect(learner).not.toContain('cu.tenant_id=e.tenant_id');
   });
 });

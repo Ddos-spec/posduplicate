@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
+import { findTenantCustomer } from './customerScope.p3';
 
 const domainError = (message: string, code: string, status = 400) =>
   Object.assign(new Error(message), { code, status });
@@ -302,7 +303,8 @@ export const listLearningEnrollments = async (tenantId: number, courseIdValue: u
     SELECT e.*,c.name AS customer_name,c.email AS customer_email,
       COALESCE((SELECT COUNT(*) FROM public.learning_progress p WHERE p.tenant_id=e.tenant_id AND p.enrollment_id=e.id AND p.status='completed'),0)::int AS completed_lessons
     FROM public.learning_enrollments e
-    JOIN public.customers c ON c.id=e.customer_id AND c.tenant_id=e.tenant_id
+    JOIN public.customers c ON c.id=e.customer_id
+    JOIN public.outlets o ON o.id=c.outlet_id AND o.tenant_id=e.tenant_id
     WHERE e.tenant_id=${tenantId} AND e.course_id=${courseId}
     ORDER BY e.enrolled_at DESC,e.id DESC
   `);
@@ -316,7 +318,7 @@ export const enrollLearningCustomer = async (tenantId: number, userId: number, c
     const course = courses[0];
     if (!course) throw domainError('Course not found', 'LEARNING_COURSE_NOT_FOUND', 404);
     if (course.status !== 'published') throw domainError('Course is not published', 'LEARNING_COURSE_NOT_PUBLISHED', 409);
-    const customers = await tx.$queryRaw<any[]>(Prisma.sql`SELECT id FROM public.customers WHERE tenant_id=${tenantId} AND id=${customerId} LIMIT 1`);
+    const customers = await findTenantCustomer(tx, tenantId, customerId);
     if (!customers[0]) throw domainError('Customer not found in tenant', 'LEARNING_CUSTOMER_SCOPE_MISMATCH', 404);
     const existingRows = await tx.$queryRaw<any[]>(Prisma.sql`
       SELECT * FROM public.learning_enrollments WHERE tenant_id=${tenantId} AND course_id=${courseId} AND customer_id=${customerId} FOR UPDATE

@@ -6,6 +6,7 @@ const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
 
 const core = read('backend/prisma/migrations/20260813250000_p3_learning_community_core/migration.sql');
 const guard = read('backend/prisma/migrations/20260813251000_p3_learning_community_scope_guard/migration.sql');
+const customerGuard = read('backend/prisma/migrations/20260813253000_p3_learning_customer_scope_guard/migration.sql');
 const runner = read('backend/src/scripts/apply-p3-migrations.ts');
 const verifier = read('backend/src/scripts/verify-p3-database.ts');
 const capabilities = read('backend/src/middlewares/capability.middleware.ts');
@@ -50,11 +51,17 @@ describe('P3.7 learning and community contracts', () => {
     expect(runner).toContain('20260813250000_p3_learning_community_core');
     expect(runner).toContain('20260813251000_p3_learning_community_scope_guard');
     expect(runner).toContain('20260813252000_p3_learning_community_public_access');
+    expect(runner).toContain('20260813253000_p3_learning_customer_scope_guard');
     expect(verifier).toContain('20260813250000_p3_learning_community_core');
     expect(verifier).toContain('20260813251000_p3_learning_community_scope_guard');
     expect(verifier).toContain('20260813252000_p3_learning_community_public_access');
+    expect(verifier).toContain('20260813253000_p3_learning_customer_scope_guard');
     expect(verifier).toContain('P3.7 learning/community tables are incomplete');
     expect(verifier).toContain('Raw public learning/community secret column must not exist');
+    expect(verifier).toContain('Learning/community customer tenant guards are incomplete');
+    expect(customerGuard).toContain('guard_learning_community_customer_scope');
+    expect(customerGuard).toContain('JOIN public.outlets o ON o.id=c.outlet_id');
+    expect(customerGuard).toContain("CONSTRAINT='learning_community_customer_tenant_scope'");
   });
 
   test('learning and community admin capabilities are named and explicit', () => {
@@ -66,8 +73,10 @@ describe('P3.7 learning and community contracts', () => {
     ]) expect(capabilities).toContain(`'${capability}'`);
   });
 
-  test('catalog remains conservative before functional frontend and exact-head acceptance', () => {
-    expect(catalogLine('elearning')).toContain("status: 'blueprint'");
-    expect(catalogLine('forum')).toContain("status: 'blueprint'");
+  test('exact-head accepted learning and community applications are live on the production workspace', () => {
+    expect(catalogLine('elearning')).toContain("status: 'live'");
+    expect(catalogLine('elearning')).toContain("path: '/learning'");
+    expect(catalogLine('forum')).toContain("status: 'live'");
+    expect(catalogLine('forum')).toContain("path: '/learning'");
   });
 });

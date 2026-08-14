@@ -45,6 +45,7 @@ backend/prisma/.env
 # Testing
 coverage/
 .nyc_output/
+.playwright-cli/page-*.yml
 
 # Misc
 .cache/

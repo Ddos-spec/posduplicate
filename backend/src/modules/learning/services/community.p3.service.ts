@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
+import { findTenantCustomer } from './customerScope.p3';
 
 const domainError = (message: string, code: string, status = 400) =>
   Object.assign(new Error(message), { code, status });
@@ -139,7 +140,7 @@ export const createCommunityTopic = async (
     if (!forum) throw domainError('Forum not found', 'COMMUNITY_FORUM_NOT_FOUND', 404);
     if (forum.status !== 'published') throw domainError('Forum is not published', 'COMMUNITY_FORUM_NOT_PUBLISHED', 409);
     if (customerId !== null) {
-      const customers = await tx.$queryRaw<any[]>(Prisma.sql`SELECT id FROM public.customers WHERE tenant_id=${tenantId} AND id=${customerId} LIMIT 1`);
+      const customers = await findTenantCustomer(tx, tenantId, customerId);
       if (!customers[0]) throw domainError('Customer not found in tenant', 'COMMUNITY_CUSTOMER_SCOPE_MISMATCH', 404);
     }
     const rows = await tx.$queryRaw<any[]>(Prisma.sql`
@@ -188,7 +189,7 @@ export const createCommunityReply = async (
     if (!topic) throw domainError('Topic not found', 'COMMUNITY_TOPIC_NOT_FOUND', 404);
     if (topic.forum_status !== 'published' || topic.status !== 'open') throw domainError('Topic is not open for replies', 'COMMUNITY_TOPIC_NOT_OPEN', 409);
     if (customerId !== null) {
-      const customers = await tx.$queryRaw<any[]>(Prisma.sql`SELECT id FROM public.customers WHERE tenant_id=${tenantId} AND id=${customerId} LIMIT 1`);
+      const customers = await findTenantCustomer(tx, tenantId, customerId);
       if (!customers[0]) throw domainError('Customer not found in tenant', 'COMMUNITY_CUSTOMER_SCOPE_MISMATCH', 404);
     }
     if (parentReplyId !== null) {
@@ -267,7 +268,7 @@ export const voteCommunity = async (
   const value = Number(input.value);
   if (![1, -1].includes(value)) throw domainError('Vote must be 1 or -1', 'INVALID_COMMUNITY_VOTE_VALUE');
   return prisma.$transaction(async (tx) => {
-    const customers = await tx.$queryRaw<any[]>(Prisma.sql`SELECT id FROM public.customers WHERE tenant_id=${tenantId} AND id=${customerId} LIMIT 1`);
+    const customers = await findTenantCustomer(tx, tenantId, customerId);
     if (!customers[0]) throw domainError('Customer not found in tenant', 'COMMUNITY_CUSTOMER_SCOPE_MISMATCH', 404);
     let forumId: number;
     if (topicId !== null) {
