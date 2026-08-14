@@ -24,7 +24,7 @@ const timestamp = (value: unknown, code: string) => {
 
 const appendEvent = async (
   tx: Prisma.TransactionClient,
-  input: { tenantId: number; entityType: 'event' | 'registration'; entityId: number; eventType: string; actorUserId: number; customerId?: number | null; payload?: Record<string, unknown> },
+  input: { tenantId: number; entityType: 'event' | 'registration'; entityId: number; eventType: string; actorUserId: number | null; customerId?: number | null; payload?: Record<string, unknown> },
 ) => {
   await tx.$executeRaw(Prisma.sql`
     INSERT INTO public.marketing_engagement_events
@@ -117,7 +117,7 @@ export const listEventRegistrations = async (tenantId: number, eventIdValue: unk
 
 export const registerMarketingEvent = async (
   tenantId: number,
-  userId: number,
+  userId: number | null,
   eventIdValue: unknown,
   input: { customerId?: number | null; attendeeName: string; attendeeEmail?: string | null; attendeePhone?: string | null; seats?: number },
 ) => prisma.$transaction(async (tx) => {
