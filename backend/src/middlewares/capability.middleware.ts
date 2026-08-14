@@ -58,7 +58,9 @@ export type SuiteCapability =
   | 'digital.website.read'
   | 'digital.website.manage'
   | 'digital.commerce.read'
-  | 'digital.commerce.manage';
+  | 'digital.commerce.manage'
+  | 'digital.marketing.read'
+  | 'digital.marketing.manage';
 
 type FeatureRecord = Record<string, unknown>;
 
