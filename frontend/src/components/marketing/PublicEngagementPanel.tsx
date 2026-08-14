@@ -11,10 +11,26 @@ import {
 } from '../../services/marketingEngagementService';
 
 type Props = { publicSlug: string; eventSlug?: string | null; surveySlug?: string | null };
-
 type AnswerState = Record<number, unknown>;
 
+type SavedAttempt = { token?: string; fingerprint?: string };
 const formatDate = (value: string) => new Date(value).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' });
+const newToken = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+
+const attemptToken = (key: string, fingerprint: string) => {
+  try {
+    const saved = sessionStorage.getItem(key);
+    if (saved) {
+      const parsed = JSON.parse(saved) as SavedAttempt;
+      if (parsed.fingerprint === fingerprint && parsed.token) return parsed.token;
+    }
+  } catch {
+    sessionStorage.removeItem(key);
+  }
+  const token = newToken();
+  sessionStorage.setItem(key, JSON.stringify({ token, fingerprint }));
+  return token;
+};
 
 export default function PublicEngagementPanel({ publicSlug, eventSlug, surveySlug }: Props) {
   const mode = eventSlug ? 'event' : surveySlug ? 'survey' : null;
@@ -55,39 +71,47 @@ export default function PublicEngagementPanel({ publicSlug, eventSlug, surveySlu
   const submitEvent = async (formEvent: FormEvent) => {
     formEvent.preventDefault();
     if (!eventSlug || !registration.name.trim()) return;
+    const payload = {
+      attendeeName: registration.name.trim(),
+      attendeeEmail: registration.email.trim() || undefined,
+      attendeePhone: registration.phone.trim() || undefined,
+      seats: Number(registration.seats || 1),
+    };
+    const key = `p3-engagement-event-attempt:${publicSlug}:${eventSlug}`;
+    const token = attemptToken(key, JSON.stringify(payload));
     setSubmitting(true); setError('');
     try {
-      const result = await registerPublicMarketingEvent(publicSlug, eventSlug, {
-        attendeeName: registration.name.trim(),
-        attendeeEmail: registration.email.trim() || undefined,
-        attendeePhone: registration.phone.trim() || undefined,
-        seats: Number(registration.seats || 1),
-      });
+      const result = await registerPublicMarketingEvent(publicSlug, eventSlug, token, payload);
+      sessionStorage.removeItem(key);
       setSuccess(`Registrasi berhasil. ${result.attendee_name} terdaftar untuk ${result.seats} kursi.`);
       setRegistration({ name: '', email: '', phone: '', seats: '1' });
       setEventData(await getPublicMarketingEvent(publicSlug, eventSlug));
     } catch (requestError: any) {
-      setError(requestError?.response?.data?.error?.message || 'Registrasi gagal. Silakan coba lagi.');
+      setError(requestError?.response?.data?.error?.message || 'Registrasi gagal. Retry akan memakai attempt yang sama.');
     } finally { setSubmitting(false); }
   };
 
   const submitSurvey = async (formEvent: FormEvent) => {
     formEvent.preventDefault();
     if (!surveySlug) return;
+    const payload = {
+      respondentName: respondent.name.trim() || undefined,
+      respondentEmail: respondent.email.trim() || undefined,
+      answers: questions
+        .filter((question) => question.id != null && answers[Number(question.id)] !== undefined)
+        .map((question) => ({ questionId: Number(question.id), answer: answers[Number(question.id)] })),
+    };
+    const key = `p3-engagement-survey-attempt:${publicSlug}:${surveySlug}`;
+    const token = attemptToken(key, JSON.stringify(payload));
     setSubmitting(true); setError('');
     try {
-      await submitPublicMarketingSurvey(publicSlug, surveySlug, {
-        respondentName: respondent.name.trim() || undefined,
-        respondentEmail: respondent.email.trim() || undefined,
-        answers: questions
-          .filter((question) => question.id != null && answers[Number(question.id)] !== undefined)
-          .map((question) => ({ questionId: Number(question.id), answer: answers[Number(question.id)] })),
-      });
+      await submitPublicMarketingSurvey(publicSlug, surveySlug, token, payload);
+      sessionStorage.removeItem(key);
       setSuccess('Jawaban survei berhasil dikirim. Terima kasih.');
       setAnswers({});
       setRespondent({ name: '', email: '' });
     } catch (requestError: any) {
-      setError(requestError?.response?.data?.error?.message || 'Jawaban survei gagal dikirim.');
+      setError(requestError?.response?.data?.error?.message || 'Jawaban survei gagal. Retry akan memakai attempt yang sama.');
     } finally { setSubmitting(false); }
   };
 
