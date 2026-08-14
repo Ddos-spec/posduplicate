@@ -18,6 +18,8 @@ const MIGRATIONS = [
   '20260813231000_p3_marketing_public_idempotency',
   '20260813240000_p3_productivity_docs_knowledge_sign_core',
   '20260813241000_p3_productivity_sign_version_guard',
+  '20260813250000_p3_learning_community_core',
+  '20260813251000_p3_learning_community_scope_guard',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081303;
