@@ -38,8 +38,10 @@ describe('P3.3 subscription core', () => {
     expect(verifier).toContain('subscription_renewals:accounting.accounts_receivable');
   });
 
-  test('catalog stays blueprint until full frontend/exact-head acceptance', () => {
+  test('catalog remains live after full frontend and exact-head acceptance', () => {
     const app = catalog.split('\n').find((line) => line.includes("{ id: 'subscriptions'"));
-    expect(app).toContain("status: 'blueprint'");
+    expect(app).toContain("bundle: 'accounting'");
+    expect(app).toContain("status: 'live'");
+    expect(app).toContain("path: '/subscriptions'");
   });
 });
