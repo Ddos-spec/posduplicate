@@ -16,6 +16,7 @@ import sharedRoutes from './modules/shared';
 import adminRoutes from './modules/admin';
 import medsosRoutes from './modules/medsos';
 import productivityRoutes from './modules/productivity';
+import learningRoutes from './modules/learning';
 import scheduler from './services/scheduler.service';
 import { swaggerSpec } from './config/swagger';
 
@@ -79,7 +80,9 @@ app.use(cors({
     'If-Modified-Since',
     'X-Order-Token',
     'X-Engagement-Token',
-    'X-Sign-Token'
+    'X-Sign-Token',
+    'X-Learning-Token',
+    'X-Community-Token'
   ]
 }));
 app.use(express.json());
@@ -102,7 +105,8 @@ apiRouter.get('/', (_req: Request, res: Response) => {
       shared: 'Shared Services (Auth, Users, Tenants, etc.)',
       admin: 'Admin & Analytics',
       medsos: 'Social Media Management',
-      productivity: 'Documents, Knowledge & Sign'
+      productivity: 'Documents, Knowledge & Sign',
+      learning: 'eLearning & Community Forum'
     },
     endpoints: {
       health: '/health',
@@ -115,7 +119,8 @@ apiRouter.get('/', (_req: Request, res: Response) => {
       transactions: '/api/transactions',
       accounting: '/api/accounting',
       admin: '/api/admin',
-      productivity: '/api/productivity'
+      productivity: '/api/productivity',
+      learning: '/api/learning'
     },
     timestamp: new Date().toISOString()
   });
@@ -145,6 +150,7 @@ apiRouter.use('/api/accounting', accountingRoutes);
 apiRouter.use('/api/admin', adminRoutes);
 apiRouter.use('/api/medsos', medsosRoutes);
 apiRouter.use('/api/productivity', productivityRoutes);
+apiRouter.use('/api/learning', learningRoutes);
 
 apiRouter.use((req: Request, res: Response) => {
   res.status(404).json({
