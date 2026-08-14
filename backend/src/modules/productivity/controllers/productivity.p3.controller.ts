@@ -38,6 +38,14 @@ const context = (req: Request) => {
   return { tenantId, userId, userRole };
 };
 
+const publicSignToken = (req: Request) => {
+  const token = String(req.header('x-sign-token') || '').trim();
+  if (token.length < 32 || token.length > 512) {
+    throw Object.assign(new Error('Signature token required'), { status: 401, code: 'SIGN_TOKEN_REQUIRED' });
+  }
+  return token;
+};
+
 export const getFolders = async (req: Request, res: Response, next: NextFunction) => {
   try { const { tenantId } = context(req); const data = await listDocumentFolders(tenantId); return res.json({ success: true, data, count: data.length }); } catch (error) { return next(error); }
 };
@@ -123,11 +131,11 @@ export const cancelSignatureRequestById = async (req: Request, res: Response, ne
 };
 
 export const getPublicSignature = async (req: Request, res: Response, next: NextFunction) => {
-  try { const data = await getPublicSignatureRequest(req.params.token); return res.json({ success: true, data }); } catch (error) { return next(error); }
+  try { const data = await getPublicSignatureRequest(publicSignToken(req)); return res.json({ success: true, data }); } catch (error) { return next(error); }
 };
 export const downloadPublicSignatureDocument = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const data = await getPublicSignatureDocument(req.params.token);
+    const data = await getPublicSignatureDocument(publicSignToken(req));
     const safeName = String(data.original_name || 'document').replace(/["\r\n]/g, '_');
     res.setHeader('Content-Type', data.mime_type || 'application/octet-stream');
     res.setHeader('Content-Length', String(data.buffer.length));
@@ -137,8 +145,8 @@ export const downloadPublicSignatureDocument = async (req: Request, res: Respons
   } catch (error) { return next(error); }
 };
 export const signPublicSignature = async (req: Request, res: Response, next: NextFunction) => {
-  try { const data = await signPublicSignatureRequest(req.params.token, req.body); return res.json({ success: true, data }); } catch (error) { return next(error); }
+  try { const data = await signPublicSignatureRequest(publicSignToken(req), req.body); return res.json({ success: true, data }); } catch (error) { return next(error); }
 };
 export const declinePublicSignature = async (req: Request, res: Response, next: NextFunction) => {
-  try { const data = await declinePublicSignatureRequest(req.params.token); return res.json({ success: true, data }); } catch (error) { return next(error); }
+  try { const data = await declinePublicSignatureRequest(publicSignToken(req)); return res.json({ success: true, data }); } catch (error) { return next(error); }
 };
