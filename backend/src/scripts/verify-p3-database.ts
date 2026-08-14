@@ -26,6 +26,8 @@ async function run() {
       '20260813220500_p3_rental_inventory_guard',
       '20260813230000_p3_marketing_engagement_core',
       '20260813231000_p3_marketing_public_idempotency',
+      '20260813240000_p3_productivity_docs_knowledge_sign_core',
+      '20260813241000_p3_productivity_sign_version_guard',
     ];
     assert(ledger.rows.length >= requiredMigrations.length, `Expected at least ${requiredMigrations.length} P3 migration ledger entries, found ${ledger.rows.length}`);
     for (const required of requiredMigrations) {
@@ -291,7 +293,95 @@ async function run() {
       assert(row.indexdef.includes('WHERE'), `Marketing public retry index ${row.indexname} must remain partial`);
     }
 
-    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental + marketing engagement source-of-truth/inventory/audit/idempotency invariants verified');
+    const productivityTables = await client.query<{ tablename: string }>(`
+      SELECT tablename FROM pg_tables WHERE schemaname='public'
+        AND tablename IN (
+          'document_folders','business_documents','business_document_versions','business_document_acl',
+          'knowledge_spaces','knowledge_articles','knowledge_article_versions',
+          'signature_requests','signature_recipients','productivity_events'
+        )
+    `);
+    assert(productivityTables.rows.length === 10, 'P3.6 productivity tables are incomplete');
+
+    const documentVersionColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='business_document_versions'
+        AND column_name IN ('tenant_id','document_id','version_no','storage_key','original_name','mime_type','size_bytes','sha256','created_by','created_at')
+    `);
+    assert(documentVersionColumns.rows.length === 10, 'Private document version metadata/hash columns are incomplete');
+
+    const knowledgeVersionColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='knowledge_article_versions'
+        AND column_name IN ('tenant_id','article_id','version_no','content','summary','created_by','created_at')
+    `);
+    assert(knowledgeVersionColumns.rows.length === 7, 'Knowledge immutable revision columns are incomplete');
+
+    const signatureRequestColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='signature_requests'
+        AND column_name IN ('tenant_id','document_id','document_version_id','status','expires_at','sent_at','completed_at','cancelled_at')
+    `);
+    assert(signatureRequestColumns.rows.length === 8, 'Signature request version/lifecycle columns are incomplete');
+
+    const signatureRecipientColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='signature_recipients'
+        AND column_name IN ('tenant_id','request_id','signing_order','status','access_token_hash','signature_type','signature_name','signature_evidence_hash','consent_text','signed_at','declined_at')
+    `);
+    assert(signatureRecipientColumns.rows.length === 11, 'Signature recipient token/evidence columns are incomplete');
+
+    const productivityImmutableTriggers = await client.query<{ tgname: string }>(`
+      SELECT t.tgname FROM pg_trigger t
+      JOIN pg_class c ON c.oid=t.tgrelid
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND NOT t.tgisinternal
+        AND t.tgname IN (
+          'trg_business_document_versions_immutable',
+          'trg_knowledge_article_versions_immutable',
+          'trg_productivity_events_immutable'
+        )
+    `);
+    assert(productivityImmutableTriggers.rows.length === 3, 'Productivity immutable version/audit triggers are incomplete');
+
+    const signVersionFk = await client.query<{
+      conname: string;
+      source_columns: string[];
+      target_schema: string;
+      target_table: string;
+      target_columns: string[];
+    }>(`
+      SELECT c.conname,
+             array_agg(sa.attname ORDER BY src.ord) AS source_columns,
+             tn.nspname AS target_schema,
+             tc.relname AS target_table,
+             array_agg(ta.attname ORDER BY src.ord) AS target_columns
+      FROM pg_constraint c
+      JOIN pg_class sc ON sc.oid=c.conrelid
+      JOIN pg_namespace sn ON sn.oid=sc.relnamespace
+      JOIN pg_class tc ON tc.oid=c.confrelid
+      JOIN pg_namespace tn ON tn.oid=tc.relnamespace
+      CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS src(attnum,ord)
+      JOIN LATERAL unnest(c.confkey) WITH ORDINALITY AS tgt(attnum,ord) ON tgt.ord=src.ord
+      JOIN pg_attribute sa ON sa.attrelid=sc.oid AND sa.attnum=src.attnum
+      JOIN pg_attribute ta ON ta.attrelid=tc.oid AND ta.attnum=tgt.attnum
+      WHERE sn.nspname='public'
+        AND sc.relname='signature_requests'
+        AND c.contype='f'
+        AND c.conname='fk_signature_request_exact_document_version'
+      GROUP BY c.conname,tn.nspname,tc.relname
+    `);
+    assert(signVersionFk.rows.length === 1, 'Signature request exact-version FK missing');
+    const signVersionConstraint = signVersionFk.rows[0];
+    assert(
+      signVersionConstraint.target_schema === 'public' &&
+      signVersionConstraint.target_table === 'business_document_versions' &&
+      signVersionConstraint.source_columns.join(',') === 'tenant_id,document_version_id,document_id' &&
+      signVersionConstraint.target_columns.join(',') === 'tenant_id,id,document_id',
+      'Signature request must be pinned by FK to exact tenant/document/version tuple',
+    );
+
+    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental + marketing engagement + productivity source-of-truth/inventory/audit/idempotency/version invariants verified');
   } finally {
     await client.end();
   }
