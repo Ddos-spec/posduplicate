@@ -17,6 +17,8 @@ const publicService = read('backend/src/modules/medsos/services/marketingEngagem
 const publicController = read('backend/src/modules/medsos/controllers/marketingEngagementPublic.p3.controller.ts');
 const routes = read('backend/src/modules/medsos/routes/marketingEngagement.p3.routes.ts');
 const moduleIndex = read('backend/src/modules/medsos/index.ts');
+const app = read('frontend/src/App.tsx');
+const automationPage = read('frontend/src/pages/medsos/AutoReplyPage.tsx');
 const storefront = read('frontend/src/pages/StorefrontPage.tsx');
 const publicPanel = read('frontend/src/components/marketing/PublicEngagementPanel.tsx');
 const frontendService = read('frontend/src/services/marketingEngagementService.ts');
@@ -105,8 +107,25 @@ describe('P3.5 marketing engagement contracts', () => {
     expect(verifier).toContain('trg_marketing_engagement_events_immutable');
   });
 
-  test('Events and Surveys remain blueprint until integration and exact-head acceptance', () => {
-    expect(catalogLine('events')).toContain("status: 'blueprint'");
-    expect(catalogLine('surveys')).toContain("status: 'blueprint'");
+  test('accepted Events and Surveys are live on the existing commerce-social automation runtime', () => {
+    const automation = catalogLine('marketing-automation');
+    const events = catalogLine('events');
+    const surveys = catalogLine('surveys');
+
+    expect(automation).toContain("bundle: 'commerSocial'");
+    expect(automation).toContain("status: 'partial'");
+    expect(automation).toContain("path: '/medsos/automations'");
+
+    for (const line of [events, surveys]) {
+      expect(line).toContain("bundle: 'commerSocial'");
+      expect(line).toContain("status: 'live'");
+      expect(line).toContain("path: '/medsos/automations?view=engagement'");
+    }
+
+    expect(app).toContain('path="automations" element={<AutoReplyPage />}');
+    expect(app).toContain('moduleKey="commerSocial"');
+    expect(automationPage).toContain("view: 'engagement'");
+    expect(automationPage).toContain('<MarketingEngagementPage />');
+    expect(catalogLine('sms-marketing')).toContain("status: 'blueprint'");
   });
 });
