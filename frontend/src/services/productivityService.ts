@@ -113,6 +113,7 @@ export interface PublicSignatureRequest {
 }
 
 const unwrap = <T>(response: { data: { data: T } }): T => response.data.data;
+const signHeaders = (token: string) => ({ 'X-Sign-Token': token });
 
 export const getDocumentFolders = async () => unwrap<DocumentFolder[]>(await api.get('/productivity/documents/folders'));
 export const createDocumentFolder = async (payload: { name: string; parentId?: number | null }) => unwrap<DocumentFolder>(await api.post('/productivity/documents/folders', payload));
@@ -151,7 +152,7 @@ export const createSignatureRequest = async (payload: {
 }) => unwrap<SignatureRequest>(await api.post('/productivity/sign/requests', payload));
 export const cancelSignatureRequest = async (id: number) => unwrap<SignatureRequest>(await api.patch(`/productivity/sign/requests/${id}/cancel`));
 
-export const getPublicSignatureRequest = async (token: string) => unwrap<PublicSignatureRequest>(await api.get(`/productivity/sign/public/${encodeURIComponent(token)}`));
-export const downloadPublicSignatureDocument = async (token: string) => api.get(`/productivity/sign/public/${encodeURIComponent(token)}/document`, { responseType: 'blob' });
-export const signPublicSignatureRequest = async (token: string, payload: { signatureName: string; consentAccepted: boolean }) => unwrap<{ status: string; signed_at: string; evidence_hash: string }>(await api.post(`/productivity/sign/public/${encodeURIComponent(token)}/sign`, payload));
-export const declinePublicSignatureRequest = async (token: string) => unwrap<{ status: string; declined_at?: string | null }>(await api.post(`/productivity/sign/public/${encodeURIComponent(token)}/decline`));
+export const getPublicSignatureRequest = async (token: string) => unwrap<PublicSignatureRequest>(await api.get('/productivity/sign/public/request', { headers: signHeaders(token) }));
+export const downloadPublicSignatureDocument = async (token: string) => api.get('/productivity/sign/public/document', { headers: signHeaders(token), responseType: 'blob' });
+export const signPublicSignatureRequest = async (token: string, payload: { signatureName: string; consentAccepted: boolean }) => unwrap<{ status: string; signed_at: string; evidence_hash: string }>(await api.post('/productivity/sign/public/sign', payload, { headers: signHeaders(token) }));
+export const declinePublicSignatureRequest = async (token: string) => unwrap<{ status: string; declined_at?: string | null }>(await api.post('/productivity/sign/public/decline', undefined, { headers: signHeaders(token) }));
