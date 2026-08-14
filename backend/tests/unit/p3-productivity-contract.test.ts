@@ -131,9 +131,13 @@ describe('P3.6 productivity contracts', () => {
     expect(verifier).toContain('fk_signature_request_exact_document_version');
   });
 
-  test('catalog remains conservative until frontend routes and exact-head acceptance are complete', () => {
-    expect(catalogLine('documents')).toContain("status: 'partial'");
-    expect(catalogLine('knowledge')).toContain("status: 'blueprint'");
-    expect(catalogLine('sign')).toContain("status: 'blueprint'");
+  test('accepted productivity apps stay live on the accounting-gated runtime', () => {
+    for (const appId of ['documents', 'knowledge', 'sign']) {
+      const line = catalogLine(appId);
+      expect(line).toContain("bundle: 'accounting'");
+      expect(line).toContain("status: 'live'");
+      expect(line).toContain("path: '/productivity'");
+    }
+    expect(catalogLine('spreadsheet')).toContain("status: 'blueprint'");
   });
 });
