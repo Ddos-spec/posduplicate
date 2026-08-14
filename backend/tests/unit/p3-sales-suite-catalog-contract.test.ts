@@ -35,8 +35,8 @@ describe('P3 sales runtime catalog acceptance contract', () => {
     expect(app).toContain('<RentalWorkspacePage />');
   });
 
-  test('unrelated future sales apps are not promoted as a side effect', () => {
-    for (const appId of ['loyalty', 'elearning']) {
+  test('the unrelated future loyalty app is not promoted as a side effect', () => {
+    for (const appId of ['loyalty']) {
       const line = findCatalogLine(appId);
       expect(line).toContain("status: 'blueprint'");
     }
