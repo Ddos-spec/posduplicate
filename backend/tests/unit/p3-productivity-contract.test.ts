@@ -11,20 +11,24 @@ const verifier = read('backend/src/scripts/verify-p3-database.ts');
 const capabilities = read('backend/src/middlewares/capability.middleware.ts');
 const server = read('backend/src/server.ts');
 const routes = read('backend/src/modules/productivity/routes/productivity.p3.routes.ts');
+const controller = read('backend/src/modules/productivity/controllers/productivity.p3.controller.ts');
 const storage = read('backend/src/modules/productivity/services/privateDocumentStorage.p3.ts');
 const documents = read('backend/src/modules/productivity/services/document.p3.service.ts');
 const knowledge = read('backend/src/modules/productivity/services/knowledge.p3.service.ts');
 const sign = read('backend/src/modules/productivity/services/sign.p3.service.ts');
 const app = read('frontend/src/App.tsx');
+const frontendService = read('frontend/src/services/productivityService.ts');
+const publicSignPage = read('frontend/src/pages/PublicSignPage.tsx');
+const signWorkspace = read('frontend/src/pages/productivity/components/SignWorkspace.tsx');
 const catalog = read('frontend/src/config/suiteCatalog.ts');
 
 const catalogLine = (appId: string) => catalog.split('\n').find((line) => line.includes(`{ id: '${appId}'`));
 
 describe('P3.6 productivity contracts', () => {
   test('private document bytes are never mounted under public static uploads', () => {
-    expect(storage).toContain("private_uploads");
+    expect(storage).toContain('private_uploads');
     expect(storage).toContain("path.join(root, 'documents')");
-    expect(storage).toContain("mode: 0o600");
+    expect(storage).toContain('mode: 0o600');
     expect(storage).toContain("flag: 'wx'");
     expect(server).toContain("app.use('/uploads', express.static");
     expect(server).not.toContain("app.use('/private_uploads'");
@@ -73,12 +77,27 @@ describe('P3.6 productivity contracts', () => {
   });
 
   test('public sign writes are rate limited and precede authenticated tenant admin routes', () => {
-    const publicAt = routes.indexOf("router.get('/sign/public/:token'");
+    const publicAt = routes.indexOf("router.get('/sign/public/request'");
     const authAt = routes.indexOf('router.use(authMiddleware)');
     expect(publicAt).toBeGreaterThanOrEqual(0);
     expect(authAt).toBeGreaterThan(publicAt);
     expect(routes).toContain('signWriteLimiter');
     expect(routes).toContain('PUBLIC_SIGN_RATE_LIMITED');
+  });
+
+  test('public sign bearer never enters frontend or backend HTTP paths', () => {
+    expect(routes).not.toContain('/sign/public/:token');
+    expect(routes).toContain("router.get('/sign/public/request'");
+    expect(routes).toContain("router.get('/sign/public/document'");
+    expect(controller).toContain("req.header('x-sign-token')");
+    expect(controller).toContain("code: 'SIGN_TOKEN_REQUIRED'");
+    expect(server).toContain("'X-Sign-Token'");
+    expect(frontendService).toContain("const signHeaders = (token: string) => ({ 'X-Sign-Token': token })");
+    expect(frontendService).toContain("api.get('/productivity/sign/public/request', { headers: signHeaders(token) })");
+    expect(frontendService).not.toContain('encodeURIComponent(token)');
+    expect(signWorkspace).toContain('/sign/entry#token=${encodeURIComponent(recipient.token)}');
+    expect(publicSignPage).toContain("window.location.hash.replace(/^#/, '')");
+    expect(publicSignPage).toContain("window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)");
   });
 
   test('admin productivity routes are capability gated and mounted under dedicated API namespace', () => {
