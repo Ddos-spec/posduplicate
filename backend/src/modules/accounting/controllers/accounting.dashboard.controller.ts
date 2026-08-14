@@ -180,23 +180,40 @@ export const getChartData = async (req: Request, res: Response, next: NextFuncti
 export const getDistributorDashboard = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const tenantId = req.tenantId!;
-        // Logic:
-        // 1. Total Pembelian (Stock Movement In)
-        // 2. Hutang Supplier (AP)
-        // 3. PO status? (Mocked or from StockMovements pending?)
-        
-        // Mocking some parts as detailed PO logic isn't fully in stock_movements yet (just 'in' type)
-        
-        const purchaseStats: any[] = await prisma.$queryRaw`
+        const [purchaseStats, apStats, recentRows, supplierRows] = await Promise.all([
+          prisma.$queryRaw<any[]>`
             SELECT SUM(total_cost) as total FROM "stock_movements"
             WHERE outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})
             AND type = 'IN'
-        `;
-        
-        const apStats: any[] = await prisma.$queryRaw`
-            SELECT SUM(balance) as total FROM "accounting"."accounts_payable"
+          `,
+          prisma.$queryRaw<any[]>`
+            SELECT SUM(balance) as total,
+                   SUM(CASE WHEN due_date <= CURRENT_DATE + INTERVAL '7 days' THEN balance ELSE 0 END) AS due_soon
+            FROM "accounting"."accounts_payable"
             WHERE tenant_id = ${tenantId} AND status != 'paid'
-        `;
+          `,
+          prisma.$queryRaw<any[]>`
+            SELECT po.id, po.po_number, po.status, po.order_date, po.total, s.name AS supplier_name
+            FROM public.purchase_orders po
+            JOIN public.outlets o ON o.id = po.outlet_id
+            LEFT JOIN public.suppliers s ON s.id = po.supplier_id
+            WHERE o.tenant_id = ${tenantId}
+            ORDER BY po.order_date DESC
+            LIMIT 5
+          `,
+          prisma.$queryRaw<any[]>`
+            SELECT COALESCE(s.name, 'Tanpa supplier') AS supplier_name,
+                   COUNT(*)::int AS order_count,
+                   SUM(po.total) AS total
+            FROM public.purchase_orders po
+            JOIN public.outlets o ON o.id = po.outlet_id
+            LEFT JOIN public.suppliers s ON s.id = po.supplier_id
+            WHERE o.tenant_id = ${tenantId}
+            GROUP BY COALESCE(s.name, 'Tanpa supplier')
+            ORDER BY SUM(po.total) DESC
+            LIMIT 5
+          `,
+        ]);
 
         res.json({
             success: true,
@@ -204,15 +221,28 @@ export const getDistributorDashboard = async (req: Request, res: Response, next:
                 stats: {
                     totalPembelian: {
                         value: Number(purchaseStats[0]?.total || 0),
-                        trend: 0 // Mock
+                        trend: null,
+                        trendSource: 'unavailable'
                     },
                     hutangSupplier: {
                         value: Number(apStats[0]?.total || 0),
-                        dueSoon: 0 // Need DB query on due_date
+                        dueSoon: Number(apStats[0]?.due_soon || 0)
                     }
                 },
-                recentPurchaseOrders: [], // Fetch from stock_movements limit 5
-                topSuppliers: [] 
+                recentPurchaseOrders: recentRows.map((row) => ({
+                    id: Number(row.id),
+                    poNumber: row.po_number,
+                    status: row.status,
+                    orderDate: row.order_date,
+                    total: Number(row.total || 0),
+                    supplierName: row.supplier_name ?? null,
+                })),
+                topSuppliers: supplierRows.map((row) => ({
+                    supplierName: row.supplier_name,
+                    orderCount: Number(row.order_count || 0),
+                    total: Number(row.total || 0),
+                })),
+                provenance: 'database'
             }
         });
     } catch (error) {
@@ -225,19 +255,53 @@ export const getDistributorDashboard = async (req: Request, res: Response, next:
  */
 export const getProdusenDashboard = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        void req;
-        // Logic:
-        // 1. Production output (Stock Movement IN for Finished Goods?)
-        // 2. Raw Material usage (Stock Movement OUT for Ingredients?)
-        
+        const tenantId = req.tenantId!;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const [productionRows, workOrderRows] = await Promise.all([
+          prisma.$queryRaw<any[]>`
+            SELECT COALESCE(SUM(quantity_produced), 0) AS produced,
+                   COUNT(*) FILTER (WHERE status IN ('confirmed','in_progress'))::int AS active_count
+            FROM public.manufacturing_orders
+            WHERE tenant_id = ${tenantId} AND created_at >= ${today}
+          `,
+          prisma.$queryRaw<any[]>`
+            SELECT mo.id, mo.mo_number, mo.status, mo.quantity_planned, mo.quantity_produced,
+                   mo.scheduled_at, i.name AS item_name
+            FROM public.manufacturing_orders mo
+            JOIN public.items i ON i.id = mo.item_id
+            WHERE mo.tenant_id = ${tenantId}
+            ORDER BY mo.created_at DESC
+            LIMIT 5
+          `,
+        ]);
+
         res.json({
             success: true,
             data: {
                 stats: {
-                    produksiHariIni: { value: 0, target: 100 },
-                    bahanBakuTersedia: { percentage: 100 }
+                    produksiHariIni: {
+                        value: Number(productionRows[0]?.produced || 0),
+                        target: null,
+                        targetSource: 'unavailable'
+                    },
+                    bahanBakuTersedia: {
+                        percentage: null,
+                        source: 'unavailable',
+                        reason: 'Persentase lintas satuan tidak dapat dihitung secara valid'
+                    },
+                    workOrderAktif: Number(productionRows[0]?.active_count || 0)
                 },
-                workOrders: []
+                workOrders: workOrderRows.map((row) => ({
+                    id: Number(row.id),
+                    moNumber: row.mo_number,
+                    itemName: row.item_name,
+                    status: row.status,
+                    quantityPlanned: Number(row.quantity_planned),
+                    quantityProduced: Number(row.quantity_produced),
+                    scheduledAt: row.scheduled_at,
+                })),
+                provenance: 'database'
             }
         });
     } catch (error) {
@@ -269,6 +333,27 @@ export const getRetailDashboard = async (req: Request, res: Response, next: Next
             WHERE tenant_id = ${tenantId} AND status != 'paid'
         `;
 
+        const [recentRows, productRows] = await Promise.all([
+          prisma.$queryRaw<any[]>`
+            SELECT t.id, t.transaction_number, t.customer_name, t.total, t.status, t.created_at
+            FROM public.transactions t
+            JOIN public.outlets o ON o.id = t.outlet_id
+            WHERE o.tenant_id = ${tenantId}
+            ORDER BY t.created_at DESC
+            LIMIT 5
+          `,
+          prisma.$queryRaw<any[]>`
+            SELECT ti.item_id, ti.item_name, SUM(ti.quantity) AS quantity, SUM(ti.subtotal) AS revenue
+            FROM public.transaction_items ti
+            JOIN public.transactions t ON t.id = ti.transaction_id
+            JOIN public.outlets o ON o.id = t.outlet_id
+            WHERE o.tenant_id = ${tenantId} AND t.status = 'completed'
+            GROUP BY ti.item_id, ti.item_name
+            ORDER BY SUM(ti.subtotal) DESC
+            LIMIT 5
+          `,
+        ]);
+
         res.json({
             success: true,
             data: {
@@ -281,8 +366,21 @@ export const getRetailDashboard = async (req: Request, res: Response, next: Next
                         value: Number(arStats[0]?.total || 0)
                     }
                 },
-                recentOrders: [], // Fetch from transactions limit 5
-                topProducts: []
+                recentOrders: recentRows.map((row) => ({
+                    id: Number(row.id),
+                    transactionNumber: row.transaction_number,
+                    customerName: row.customer_name,
+                    total: Number(row.total || 0),
+                    status: row.status,
+                    createdAt: row.created_at,
+                })),
+                topProducts: productRows.map((row) => ({
+                    itemId: Number(row.item_id),
+                    itemName: row.item_name,
+                    quantity: Number(row.quantity || 0),
+                    revenue: Number(row.revenue || 0),
+                })),
+                provenance: 'database'
             }
         });
     } catch (error) {

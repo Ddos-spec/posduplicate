@@ -1,6 +1,6 @@
 import express from 'express';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import {
   getOwnerDashboard,
   getAkuntanDashboard,
@@ -14,7 +14,7 @@ const router = express.Router();
 
 // All routes require authentication and tenant
 router.use(authMiddleware);
-router.use(tenantMiddleware);
+router.use(tenantMiddleware, requireTenantContext);
 
 /**
  * @route GET /api/accounting/dashboard/owner

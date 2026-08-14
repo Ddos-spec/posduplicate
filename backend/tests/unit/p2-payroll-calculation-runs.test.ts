@@ -66,7 +66,7 @@ describe('Payroll-C1 profile-driven verification contracts', () => {
 
   test('suite deploy path retains calculation runs through migration seventeen', () => {
     expect(runner).toContain('20260813073000_p2_payroll_calculation_runs');
-    expect(verifier).toContain('Expected 17 suite migration ledger entries');
+    expect(verifier).toContain('Expected 20 suite migration ledger entries');
     expect(verifier).toContain('payroll_employee_statutory_settings');
     expect(verifier).toContain('payroll_calculation_runs');
     expect(verifier).toContain('trg_payroll_calculation_run_append_only');

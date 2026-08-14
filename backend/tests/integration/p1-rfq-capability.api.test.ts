@@ -21,6 +21,13 @@ jest.mock('../../src/middlewares/tenant.middleware', () => ({
     req.tenant = { id: 1, features: { capabilities } };
     next();
   },
+  requireTenantContext: (req: any, res: any, next: any) => req.tenantId
+    ? next()
+    : res.status(400).json({ success: false, error: { code: 'TENANT_CONTEXT_REQUIRED' } }),
+  tenantOutletScopeMiddleware: (req: any, _res: any, next: any) => {
+    req.tenantOutletIds = [1];
+    next();
+  },
   ownerOnly: (_req: any, _res: any, next: any) => next(),
   superAdminOnly: (_req: any, _res: any, next: any) => next(),
 }));

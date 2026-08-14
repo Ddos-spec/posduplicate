@@ -65,7 +65,7 @@ describe('P2.6 Field Service contracts', () => {
 
   test('suite deployment and verifier retain Field Service through migration seventeen', () => {
     expect(runner).toContain('20260813054000_p2_field_service_core');
-    expect(verifier).toContain('Expected 17 suite migration ledger entries');
+    expect(verifier).toContain('Expected 20 suite migration ledger entries');
     expect(verifier).toContain('service_field_orders');
     expect(verifier).toContain('service_field_events');
     expect(verifier).toContain('trg_service_field_event_append_only');

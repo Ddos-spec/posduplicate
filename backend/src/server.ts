@@ -2,7 +2,9 @@ import express, { Express, Request, Response, NextFunction, Router } from 'expre
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
 import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -20,6 +22,7 @@ import learningRoutes from './modules/learning';
 import scheduler from './services/scheduler.service';
 import { swaggerSpec } from './config/swagger';
 import { jsonBigIntReplacer } from './utils/json';
+import prisma from './utils/prisma';
 
 const app: Express = express();
 app.set('json replacer', jsonBigIntReplacer);
@@ -27,7 +30,7 @@ const httpServer = createServer(app);
 const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',')
+  ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
   : [
       'http://localhost:5173',
       'http://localhost:3000',
@@ -54,13 +57,12 @@ io.on('connection', (socket) => {
 
 app.set('trust proxy', 1);
 
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) {
-      callback(null, true);
-      return;
-    }
-    if (origin.includes('.vercel.app')) {
       callback(null, true);
       return;
     }
@@ -76,6 +78,7 @@ app.use(cors({
     'Content-Type',
     'Authorization',
     'X-Tenant-ID',
+    'X-Integration-ID',
     'Cache-Control',
     'Pragma',
     'Expires',
@@ -89,17 +92,39 @@ app.use(cors({
   ]
 }));
 app.use(express.json({
-  verify: (request, _response, buffer) => {
-    const expressRequest = request as Request & { rawBody?: Buffer };
-    if (expressRequest.originalUrl.startsWith('/api/medsos/zernio/webhook')) {
-      expressRequest.rawBody = Buffer.from(buffer);
-    }
-  },
+  limit: '1mb',
+  verify: (req, _res, buffer) => {
+    (req as Request).rawBody = Buffer.from(buffer);
+  }
 }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(morgan('dev'));
 
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/health' || req.path === '/ready'
+}));
+
+// Accounting attachments are private and must only be downloaded through the
+// authenticated, tenant-scoped attachment controller.
+app.use('/uploads/accounting', (_req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    error: { code: 'NOT_FOUND', message: 'File not found' }
+  });
+});
+
+// Serve tenant-scoped public media (for example product images).
+// Use process.cwd() to match the upload middleware path.
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
+  dotfiles: 'deny',
+  index: false,
+  fallthrough: false,
+  maxAge: '1h'
+}));
 
 const apiRouter: Router = Router();
 
@@ -144,6 +169,24 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
   });
 });
 
+apiRouter.get('/ready', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return res.json({
+      status: 'READY',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Readiness check failed:', error);
+    return res.status(503).json({
+      status: 'NOT_READY',
+      database: 'unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 apiRouter.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'OmniPilot AI API Documentation'
@@ -176,20 +219,33 @@ app.use('/mypos', apiRouter);
 app.use('/', apiRouter);
 
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-  console.error('Error:', err);
+  const status = Number.isInteger(err?.status) && err.status >= 400 && err.status <= 599
+    ? err.status
+    : 500;
+  const safeMessage = String(err?.message || 'Unknown error').replace(/[\r\n]/g, ' ');
+  console.error('Request failed', {
+    method: req.method,
+    path: req.path,
+    status,
+    name: err instanceof Error ? err.name : 'UnknownError',
+  });
 
   try {
-    const logMessage = `[${new Date().toISOString()}] ${req.method} ${req.path} - Error: ${err.message}\nStack: ${err.stack}\n\n`;
-    fs.appendFileSync(path.join(__dirname, '../server-error.log'), logMessage);
+    const stack = process.env.NODE_ENV === 'development' ? `\nStack: ${err.stack}` : '';
+    const logMessage = `[${new Date().toISOString()}] ${req.method} ${req.path} - Error: ${safeMessage}${stack}\n\n`;
+    fs.appendFile(path.join(__dirname, '../server-error.log'), logMessage, (logErr) => {
+      if (logErr) console.error('Failed to write to error log file:', logErr);
+    });
   } catch (logErr) {
     console.error('Failed to write to error log file:', logErr);
   }
 
-  res.status(err.status || 500).json({
+  const exposeDetails = status < 500 || process.env.NODE_ENV === 'development';
+  res.status(status).json({
     success: false,
     error: {
-      code: err.code || 'INTERNAL_SERVER_ERROR',
-      message: err.message || 'Something went wrong',
+      code: exposeDetails ? (err.code || 'REQUEST_FAILED') : 'INTERNAL_SERVER_ERROR',
+      message: exposeDetails ? safeMessage : 'Internal server error',
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     }
   });

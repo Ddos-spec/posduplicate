@@ -9,6 +9,7 @@ import {
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import useConfirmationStore from '../../store/confirmationStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface Ingredient {
   id: number;
@@ -45,9 +46,8 @@ export default function IngredientsManagementPage() {
   const loadIngredients = useCallback(async () => {
     try {
       setLoading(true);
-      // Get user's outlet ID from localStorage (optional)
-      const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-      const outletId = user?.outletId || user?.outlet?.id;
+      const user = useAuthStore.getState().user;
+      const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
 
       // If outletId exists, filter by it; otherwise get all ingredients for tenant
       const params: any = {};
@@ -113,8 +113,8 @@ export default function IngredientsManagementPage() {
       return;
     }
 
-    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}') : null;
-    const outletId = user?.outletId || user?.outlet?.id;
+    const user = useAuthStore.getState().user;
+    const outletId = user?.outletId || user?.outlet_id || user?.outlets?.id;
 
     if (!outletId) {
       toast.error('Outlet ID missing');

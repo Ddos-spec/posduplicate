@@ -99,7 +99,8 @@ api.interceptors.response.use(
     const isPublicStorefrontRequest = String(error.config?.url || '').includes('/digital/storefront/');
     if (error.response?.status === 401 && error.config?.headers?.Authorization && !isPublicStorefrontRequest) {
       useAuthStore.getState().logout();
-      window.location.href = '/login';
+      const basePath = window.location.pathname.startsWith('/myerp') ? '/myerp' : '';
+      window.location.assign(`${basePath}/login`);
     }
     return Promise.reject(error);
   }

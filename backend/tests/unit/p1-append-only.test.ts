@@ -41,7 +41,7 @@ describe('suite immutable audit guards', () => {
     const verifier = read('src/scripts/verify-p1-database-v2.ts');
     const suiteWorkflow = read('../.github/workflows/frontend-ci.yml');
     const runtimeWorkflow = read('../.github/workflows/p1-runtime-ci.yml');
-    expect(verifier).toContain('ledger.rows.length === 17');
+    expect(verifier).toContain('ledger.rows.length === 20');
     expect(verifier).toContain('workforce_attendance_sessions');
     expect(verifier).toContain('payroll_rate_profiles');
     expect(verifier).toContain('payroll_employee_statutory_settings');

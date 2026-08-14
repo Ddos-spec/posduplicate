@@ -117,6 +117,35 @@ export default function BillingManagementPage() {
 
   const overdueRecords = billingRecords.filter(r => isOverdue(r));
 
+  const exportBillingCsv = () => {
+    const csvCell = (value: unknown) => {
+      const raw = String(value ?? '');
+      const spreadsheetSafe = /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
+      return `"${spreadsheetSafe.replace(/"/g, '""')}"`;
+    };
+    const rows = [
+      ['Tenant', 'Plan', 'Starts At', 'Expires At', 'Next Billing', 'Status'],
+      ...billingRecords.map((record) => [
+        record.businessName,
+        record.subscriptionPlan,
+        record.subscriptionStartsAt,
+        record.subscriptionExpiresAt,
+        record.nextBillingDate,
+        record.subscriptionStatus,
+      ]),
+    ];
+    const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `billing-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    toast.success(`${billingRecords.length} billing record diekspor ke CSV.`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -205,11 +234,12 @@ export default function BillingManagementPage() {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">Billing History</h2>
             <button
-              onClick={() => toast.success('Export to Excel (Mock)')}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              onClick={exportBillingCsv}
+              disabled={billingRecords.length === 0}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FileDown className="w-5 h-5" />
-              Export to Excel
+              Export CSV
             </button>
           </div>
 

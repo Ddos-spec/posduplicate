@@ -51,7 +51,7 @@ export default function AutoReplyPage() {
           <Workflow size={16} /> Journeys
         </button>
         <button type="button" onClick={() => setSearchParams({ view: 'engagement' })} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${activeView === 'engagement' ? (isDark ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 shadow-sm') : 'text-slate-500'}`}>
-          <CalendarDays size={16} /> Events & Surveys
+          <CalendarDays size={16} /> Events &amp; Surveys
         </button>
       </div>
 

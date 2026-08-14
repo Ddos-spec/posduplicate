@@ -12,7 +12,7 @@ describe('business-suite contracts', () => {
     const recipeRoutes = read('src/modules/fnb/routes/recipe.routes.ts');
     const supplierRoutes = read('src/modules/fnb/routes/supplier.routes.ts');
     for (const source of [revenueRoutes, supplyRoutes, purchaseRoutes, recipeRoutes, supplierRoutes]) {
-      expect(source).toContain('authMiddleware'); expect(source).toContain('tenantMiddleware'); expect(source).toMatch(/router\.use\(authMiddleware, tenantMiddleware\)/); expect(source).toContain('requireCapability');
+      expect(source).toContain('authMiddleware'); expect(source).toContain('tenantMiddleware'); expect(source).toMatch(/router\.use\(authMiddleware,\s*tenantMiddleware[,)]/); expect(source).toContain('requireCapability');
     }
     expect(revenueRoutes).toContain("requireCapability('revenue.sales.manage')");
     expect(supplyRoutes).toContain("requireCapability('supply.warehouse.manage')");

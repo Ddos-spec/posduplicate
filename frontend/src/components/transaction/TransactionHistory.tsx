@@ -1138,7 +1138,7 @@ export default function TransactionHistory({ onClose, settings }: TransactionHis
                       <span className="font-semibold">{selectedTransaction.transactionNumber}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Tanggal & Waktu:</span>
+                      <span className="text-gray-600">Tanggal &amp; Waktu:</span>
                       <span>{new Date(selectedTransaction.createdAt).toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between">

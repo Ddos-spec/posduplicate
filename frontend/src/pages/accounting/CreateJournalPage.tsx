@@ -414,7 +414,7 @@ export default function CreateJournalPage() {
 
               <div className="space-y-4">
                 <div>
-                  <h4 className={`font-medium ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>Prinsip Debit & Kredit</h4>
+                  <h4 className={`font-medium ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>Prinsip Debit &amp; Kredit</h4>
                   <p className={`text-sm ${isDark ? 'text-amber-300/80' : 'text-amber-600'}`}>
                     Setiap transaksi harus dicatat minimal di dua akun yang berbeda. Satu di sisi Debit, satu lagi di sisi Kredit.
                   </p>

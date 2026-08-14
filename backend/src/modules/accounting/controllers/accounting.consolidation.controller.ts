@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 
 /**
@@ -38,7 +39,7 @@ export const getConsolidatedIncomeStatement = async (req: Request, res: Response
     let consolidatedRevenue = 0, consolidatedCOGS = 0, consolidatedExpenses = 0;
 
     for (const outlet of outlets) {
-      const data: any[] = await prisma.$queryRawUnsafe(`
+      const data: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT
           coa.account_type,
           SUM(CASE WHEN coa.normal_balance = 'CREDIT' THEN gl.credit_amount - gl.debit_amount
@@ -47,8 +48,8 @@ export const getConsolidatedIncomeStatement = async (req: Request, res: Response
         JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
         WHERE gl.tenant_id = ${tenantId}
         AND gl.outlet_id = ${outlet.id}
-        AND gl.transaction_date >= '${new Date(startDate as string).toISOString()}'
-        AND gl.transaction_date <= '${new Date(endDate as string).toISOString()}'
+        AND gl.transaction_date >= ${new Date(startDate as string).toISOString()}
+        AND gl.transaction_date <= ${new Date(endDate as string).toISOString()}
         AND coa.account_type IN ('REVENUE', 'EXPENSE', 'COGS')
         GROUP BY coa.account_type
       `);
@@ -135,7 +136,7 @@ export const getConsolidatedBalanceSheet = async (req: Request, res: Response, n
     let consolidatedAssets = 0, consolidatedLiabilities = 0, consolidatedEquity = 0;
 
     for (const outlet of outlets) {
-      const data: any[] = await prisma.$queryRawUnsafe(`
+      const data: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT
           coa.account_type,
           SUM(CASE WHEN coa.normal_balance = 'DEBIT' THEN gl.debit_amount - gl.credit_amount
@@ -144,7 +145,7 @@ export const getConsolidatedBalanceSheet = async (req: Request, res: Response, n
         JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
         WHERE gl.tenant_id = ${tenantId}
         AND gl.outlet_id = ${outlet.id}
-        AND gl.transaction_date <= '${date.toISOString()}'
+        AND gl.transaction_date <= ${date.toISOString()}
         AND coa.account_type NOT IN ('REVENUE', 'EXPENSE', 'COGS')
         GROUP BY coa.account_type
       `);
@@ -217,37 +218,37 @@ export const getOutletPerformanceComparison = async (req: Request, res: Response
 
     for (const outlet of outlets) {
       // Revenue
-      const revenueData: any[] = await prisma.$queryRawUnsafe(`
+      const revenueData: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT COALESCE(SUM(gl.credit_amount - gl.debit_amount), 0) as amount
         FROM "accounting"."general_ledger" gl
         JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
         WHERE gl.tenant_id = ${tenantId}
         AND gl.outlet_id = ${outlet.id}
-        AND gl.transaction_date >= '${new Date(startDate as string).toISOString()}'
-        AND gl.transaction_date <= '${new Date(endDate as string).toISOString()}'
+        AND gl.transaction_date >= ${new Date(startDate as string).toISOString()}
+        AND gl.transaction_date <= ${new Date(endDate as string).toISOString()}
         AND coa.account_type = 'REVENUE'
       `);
 
       // Expenses
-      const expenseData: any[] = await prisma.$queryRawUnsafe(`
+      const expenseData: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT COALESCE(SUM(gl.debit_amount - gl.credit_amount), 0) as amount
         FROM "accounting"."general_ledger" gl
         JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
         WHERE gl.tenant_id = ${tenantId}
         AND gl.outlet_id = ${outlet.id}
-        AND gl.transaction_date >= '${new Date(startDate as string).toISOString()}'
-        AND gl.transaction_date <= '${new Date(endDate as string).toISOString()}'
+        AND gl.transaction_date >= ${new Date(startDate as string).toISOString()}
+        AND gl.transaction_date <= ${new Date(endDate as string).toISOString()}
         AND coa.account_type IN ('EXPENSE', 'COGS')
       `);
 
       // Transaction Count
-      const txCount: any[] = await prisma.$queryRawUnsafe(`
+      const txCount: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total
         FROM "transactions"
         WHERE outlet_id = ${outlet.id}
         AND status = 'completed'
-        AND created_at >= '${new Date(startDate as string).toISOString()}'
-        AND created_at <= '${new Date(endDate as string).toISOString()}'
+        AND created_at >= ${new Date(startDate as string).toISOString()}
+        AND created_at <= ${new Date(endDate as string).toISOString()}
       `);
 
       const revenue = Number(revenueData[0]?.amount || 0);
@@ -341,7 +342,7 @@ export const getSegmentAnalysis = async (req: Request, res: Response, next: Next
       });
 
       for (const outlet of outlets) {
-        const data: any[] = await prisma.$queryRawUnsafe(`
+        const data: any[] = await prisma.$queryRaw(Prisma.sql`
           SELECT
             'revenue' as type,
             COALESCE(SUM(gl.credit_amount - gl.debit_amount), 0) as amount
@@ -349,8 +350,8 @@ export const getSegmentAnalysis = async (req: Request, res: Response, next: Next
           JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
           WHERE gl.tenant_id = ${tenantId}
           AND gl.outlet_id = ${outlet.id}
-          AND gl.transaction_date >= '${new Date(startDate as string).toISOString()}'
-          AND gl.transaction_date <= '${new Date(endDate as string).toISOString()}'
+          AND gl.transaction_date >= ${new Date(startDate as string).toISOString()}
+          AND gl.transaction_date <= ${new Date(endDate as string).toISOString()}
           AND coa.account_type = 'REVENUE'
         `);
 
@@ -363,7 +364,7 @@ export const getSegmentAnalysis = async (req: Request, res: Response, next: Next
       }
     } else if (segmentBy === 'category') {
       // Segment by product category
-      const categoryData: any[] = await prisma.$queryRawUnsafe(`
+      const categoryData: any[] = await prisma.$queryRaw(Prisma.sql`
         SELECT
           COALESCE(ti.items->>'category_id', 'Uncategorized') as category,
           SUM(ti.subtotal) as revenue
@@ -371,8 +372,8 @@ export const getSegmentAnalysis = async (req: Request, res: Response, next: Next
         JOIN "transaction_items" ti ON t.id = ti.transaction_id
         WHERE t.outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})
         AND t.status = 'completed'
-        AND t.created_at >= '${new Date(startDate as string).toISOString()}'
-        AND t.created_at <= '${new Date(endDate as string).toISOString()}'
+        AND t.created_at >= ${new Date(startDate as string).toISOString()}
+        AND t.created_at <= ${new Date(endDate as string).toISOString()}
         GROUP BY ti.items->>'category_id'
       `);
 

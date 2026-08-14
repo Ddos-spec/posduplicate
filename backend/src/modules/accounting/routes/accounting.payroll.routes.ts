@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { requireCapability } from '../../../middlewares/capability.middleware';
 import {
   // Employee management
@@ -26,7 +26,7 @@ const router = Router();
 
 // Apply auth and tenant middleware
 router.use(authMiddleware);
-router.use(tenantMiddleware);
+router.use(tenantMiddleware, requireTenantContext);
 
 // ============= EMPLOYEE MANAGEMENT =============
 /**

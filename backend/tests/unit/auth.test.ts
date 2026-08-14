@@ -11,7 +11,15 @@ jest.mock('../../src/utils/prisma', () => ({
             findUnique: jest.fn(),
             create: jest.fn(),
             update: jest.fn(),
-        }
+        },
+        tenants: {
+            findUnique: jest.fn(),
+            create: jest.fn(),
+        },
+        roles: {
+            findUnique: jest.fn(),
+        },
+        $transaction: jest.fn(),
     }
 }));
 
@@ -27,6 +35,7 @@ jest.mock('jsonwebtoken', () => ({
 describe('Auth Controller Logic', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => callback(prisma));
     });
 
     describe('login', () => {
@@ -76,18 +85,63 @@ describe('Auth Controller Logic', () => {
     });
 
     describe('register', () => {
-        it('should create new user', async () => {
-            const req = { body: { email: 'new@test.com', password: 'pass', name: 'New User' } } as any;
+        it('rejects weak public registration passwords before creating a tenant', async () => {
+            const req = {
+                body: {
+                    email: 'weak@test.com',
+                    password: 'short',
+                    name: 'Weak User',
+                    businessName: 'Weak Business'
+                }
+            } as any;
             const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
-
-            (prisma.users.findUnique as jest.Mock).mockResolvedValue(null); // No existing user
-            (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_new_pass');
-            (prisma.users.create as jest.Mock).mockResolvedValue({ id: 2, email: 'new@test.com' });
 
             await register(req, res, jest.fn());
 
-            expect(prisma.users.create).toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(prisma.$transaction).not.toHaveBeenCalled();
+        });
+
+        it('should create a tenant owner without trusting client role or tenant IDs', async () => {
+            const req = {
+                body: {
+                    email: 'new@test.com',
+                    password: 'strong-password',
+                    name: 'New User',
+                    businessName: 'New Business',
+                    roleId: 999,
+                    tenantId: 999
+                }
+            } as any;
+            const res = { status: jest.fn().mockReturnThis(), json: jest.fn() } as any;
+
+            (prisma.users.findUnique as jest.Mock).mockResolvedValue(null); // No existing user
+            (prisma.tenants.findUnique as jest.Mock).mockResolvedValue(null);
+            (prisma.roles.findUnique as jest.Mock).mockResolvedValue({ id: 7, name: 'Owner' });
+            (prisma.tenants.create as jest.Mock).mockResolvedValue({ id: 42 });
+            (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_new_pass');
+            (prisma.users.create as jest.Mock).mockResolvedValue({
+                id: 2,
+                email: 'new@test.com',
+                password_hash: 'hashed_new_pass',
+                role_id: 7,
+                tenant_id: 42
+            });
+
+            await register(req, res, jest.fn());
+
+            expect(prisma.tenants.create).toHaveBeenCalled();
+            expect(prisma.users.create).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({
+                    role_id: 7,
+                    tenant_id: 42,
+                    outlet_id: null
+                })
+            }));
             expect(res.status).toHaveBeenCalledWith(201);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.not.objectContaining({ password_hash: expect.anything() })
+            }));
         });
     });
 });

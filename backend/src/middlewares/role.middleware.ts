@@ -7,7 +7,7 @@ import { Request, Response, NextFunction } from 'express';
  */
 export const roleMiddleware = (allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const userRole = req.roleName;
+    const userRole = req.userRole ?? req.roleName;
 
     if (!userRole) {
       return res.status(401).json({
@@ -48,7 +48,7 @@ export const roleMiddleware = (allowedRoles: string[]) => {
  */
 export const requireRole = (...allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const userRole = req.roleName;
+    const userRole = req.userRole ?? req.roleName;
 
     if (!userRole) {
       return res.status(401).json({
@@ -94,7 +94,7 @@ const roleHierarchy: Record<string, number> = {
 
 export const requireMinRole = (minRole: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const userRole = req.roleName;
+    const userRole = req.userRole ?? req.roleName;
 
     if (!userRole) {
       return res.status(401).json({

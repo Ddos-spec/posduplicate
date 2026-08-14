@@ -108,7 +108,7 @@ export default function DemoReports() {
                         </div>
 
                         <div>
-                            <h3 className="font-bold text-red-600 mb-4 border-b pb-2">KEWAJIBAN & EKUITAS</h3>
+                            <h3 className="font-bold text-red-600 mb-4 border-b pb-2">KEWAJIBAN &amp; EKUITAS</h3>
                             <div className="flex justify-between py-2">
                                 <span>Total Kewajiban</span>
                                 <span>Rp {BS_DATA.liabilities.toLocaleString('id-ID')}</span>
@@ -122,7 +122,7 @@ export default function DemoReports() {
                                 <span>Rp 550.000.000</span>
                             </div>
                             <div className="flex justify-between py-2 font-bold bg-red-50 px-2 rounded mt-2">
-                                <span>TOTAL KEWAJIBAN & EKUITAS</span>
+                                <span>TOTAL KEWAJIBAN &amp; EKUITAS</span>
                                 <span>Rp {(BS_DATA.liabilities + BS_DATA.equity).toLocaleString('id-ID')}</span>
                             </div>
                         </div>

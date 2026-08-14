@@ -305,7 +305,7 @@ export default function IncomeStatementPage() {
           {/* Balance Check */}
           <tr className={`border-t-4 ${isDark ? 'border-slate-600 bg-slate-700/50' : 'border-gray-300 bg-gray-100'}`}>
             <td className={`py-4 font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              TOTAL KEWAJIBAN & EKUITAS
+              TOTAL KEWAJIBAN &amp; EKUITAS
             </td>
             <td className={`py-4 text-right font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {formatCurrency(bsData.check.liabPlusEquity)}

@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma';
+import { Prisma } from '@prisma/client';
 
 /**
  * Advanced Forecasting Service
@@ -685,7 +686,7 @@ const calculateFinancialHealth = async (
   tenantId: number,
   outletId?: number
 ): Promise<FinancialHealthScore> => {
-  const whereOutlet = outletId ? `AND outlet_id = ${outletId}` : '';
+  const whereOutlet = outletId ? Prisma.sql`AND outlet_id = ${outletId}` : Prisma.empty;
 
   // Get key metrics
   const thirtyDaysAgo = new Date();
@@ -694,12 +695,12 @@ const calculateFinancialHealth = async (
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
   // Revenue trend
-  const revenueData: any[] = await prisma.$queryRawUnsafe(`
+  const revenueData: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
-      SUM(CASE WHEN gl.transaction_date >= '${thirtyDaysAgo.toISOString()}'
+      SUM(CASE WHEN gl.transaction_date >= ${thirtyDaysAgo.toISOString()}
           THEN gl.credit_amount - gl.debit_amount ELSE 0 END) as current_revenue,
-      SUM(CASE WHEN gl.transaction_date >= '${sixtyDaysAgo.toISOString()}'
-          AND gl.transaction_date < '${thirtyDaysAgo.toISOString()}'
+      SUM(CASE WHEN gl.transaction_date >= ${sixtyDaysAgo.toISOString()}
+          AND gl.transaction_date < ${thirtyDaysAgo.toISOString()}
           THEN gl.credit_amount - gl.debit_amount ELSE 0 END) as previous_revenue
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
@@ -709,12 +710,12 @@ const calculateFinancialHealth = async (
   `);
 
   // Expense trend
-  const expenseData: any[] = await prisma.$queryRawUnsafe(`
+  const expenseData: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
-      SUM(CASE WHEN gl.transaction_date >= '${thirtyDaysAgo.toISOString()}'
+      SUM(CASE WHEN gl.transaction_date >= ${thirtyDaysAgo.toISOString()}
           THEN gl.debit_amount - gl.credit_amount ELSE 0 END) as current_expense,
-      SUM(CASE WHEN gl.transaction_date >= '${sixtyDaysAgo.toISOString()}'
-          AND gl.transaction_date < '${thirtyDaysAgo.toISOString()}'
+      SUM(CASE WHEN gl.transaction_date >= ${sixtyDaysAgo.toISOString()}
+          AND gl.transaction_date < ${thirtyDaysAgo.toISOString()}
           THEN gl.debit_amount - gl.credit_amount ELSE 0 END) as previous_expense
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
@@ -724,7 +725,7 @@ const calculateFinancialHealth = async (
   `);
 
   // AR/AP health
-  const arApData: any[] = await prisma.$queryRawUnsafe(`
+  const arApData: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       (SELECT COALESCE(SUM(balance), 0) FROM "accounting"."accounts_receivable"
        WHERE tenant_id = ${tenantId} AND status != 'paid') as ar_balance,
@@ -864,9 +865,9 @@ export const getAdvancedRevenueForecast = async (
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - historicalDays);
 
-  const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+  const whereOutlet = outletId ? Prisma.sql`AND gl.outlet_id = ${outletId}` : Prisma.empty;
 
-  const historicalData: any[] = await prisma.$queryRawUnsafe(`
+  const historicalData: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       DATE(gl.transaction_date) as date,
       SUM(gl.credit_amount - gl.debit_amount) as net_amount
@@ -874,7 +875,7 @@ export const getAdvancedRevenueForecast = async (
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
     WHERE gl.tenant_id = ${tenantId}
     ${whereOutlet}
-    AND gl.transaction_date >= '${startDate.toISOString()}'
+    AND gl.transaction_date >= ${startDate.toISOString()}
     AND coa.account_type = 'REVENUE'
     GROUP BY DATE(gl.transaction_date)
     ORDER BY date
@@ -980,9 +981,9 @@ export const getAdvancedExpenseForecast = async (
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - historicalDays);
 
-  const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+  const whereOutlet = outletId ? Prisma.sql`AND gl.outlet_id = ${outletId}` : Prisma.empty;
 
-  const historicalData: any[] = await prisma.$queryRawUnsafe(`
+  const historicalData: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       DATE(gl.transaction_date) as date,
       SUM(gl.debit_amount - gl.credit_amount) as net_amount
@@ -990,7 +991,7 @@ export const getAdvancedExpenseForecast = async (
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
     WHERE gl.tenant_id = ${tenantId}
     ${whereOutlet}
-    AND gl.transaction_date >= '${startDate.toISOString()}'
+    AND gl.transaction_date >= ${startDate.toISOString()}
     AND coa.account_type IN ('EXPENSE', 'COGS')
     GROUP BY DATE(gl.transaction_date)
     ORDER BY date
@@ -1082,17 +1083,17 @@ export const getAdvancedSalesForecast = async (
   startDate.setDate(startDate.getDate() - historicalDays);
 
   const whereOutlet = outletId
-    ? `AND outlet_id = ${outletId}`
-    : `AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
+    ? Prisma.sql`AND outlet_id = ${outletId}`
+    : Prisma.sql`AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
 
-  const historicalData: any[] = await prisma.$queryRawUnsafe(`
+  const historicalData: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       DATE(created_at) as date,
       SUM(total) as net_amount
     FROM "transactions"
     WHERE status = 'completed'
     ${whereOutlet}
-    AND created_at >= '${startDate.toISOString()}'
+    AND created_at >= ${startDate.toISOString()}
     GROUP BY DATE(created_at)
     ORDER BY date
   `);

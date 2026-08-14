@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import { matchesDeclaredFileType } from '../../../utils/fileSecurity';
 
 const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -23,6 +24,7 @@ export const validatePrivateDocumentUpload = (file: Express.Multer.File) => {
   if (!file?.buffer?.length) throw domainError('Document file is required', 'DOCUMENT_FILE_REQUIRED');
   if (file.buffer.length > MAX_DOCUMENT_BYTES) throw domainError('Document file exceeds 25 MB limit', 'DOCUMENT_FILE_TOO_LARGE', 413);
   if (!ALLOWED_MIME.has(String(file.mimetype || '').toLowerCase())) throw domainError('Unsupported document file type', 'UNSUPPORTED_DOCUMENT_FILE_TYPE', 415);
+  if (!matchesDeclaredFileType(file.buffer, file.mimetype)) throw domainError('Document bytes do not match the declared file type', 'DOCUMENT_FILE_SIGNATURE_MISMATCH', 415);
   const originalName = String(file.originalname || 'document').replace(/[\r\n\0]/g, '').trim().slice(0, 255);
   if (!originalName) throw domainError('Invalid document filename', 'INVALID_DOCUMENT_FILENAME');
   return {

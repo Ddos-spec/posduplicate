@@ -34,9 +34,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Baseline typecheck diagnostic
-        continue-on-error: true
+      - name: Frontend TypeScript gate
         run: npx tsc -b --pretty false
+
+      - name: Frontend dependency audit
+        run: npm audit --audit-level=high
 
       - name: Production build gate
         run: npm run build
@@ -85,6 +87,9 @@ jobs:
       - name: Backend TypeScript build gate
         run: npm run build
 
+      - name: Backend dependency audit
+        run: npm audit --audit-level=high
+
       - name: Build legacy schema baseline
         run: npx prisma db push --skip-generate
 
@@ -96,6 +101,15 @@ jobs:
 
       - name: Verify P1 tables, migration ledger, and immutable triggers
         run: node dist/scripts/verify-p1-database-v2.js
+
+      - name: Production P3 migration runner
+        run: node dist/scripts/apply-p3-migrations.js
+
+      - name: Verify P3 migration runner idempotency
+        run: node dist/scripts/apply-p3-migrations.js
+
+      - name: Verify P3 database behavior
+        run: node dist/scripts/verify-p3-database.js
 
       - name: Production backend Docker image build gate
         working-directory: .

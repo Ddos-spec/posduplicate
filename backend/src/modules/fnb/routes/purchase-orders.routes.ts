@@ -1,4 +1,10 @@
 import { Router } from 'express';
+import { authMiddleware } from '../../../middlewares/auth.middleware';
+import {
+  requireTenantContext,
+  tenantMiddleware,
+  tenantOutletScopeMiddleware
+} from '../../../middlewares/tenant.middleware';
 import {
   getAllPurchaseOrders,
   getPurchaseOrderById,
@@ -9,14 +15,10 @@ import {
   getPOSuggestions
 } from '../controllers/purchase-orders.p1.controller';
 import { receivePOItemsWithWarehouse } from '../controllers/procurement-receiving.p1.controller';
-import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { requireCapability } from '../../../middlewares/capability.middleware';
 
 const router = Router();
-
-// Procurement is operationally sensitive: every endpoint requires an authenticated tenant context.
-router.use(authMiddleware, tenantMiddleware);
+router.use(authMiddleware, tenantMiddleware, requireTenantContext, tenantOutletScopeMiddleware);
 
 router.get('/suggestions', requireCapability('supply.procurement.read'), getPOSuggestions);
 router.get('/', requireCapability('supply.procurement.read'), getAllPurchaseOrders);

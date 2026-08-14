@@ -96,7 +96,7 @@ export default function WorkforceWorkspacePage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/module-selector')} className="rounded-xl border border-slate-700 p-2 hover:bg-slate-800" aria-label="Back"><ArrowLeft size={18} /></button>
-            <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">P2 Workforce & Services</p><h1 className="text-xl font-black">People, Service & Payroll Operations</h1><p className="hidden text-xs text-slate-500 md:block">Attendance · Time Off · Recruitment · Appraisals · Services · Current-law Payroll</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">P2 Workforce &amp; Services</p><h1 className="text-xl font-black">People, Service &amp; Payroll Operations</h1><p className="hidden text-xs text-slate-500 md:block">Attendance · Time Off · Recruitment · Appraisals · Services · Current-law Payroll</p></div>
           </div>
           {tab === 'attendance' && <button onClick={() => void load()} disabled={loading} className="rounded-xl border border-slate-700 p-2 hover:bg-slate-800"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>}
         </div>

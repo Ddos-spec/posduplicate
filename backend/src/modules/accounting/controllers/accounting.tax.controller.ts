@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -330,10 +331,37 @@ export const getTaxSummary = async (req: Request, res: Response, next: NextFunct
       return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Start and end date are required' } });
     }
 
-    const whereOutlet = outlet_id ? `AND tt.outlet_id = ${outlet_id}` : '';
+    const startDate = new Date(String(start_date));
+    const endDate = new Date(String(end_date));
+    const outletId = outlet_id ? Number(outlet_id) : null;
+    if (
+      Number.isNaN(startDate.getTime()) ||
+      Number.isNaN(endDate.getTime()) ||
+      (outletId !== null && (!Number.isInteger(outletId) || outletId <= 0))
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Date range or outlet ID is invalid' }
+      });
+    }
+    if (outletId !== null) {
+      const outlet = await prisma.outlets.findFirst({
+        where: { id: outletId, tenant_id: tenantId },
+        select: { id: true }
+      });
+      if (!outlet) {
+        return res.status(404).json({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Outlet not found for the active tenant' }
+        });
+      }
+    }
+    const whereOutlet = outletId !== null
+      ? Prisma.sql`AND tt.outlet_id = ${outletId}`
+      : Prisma.empty;
 
     // Group by tax type
-    const summary: any[] = await prisma.$queryRawUnsafe(`
+    const summary: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         tc.tax_type,
         tc.tax_code,
@@ -346,8 +374,8 @@ export const getTaxSummary = async (req: Request, res: Response, next: NextFunct
       JOIN "accounting"."tax_configurations" tc ON tt.tax_config_id = tc.id
       WHERE tt.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND tt.transaction_date >= '${new Date(start_date as string).toISOString()}'
-      AND tt.transaction_date <= '${new Date(end_date as string).toISOString()}'
+      AND tt.transaction_date >= ${startDate}
+      AND tt.transaction_date <= ${endDate}
       GROUP BY tc.tax_type, tc.tax_code, tc.tax_rate, tt.transaction_type
       ORDER BY tc.tax_type, tt.transaction_type
     `);
@@ -398,14 +426,46 @@ export const generateSPTReport = async (req: Request, res: Response, next: NextF
       return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Month and year are required' } });
     }
 
-    const startDate = new Date(parseInt(year as string), parseInt(month as string) - 1, 1);
-    const endDate = new Date(parseInt(year as string), parseInt(month as string), 0);
+    const parsedMonth = Number(month);
+    const parsedYear = Number(year);
+    const outletId = outlet_id ? Number(outlet_id) : null;
+    if (
+      !Number.isInteger(parsedMonth) ||
+      parsedMonth < 1 ||
+      parsedMonth > 12 ||
+      !Number.isInteger(parsedYear) ||
+      parsedYear < 2000 ||
+      parsedYear > 2200 ||
+      (outletId !== null && (!Number.isInteger(outletId) || outletId <= 0))
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Month, year, or outlet ID is invalid' }
+      });
+    }
+    if (outletId !== null) {
+      const outlet = await prisma.outlets.findFirst({
+        where: { id: outletId, tenant_id: tenantId },
+        select: { id: true }
+      });
+      if (!outlet) {
+        return res.status(404).json({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Outlet not found for the active tenant' }
+        });
+      }
+    }
+
+    const startDate = new Date(parsedYear, parsedMonth - 1, 1);
+    const endDate = new Date(parsedYear, parsedMonth, 0);
     endDate.setHours(23, 59, 59, 999);
 
-    const whereOutlet = outlet_id ? `AND tt.outlet_id = ${outlet_id}` : '';
+    const whereOutlet = outletId !== null
+      ? Prisma.sql`AND tt.outlet_id = ${outletId}`
+      : Prisma.empty;
 
     // PPN Keluaran (Output VAT)
-    const outputVAT: any[] = await prisma.$queryRawUnsafe(`
+    const outputVAT: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         SUM(tt.amount) as dpp,
         SUM(tt.tax_amount) as ppn
@@ -413,14 +473,14 @@ export const generateSPTReport = async (req: Request, res: Response, next: NextF
       JOIN "accounting"."tax_configurations" tc ON tt.tax_config_id = tc.id
       WHERE tt.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND tt.transaction_date >= '${startDate.toISOString()}'
-      AND tt.transaction_date <= '${endDate.toISOString()}'
+      AND tt.transaction_date >= ${startDate}
+      AND tt.transaction_date <= ${endDate}
       AND tc.tax_type = 'PPN'
       AND tt.transaction_type IN ('SALES', 'OUTPUT')
     `);
 
     // PPN Masukan (Input VAT)
-    const inputVAT: any[] = await prisma.$queryRawUnsafe(`
+    const inputVAT: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         SUM(tt.amount) as dpp,
         SUM(tt.tax_amount) as ppn
@@ -428,14 +488,14 @@ export const generateSPTReport = async (req: Request, res: Response, next: NextF
       JOIN "accounting"."tax_configurations" tc ON tt.tax_config_id = tc.id
       WHERE tt.tenant_id = ${tenantId}
       ${whereOutlet}
-      AND tt.transaction_date >= '${startDate.toISOString()}'
-      AND tt.transaction_date <= '${endDate.toISOString()}'
+      AND tt.transaction_date >= ${startDate}
+      AND tt.transaction_date <= ${endDate}
       AND tc.tax_type = 'PPN'
       AND tt.transaction_type IN ('PURCHASE', 'INPUT')
     `);
 
     const sptData = {
-      period: { month: parseInt(month as string), year: parseInt(year as string) },
+      period: { month: parsedMonth, year: parsedYear },
       ppnKeluaran: {
         dpp: Number(outputVAT[0]?.dpp || 0),
         ppn: Number(outputVAT[0]?.ppn || 0)

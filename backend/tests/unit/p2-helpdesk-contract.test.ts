@@ -74,7 +74,7 @@ describe('P2.7 Helpdesk contracts', () => {
 
   test('suite deployment retains Helpdesk through migration seventeen', () => {
     expect(runner).toContain('20260813060000_p2_helpdesk_core');
-    expect(verifier).toContain('Expected 17 suite migration ledger entries');
+    expect(verifier).toContain('Expected 20 suite migration ledger entries');
     expect(verifier).toContain('service_helpdesk_sla_policies');
     expect(verifier).toContain('service_helpdesk_tickets');
     expect(verifier).toContain('service_helpdesk_messages');

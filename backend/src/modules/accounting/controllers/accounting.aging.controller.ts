@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 
 /**
@@ -35,13 +36,25 @@ export const getARAgingReport = async (req: Request, res: Response, next: NextFu
     const { asOfDate, outletId, customerId } = req.query;
 
     const refDate = asOfDate ? new Date(asOfDate as string) : new Date();
-
-    let whereClause = `WHERE ar.tenant_id = ${tenantId} AND ar.status NOT IN ('paid', 'bad_debt')`;
-    if (outletId) whereClause += ` AND ar.outlet_id = ${outletId}`;
-    if (customerId) whereClause += ` AND ar.customer_id = ${customerId}`;
+    const normalizedOutletId = outletId ? Number(outletId) : null;
+    const normalizedCustomerId = customerId ? Number(customerId) : null;
+    if (
+      Number.isNaN(refDate.getTime()) ||
+      (normalizedOutletId !== null && (!Number.isInteger(normalizedOutletId) || normalizedOutletId <= 0)) ||
+      (normalizedCustomerId !== null && (!Number.isInteger(normalizedCustomerId) || normalizedCustomerId <= 0))
+    ) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Aging filters are invalid' } });
+    }
+    const filters: Prisma.Sql[] = [
+      Prisma.sql`ar.tenant_id = ${tenantId}`,
+      Prisma.sql`ar.status NOT IN ('paid', 'bad_debt')`
+    ];
+    if (normalizedOutletId !== null) filters.push(Prisma.sql`ar.outlet_id = ${normalizedOutletId}`);
+    if (normalizedCustomerId !== null) filters.push(Prisma.sql`ar.customer_id = ${normalizedCustomerId}`);
+    const whereClause = Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}`;
 
     // Get all outstanding AR with aging calculation
-    const arData: any[] = await prisma.$queryRawUnsafe(`
+    const arData: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         ar.id,
         ar.customer_id,
@@ -55,7 +68,7 @@ export const getARAgingReport = async (req: Request, res: Response, next: NextFu
         ar.status,
         c.name as customer_company,
         c.phone as customer_phone,
-        EXTRACT(DAY FROM '${refDate.toISOString()}'::timestamp - ar.due_date::timestamp) as days_overdue
+        EXTRACT(DAY FROM ${refDate}::timestamp - ar.due_date::timestamp) as days_overdue
       FROM "accounting"."accounts_receivable" ar
       LEFT JOIN "customers" c ON ar.customer_id = c.id
       ${whereClause}
@@ -146,12 +159,24 @@ export const getAPAgingReport = async (req: Request, res: Response, next: NextFu
     const { asOfDate, outletId, supplierId } = req.query;
 
     const refDate = asOfDate ? new Date(asOfDate as string) : new Date();
+    const normalizedOutletId = outletId ? Number(outletId) : null;
+    const normalizedSupplierId = supplierId ? Number(supplierId) : null;
+    if (
+      Number.isNaN(refDate.getTime()) ||
+      (normalizedOutletId !== null && (!Number.isInteger(normalizedOutletId) || normalizedOutletId <= 0)) ||
+      (normalizedSupplierId !== null && (!Number.isInteger(normalizedSupplierId) || normalizedSupplierId <= 0))
+    ) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Aging filters are invalid' } });
+    }
+    const filters: Prisma.Sql[] = [
+      Prisma.sql`ap.tenant_id = ${tenantId}`,
+      Prisma.sql`ap.status NOT IN ('paid', 'cancelled')`
+    ];
+    if (normalizedOutletId !== null) filters.push(Prisma.sql`ap.outlet_id = ${normalizedOutletId}`);
+    if (normalizedSupplierId !== null) filters.push(Prisma.sql`ap.supplier_id = ${normalizedSupplierId}`);
+    const whereClause = Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}`;
 
-    let whereClause = `WHERE ap.tenant_id = ${tenantId} AND ap.status NOT IN ('paid', 'cancelled')`;
-    if (outletId) whereClause += ` AND ap.outlet_id = ${outletId}`;
-    if (supplierId) whereClause += ` AND ap.supplier_id = ${supplierId}`;
-
-    const apData: any[] = await prisma.$queryRawUnsafe(`
+    const apData: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         ap.id,
         ap.supplier_id,
@@ -164,7 +189,7 @@ export const getAPAgingReport = async (req: Request, res: Response, next: NextFu
         ap.status,
         s.name as supplier_name,
         s.phone as supplier_phone,
-        EXTRACT(DAY FROM '${refDate.toISOString()}'::timestamp - ap.due_date::timestamp) as days_overdue
+        EXTRACT(DAY FROM ${refDate}::timestamp - ap.due_date::timestamp) as days_overdue
       FROM "accounting"."accounts_payable" ap
       LEFT JOIN "suppliers" s ON ap.supplier_id = s.id
       ${whereClause}
@@ -252,27 +277,30 @@ export const getAgingSummary = async (req: Request, res: Response, next: NextFun
     const tenantId = req.tenantId!;
     const { asOfDate } = req.query;
     const refDate = asOfDate ? new Date(asOfDate as string) : new Date();
+    if (Number.isNaN(refDate.getTime())) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'asOfDate is invalid' } });
+    }
 
     // A/R Summary
-    const arSummary: any[] = await prisma.$queryRawUnsafe(`
+    const arSummary: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         COUNT(*) as total_count,
         COALESCE(SUM(balance), 0) as total_balance,
-        COALESCE(SUM(CASE WHEN due_date >= '${refDate.toISOString()}' THEN balance ELSE 0 END), 0) as current_balance,
-        COALESCE(SUM(CASE WHEN due_date < '${refDate.toISOString()}' THEN balance ELSE 0 END), 0) as overdue_balance,
-        COALESCE(AVG(EXTRACT(DAY FROM '${refDate.toISOString()}'::timestamp - due_date::timestamp)), 0) as avg_days_outstanding
+        COALESCE(SUM(CASE WHEN due_date >= ${refDate} THEN balance ELSE 0 END), 0) as current_balance,
+        COALESCE(SUM(CASE WHEN due_date < ${refDate} THEN balance ELSE 0 END), 0) as overdue_balance,
+        COALESCE(AVG(EXTRACT(DAY FROM ${refDate}::timestamp - due_date::timestamp)), 0) as avg_days_outstanding
       FROM "accounting"."accounts_receivable"
       WHERE tenant_id = ${tenantId} AND status NOT IN ('paid', 'bad_debt')
     `);
 
     // A/P Summary
-    const apSummary: any[] = await prisma.$queryRawUnsafe(`
+    const apSummary: any[] = await prisma.$queryRaw(Prisma.sql`
       SELECT
         COUNT(*) as total_count,
         COALESCE(SUM(balance), 0) as total_balance,
-        COALESCE(SUM(CASE WHEN due_date >= '${refDate.toISOString()}' THEN balance ELSE 0 END), 0) as current_balance,
-        COALESCE(SUM(CASE WHEN due_date < '${refDate.toISOString()}' THEN balance ELSE 0 END), 0) as overdue_balance,
-        COALESCE(AVG(EXTRACT(DAY FROM '${refDate.toISOString()}'::timestamp - due_date::timestamp)), 0) as avg_days_outstanding
+        COALESCE(SUM(CASE WHEN due_date >= ${refDate} THEN balance ELSE 0 END), 0) as current_balance,
+        COALESCE(SUM(CASE WHEN due_date < ${refDate} THEN balance ELSE 0 END), 0) as overdue_balance,
+        COALESCE(AVG(EXTRACT(DAY FROM ${refDate}::timestamp - due_date::timestamp)), 0) as avg_days_outstanding
       FROM "accounting"."accounts_payable"
       WHERE tenant_id = ${tenantId} AND status NOT IN ('paid', 'cancelled')
     `);

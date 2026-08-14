@@ -72,7 +72,7 @@ describe('Payroll-C2 final reconciliation and activation contracts', () => {
 
   test('suite deployment retains final reconciliation through migration seventeen', () => {
     expect(runner).toContain('20260813080000_p2_payroll_final_reconciliation');
-    expect(verifier).toContain('Expected 17 suite migration ledger entries');
+    expect(verifier).toContain('Expected 20 suite migration ledger entries');
     expect(verifier).toContain('payroll_profile_activation_events');
     expect(verifier).toContain('idx_payroll_profile_activation_tenant');
     expect(verifier).toContain('ux_payroll_profile_activation_run');

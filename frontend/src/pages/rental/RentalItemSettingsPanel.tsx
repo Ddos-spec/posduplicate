@@ -61,7 +61,7 @@ export default function RentalItemSettingsPanel({ onChanged }: { onChanged?: () 
         <input type="number" min={1} value={form.maximumDuration} onChange={(e) => setForm((v) => ({ ...v, maximumDuration: e.target.value }))} placeholder="Maximum duration (optional)" className="rounded-lg border p-2" />
         <input type="number" min={0} value={form.bufferMinutes} onChange={(e) => setForm((v) => ({ ...v, bufferMinutes: Number(e.target.value) }))} placeholder="Turnaround buffer minutes" className="rounded-lg border p-2" />
       </div>
-      <button disabled={busy} onClick={() => void save()} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white"><Plus size={16} /> Save & activate</button>
+      <button disabled={busy} onClick={() => void save()} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white"><Plus size={16} /> Save &amp; activate</button>
       <div className="mt-5 space-y-2">{rows.map((row) => <div key={row.id} className="rounded-xl border p-3 text-sm"><div className="flex justify-between gap-3"><strong>{row.item_name}</strong><span className="text-xs font-black uppercase">{row.status}</span></div><p className="mt-1 text-slate-600">{money(row.rate_amount)} / {row.rate_unit} · deposit {money(row.deposit_amount)} · stock {Number(row.stock || 0)} · buffer {row.buffer_minutes}m</p></div>)}</div>
     </>}
   </section>;

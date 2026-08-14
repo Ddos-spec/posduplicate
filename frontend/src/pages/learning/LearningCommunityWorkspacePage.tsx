@@ -70,7 +70,7 @@ export default function LearningCommunityWorkspacePage() {
       setForums(forumRows);
       if (selectedCourse) setSelectedCourse(courseRows.find((row) => row.id === selectedCourse.id) || null);
       if (selectedForum) setSelectedForum(forumRows.find((row) => row.id === selectedForum.id) || null);
-    } catch (error: any) { toast.error(error?.response?.data?.error?.message || 'Gagal memuat Learning & Community'); }
+    } catch (error: any) { toast.error(error?.response?.data?.error?.message || 'Gagal memuat Learning &amp; Community'); }
     finally { setLoading(false); }
   };
   useEffect(() => { void loadRoot(); }, []);
@@ -210,7 +210,7 @@ export default function LearningCommunityWorkspacePage() {
   return <main className="min-h-screen bg-slate-50 p-4 md:p-7 text-slate-900">
     <div className="mx-auto max-w-7xl space-y-5">
       <header className="rounded-3xl border bg-white p-6 shadow-sm">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">P3.7 Learning & Community</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">P3.7 Learning &amp; Community</p>
         <h1 className="mt-2 text-3xl font-black">eLearning + Forum Operations</h1>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">Published website sites are reused for public discovery. Learners reuse Customer records. Lesson and forum content is declarative-safe.</p>
         <div className="mt-5 flex gap-2">{(['learning','community'] as Tab[]).map((item) => <button key={item} onClick={() => setTab(item)} className={`rounded-xl px-4 py-2 text-sm font-bold ${tab === item ? 'bg-slate-900 text-white' : 'border bg-white'}`}>{item === 'learning' ? 'eLearning' : 'Forum'}</button>)}</div>

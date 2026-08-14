@@ -1,8 +1,54 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
 import crypto from 'crypto';
-import { cacheWebhookResult } from '../../../middlewares/webhook.middleware';
+import { cacheWebhookResult, releaseWebhookEvent } from '../../../middlewares/webhook.middleware';
 import { safeParseFloat } from '../../../utils/validation';
+
+type DeliveryPlatform = 'gofood' | 'grabfood' | 'shopeefood';
+
+class WebhookProcessingError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+const rejectWebhook = async (
+  req: Request,
+  res: Response,
+  status: number,
+  payload: Record<string, unknown>,
+) => {
+  await releaseWebhookEvent(req.idempotencyKey);
+  return res.status(status).json(payload);
+};
+
+const releaseFailedWebhook = async (req: Request) => {
+  await releaseWebhookEvent(req.idempotencyKey).catch((releaseError) => {
+    console.error('[Webhook] Failed to release unfinished receipt:', releaseError);
+  });
+};
+
+const deliveryTransactionNumber = (platform: DeliveryPlatform, orderId: string, outletId: number) => (
+  `${platform.toUpperCase()}-${outletId}-${orderId.trim()}`
+);
+
+const findDeliveryTransaction = (platform: DeliveryPlatform, orderId: string, outletId: number) => (
+  prisma.transactions.findFirst({
+    where: {
+      outlet_id: outletId,
+      transaction_number: {
+        in: [
+          deliveryTransactionNumber(platform, orderId, outletId),
+          `${platform.toUpperCase()}-${orderId.trim()}`,
+        ],
+      },
+    },
+  })
+);
 
 /**
  * Map food delivery status to internal status
@@ -25,7 +71,7 @@ const mapDeliveryStatus = (status: string): string => {
  * Create transaction from food delivery webhook
  */
 const createTransactionFromWebhook = async (
-  platform: 'gofood' | 'grabfood' | 'shopeefood',
+  platform: DeliveryPlatform,
   orderId: string,
   outletId: number,
   orderData: {
@@ -36,12 +82,10 @@ const createTransactionFromWebhook = async (
     notes?: string;
   }
 ) => {
-  const transactionNumber = `${platform.toUpperCase()}-${orderId}`;
+  const transactionNumber = deliveryTransactionNumber(platform, orderId, outletId);
 
   // Check for existing transaction
-  const existing = await prisma.transactions.findFirst({
-    where: { transaction_number: transactionNumber }
-  });
+  const existing = await findDeliveryTransaction(platform, orderId, outletId);
 
   if (existing) {
     return existing;
@@ -70,8 +114,16 @@ const createTransactionFromWebhook = async (
         }
       });
 
+      if (!matchedItem) {
+        throw new WebhookProcessingError(
+          409,
+          'WEBHOOK_ITEM_MAPPING_REQUIRED',
+          `Item ${String(item.sku || item.name)} belum dipetakan ke katalog outlet`,
+        );
+      }
+
       transactionItems.push({
-        item_id: matchedItem?.id || null,
+        item_id: matchedItem.id,
         item_name: item.name || 'Unknown Item',
         quantity,
         unit_price: unitPrice,
@@ -133,12 +185,20 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
       amount,
       referenceNumber
     });
+    const outletId = req.integrationOutletId;
+    if (!outletId) {
+      return rejectWebhook(req, res, 400, {
+        success: false,
+        error: { code: 'OUTLET_NOT_CONFIGURED', message: 'QRIS integration outlet is not configured' }
+      });
+    }
 
     // Find the payment by reference number
     const payment = await prisma.payments.findFirst({
       where: {
         reference_number: referenceNumber,
-        method: 'qris'
+        method: 'qris',
+        transactions: { outlet_id: outletId }
       },
       include: {
         transactions: true
@@ -146,12 +206,18 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
     });
 
     if (!payment) {
-      return res.status(404).json({
+      return rejectWebhook(req, res, 404, {
         success: false,
         error: {
           code: 'PAYMENT_NOT_FOUND',
           message: 'Payment not found'
         }
+      });
+    }
+    if (Math.abs(Number(payment.amount) - Number(amount)) > 0.01) {
+      return rejectWebhook(req, res, 409, {
+        success: false,
+        error: { code: 'PAYMENT_AMOUNT_MISMATCH', message: 'Webhook amount does not match the payment' }
       });
     }
 
@@ -180,13 +246,14 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
     };
 
     // Cache result for idempotency
-    if ((req as any).idempotencyKey) {
-      cacheWebhookResult((req as any).idempotencyKey, result);
+    if (req.idempotencyKey) {
+      await cacheWebhookResult(req.idempotencyKey, result);
     }
 
     return res.json(result);
   } catch (error) {
     console.error('[QRIS Webhook] Error:', error);
+    await releaseFailedWebhook(req);
     return next(error);
   }
 };
@@ -197,7 +264,7 @@ export const qrisWebhook = async (req: Request, res: Response, next: NextFunctio
 export const gofoodWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderId, status, items, customer, totalAmount, notes } = req.body;
-    const outletId = (req as any).integrationOutletId;
+    const outletId = req.integrationOutletId;
 
     console.log('[GoFood Webhook] Received:', {
       orderId,
@@ -207,7 +274,7 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
     });
 
     if (!outletId) {
-      return res.status(400).json({
+      return rejectWebhook(req, res, 400, {
         success: false,
         error: {
           code: 'OUTLET_NOT_CONFIGURED',
@@ -217,11 +284,7 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
     }
 
     // Check for existing transaction
-    const existingTransaction = await prisma.transactions.findFirst({
-      where: {
-        transaction_number: `GOFOOD-${orderId}`
-      }
-    });
+    const existingTransaction = await findDeliveryTransaction('gofood', orderId, outletId);
 
     if (existingTransaction) {
       // Update existing transaction status
@@ -240,8 +303,8 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
         data: { transactionId: existingTransaction.id, status: mappedStatus }
       };
 
-      if ((req as any).idempotencyKey) {
-        cacheWebhookResult((req as any).idempotencyKey, result);
+      if (req.idempotencyKey) {
+        await cacheWebhookResult(req.idempotencyKey, result);
       }
 
       return res.json(result);
@@ -262,13 +325,20 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
       data: { transactionId: transaction.id, transactionNumber: transaction.transaction_number }
     };
 
-    if ((req as any).idempotencyKey) {
-      cacheWebhookResult((req as any).idempotencyKey, result);
+    if (req.idempotencyKey) {
+      await cacheWebhookResult(req.idempotencyKey, result);
     }
 
     return res.json(result);
   } catch (error) {
     console.error('[GoFood Webhook] Error:', error);
+    if (error instanceof WebhookProcessingError) {
+      return rejectWebhook(req, res, error.status, {
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+    }
+    await releaseFailedWebhook(req);
     return next(error);
   }
 };
@@ -279,7 +349,7 @@ export const gofoodWebhook = async (req: Request, res: Response, next: NextFunct
 export const grabfoodWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderId, status, items, customer, totalAmount, notes } = req.body;
-    const outletId = (req as any).integrationOutletId;
+    const outletId = req.integrationOutletId;
 
     console.log('[GrabFood Webhook] Received:', {
       orderId,
@@ -289,7 +359,7 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
     });
 
     if (!outletId) {
-      return res.status(400).json({
+      return rejectWebhook(req, res, 400, {
         success: false,
         error: {
           code: 'OUTLET_NOT_CONFIGURED',
@@ -299,11 +369,7 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
     }
 
     // Check for existing transaction
-    const existingTransaction = await prisma.transactions.findFirst({
-      where: {
-        transaction_number: `GRABFOOD-${orderId}`
-      }
-    });
+    const existingTransaction = await findDeliveryTransaction('grabfood', orderId, outletId);
 
     if (existingTransaction) {
       const mappedStatus = mapDeliveryStatus(status);
@@ -321,8 +387,8 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
         data: { transactionId: existingTransaction.id, status: mappedStatus }
       };
 
-      if ((req as any).idempotencyKey) {
-        cacheWebhookResult((req as any).idempotencyKey, result);
+      if (req.idempotencyKey) {
+        await cacheWebhookResult(req.idempotencyKey, result);
       }
 
       return res.json(result);
@@ -343,13 +409,20 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
       data: { transactionId: transaction.id, transactionNumber: transaction.transaction_number }
     };
 
-    if ((req as any).idempotencyKey) {
-      cacheWebhookResult((req as any).idempotencyKey, result);
+    if (req.idempotencyKey) {
+      await cacheWebhookResult(req.idempotencyKey, result);
     }
 
     return res.json(result);
   } catch (error) {
     console.error('[GrabFood Webhook] Error:', error);
+    if (error instanceof WebhookProcessingError) {
+      return rejectWebhook(req, res, error.status, {
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+    }
+    await releaseFailedWebhook(req);
     return next(error);
   }
 };
@@ -360,7 +433,7 @@ export const grabfoodWebhook = async (req: Request, res: Response, next: NextFun
 export const shopeefoodWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderId, status, items, customer, totalAmount, notes } = req.body;
-    const outletId = (req as any).integrationOutletId;
+    const outletId = req.integrationOutletId;
 
     console.log('[ShopeeFood Webhook] Received:', {
       orderId,
@@ -370,7 +443,7 @@ export const shopeefoodWebhook = async (req: Request, res: Response, next: NextF
     });
 
     if (!outletId) {
-      return res.status(400).json({
+      return rejectWebhook(req, res, 400, {
         success: false,
         error: {
           code: 'OUTLET_NOT_CONFIGURED',
@@ -380,11 +453,7 @@ export const shopeefoodWebhook = async (req: Request, res: Response, next: NextF
     }
 
     // Check for existing transaction
-    const existingTransaction = await prisma.transactions.findFirst({
-      where: {
-        transaction_number: `SHOPEEFOOD-${orderId}`
-      }
-    });
+    const existingTransaction = await findDeliveryTransaction('shopeefood', orderId, outletId);
 
     if (existingTransaction) {
       const mappedStatus = mapDeliveryStatus(status);
@@ -402,8 +471,8 @@ export const shopeefoodWebhook = async (req: Request, res: Response, next: NextF
         data: { transactionId: existingTransaction.id, status: mappedStatus }
       };
 
-      if ((req as any).idempotencyKey) {
-        cacheWebhookResult((req as any).idempotencyKey, result);
+      if (req.idempotencyKey) {
+        await cacheWebhookResult(req.idempotencyKey, result);
       }
 
       return res.json(result);
@@ -424,13 +493,20 @@ export const shopeefoodWebhook = async (req: Request, res: Response, next: NextF
       data: { transactionId: transaction.id, transactionNumber: transaction.transaction_number }
     };
 
-    if ((req as any).idempotencyKey) {
-      cacheWebhookResult((req as any).idempotencyKey, result);
+    if (req.idempotencyKey) {
+      await cacheWebhookResult(req.idempotencyKey, result);
     }
 
     return res.json(result);
   } catch (error) {
     console.error('[ShopeeFood Webhook] Error:', error);
+    if (error instanceof WebhookProcessingError) {
+      return rejectWebhook(req, res, error.status, {
+        success: false,
+        error: { code: error.code, message: error.message },
+      });
+    }
+    await releaseFailedWebhook(req);
     return next(error);
   }
 };

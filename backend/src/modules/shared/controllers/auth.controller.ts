@@ -11,6 +11,24 @@ const requireJwtSecret = () => {
   return secret;
 };
 
+const serializeSafeUser = (user: any) => ({
+  id: user.id,
+  tenant_id: user.tenant_id ?? null,
+  email: user.email,
+  name: user.name,
+  role_id: user.role_id,
+  outlet_id: user.outlet_id ?? null,
+  is_active: user.is_active,
+  last_login: user.last_login ?? null,
+  created_at: user.created_at ?? null,
+  updated_at: user.updated_at ?? null,
+  first_login: user.first_login ?? null,
+  dashboard_preferences: user.dashboard_preferences ?? {},
+  roles: user.roles,
+  tenants_users_tenant_idTotenants: user.tenants_users_tenant_idTotenants ?? null,
+  outlets: user.outlets ?? null,
+});
+
 /**
  * Login
  */
@@ -26,13 +44,6 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       });
     }
 
-    // Find user
-    // Explicitly select fields to ensure we only get what exists in the DB
-    // and avoid any schema-DB mismatch (like missing printerSettings column)
-// This is a bulk semantic replacement, I will try to target specific blocks to be safe or use multiple replace calls.
-// Let's perform replacements block by block.
-
-// Fix 1: Login Select
     const user = await prisma.users.findUnique({
       where: { email },
       select: {
@@ -47,6 +58,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         last_login: true,
         created_at: true,
         updated_at: true,
+        first_login: true,
+        dashboard_preferences: true,
         roles: true,
         tenants_users_tenant_idTotenants: true, // This relationship name seems auto-generated and ugly. "tenants" might be ambiguous or named differently.
         outlets: true
@@ -122,23 +135,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       { expiresIn: '24h' }
     );
 
-    // Use an explicit response projection so authentication material can never
-    // leak when the Prisma selection evolves.
-    const userWithoutPassword = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role_id: user.role_id,
-      tenant_id: user.tenant_id,
-      outlet_id: user.outlet_id,
-      is_active: user.is_active,
-      last_login: user.last_login,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-      roles: user.roles,
-      tenants_users_tenant_idTotenants: user.tenants_users_tenant_idTotenants,
-      outlets: user.outlets,
-    };
+    const userWithoutPassword = serializeSafeUser(user);
 
     res.json({
       success: true,
@@ -154,57 +151,101 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 };
 
 /**
- * Register (create new user)
+ * Register a new tenant and its Owner user.
+ *
+ * Security invariant: role, tenant and outlet identifiers are never accepted
+ * from the public request. They are derived and created by the server.
  */
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { password, name, roleId, tenantId, outletId } = req.body;
+    const { password, name, businessName, phone, address } = req.body;
     const email = normalizeEmailIdentity(req.body.email);
 
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !businessName) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Email, password, and name are required' }
+        error: { code: 'VALIDATION_ERROR', message: 'Email, password, name, and business name are required' }
+      });
+    }
+    if (typeof password !== 'string' || password.length < 10 || password.length > 128) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Password must be between 10 and 128 characters' }
       });
     }
 
-    // Check if email exists
-    const existing = await prisma.users.findUnique({ where: { email } });
-    if (existing) {
+    const user = await prisma.$transaction(async (tx) => {
+      const [existingUser, existingTenant, ownerRole] = await Promise.all([
+        tx.users.findUnique({ where: { email } }),
+        tx.tenants.findUnique({ where: { email } }),
+        tx.roles.findUnique({ where: { name: 'Owner' } })
+      ]);
+
+      if (existingUser || existingTenant) {
+        throw new Error('EMAIL_EXISTS');
+      }
+      if (!ownerRole) {
+        throw new Error('OWNER_ROLE_NOT_FOUND');
+      }
+
+      const trialExpiresAt = new Date();
+      trialExpiresAt.setDate(trialExpiresAt.getDate() + 14);
+
+      const tenant = await tx.tenants.create({
+        data: {
+          business_name: String(businessName).trim(),
+          owner_name: String(name).trim(),
+          email,
+          phone: typeof phone === 'string' && phone.trim() ? phone.trim() : null,
+          address: typeof address === 'string' && address.trim() ? address.trim() : null,
+          subscription_plan: 'basic',
+          subscription_status: 'trial',
+          subscription_starts_at: new Date(),
+          subscription_expires_at: trialExpiresAt,
+          is_active: true,
+          onboarding_completed: false,
+          onboarding_step: 1
+        }
+      });
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      return tx.users.create({
+        data: {
+          email,
+          password_hash: passwordHash,
+          name: String(name).trim(),
+          role_id: ownerRole.id,
+          tenant_id: tenant.id,
+          outlet_id: null
+        },
+        include: {
+          roles: true,
+          tenants_users_tenant_idTotenants: true,
+          outlets: true
+        }
+      });
+    });
+
+    const userWithoutPassword = serializeSafeUser(user);
+
+    res.status(201).json({
+      success: true,
+      data: userWithoutPassword,
+      message: 'Tenant and owner registered successfully'
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'EMAIL_EXISTS') {
       return res.status(400).json({
         success: false,
         error: { code: 'EMAIL_EXISTS', message: 'Email already registered' }
       });
     }
-
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = await prisma.users.create({
-      data: {
-        email,
-        password_hash: passwordHash,
-        name,
-        role_id: roleId,
-        tenant_id: tenantId,
-        outlet_id: outletId
-      },
-      include: {
-        roles: true,
-        tenants_users_tenant_idTotenants: true,
-        outlets: true
-      }
-    });
-
-    const { password_hash: _, ...userWithoutPassword } = user;
-
-    res.status(201).json({
-      success: true,
-      data: userWithoutPassword,
-      message: 'User registered successfully'
-    });
-  } catch (error) {
+    if (error instanceof Error && error.message === 'OWNER_ROLE_NOT_FOUND') {
+      return res.status(500).json({
+        success: false,
+        error: { code: 'CONFIGURATION_ERROR', message: 'Owner role is not configured' }
+      });
+    }
     return next(error);
   }
 };
@@ -233,7 +274,7 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
           });
         }
     
-        const { password_hash, ...userWithoutPassword } = user;
+        const userWithoutPassword = serializeSafeUser(user);
 
     res.json({
       success: true,
@@ -317,7 +358,7 @@ export const updateMe = async (req: Request, res: Response, next: NextFunction) 
       console.error('Failed to create self profile update log:', logError);
     }
 
-    const { password_hash, ...userWithoutPassword } = updatedUser;
+    const userWithoutPassword = serializeSafeUser(updatedUser);
 
     res.json({
       success: true,
@@ -340,6 +381,18 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
       return res.status(400).json({
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'Current and new password are required' }
+      });
+    }
+    if (typeof newPassword !== 'string' || newPassword.length < 10) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'WEAK_PASSWORD', message: 'New password must be at least 10 characters' }
+      });
+    }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'PASSWORD_REUSE', message: 'New password must be different from current password' }
       });
     }
 

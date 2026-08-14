@@ -72,7 +72,7 @@ export default function ShopeeFoodDetailPage() {
             <p className="text-gray-600 mb-4">
               ShopeeFood adalah layanan pesan-antar makanan yang terintegrasi dengan ekosistem
               Shopee. Dengan basis pengguna Shopee yang sangat besar, ShopeeFood memberikan
-              peluang luar biasa untuk meningkatkan penjualan dan jangkauan bisnis F&B Anda.
+              peluang luar biasa untuk meningkatkan penjualan dan jangkauan bisnis F&amp;B Anda.
             </p>
 
             <div className="space-y-3">
@@ -155,7 +155,7 @@ export default function ShopeeFoodDetailPage() {
                       <h4 className="font-semibold text-gray-800 mb-2 text-sm">Data Toko</h4>
                       <ul className="text-sm text-gray-600 space-y-1">
                         <li>• Foto toko/outlet</li>
-                        <li>• Daftar menu & harga</li>
+                        <li>• Daftar menu &amp; harga</li>
                         <li>• Foto produk berkualitas</li>
                         <li>• Nomor rekening bank</li>
                       </ul>
@@ -337,7 +337,7 @@ export default function ShopeeFoodDetailPage() {
 
           {/* Commission Info */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Komisi & Biaya</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Komisi &amp; Biaya</h2>
             <div className="space-y-4">
               <div>
                 <div className="flex items-baseline gap-2 mb-2">

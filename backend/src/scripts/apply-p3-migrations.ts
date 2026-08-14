@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { resolvePathWithin } from '../utils/pathSecurity';
 import crypto from 'crypto';
 import { Client } from 'pg';
 import dotenv from 'dotenv';
@@ -42,9 +43,9 @@ const checksumCandidates = (content: string) => {
 
 const resolveMigrationFile = (migrationName: string) => {
   const candidates = [
-    path.resolve(process.cwd(), 'prisma', 'migrations', migrationName, 'migration.sql'),
-    path.resolve(__dirname, '..', '..', 'prisma', 'migrations', migrationName, 'migration.sql'),
-    path.resolve(__dirname, '..', '..', '..', 'prisma', 'migrations', migrationName, 'migration.sql'),
+    resolvePathWithin(path.resolve(process.cwd(), 'prisma', 'migrations'), migrationName, 'migration.sql'),
+    resolvePathWithin(path.resolve(__dirname, '..', '..', 'prisma', 'migrations'), migrationName, 'migration.sql'),
+    resolvePathWithin(path.resolve(__dirname, '..', '..', '..', 'prisma', 'migrations'), migrationName, 'migration.sql'),
   ];
   const found = candidates.find((candidate) => fs.existsSync(candidate));
   if (!found) throw new Error(`P3 migration SQL not found for ${migrationName}. Checked: ${candidates.join(', ')}`);

@@ -1,12 +1,12 @@
 import express from 'express';
 import { authMiddleware, roleMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import * as dashboardController from '../controllers/accounting.dashboard.controller';
 
 const router = express.Router();
 
 router.use(authMiddleware);
-router.use(tenantMiddleware);
+router.use(tenantMiddleware, requireTenantContext);
 router.get('/', dashboardController.getStats);
 
 /**

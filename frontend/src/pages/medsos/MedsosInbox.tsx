@@ -1076,9 +1076,9 @@ function DemoInboxWorkspace({ channel, isDark }: { channel: InboxChannel; isDark
                 />
               </div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold">Queue & Response Desk</h2>
+                <h2 className="text-lg font-bold">Queue &amp; Response Desk</h2>
                 <FieldHelp
-                  title="Queue & Response Desk"
+                  title="Queue &amp; Response Desk"
                   description="Ini meja kerja operator untuk memilih antrean chat, menyaring prioritas, dan membuka percakapan aktif."
                   howToUse="Pakai filter untuk mempersempit antrean, gunakan pencarian bila butuh customer tertentu, lalu klik salah satu thread agar percakapannya terbuka di panel tengah."
                 />

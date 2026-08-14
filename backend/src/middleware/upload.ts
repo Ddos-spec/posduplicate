@@ -1,6 +1,8 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
+import { resolvePathWithin } from '../utils/pathSecurity';
 
 // Create uploads directory if it doesn't exist
 // Use process.cwd() to ensure we always target the project root 'uploads' folder
@@ -13,15 +15,30 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Configure storage
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadsDir);
+  destination: (req, _file, cb) => {
+    try {
+      const tenantId = Number(req.tenantId);
+      if (!Number.isInteger(tenantId) || tenantId <= 0) {
+        return cb(new Error('Valid tenant context is required'), '');
+      }
+      const tenantDirectory = resolvePathWithin(uploadsDir, String(tenantId));
+      fs.mkdirSync(tenantDirectory, { recursive: true });
+      return cb(null, tenantDirectory);
+    } catch (error) {
+      return cb(error as Error, '');
+    }
   },
   filename: (_req, file, cb) => {
-    // Generate unique filename: timestamp-randomstring-originalname
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    const nameWithoutExt = path.basename(file.originalname, ext);
-    cb(null, `${nameWithoutExt}-${uniqueSuffix}${ext}`);
+    const extensionByMime: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/jpg': '.jpg',
+      'image/png': '.png',
+      'image/gif': '.gif',
+      'image/webp': '.webp'
+    };
+    const ext = extensionByMime[file.mimetype];
+    if (!ext) return cb(new Error('Unsupported image type'), '');
+    cb(null, `${crypto.randomBytes(24).toString('hex')}${ext}`);
   }
 });
 

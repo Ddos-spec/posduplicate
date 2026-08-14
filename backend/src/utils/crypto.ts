@@ -7,8 +7,11 @@ const TAG_LENGTH = 16;
 const KEY_LENGTH = 32;
 const ITERATIONS = 100000;
 
-// Use environment variable or generate a secure key
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
+const configuredEncryptionKey = process.env.ENCRYPTION_KEY?.trim();
+if (!configuredEncryptionKey || configuredEncryptionKey.length < 32) {
+  throw new Error('ENCRYPTION_KEY environment variable must contain at least 32 characters');
+}
+const ENCRYPTION_KEY: string = configuredEncryptionKey;
 
 /**
  * Derive encryption key from password using PBKDF2
@@ -32,7 +35,7 @@ export function encrypt(data: any): string {
     const key = deriveKey(ENCRYPTION_KEY, salt);
 
     // Create cipher
-    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH });
 
     // Encrypt
     let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -43,8 +46,7 @@ export function encrypt(data: any): string {
 
     // Combine salt + iv + tag + encrypted data
     return Buffer.concat([salt, iv, tag, Buffer.from(encrypted, 'hex')]).toString('base64');
-  } catch (error) {
-    console.error('Encryption error:', error);
+  } catch {
     throw new Error('Failed to encrypt data');
   }
 }
@@ -56,6 +58,9 @@ export function decrypt(encryptedData: string): any {
   try {
     // Decode from base64
     const buffer = Buffer.from(encryptedData, 'base64');
+    if (buffer.length <= SALT_LENGTH + IV_LENGTH + TAG_LENGTH) {
+      throw new Error('Encrypted payload is malformed');
+    }
 
     // Extract components
     const salt = buffer.slice(0, SALT_LENGTH);
@@ -67,7 +72,7 @@ export function decrypt(encryptedData: string): any {
     const key = deriveKey(ENCRYPTION_KEY, salt);
 
     // Create decipher
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH });
     decipher.setAuthTag(tag);
 
     // Decrypt
@@ -80,8 +85,7 @@ export function decrypt(encryptedData: string): any {
     } catch {
       return decrypted;
     }
-  } catch (error) {
-    console.error('Decryption error:', error);
+  } catch {
     throw new Error('Failed to decrypt data');
   }
 }

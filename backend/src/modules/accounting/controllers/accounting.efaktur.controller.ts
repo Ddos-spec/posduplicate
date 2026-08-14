@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 
 /**
@@ -84,14 +85,14 @@ export const getNSFP = async (req: Request, res: Response, next: NextFunction) =
     const tenantId = req.tenantId!;
 
     // Get NSFP allocations
-    const nsfpList = await prisma.$queryRawUnsafe<any[]>(`
+    const nsfpList = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT * FROM "accounting"."nsfp_allocation"
       WHERE tenant_id = ${tenantId}
       ORDER BY created_at DESC
     `).catch(() => []);
 
     // Calculate usage
-    const usedCount = await prisma.$queryRawUnsafe<any[]>(`
+    const usedCount = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT COUNT(*) as count FROM "accounting"."faktur_pajak"
       WHERE tenant_id = ${tenantId}
       AND EXTRACT(YEAR FROM tanggal_faktur) = EXTRACT(YEAR FROM NOW())
@@ -135,10 +136,10 @@ export const registerNSFP = async (req: Request, res: Response, next: NextFuncti
       });
     }
 
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       INSERT INTO "accounting"."nsfp_allocation"
       (tenant_id, nomor_awal, nomor_akhir, tahun_pajak, created_by, created_at)
-      VALUES (${tenantId}, '${nomorAwal}', '${nomorAkhir}', ${tahunPajak}, ${userId}, NOW())
+      VALUES (${tenantId}, ${nomorAwal}, ${nomorAkhir}, ${tahunPajak}, ${userId}, NOW())
     `).catch(() => {
       // Table might not exist, create it
       console.log('NSFP table not available');
@@ -163,15 +164,32 @@ export const getFakturKeluaran = async (req: Request, res: Response, next: NextF
     const tenantId = req.tenantId!;
     const { masa, tahun, status, page = 1, limit = 20 } = req.query;
 
-    let whereClause = `WHERE fp.tenant_id = ${tenantId} AND fp.jenis = 'keluaran'`;
+    const normalizedMonth = masa ? Number(masa) : null;
+    const normalizedYear = tahun ? Number(tahun) : null;
+    const normalizedPage = Math.max(1, Number(page) || 1);
+    const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
+    const allowedStatuses = new Set(['draft', 'approved', 'uploaded', 'rejected']);
+    if (
+      (normalizedMonth !== null && (!Number.isInteger(normalizedMonth) || normalizedMonth < 1 || normalizedMonth > 12)) ||
+      (normalizedYear !== null && (!Number.isInteger(normalizedYear) || normalizedYear < 2000 || normalizedYear > 2200)) ||
+      (status && !allowedStatuses.has(String(status)))
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Faktur filters are invalid' }
+      });
+    }
+    const filters: Prisma.Sql[] = [
+      Prisma.sql`fp.tenant_id = ${tenantId}`,
+      Prisma.sql`fp.jenis = 'keluaran'`
+    ];
+    if (normalizedMonth !== null) filters.push(Prisma.sql`EXTRACT(MONTH FROM fp.tanggal_faktur) = ${normalizedMonth}`);
+    if (normalizedYear !== null) filters.push(Prisma.sql`EXTRACT(YEAR FROM fp.tanggal_faktur) = ${normalizedYear}`);
+    if (status) filters.push(Prisma.sql`fp.status = ${String(status)}`);
+    const whereClause = Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}`;
+    const offset = (normalizedPage - 1) * normalizedLimit;
 
-    if (masa) whereClause += ` AND EXTRACT(MONTH FROM fp.tanggal_faktur) = ${masa}`;
-    if (tahun) whereClause += ` AND EXTRACT(YEAR FROM fp.tanggal_faktur) = ${tahun}`;
-    if (status) whereClause += ` AND fp.status = '${status}'`;
-
-    const offset = (Number(page) - 1) * Number(limit);
-
-    const fakturs: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const fakturs: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         fp.*,
         u.name as created_by_name
@@ -179,15 +197,15 @@ export const getFakturKeluaran = async (req: Request, res: Response, next: NextF
       LEFT JOIN "users" u ON fp.created_by = u.id
       ${whereClause}
       ORDER BY fp.tanggal_faktur DESC
-      LIMIT ${limit} OFFSET ${offset}
+      LIMIT ${normalizedLimit} OFFSET ${offset}
     `).catch(() => []);
 
-    const total: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const total: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT COUNT(*) as count FROM "accounting"."faktur_pajak" fp ${whereClause}
     `).catch(() => [{ count: 0 }]);
 
     // Calculate summary
-    const summary: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const summary: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         COALESCE(SUM(dpp), 0) as total_dpp,
         COALESCE(SUM(ppn), 0) as total_ppn,
@@ -206,10 +224,10 @@ export const getFakturKeluaran = async (req: Request, res: Response, next: NextF
           jumlahFaktur: Number(summary[0]?.jumlah_faktur || 0)
         },
         pagination: {
-          page: Number(page),
-          limit: Number(limit),
+          page: normalizedPage,
+          limit: normalizedLimit,
           total: Number(total[0]?.count || 0),
-          totalPages: Math.ceil(Number(total[0]?.count || 0) / Number(limit))
+          totalPages: Math.ceil(Number(total[0]?.count || 0) / normalizedLimit)
         }
       }
     });
@@ -272,7 +290,7 @@ export const createFakturKeluaran = async (req: Request, res: Response, next: Ne
       }
     } else if (transactionId) {
       // Get items from transaction
-      const txItems: any[] = await prisma.$queryRawUnsafe<any[]>(`
+      const txItems: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT ti.*, p.name as product_name
         FROM "transaction_items" ti
         JOIN "products" p ON ti.product_id = p.id
@@ -303,15 +321,15 @@ export const createFakturKeluaran = async (req: Request, res: Response, next: Ne
     // Create faktur record
     const tanggalFaktur = new Date();
 
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       INSERT INTO "accounting"."faktur_pajak"
       (tenant_id, no_faktur, tanggal_faktur, jenis, kode_transaksi,
        npwp_lawan, nama_lawan, alamat_lawan, dpp, ppn, ppnbm,
        status, items, transaction_id, created_by, created_at)
       VALUES
-      (${tenantId}, '${noFaktur}', '${tanggalFaktur.toISOString()}', 'keluaran', '${kodeTransaksi}',
-       '${npwpPembeli}', '${namaPembeli}', '${alamatPembeli || ''}', ${totalDPP}, ${totalPPN}, 0,
-       'draft', '${JSON.stringify(fakturItems)}', ${transactionId || 'NULL'}, ${userId}, NOW())
+      (${tenantId}, ${noFaktur}, ${tanggalFaktur.toISOString()}, 'keluaran', ${kodeTransaksi},
+       ${npwpPembeli}, ${namaPembeli}, ${alamatPembeli || ''}, ${totalDPP}, ${totalPPN}, 0,
+       'draft', ${JSON.stringify(fakturItems)}, ${transactionId ? Number(transactionId) : null}, ${userId}, NOW())
     `).catch(async () => {
       // Create table if not exists
       await createFakturTable();
@@ -347,7 +365,7 @@ export const generateFakturFromAR = async (req: Request, res: Response, next: Ne
     const { arId } = req.params;
 
     // Get AR invoice details
-    const ar: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const ar: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT ar.*, c.name as customer_name, c.npwp, c.address
       FROM "accounting"."accounts_receivable" ar
       LEFT JOIN "customers" c ON ar.customer_id = c.id
@@ -371,14 +389,14 @@ export const generateFakturFromAR = async (req: Request, res: Response, next: Ne
     // Get next NSFP
     const noFaktur = await getNextNSFP(tenantId);
 
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       INSERT INTO "accounting"."faktur_pajak"
       (tenant_id, no_faktur, tanggal_faktur, jenis, kode_transaksi,
        npwp_lawan, nama_lawan, alamat_lawan, dpp, ppn, ppnbm,
        status, ar_id, created_by, created_at)
       VALUES
-      (${tenantId}, '${noFaktur}', NOW(), 'keluaran', '01',
-       '${invoice.npwp || '000000000000000'}', '${invoice.customer_name}', '${invoice.address || ''}',
+      (${tenantId}, ${noFaktur}, NOW(), 'keluaran', '01',
+       ${invoice.npwp || '000000000000000'}, ${invoice.customer_name}, ${invoice.address || ''},
        ${dpp}, ${ppn}, 0, 'draft', ${arId}, ${userId}, NOW())
     `).catch(() => {});
 
@@ -409,24 +427,41 @@ export const getFakturMasukan = async (req: Request, res: Response, next: NextFu
     const tenantId = req.tenantId!;
     const { masa, tahun, status, page = 1, limit = 20 } = req.query;
 
-    let whereClause = `WHERE fp.tenant_id = ${tenantId} AND fp.jenis = 'masukan'`;
+    const normalizedMonth = masa ? Number(masa) : null;
+    const normalizedYear = tahun ? Number(tahun) : null;
+    const normalizedPage = Math.max(1, Number(page) || 1);
+    const normalizedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
+    const allowedStatuses = new Set(['draft', 'approved', 'uploaded', 'rejected']);
+    if (
+      (normalizedMonth !== null && (!Number.isInteger(normalizedMonth) || normalizedMonth < 1 || normalizedMonth > 12)) ||
+      (normalizedYear !== null && (!Number.isInteger(normalizedYear) || normalizedYear < 2000 || normalizedYear > 2200)) ||
+      (status && !allowedStatuses.has(String(status)))
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Faktur filters are invalid' }
+      });
+    }
+    const filters: Prisma.Sql[] = [
+      Prisma.sql`fp.tenant_id = ${tenantId}`,
+      Prisma.sql`fp.jenis = 'masukan'`
+    ];
+    if (normalizedMonth !== null) filters.push(Prisma.sql`EXTRACT(MONTH FROM fp.tanggal_faktur) = ${normalizedMonth}`);
+    if (normalizedYear !== null) filters.push(Prisma.sql`EXTRACT(YEAR FROM fp.tanggal_faktur) = ${normalizedYear}`);
+    if (status) filters.push(Prisma.sql`fp.status = ${String(status)}`);
+    const whereClause = Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}`;
+    const offset = (normalizedPage - 1) * normalizedLimit;
 
-    if (masa) whereClause += ` AND EXTRACT(MONTH FROM fp.tanggal_faktur) = ${masa}`;
-    if (tahun) whereClause += ` AND EXTRACT(YEAR FROM fp.tanggal_faktur) = ${tahun}`;
-    if (status) whereClause += ` AND fp.status = '${status}'`;
-
-    const offset = (Number(page) - 1) * Number(limit);
-
-    const fakturs: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const fakturs: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT fp.*, u.name as created_by_name
       FROM "accounting"."faktur_pajak" fp
       LEFT JOIN "users" u ON fp.created_by = u.id
       ${whereClause}
       ORDER BY fp.tanggal_faktur DESC
-      LIMIT ${limit} OFFSET ${offset}
+      LIMIT ${normalizedLimit} OFFSET ${offset}
     `).catch(() => []);
 
-    const summary: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const summary: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         COALESCE(SUM(dpp), 0) as total_dpp,
         COALESCE(SUM(ppn), 0) as total_ppn,
@@ -488,9 +523,9 @@ export const inputFakturMasukan = async (req: Request, res: Response, next: Next
     }
 
     // Check for duplicate
-    const existing: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const existing: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT id FROM "accounting"."faktur_pajak"
-      WHERE tenant_id = ${tenantId} AND no_faktur = '${noFaktur}' AND jenis = 'masukan'
+      WHERE tenant_id = ${tenantId} AND no_faktur = ${noFaktur} AND jenis = 'masukan'
     `).catch(() => []);
 
     if (existing.length > 0) {
@@ -500,15 +535,15 @@ export const inputFakturMasukan = async (req: Request, res: Response, next: Next
       });
     }
 
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       INSERT INTO "accounting"."faktur_pajak"
       (tenant_id, no_faktur, tanggal_faktur, jenis, kode_transaksi,
        npwp_lawan, nama_lawan, alamat_lawan, dpp, ppn, ppnbm,
        status, ap_id, created_by, created_at)
       VALUES
-      (${tenantId}, '${noFaktur}', '${tanggalFaktur}', 'masukan', '01',
-       '${npwpPenjual}', '${namaPenjual}', '${alamatPenjual || ''}',
-       ${dpp}, ${ppn}, 0, 'draft', ${apId || 'NULL'}, ${userId}, NOW())
+      (${tenantId}, ${noFaktur}, ${tanggalFaktur}, 'masukan', '01',
+       ${npwpPenjual}, ${namaPenjual}, ${alamatPenjual || ''},
+       ${dpp}, ${ppn}, 0, 'draft', ${apId ? Number(apId) : null}, ${userId}, NOW())
     `).catch(() => {});
 
     res.status(201).json({
@@ -533,7 +568,7 @@ export const getPPhSummary = async (req: Request, res: Response, next: NextFunct
     const tahunFilter = tahun || new Date().getFullYear();
     const masaFilter = masa ? `AND EXTRACT(MONTH FROM tanggal) = ${masa}` : '';
 
-    const summary: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const summary: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         jenis,
         COUNT(*) as jumlah,
@@ -627,14 +662,14 @@ export const createPPh = async (req: Request, res: Response, next: NextFunction)
     // Generate bukti potong number
     const noBuktiPotong = await generateBuktiPotongNumber(tenantId, jenis);
 
-    await prisma.$executeRawUnsafe(`
+    await prisma.$executeRaw(Prisma.sql`
       INSERT INTO "accounting"."pph_potput"
       (tenant_id, jenis, tanggal, npwp_dipotong, nama_dipotong, alamat_dipotong,
        penghasilan_bruto, tarif, pph_terutang, no_bukti_potong, kode_objek_pajak,
        status, created_by, created_at)
       VALUES
-      (${tenantId}, '${jenis}', '${tanggal}', '${npwpDipotong}', '${namaDipotong}', '${alamatDipotong || ''}',
-       ${penghasilanBruto}, ${tarif}, ${pphTerutang}, '${noBuktiPotong}', '${kodeObjekPajak || ''}',
+      (${tenantId}, ${jenis}, ${tanggal}, ${npwpDipotong}, ${namaDipotong}, ${alamatDipotong || ''},
+       ${penghasilanBruto}, ${tarif}, ${pphTerutang}, ${noBuktiPotong}, ${kodeObjekPajak || ''},
        'draft', ${userId}, NOW())
     `).catch(() => {});
 
@@ -672,7 +707,7 @@ export const getSPTMasaPPN = async (req: Request, res: Response, next: NextFunct
     }
 
     // Get Faktur Keluaran (PPN Keluaran)
-    const keluaran: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const keluaran: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         COALESCE(SUM(dpp), 0) as total_dpp,
         COALESCE(SUM(ppn), 0) as total_ppn,
@@ -686,7 +721,7 @@ export const getSPTMasaPPN = async (req: Request, res: Response, next: NextFunct
     `).catch(() => [{ total_dpp: 0, total_ppn: 0, jumlah: 0 }]);
 
     // Get Faktur Masukan (PPN Masukan)
-    const masukan: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const masukan: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT
         COALESCE(SUM(dpp), 0) as total_dpp,
         COALESCE(SUM(ppn), 0) as total_ppn,
@@ -738,11 +773,11 @@ export const exportEFakturCSV = async (req: Request, res: Response, next: NextFu
     const tenantId = req.tenantId!;
     const { masa, tahun, jenis = 'keluaran' } = req.query;
 
-    const fakturs: any[] = await prisma.$queryRawUnsafe<any[]>(`
+    const fakturs: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT *
       FROM "accounting"."faktur_pajak"
       WHERE tenant_id = ${tenantId}
-      AND jenis = '${jenis}'
+      AND jenis = ${jenis}
       AND EXTRACT(MONTH FROM tanggal_faktur) = ${masa}
       AND EXTRACT(YEAR FROM tanggal_faktur) = ${tahun}
       ORDER BY no_faktur
@@ -887,7 +922,7 @@ function calculateRemainingNSFP(allocations: any[], used: number): number {
 
 async function getNextNSFP(tenantId: number): Promise<string> {
   // Get current allocation
-  const alloc: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const alloc: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT * FROM "accounting"."nsfp_allocation"
     WHERE tenant_id = ${tenantId}
     AND tahun_pajak = EXTRACT(YEAR FROM NOW())
@@ -904,7 +939,7 @@ async function getNextNSFP(tenantId: number): Promise<string> {
   }
 
   // Get last used number
-  const lastUsed: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const lastUsed: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT no_faktur FROM "accounting"."faktur_pajak"
     WHERE tenant_id = ${tenantId}
     AND jenis = 'keluaran'
@@ -928,10 +963,10 @@ async function generateBuktiPotongNumber(tenantId: number, jenis: string): Promi
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
 
-  const count: any[] = await prisma.$queryRawUnsafe<any[]>(`
+  const count: any[] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT COUNT(*) as count FROM "accounting"."pph_potput"
     WHERE tenant_id = ${tenantId}
-    AND jenis = '${jenis}'
+    AND jenis = ${jenis}
     AND EXTRACT(YEAR FROM tanggal) = ${year}
     AND EXTRACT(MONTH FROM tanggal) = ${date.getMonth() + 1}
   `).catch(() => [{ count: 0 }]);
@@ -941,7 +976,7 @@ async function generateBuktiPotongNumber(tenantId: number, jenis: string): Promi
 }
 
 async function createFakturTable(): Promise<void> {
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE TABLE IF NOT EXISTS "accounting"."faktur_pajak" (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER NOT NULL,
@@ -966,7 +1001,7 @@ async function createFakturTable(): Promise<void> {
     )
   `).catch(() => {});
 
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE TABLE IF NOT EXISTS "accounting"."pph_potput" (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER NOT NULL,
@@ -986,7 +1021,7 @@ async function createFakturTable(): Promise<void> {
     )
   `).catch(() => {});
 
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE TABLE IF NOT EXISTS "accounting"."nsfp_allocation" (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER NOT NULL,

@@ -349,7 +349,7 @@ async function exchangeCodeForTokens(platform: string, code: string): Promise<an
       username: data.username || data.name
     };
   } catch (error: any) {
-    console.error(`[OAuth] Token exchange error for ${platform}:`, error);
+    console.error('[OAuth] Token exchange error:', { platform, error });
     return { success: false, error: error.message };
   }
 }
@@ -389,7 +389,7 @@ async function refreshAccessToken(platform: string, refreshToken: string): Promi
       expires_in: data.expires_in || 3600
     };
   } catch (error: any) {
-    console.error(`[OAuth] Token refresh error for ${platform}:`, error);
+    console.error('[OAuth] Token refresh error:', { platform, error });
     return { success: false, error: error.message };
   }
 }

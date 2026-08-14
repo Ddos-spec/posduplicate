@@ -31,7 +31,6 @@ import {
   type WACrmStats,
 } from '../../services/medsosPostsService';
 import { getMyCommerSocialIntegrationHub, type ManagedIntegrationConnector } from '../../services/myCommerSocialIntegrations';
-import { replyTemplates } from '../../data/omnichannelMock';
 import { BrandLogo } from './BrandLogo';
 
 type FilterTab = 'all' | 'unread' | 'pending' | 'escalation';
@@ -522,13 +521,6 @@ export default function WaInboxWorkspace({
     ];
   }, [selectedConversation]);
 
-  const templateMatches = useMemo(() => {
-    return replyTemplates.filter((template) => {
-      const channel = template.channel.toLowerCase();
-      return channel.includes('whatsapp') || channel.includes('reservation');
-    });
-  }, []);
-
   const handleSelectConversation = (conversation: WACrmConversation) => {
     shouldStickToBottomRef.current = true;
     setSelectedConversationId(conversation.id);
@@ -764,7 +756,7 @@ export default function WaInboxWorkspace({
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className={`text-[11px] uppercase tracking-[0.18em] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>WA Inbox</p>
-                <h2 className="text-lg font-bold">Queue & Response Desk</h2>
+                <h2 className="text-lg font-bold">Queue &amp; Response Desk</h2>
               </div>
               <div className="flex items-center gap-2">
                 {conversationRefreshing ? (
@@ -1064,18 +1056,6 @@ export default function WaInboxWorkspace({
               </div>
 
               <div className={`sticky bottom-0 z-[2] p-4 border-t backdrop-blur-sm shadow-[0_-10px_30px_rgba(15,23,42,0.06)] ${isDark ? 'bg-[#111318]/96 border-slate-700' : 'bg-white/95 border-gray-100'}`}>
-                <div className="mb-2 flex gap-2 overflow-x-auto whitespace-nowrap pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {templateMatches.slice(0, 3).map((template) => (
-                    <button
-                      key={template.id}
-                      type="button"
-                      onClick={() => setReply(template.preview)}
-                      className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? 'bg-slate-700 text-gray-200 hover:bg-slate-600' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
-                    >
-                      {template.title}
-                    </button>
-                  ))}
-                </div>
                 <div className={`flex items-center gap-2 rounded-[22px] border px-2 py-2 shadow-sm ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50/90 border-gray-200'}`}>
                   <button type="button" title="Lampirkan file (coming soon)" className="p-2 text-gray-400 hover:text-gray-600" disabled>
                     <Paperclip size={20} />

@@ -87,7 +87,7 @@ describe('Payroll-C3 official posting contracts', () => {
 
   test('deployment and DB acceptance include migration seventeen and official immutability proof', () => {
     expect(runner).toContain('20260813083000_p2_payroll_official_posting');
-    expect(verifier).toContain('Expected 17 suite migration ledger entries');
+    expect(verifier).toContain('Expected 20 suite migration ledger entries');
     expect(verifier).toContain('payroll_accounting_settings');
     expect(verifier).toContain('payroll_official_materializations');
     expect(verifier).toContain('payroll_official_postings');

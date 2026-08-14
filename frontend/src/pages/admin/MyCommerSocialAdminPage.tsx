@@ -779,7 +779,7 @@ export default function MyCommerSocialAdminPage() {
                 <div className="rounded-3xl border border-gray-200 p-5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Paket & pengaturan internal</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">Paket &amp; pengaturan internal</h3>
                       <p className="mt-1 text-sm text-gray-500">
                         Atur perbedaan tenant 500K vs 1JT dari limit internal. Isolasi social workspace tetap per tenant.
                       </p>

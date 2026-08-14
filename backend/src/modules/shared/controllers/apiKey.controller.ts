@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../../utils/prisma';
-import { generateApiKey } from '../../../utils/apiKeyGenerator';
+import { generateApiKey, hashApiKey } from '../../../utils/apiKeyGenerator';
 
 /**
  * Get ALL API keys for ALL tenants (Admin only)
@@ -8,7 +8,14 @@ import { generateApiKey } from '../../../utils/apiKeyGenerator';
 export const getAllApiKeys = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const apiKeys = await prisma.api_keys.findMany({
-      include: {
+      select: {
+        id: true,
+        tenant_id: true,
+        key_name: true,
+        is_active: true,
+        created_at: true,
+        last_used: true,
+        expires_at: true,
         tenants: {
           select: {
             id: true,
@@ -25,14 +32,19 @@ export const getAllApiKeys = async (_req: Request, res: Response, next: NextFunc
     res.json({
       success: true,
       data: apiKeys.map((apiKey) => {
-        const { tenants, ...rest } = apiKey;
         return {
-          ...rest,
-          tenant: tenants
+          id: apiKey.id,
+          tenant_id: apiKey.tenant_id,
+          key_name: apiKey.key_name,
+          is_active: apiKey.is_active,
+          created_at: apiKey.created_at,
+          last_used: apiKey.last_used,
+          expires_at: apiKey.expires_at,
+          tenant: apiKey.tenants
             ? {
-                id: tenants.id,
-                businessName: tenants.business_name,
-                email: tenants.email
+                id: apiKey.tenants.id,
+                businessName: apiKey.tenants.business_name,
+                email: apiKey.tenants.email
               }
             : null
         };
@@ -139,9 +151,7 @@ export const createApiKey = async (req: Request, res: Response, next: NextFuncti
 
     // Generate new API key
     const apiKey = generateApiKey();
-    // Store plain text as requested for easier integration/lookup by middleware
-    // Security note: Ideally this should be hashed, but current middleware uses findUnique lookup
-    const hashedKey = apiKey; 
+    const hashedKey = hashApiKey(apiKey);
 
     // Create API key record
     const apiKeyRecord = await prisma.api_keys.create({

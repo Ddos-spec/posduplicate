@@ -90,7 +90,7 @@ describe('P2.8 Appointments contracts', () => {
 
   test('suite deployment retains Appointments through migration seventeen', () => {
     expect(runner).toContain('20260813063000_p2_appointments_core');
-    expect(verifier).toContain('Expected 17 suite migration ledger entries');
+    expect(verifier).toContain('Expected 20 suite migration ledger entries');
     expect(verifier).toContain('service_appointment_types');
     expect(verifier).toContain('service_appointments');
     expect(verifier).toContain('service_appointment_events');

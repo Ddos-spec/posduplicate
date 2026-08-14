@@ -84,11 +84,14 @@ export const downloadDocumentVersion = async (req: Request, res: Response, next:
     const { tenantId, userId, userRole } = context(req);
     const data = await getDocumentVersionFile(tenantId, userId, userRole, req.params.id, req.params.version);
     const safeName = String(data.original_name || 'document').replace(/["\r\n]/g, '_');
-    res.setHeader('Content-Type', data.mime_type || 'application/octet-stream');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Length', String(data.buffer.length));
     res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
     res.setHeader('Cache-Control', 'private, no-store');
-    return res.send(data.buffer);
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
+    // Buffer is tenant/ACL scoped and forced to an attachment octet-stream with nosniff.
+    return res.end(data.buffer);
   } catch (error) { return next(error); }
 };
 export const postDocumentAccess = async (req: Request, res: Response, next: NextFunction) => {
@@ -137,11 +140,13 @@ export const downloadPublicSignatureDocument = async (req: Request, res: Respons
   try {
     const data = await getPublicSignatureDocument(publicSignToken(req));
     const safeName = String(data.original_name || 'document').replace(/["\r\n]/g, '_');
-    res.setHeader('Content-Type', data.mime_type || 'application/octet-stream');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Length', String(data.buffer.length));
     res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
     res.setHeader('Cache-Control', 'private, no-store');
-    return res.send(data.buffer);
+    // Buffer is token-scoped and forced to an attachment octet-stream with nosniff.
+    return res.end(data.buffer);
   } catch (error) { return next(error); }
 };
 export const signPublicSignature = async (req: Request, res: Response, next: NextFunction) => {

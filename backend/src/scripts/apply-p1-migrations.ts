@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { resolvePathWithin } from '../utils/pathSecurity';
 import crypto from 'crypto';
 import { Client } from 'pg';
 import dotenv from 'dotenv';
@@ -7,6 +8,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const MIGRATIONS = [
+  '20260121145000_create_trial_balance_view',
+  '20260728135000_add_webhook_events',
   '20260812103000_p1_revenue_core',
   '20260812112000_p1_supply_chain_core',
   '20260812130000_p1_procurement_rfq',
@@ -24,6 +27,7 @@ const MIGRATIONS = [
   '20260813073000_p2_payroll_calculation_runs',
   '20260813080000_p2_payroll_final_reconciliation',
   '20260813083000_p2_payroll_official_posting',
+  '20260815090000_harden_webhook_events',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081201;
@@ -32,9 +36,9 @@ const sha256 = (content: string) => crypto.createHash('sha256').update(content).
 
 const resolveMigrationFile = (migrationName: string) => {
   const candidates = [
-    path.resolve(process.cwd(), 'prisma', 'migrations', migrationName, 'migration.sql'),
-    path.resolve(__dirname, '..', '..', 'prisma', 'migrations', migrationName, 'migration.sql'),
-    path.resolve(__dirname, '..', '..', '..', 'prisma', 'migrations', migrationName, 'migration.sql'),
+    resolvePathWithin(path.resolve(process.cwd(), 'prisma', 'migrations'), migrationName, 'migration.sql'),
+    resolvePathWithin(path.resolve(__dirname, '..', '..', 'prisma', 'migrations'), migrationName, 'migration.sql'),
+    resolvePathWithin(path.resolve(__dirname, '..', '..', '..', 'prisma', 'migrations'), migrationName, 'migration.sql'),
   ];
   const found = candidates.find((candidate) => fs.existsSync(candidate));
   if (!found) throw new Error(`Migration SQL not found for ${migrationName}. Checked: ${candidates.join(', ')}`);

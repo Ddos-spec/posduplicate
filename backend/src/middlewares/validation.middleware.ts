@@ -49,17 +49,44 @@ export const validateRegister = [
   body('password')
     .isString()
     .notEmpty()
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters'),
+    .isLength({ min: 10, max: 128 })
+    .withMessage('Password must be between 10 and 128 characters'),
   body('name')
     .isString()
     .notEmpty()
     .withMessage('Name is required')
-    .trim(),
+    .trim()
+    .isLength({ max: 160 })
+    .withMessage('Name must be at most 160 characters'),
+  body('businessName')
+    .isString()
+    .notEmpty()
+    .withMessage('Business name is required')
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage('Business name must be at most 255 characters'),
+  body('roleId')
+    .not()
+    .exists()
+    .withMessage('Role is assigned by the server'),
+  body('tenantId')
+    .not()
+    .exists()
+    .withMessage('Tenant is created by the server'),
+  body('outletId')
+    .not()
+    .exists()
+    .withMessage('Outlet is assigned after registration'),
   body('phone')
     .optional()
     .isMobilePhone('any')
     .withMessage('Valid phone number is required'),
+  body('address')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Address must be at most 500 characters'),
   handleValidationErrors
 ];
 

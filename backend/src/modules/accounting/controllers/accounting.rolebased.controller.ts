@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import advancedForecast from '../../../services/advanced-forecasting.service';
 
@@ -559,29 +560,29 @@ async function getOwnerQuickStats(tenantId: number, outletId?: number) {
   const mtdStart = new Date(today.getFullYear(), today.getMonth(), 1);
   const ytdStart = new Date(today.getFullYear(), 0, 1);
 
-  const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+  const whereOutlet = outletId ? Prisma.sql`AND gl.outlet_id = ${outletId}` : Prisma.empty;
 
-  const stats: any[] = await prisma.$queryRawUnsafe(`
+  const stats: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       -- Today
-      SUM(CASE WHEN gl.transaction_date >= '${today.toISOString()}'
+      SUM(CASE WHEN gl.transaction_date >= ${today.toISOString()}
           AND coa.account_type = 'REVENUE'
           THEN gl.credit_amount - gl.debit_amount ELSE 0 END) as today_revenue,
-      SUM(CASE WHEN gl.transaction_date >= '${today.toISOString()}'
+      SUM(CASE WHEN gl.transaction_date >= ${today.toISOString()}
           AND coa.account_type IN ('EXPENSE', 'COGS')
           THEN gl.debit_amount - gl.credit_amount ELSE 0 END) as today_expense,
       -- MTD
-      SUM(CASE WHEN gl.transaction_date >= '${mtdStart.toISOString()}'
+      SUM(CASE WHEN gl.transaction_date >= ${mtdStart.toISOString()}
           AND coa.account_type = 'REVENUE'
           THEN gl.credit_amount - gl.debit_amount ELSE 0 END) as mtd_revenue,
-      SUM(CASE WHEN gl.transaction_date >= '${mtdStart.toISOString()}'
+      SUM(CASE WHEN gl.transaction_date >= ${mtdStart.toISOString()}
           AND coa.account_type IN ('EXPENSE', 'COGS')
           THEN gl.debit_amount - gl.credit_amount ELSE 0 END) as mtd_expense,
       -- YTD
-      SUM(CASE WHEN gl.transaction_date >= '${ytdStart.toISOString()}'
+      SUM(CASE WHEN gl.transaction_date >= ${ytdStart.toISOString()}
           AND coa.account_type = 'REVENUE'
           THEN gl.credit_amount - gl.debit_amount ELSE 0 END) as ytd_revenue,
-      SUM(CASE WHEN gl.transaction_date >= '${ytdStart.toISOString()}'
+      SUM(CASE WHEN gl.transaction_date >= ${ytdStart.toISOString()}
           AND coa.account_type IN ('EXPENSE', 'COGS')
           THEN gl.debit_amount - gl.credit_amount ELSE 0 END) as ytd_expense
     FROM "accounting"."general_ledger" gl
@@ -590,7 +591,7 @@ async function getOwnerQuickStats(tenantId: number, outletId?: number) {
     ${whereOutlet}
   `);
 
-  const arAp: any[] = await prisma.$queryRawUnsafe(`
+  const arAp: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       (SELECT COALESCE(SUM(balance), 0) FROM "accounting"."accounts_receivable"
        WHERE tenant_id = ${tenantId} AND status != 'paid') as ar_balance,
@@ -598,7 +599,7 @@ async function getOwnerQuickStats(tenantId: number, outletId?: number) {
        WHERE tenant_id = ${tenantId} AND status != 'paid') as ap_balance
   `);
 
-  const cashBalance: any[] = await prisma.$queryRawUnsafe(`
+  const cashBalance: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT COALESCE(SUM(gl.debit_amount - gl.credit_amount), 0) as cash
     FROM "accounting"."general_ledger" gl
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
@@ -635,29 +636,29 @@ async function getTopPerformers(tenantId: number, outletId?: number) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const whereOutlet = outletId
-    ? `AND t.outlet_id = ${outletId}`
-    : `AND t.outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
+    ? Prisma.sql`AND t.outlet_id = ${outletId}`
+    : Prisma.sql`AND t.outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
 
-  const topProducts: any[] = await prisma.$queryRawUnsafe(`
+  const topProducts: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT p.name, SUM(ti.quantity) as qty, SUM(ti.subtotal) as revenue
     FROM "transaction_items" ti
     JOIN "transactions" t ON ti.transaction_id = t.id
     JOIN "products" p ON ti.product_id = p.id
     WHERE t.status = 'completed'
     ${whereOutlet}
-    AND t.created_at >= '${thirtyDaysAgo.toISOString()}'
+    AND t.created_at >= ${thirtyDaysAgo.toISOString()}
     GROUP BY p.id, p.name
     ORDER BY revenue DESC
     LIMIT 5
   `);
 
-  const topOutlets: any[] = await prisma.$queryRawUnsafe(`
+  const topOutlets: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT o.name, SUM(t.total) as revenue, COUNT(*) as transactions
     FROM "transactions" t
     JOIN "outlets" o ON t.outlet_id = o.id
     WHERE t.status = 'completed'
     AND o.tenant_id = ${tenantId}
-    AND t.created_at >= '${thirtyDaysAgo.toISOString()}'
+    AND t.created_at >= ${thirtyDaysAgo.toISOString()}
     GROUP BY o.id, o.name
     ORDER BY revenue DESC
     LIMIT 5
@@ -681,7 +682,7 @@ async function getOwnerAlerts(tenantId: number) {
   const alerts: any[] = [];
 
   // Check overdue AR
-  const overdueAR: any[] = await prisma.$queryRawUnsafe(`
+  const overdueAR: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT COUNT(*) as count, COALESCE(SUM(balance), 0) as total
     FROM "accounting"."accounts_receivable"
     WHERE tenant_id = ${tenantId} AND status != 'paid' AND due_date < NOW()
@@ -696,7 +697,7 @@ async function getOwnerAlerts(tenantId: number) {
   }
 
   // Check overdue AP
-  const overdueAP: any[] = await prisma.$queryRawUnsafe(`
+  const overdueAP: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT COUNT(*) as count, COALESCE(SUM(balance), 0) as total
     FROM "accounting"."accounts_payable"
     WHERE tenant_id = ${tenantId} AND status != 'paid' AND due_date < NOW()
@@ -711,7 +712,7 @@ async function getOwnerAlerts(tenantId: number) {
   }
 
   // Check low inventory
-  const lowStock: any[] = await prisma.$queryRawUnsafe(`
+  const lowStock: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT COUNT(*) as count
     FROM "inventory"
     WHERE is_active = true AND alert = true AND current_stock <= stock_alert
@@ -784,7 +785,7 @@ async function getReconciliationStatus(tenantId: number, outletId?: number) {
     orderBy: { reconciled_at: 'desc' }
   });
 
-  const unreconciledTotal: any[] = await prisma.$queryRawUnsafe(`
+  const unreconciledTotal: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT COALESCE(SUM(ABS(difference)), 0) as total
     FROM "accounting"."bank_reconciliations"
     WHERE tenant_id = ${tenantId} AND status = 'pending'
@@ -868,10 +869,10 @@ async function getProductionStats(tenantId: number, outletId?: number) {
 
 async function getRawMaterialStatus(tenantId: number, outletId?: number) {
   const whereOutlet = outletId
-    ? `AND outlet_id = ${outletId}`
-    : `AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
+    ? Prisma.sql`AND outlet_id = ${outletId}`
+    : Prisma.sql`AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
 
-  const stats: any[] = await prisma.$queryRawUnsafe(`
+  const stats: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       COALESCE(SUM(current_stock * cost_amount), 0) as total_value,
       COUNT(CASE WHEN alert = true AND current_stock <= stock_alert THEN 1 END) as low_stock
@@ -907,13 +908,13 @@ async function getPurchasingStats(tenantId: number, outletId?: number) {
   const mtdStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
   const whereOutlet = outletId
-    ? `AND outlet_id = ${outletId}`
-    : `AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
+    ? Prisma.sql`AND outlet_id = ${outletId}`
+    : Prisma.sql`AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
 
-  const stats: any[] = await prisma.$queryRawUnsafe(`
+  const stats: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
-      COALESCE(SUM(CASE WHEN created_at >= '${today.toISOString()}' THEN total_cost ELSE 0 END), 0) as today,
-      COALESCE(SUM(CASE WHEN created_at >= '${mtdStart.toISOString()}' THEN total_cost ELSE 0 END), 0) as mtd
+      COALESCE(SUM(CASE WHEN created_at >= ${today.toISOString()} THEN total_cost ELSE 0 END), 0) as today,
+      COALESCE(SUM(CASE WHEN created_at >= ${mtdStart.toISOString()} THEN total_cost ELSE 0 END), 0) as mtd
     FROM "stock_movements"
     WHERE type = 'IN' ${whereOutlet}
   `);
@@ -928,10 +929,10 @@ async function getPurchasingStats(tenantId: number, outletId?: number) {
 
 async function getInventoryStatus(tenantId: number, outletId?: number) {
   const whereOutlet = outletId
-    ? `AND outlet_id = ${outletId}`
-    : `AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
+    ? Prisma.sql`AND outlet_id = ${outletId}`
+    : Prisma.sql`AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
 
-  const stats: any[] = await prisma.$queryRawUnsafe(`
+  const stats: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       COALESCE(SUM(current_stock * cost_amount), 0) as total_value,
       COUNT(*) as total_items,
@@ -956,10 +957,10 @@ async function getAPStatus(tenantId: number) {
   const thirtyDaysLater = new Date();
   thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
 
-  const stats: any[] = await prisma.$queryRawUnsafe(`
+  const stats: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       COALESCE(SUM(balance), 0) as total,
-      COALESCE(SUM(CASE WHEN due_date <= '${thirtyDaysLater.toISOString()}' AND due_date > NOW() THEN balance ELSE 0 END), 0) as due_soon,
+      COALESCE(SUM(CASE WHEN due_date <= ${thirtyDaysLater.toISOString()} AND due_date > NOW() THEN balance ELSE 0 END), 0) as due_soon,
       COALESCE(SUM(CASE WHEN due_date < NOW() THEN balance ELSE 0 END), 0) as overdue,
       COUNT(CASE WHEN due_date < NOW() THEN 1 END) as overdue_count
     FROM "accounting"."accounts_payable"
@@ -996,13 +997,13 @@ async function getTodaySales(tenantId: number, outletId: number) {
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  const stats: any[] = await prisma.$queryRawUnsafe(`
+  const stats: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
-      COALESCE(SUM(CASE WHEN created_at >= '${today.toISOString()}' AND status = 'completed' THEN total ELSE 0 END), 0) as today_total,
-      COUNT(CASE WHEN created_at >= '${today.toISOString()}' AND status = 'completed' THEN 1 END) as today_count,
-      COALESCE(SUM(CASE WHEN created_at >= '${yesterday.toISOString()}' AND created_at < '${today.toISOString()}' AND status = 'completed' THEN total ELSE 0 END), 0) as yesterday_total,
-      COUNT(CASE WHEN created_at >= '${today.toISOString()}' AND status = 'voided' THEN 1 END) as voided,
-      COALESCE(SUM(CASE WHEN created_at >= '${today.toISOString()}' AND status = 'refunded' THEN total ELSE 0 END), 0) as refunded
+      COALESCE(SUM(CASE WHEN created_at >= ${today.toISOString()} AND status = 'completed' THEN total ELSE 0 END), 0) as today_total,
+      COUNT(CASE WHEN created_at >= ${today.toISOString()} AND status = 'completed' THEN 1 END) as today_count,
+      COALESCE(SUM(CASE WHEN created_at >= ${yesterday.toISOString()} AND created_at < ${today.toISOString()} AND status = 'completed' THEN total ELSE 0 END), 0) as yesterday_total,
+      COUNT(CASE WHEN created_at >= ${today.toISOString()} AND status = 'voided' THEN 1 END) as voided,
+      COALESCE(SUM(CASE WHEN created_at >= ${today.toISOString()} AND status = 'refunded' THEN total ELSE 0 END), 0) as refunded
     FROM "transactions"
     WHERE outlet_id = ${outletId}
   `);
@@ -1039,7 +1040,7 @@ async function getPaymentMethodBreakdown(tenantId: number, outletId: number) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const breakdown: any[] = await prisma.$queryRawUnsafe(`
+  const breakdown: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       payment_method as method,
       COUNT(*) as count,
@@ -1047,7 +1048,7 @@ async function getPaymentMethodBreakdown(tenantId: number, outletId: number) {
     FROM "transactions"
     WHERE outlet_id = ${outletId}
     AND status = 'completed'
-    AND created_at >= '${today.toISOString()}'
+    AND created_at >= ${today.toISOString()}
     GROUP BY payment_method
   `);
 
@@ -1086,15 +1087,15 @@ async function getRetailSalesStats(tenantId: number, outletId?: number) {
   const ytdStart = new Date(today.getFullYear(), 0, 1);
 
   const whereOutlet = outletId
-    ? `AND outlet_id = ${outletId}`
-    : `AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
+    ? Prisma.sql`AND outlet_id = ${outletId}`
+    : Prisma.sql`AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
 
-  const stats: any[] = await prisma.$queryRawUnsafe(`
+  const stats: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
-      COALESCE(SUM(CASE WHEN created_at >= '${today.toISOString()}' THEN total ELSE 0 END), 0) as today,
-      COALESCE(SUM(CASE WHEN created_at >= '${mtdStart.toISOString()}' THEN total ELSE 0 END), 0) as mtd,
-      COALESCE(SUM(CASE WHEN created_at >= '${ytdStart.toISOString()}' THEN total ELSE 0 END), 0) as ytd,
-      COUNT(CASE WHEN created_at >= '${mtdStart.toISOString()}' THEN 1 END) as transaction_count
+      COALESCE(SUM(CASE WHEN created_at >= ${today.toISOString()} THEN total ELSE 0 END), 0) as today,
+      COALESCE(SUM(CASE WHEN created_at >= ${mtdStart.toISOString()} THEN total ELSE 0 END), 0) as mtd,
+      COALESCE(SUM(CASE WHEN created_at >= ${ytdStart.toISOString()} THEN total ELSE 0 END), 0) as ytd,
+      COUNT(CASE WHEN created_at >= ${mtdStart.toISOString()} THEN 1 END) as transaction_count
     FROM "transactions"
     WHERE status = 'completed' ${whereOutlet}
   `);
@@ -1116,10 +1117,10 @@ async function getRetailSalesStats(tenantId: number, outletId?: number) {
 
 async function getRetailInventoryAlerts(tenantId: number, outletId?: number) {
   const whereOutlet = outletId
-    ? `AND outlet_id = ${outletId}`
-    : `AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
+    ? Prisma.sql`AND outlet_id = ${outletId}`
+    : Prisma.sql`AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
 
-  const stats: any[] = await prisma.$queryRawUnsafe(`
+  const stats: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       COUNT(CASE WHEN current_stock <= stock_alert AND current_stock > 0 THEN 1 END) as low_stock,
       COUNT(CASE WHEN current_stock = 0 THEN 1 END) as out_of_stock,

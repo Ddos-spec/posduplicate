@@ -9,18 +9,23 @@ import {
   applyPromotion
 } from '../controllers/promotion.controller';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware, ownerOnly } from '../../../middlewares/tenant.middleware';
+import {
+  ownerOnly,
+  requireTenantContext,
+  tenantMiddleware,
+  tenantOutletScopeMiddleware
+} from '../../../middlewares/tenant.middleware';
 
 const router = Router();
 
-// Public route for getting applicable promotions
+// Applicable promotion lookup requires an authenticated tenant context.
 /**
  * @swagger
  * /api/promotions/applicable:
  *   post:
  *     tags: [Promotions]
  *     summary: Get applicable promotions
- *     description: Public endpoint to check applicable promotions
+ *     description: Authenticated endpoint to check applicable promotions
  *     requestBody:
  *       required: false
  *       content:
@@ -35,10 +40,9 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/Success'
  */
-router.post('/applicable', getApplicablePromotions);
-
 // Protected routes
-router.use(authMiddleware, tenantMiddleware);
+router.use(authMiddleware, tenantMiddleware, requireTenantContext, tenantOutletScopeMiddleware);
+router.post('/applicable', getApplicablePromotions);
 
 /**
  * @swagger

@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import prisma from '../../../utils/prisma';
 import bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
 import { createActivityLog } from '../../shared/controllers/activity-log.controller';
 import { normalizeEmailIdentity } from '../../../utils/email';
 
@@ -137,7 +137,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
  */
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, password, role, outletId, sendEmailNotification } = req.body;
+    const { name, password, role, outletId, sendEmailNotification = false } = req.body;
     const email = normalizeEmailIdentity(req.body.email);
     const tenantId = req.tenantId!;
 

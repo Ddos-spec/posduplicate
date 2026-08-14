@@ -785,6 +785,25 @@ model integrations {
   @@schema("public")
 }
 
+model webhook_events {
+  id               Int      @id @default(autoincrement())
+  idempotency_key  String   @unique @db.VarChar(255)
+  integration_type String   @db.VarChar(50)
+  tenant_id        Int?
+  external_id      String   @db.VarChar(255)
+  payload_digest   String?  @db.VarChar(64)
+  event_status     String   @default("processing") @db.VarChar(20)
+  response_payload Json?
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  completed_at     DateTime? @db.Timestamptz(6)
+  expires_at       DateTime @db.Timestamptz(6)
+
+  @@index([tenant_id, integration_type], map: "idx_webhook_events_tenant_type")
+  @@index([expires_at], map: "idx_webhook_events_expires")
+  @@index([integration_type, tenant_id, external_id], map: "idx_webhook_events_integration_external")
+  @@schema("public")
+}
+
 model inventory {
   id                   Int                    @id @default(autoincrement())
   name                 String                 @db.VarChar(255)

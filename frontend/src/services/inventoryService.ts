@@ -47,9 +47,13 @@ export interface InventoryAlert {
 export interface ForecastData {
   day: string;
   date?: string;
-  usage: number;
+  usage: number | null;
   predicted: number;
   reason: string;
+  confidence?: number | null;
+  itemId?: number | null;
+  itemName?: string | null;
+  provenance?: 'database';
 }
 
 export interface PurchaseOrder {
@@ -108,49 +112,49 @@ export interface InventorySettings {
 export const inventoryService = {
   // Get all inventory items
   getAll: async (params?: { outlet_id?: number; category?: string; business_type?: string; status?: string; low_stock?: boolean }) => {
-    const response = await api.get('/fnb/inventory-module', { params });
+    const response = await api.get('/inventory-module', { params });
     return response.data;
   },
 
   // Get single item
   getById: async (id: number) => {
-    const response = await api.get(`/fnb/inventory-module/${id}`);
+    const response = await api.get(`/inventory-module/${id}`);
     return response.data;
   },
 
   // Create item
   create: async (data: Partial<InventoryItem>) => {
-    const response = await api.post('/fnb/inventory-module', data);
+    const response = await api.post('/inventory-module', data);
     return response.data;
   },
 
   // Update item
   update: async (id: number, data: Partial<InventoryItem>) => {
-    const response = await api.put(`/fnb/inventory-module/${id}`, data);
+    const response = await api.put(`/inventory-module/${id}`, data);
     return response.data;
   },
 
   // Delete item
   delete: async (id: number) => {
-    const response = await api.delete(`/fnb/inventory-module/${id}`);
+    const response = await api.delete(`/inventory-module/${id}`);
     return response.data;
   },
 
   // Adjust stock
   adjustStock: async (id: number, data: { quantity: number; type: 'in' | 'out'; notes?: string }) => {
-    const response = await api.post(`/fnb/inventory-module/${id}/adjust`, data);
+    const response = await api.post(`/inventory-module/${id}/adjust`, data);
     return response.data;
   },
 
   // Get stats for dashboard
   getStats: async (outletId?: number) => {
-    const response = await api.get('/fnb/inventory-module/stats', { params: { outlet_id: outletId } });
+    const response = await api.get('/inventory-module/stats', { params: { outlet_id: outletId } });
     return response.data;
   },
 
   // Get alerts
   getAlerts: async (outletId?: number, includeResolved?: boolean) => {
-    const response = await api.get('/fnb/inventory-module/alerts', {
+    const response = await api.get('/inventory-module/alerts', {
       params: { outlet_id: outletId, include_resolved: includeResolved }
     });
     return response.data;
@@ -158,7 +162,7 @@ export const inventoryService = {
 
   // Generate alerts
   generateAlerts: async (outletId?: number) => {
-    const response = await api.post('/fnb/inventory-module/alerts/generate', null, {
+    const response = await api.post('/inventory-module/alerts/generate', null, {
       params: { outlet_id: outletId }
     });
     return response.data;
@@ -166,13 +170,13 @@ export const inventoryService = {
 
   // Resolve alert
   resolveAlert: async (alertId: number) => {
-    const response = await api.put(`/fnb/inventory-module/alerts/${alertId}/resolve`);
+    const response = await api.put(`/inventory-module/alerts/${alertId}/resolve`);
     return response.data;
   },
 
   // Get forecast data
   getForecast: async (outletId?: number, days?: number) => {
-    const response = await api.get('/fnb/inventory-module/forecast', {
+    const response = await api.get('/inventory-module/forecast', {
       params: { outlet_id: outletId, days }
     });
     return response.data;
@@ -180,13 +184,13 @@ export const inventoryService = {
 
   // Get categories
   getCategories: async () => {
-    const response = await api.get('/fnb/inventory-module/categories');
+    const response = await api.get('/inventory-module/categories');
     return response.data;
   },
 
   // Get low stock items
   getLowStock: async (outletId?: number) => {
-    const response = await api.get('/fnb/inventory-module/low-stock', { params: { outlet_id: outletId } });
+    const response = await api.get('/inventory-module/low-stock', { params: { outlet_id: outletId } });
     return response.data;
   }
 };
@@ -195,49 +199,49 @@ export const inventoryService = {
 export const purchaseOrderService = {
   // Get all POs
   getAll: async (params?: { outlet_id?: number; status?: string; supplier_id?: number }) => {
-    const response = await api.get('/fnb/purchase-orders', { params });
+    const response = await api.get('/purchase-orders', { params });
     return response.data;
   },
 
   // Get single PO
   getById: async (id: number) => {
-    const response = await api.get(`/fnb/purchase-orders/${id}`);
+    const response = await api.get(`/purchase-orders/${id}`);
     return response.data;
   },
 
   // Create PO
   create: async (data: { outletId: number; supplierId?: number; expectedDate?: string; notes?: string; items: Array<{ inventoryId: number; quantity: number; unit: string; unitPrice: number }> }) => {
-    const response = await api.post('/fnb/purchase-orders', data);
+    const response = await api.post('/purchase-orders', data);
     return response.data;
   },
 
   // Update PO
   update: async (id: number, data: Partial<PurchaseOrder & { items?: Array<{ inventoryId: number; quantity: number; unit: string; unitPrice: number }> }>) => {
-    const response = await api.put(`/fnb/purchase-orders/${id}`, data);
+    const response = await api.put(`/purchase-orders/${id}`, data);
     return response.data;
   },
 
   // Update PO status
   updateStatus: async (id: number, status: string) => {
-    const response = await api.patch(`/fnb/purchase-orders/${id}/status`, { status });
+    const response = await api.patch(`/purchase-orders/${id}/status`, { status });
     return response.data;
   },
 
   // Receive PO items
   receiveItems: async (id: number, items: Array<{ itemId: number; receivedQty: number }>) => {
-    const response = await api.post(`/fnb/purchase-orders/${id}/receive`, { items });
+    const response = await api.post(`/purchase-orders/${id}/receive`, { items });
     return response.data;
   },
 
   // Delete PO
   delete: async (id: number) => {
-    const response = await api.delete(`/fnb/purchase-orders/${id}`);
+    const response = await api.delete(`/purchase-orders/${id}`);
     return response.data;
   },
 
   // Get PO suggestions
   getSuggestions: async (outletId?: number) => {
-    const response = await api.get('/fnb/purchase-orders/suggestions', { params: { outlet_id: outletId } });
+    const response = await api.get('/purchase-orders/suggestions', { params: { outlet_id: outletId } });
     return response.data;
   }
 };
@@ -246,25 +250,25 @@ export const purchaseOrderService = {
 export const inventorySettingsService = {
   // Get settings
   get: async (outletId: number) => {
-    const response = await api.get('/fnb/inventory-settings', { params: { outlet_id: outletId } });
+    const response = await api.get('/inventory-settings', { params: { outlet_id: outletId } });
     return response.data;
   },
 
   // Update settings
   update: async (outletId: number, data: Partial<InventorySettings>) => {
-    const response = await api.put('/fnb/inventory-settings', data, { params: { outlet_id: outletId } });
+    const response = await api.put('/inventory-settings', data, { params: { outlet_id: outletId } });
     return response.data;
   },
 
   // Get business type fields
   getBusinessTypeFields: async (businessType?: string) => {
-    const response = await api.get('/fnb/inventory-settings/business-types', { params: { business_type: businessType } });
+    const response = await api.get('/inventory-settings/business-types', { params: { business_type: businessType } });
     return response.data;
   },
 
   // Get inventory summary
   getSummary: async (outletId?: number) => {
-    const response = await api.get('/fnb/inventory-settings/summary', { params: { outlet_id: outletId } });
+    const response = await api.get('/inventory-settings/summary', { params: { outlet_id: outletId } });
     return response.data;
   }
 };

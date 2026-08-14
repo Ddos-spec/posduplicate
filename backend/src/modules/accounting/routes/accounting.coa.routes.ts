@@ -1,6 +1,6 @@
 import express from 'express';
 import { authMiddleware, roleMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { auditLogger } from '../../../middlewares/audit.middleware';
 import * as coaController from '../controllers/accounting.coa.controller';
 
@@ -11,7 +11,7 @@ const router = express.Router();
 // 2. Attach User/Tenant Context
 // 3. Audit Logging (for mutations)
 router.use(authMiddleware);
-router.use(tenantMiddleware);
+router.use(tenantMiddleware, requireTenantContext);
 router.use(auditLogger);
 
 // Routes

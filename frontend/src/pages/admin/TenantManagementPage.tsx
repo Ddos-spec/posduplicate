@@ -427,7 +427,7 @@ export default function TenantManagementPage() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Business</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modules</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan & Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan &amp; Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Limits</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expires At</th>
@@ -656,7 +656,7 @@ export default function TenantManagementPage() {
                   </section>
 
                   <section className="rounded-2xl border border-gray-200 p-5">
-                    <h3 className="font-semibold text-gray-900 mb-4">Billing & Capacity</h3>
+                    <h3 className="font-semibold text-gray-900 mb-4">Billing &amp; Capacity</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Subscription Plan</label>

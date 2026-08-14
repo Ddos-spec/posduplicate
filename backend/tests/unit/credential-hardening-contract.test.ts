@@ -17,7 +17,8 @@ describe('credential hardening contract', () => {
     expect(source).toContain('requireJwtSecret()');
     expect(source).not.toContain('fallback-secret');
     expect(source).not.toContain('passwordHash, ...userWithoutPassword');
-    expect(source).toContain('const userWithoutPassword = {');
+    expect(source).toContain('const serializeSafeUser = (user: any) => ({');
+    expect(source).not.toContain('invitation_token: user.invitation_token');
   });
 
   test('temporary credentials use cryptographic randomness and never enter logs', () => {
@@ -27,11 +28,12 @@ describe('credential hardening contract', () => {
     expect(source).toContain('emailSent: false');
   });
 
-  test('Zernio raw body is retained only for signature verification', () => {
+  test('webhook raw bytes are retained under the request-size limit for signature verification', () => {
     const server = read('backend/src/server.ts');
     const routes = read('backend/src/modules/medsos/routes/zernio.routes.ts');
     const receipt = read('backend/src/modules/medsos/services/zernioWebhookReceipt.service.ts');
-    expect(server).toContain("expressRequest.originalUrl.startsWith('/api/medsos/zernio/webhook')");
+    expect(server).toContain("limit: '1mb'");
+    expect(server).toContain('(req as Request).rawBody = Buffer.from(buffer)');
     expect(routes).toContain('verifyZernioWebhookSignature');
     expect(routes).toContain('processZernioWebhookReceipt');
     expect(routes).toContain("'Idempotency-Key': `zernio-${payload.id}`");

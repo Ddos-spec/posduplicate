@@ -16,6 +16,11 @@ const getTenantOutletIds = async (tenantId: number | undefined): Promise<number[
   return outlets.map(o => o.id);
 };
 
+const getScopedOutletIds = async (req: Request): Promise<number[]> => {
+  if (req.tenantOutletIds) return req.tenantOutletIds;
+  return getTenantOutletIds(req.tenantId);
+};
+
 // Get all expenses with filters
 export const getExpenses = async (req: Request, res: Response, _next: NextFunction) => {
   try {
@@ -33,7 +38,7 @@ export const getExpenses = async (req: Request, res: Response, _next: NextFuncti
 
     // Tenant isolation
     if (req.tenantId) {
-      const outletIds = await getTenantOutletIds(req.tenantId);
+      const outletIds = await getScopedOutletIds(req);
       if (outletIds.length === 0) {
         return res.json({ success: true, data: [], count: 0 });
       }
@@ -44,7 +49,7 @@ export const getExpenses = async (req: Request, res: Response, _next: NextFuncti
     if (outlet_id) {
       const parsedOutletId = safeParseInt(outlet_id);
       if (req.tenantId) {
-        const outletIds = await getTenantOutletIds(req.tenantId);
+        const outletIds = await getScopedOutletIds(req);
         if (!outletIds.includes(parsedOutletId)) {
           return res.status(403).json({
             success: false,
@@ -106,8 +111,12 @@ export const getExpense = async (req: Request, res: Response, _next: NextFunctio
   try {
     const { id } = req.params;
 
-    const expense = await prisma.expenses.findUnique({
-      where: { id: safeParseInt(id) },
+    const outletIds = await getScopedOutletIds(req);
+    const expense = await prisma.expenses.findFirst({
+      where: {
+        id: safeParseInt(id),
+        outlet_id: { in: outletIds }
+      },
       include: {
         users: { select: { id: true, name: true } },
         suppliers: { select: { id: true, name: true, phone: true, email: true } },
@@ -126,16 +135,6 @@ export const getExpense = async (req: Request, res: Response, _next: NextFunctio
         success: false,
         error: { code: 'EXPENSE_NOT_FOUND', message: 'Expense not found' }
       });
-    }
-
-    // Tenant isolation check
-    if (req.tenantId && expense.outlets) {
-      if (expense.outlets.tenant_id !== req.tenantId) {
-        return res.status(403).json({
-          success: false,
-          error: { code: 'ACCESS_DENIED', message: 'Access denied' }
-        });
-      }
     }
 
     res.json({ success: true, data: expense });
@@ -181,6 +180,22 @@ export const createExpense = async (req: Request, res: Response, _next: NextFunc
         return res.status(403).json({
           success: false,
           error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
+        });
+      }
+    }
+
+    if (supplierId) {
+      const supplier = await prisma.suppliers.findFirst({
+        where: {
+          id: safeParseInt(supplierId),
+          outlet_id: { in: await getScopedOutletIds(req) }
+        },
+        select: { id: true }
+      });
+      if (!supplier) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_SUPPLIER', message: 'Supplier does not belong to this tenant' }
         });
       }
     }
@@ -263,7 +278,11 @@ export const updateExpense = async (req: Request, res: Response, _next: NextFunc
       paidAt
     } = req.body;
 
-    const existing = await prisma.expenses.findUnique({ where: { id: parseInt(id) } });
+    const expenseId = safeParseInt(id);
+    const outletIds = await getScopedOutletIds(req);
+    const existing = await prisma.expenses.findFirst({
+      where: { id: expenseId, outlet_id: { in: outletIds } }
+    });
 
     if (!existing) {
       return res.status(404).json({
@@ -272,8 +291,24 @@ export const updateExpense = async (req: Request, res: Response, _next: NextFunc
       });
     }
 
+    if (supplierId) {
+      const supplier = await prisma.suppliers.findFirst({
+        where: {
+          id: safeParseInt(supplierId),
+          outlet_id: { in: outletIds }
+        },
+        select: { id: true }
+      });
+      if (!supplier) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_SUPPLIER', message: 'Supplier does not belong to this tenant' }
+        });
+      }
+    }
+
     const expense = await prisma.expenses.update({
-      where: { id: parseInt(id) },
+      where: { id: expenseId },
       data: {
         ...(expenseType && { expense_type: expenseType }),
         ...(category && { category }),
@@ -331,7 +366,11 @@ export const deleteExpense = async (req: Request, res: Response, _next: NextFunc
       });
     }
 
-    const existing = await prisma.expenses.findUnique({ where: { id: parseInt(id) } });
+    const expenseId = safeParseInt(id);
+    const outletIds = await getScopedOutletIds(req);
+    const existing = await prisma.expenses.findFirst({
+      where: { id: expenseId, outlet_id: { in: outletIds } }
+    });
 
     if (!existing) {
       return res.status(404).json({
@@ -340,7 +379,7 @@ export const deleteExpense = async (req: Request, res: Response, _next: NextFunc
       });
     }
 
-    await prisma.expenses.delete({ where: { id: parseInt(id) } });
+    await prisma.expenses.delete({ where: { id: expenseId } });
 
     // Create activity log
     try {
@@ -348,7 +387,7 @@ export const deleteExpense = async (req: Request, res: Response, _next: NextFunc
         req.userId || 0,
         'expense_delete',
         'expense',
-        parseInt(id),
+        expenseId,
         existing,
         null,
         reason,
@@ -371,10 +410,18 @@ export const deleteExpense = async (req: Request, res: Response, _next: NextFunc
 export const getExpenseSummary = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id, date_from, date_to } = req.query;
-    const where: any = {};
+    const outletIds = await getScopedOutletIds(req);
+    const where: any = { outlet_id: { in: outletIds } };
 
     if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+      const outletId = safeParseInt(outlet_id);
+      if (!outletIds.includes(outletId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
+        });
+      }
+      where.outlet_id = outletId;
     }
 
     if (date_from || date_to) {
@@ -435,10 +482,18 @@ export const getExpenseSummary = async (req: Request, res: Response, _next: Next
 export const getExpenseCategories = async (req: Request, res: Response, _next: NextFunction) => {
   try {
     const { outlet_id } = req.query;
-    const where: any = {};
+    const outletIds = await getScopedOutletIds(req);
+    const where: any = { outlet_id: { in: outletIds } };
 
     if (outlet_id) {
-      where.outlet_id = parseInt(outlet_id as string);
+      const outletId = safeParseInt(outlet_id);
+      if (!outletIds.includes(outletId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'ACCESS_DENIED', message: 'Access denied to this outlet' }
+        });
+      }
+      where.outlet_id = outletId;
     }
 
     const categories = await prisma.expenses.groupBy({

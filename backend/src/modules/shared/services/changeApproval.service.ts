@@ -332,7 +332,7 @@ export const canInitiateOperationalChange = (role?: string | null) => {
 };
 
 export const ensureOperationalChangeTables = async () => {
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE TABLE IF NOT EXISTS public.operational_change_requests (
       id SERIAL PRIMARY KEY,
       tenant_id INTEGER NOT NULL,
@@ -360,12 +360,12 @@ export const ensureOperationalChangeTables = async () => {
     );
   `);
 
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE INDEX IF NOT EXISTS idx_operational_change_requests_tenant_status
     ON public.operational_change_requests (tenant_id, status, created_at DESC);
   `);
 
-  await prisma.$executeRawUnsafe(`
+  await prisma.$executeRaw(Prisma.sql`
     CREATE INDEX IF NOT EXISTS idx_operational_change_requests_requester
     ON public.operational_change_requests (requester_id, created_at DESC);
   `);

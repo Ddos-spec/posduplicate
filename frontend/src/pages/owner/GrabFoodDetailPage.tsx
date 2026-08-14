@@ -152,8 +152,8 @@ export default function GrabFoodDetailPage() {
                     <div className="bg-gray-50 rounded-lg p-4">
                       <h4 className="font-semibold text-gray-800 mb-2 text-sm">Data Merchant</h4>
                       <ul className="text-sm text-gray-600 space-y-1">
-                        <li>• Foto outlet (interior & eksterior)</li>
-                        <li>• Menu lengkap & foto produk</li>
+                        <li>• Foto outlet (interior &amp; eksterior)</li>
+                        <li>• Menu lengkap &amp; foto produk</li>
                         <li>• Info rekening bank</li>
                       </ul>
                     </div>
@@ -192,7 +192,7 @@ export default function GrabFoodDetailPage() {
                         4
                       </span>
                       <span className="text-gray-600 pt-0.5">
-                        Merchant training & onboarding session
+                        Merchant training &amp; onboarding session
                       </span>
                     </li>
                     <li className="flex items-start gap-3">
@@ -308,7 +308,7 @@ export default function GrabFoodDetailPage() {
               </button>
               <button className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 <Star className="w-5 h-5 text-gray-600" />
-                <span className="text-gray-700 font-medium">Rating & Review</span>
+                <span className="text-gray-700 font-medium">Rating &amp; Review</span>
               </button>
               <button className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 <Info className="w-5 h-5 text-gray-600" />
@@ -319,7 +319,7 @@ export default function GrabFoodDetailPage() {
 
           {/* Commission Info */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Komisi & Fee</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Komisi &amp; Fee</h2>
             <div className="space-y-4">
               <div>
                 <div className="flex items-baseline gap-2 mb-2">

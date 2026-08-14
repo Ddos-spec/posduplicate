@@ -151,7 +151,7 @@ export default function DemoForecastPage({ variant = 'owner' }: { variant: Forec
               AI Financial Forecast
             </h1>
             <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-              Prediksi cerdas berbasis data historis & tren pasar.
+              Prediksi cerdas berbasis data historis &amp; tren pasar.
             </p>
           </div>
           

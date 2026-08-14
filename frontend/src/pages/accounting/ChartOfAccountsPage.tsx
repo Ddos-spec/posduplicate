@@ -244,7 +244,7 @@ export default function ChartOfAccountsPage() {
 
           {/* Table Header */}
           <div className={`flex items-center justify-between px-4 py-3 border-b text-sm font-medium ${isDark ? 'border-slate-700 text-gray-400 bg-slate-800/50' : 'border-gray-200 text-gray-500 bg-gray-50'}`}>
-            <span>NAMA AKUN & KODE</span>
+            <span>NAMA AKUN &amp; KODE</span>
             <div className="flex items-center gap-8">
               <span>TIPE</span>
               <span className="w-32 text-right">SALDO</span>

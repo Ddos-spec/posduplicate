@@ -6,8 +6,9 @@ const domainError = (message: string, code: string, status = 400) =>
 
 const cleanSlug = (value: unknown, max: number, code: string) => {
   const slug = String(value || '').trim().toLowerCase();
-  const pattern = new RegExp(`^[a-z0-9][a-z0-9-]{0,${max - 1}}$`);
-  if (!pattern.test(slug)) throw domainError('Invalid slug', code);
+  if (slug.length < 1 || slug.length > max || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
+    throw domainError('Invalid slug', code);
+  }
   return slug;
 };
 

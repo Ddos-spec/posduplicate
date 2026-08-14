@@ -122,12 +122,21 @@ const defaultSettings: SettingsState = {
     active: false,
     url: '',
   },
+  activeSlaIds: [],
+  activeRoutingIds: [],
+  activeApprovalIds: [],
+  activeTemplateIds: [],
+  activeNotificationIds: [],
+  seats: [],
+};
+
+const demoDefaultSettings: SettingsState = {
+  ...defaultSettings,
   activeSlaIds: slaPolicies.map((policy) => policy.id),
   activeRoutingIds: routingRules.filter((rule) => rule.active).map((rule) => rule.id),
   activeApprovalIds: approvalFlows.map((flow) => flow.id),
   activeTemplateIds: replyTemplates.slice(0, 3).map((template) => template.id),
   activeNotificationIds: notificationDestinations.filter((item) => item.active).map((item) => item.id),
-  seats: [],
 };
 
 type SeatDraft = {
@@ -287,7 +296,7 @@ export default function MedsosSettings() {
   const { isDark } = useThemeStore();
   const location = useLocation();
   const isDemo = location.pathname.startsWith('/demo');
-  const [settings, setSettings] = useState<SettingsState>(defaultSettings);
+  const [settings, setSettings] = useState<SettingsState>(isDemo ? demoDefaultSettings : defaultSettings);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [seatDraft, setSeatDraft] = useState<SeatDraft>(emptySeatDraft);
@@ -331,24 +340,26 @@ export default function MedsosSettings() {
           }
         }
 
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved) as { settings?: Partial<SettingsState>; lastSavedAt?: string };
-          if (parsed.settings) {
-            setSettings({
-              ...defaultSettings,
-              ...parsed.settings,
-              channelAccess: {
-                ...defaultSettings.channelAccess,
-                ...(parsed.settings.channelAccess ?? {}),
-              },
-              logisticsAssistant: buildLogisticsAssistantSettings(parsed.settings.logisticsAssistant),
-              aiAnalysis: buildAiAnalysisSettings(parsed.settings.aiAnalysis),
-              seats: parsed.settings.seats ?? [],
-            });
-          }
-          if (parsed.lastSavedAt) {
-            setLastSavedAt(parsed.lastSavedAt);
+        if (isDemo) {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved) as { settings?: Partial<SettingsState>; lastSavedAt?: string };
+            if (parsed.settings) {
+              setSettings({
+                ...demoDefaultSettings,
+                ...parsed.settings,
+                channelAccess: {
+                  ...demoDefaultSettings.channelAccess,
+                  ...(parsed.settings.channelAccess ?? {}),
+                },
+                logisticsAssistant: buildLogisticsAssistantSettings(parsed.settings.logisticsAssistant),
+                aiAnalysis: buildAiAnalysisSettings(parsed.settings.aiAnalysis),
+                seats: parsed.settings.seats ?? [],
+              });
+            }
+            if (parsed.lastSavedAt) {
+              setLastSavedAt(parsed.lastSavedAt);
+            }
           }
         }
       } catch (error) {
@@ -461,13 +472,15 @@ export default function MedsosSettings() {
             };
       }
 
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          settings: nextSettings,
-          lastSavedAt: savedAt,
-        })
-      );
+      if (isDemo) {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            settings: nextSettings,
+            lastSavedAt: savedAt,
+          })
+        );
+      }
       setSettings(nextSettings);
       setAnalysisApiKeyInput('');
       setLastSavedAt(savedAt);
@@ -868,9 +881,9 @@ export default function MedsosSettings() {
             <Workflow size={18} className="text-purple-500" />
             <div>
           <div className="flex items-center gap-2">
-            <h2 className="font-bold text-lg">Routing & approval</h2>
+            <h2 className="font-bold text-lg">Routing &amp; approval</h2>
             <FieldHelp
-              title="Routing & approval"
+              title="Routing &amp; approval"
               description="Bagian ini mengatur rule kapan kasus diarahkan ke orang tertentu atau butuh approval tambahan."
               howToUse="Aktifkan rule yang relevan dengan operasi tim. Gunakan untuk kasus refund, sentiment negatif, atau campaign yang butuh approval sebelum dijalankan."
             />

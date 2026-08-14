@@ -1,13 +1,13 @@
 import express from 'express';
 import { authMiddleware, roleMiddleware } from '../../../middlewares/auth.middleware';
-import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
+import { requireTenantContext, tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import * as efakturController from '../controllers/accounting.efaktur.controller';
 
 const router = express.Router();
 
 // Middleware
 router.use(authMiddleware);
-router.use(tenantMiddleware);
+router.use(tenantMiddleware, requireTenantContext);
 
 // ===== NSFP Management =====
 /**

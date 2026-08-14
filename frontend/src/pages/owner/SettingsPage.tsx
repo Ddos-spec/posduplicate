@@ -519,7 +519,7 @@ export default function SettingsPage() {
 
         {activeTab === 'tax' && settings && (
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg mb-4">Tax & Service Charges</h3>
+            <h3 className="font-semibold text-lg mb-4">Tax &amp; Service Charges</h3>
             <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
               <input
                 type="checkbox"

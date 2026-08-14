@@ -22,8 +22,7 @@ export default function CreateUserPage() {
     role: null as RoleType,
     outletId: '',
     allOutlets: false,
-    confirmed: false,
-    sendEmailNotification: true
+    confirmed: false
   };
   const [formData, setFormData] = useState(initialFormState);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
@@ -33,7 +32,6 @@ export default function CreateUserPage() {
     name: string;
     email: string;
     tempPassword: string;
-    emailSent: boolean;
   } | null>(null);
 
   const roleLabelMap: Record<Exclude<RoleType, null>, string> = {
@@ -157,8 +155,7 @@ export default function CreateUserPage() {
         name: formData.name.trim(),
         email: formData.email.trim(),
         role: roleLabel,
-        outletId,
-        sendEmailNotification: formData.sendEmailNotification
+        outletId
       };
       if (trimmedPassword) {
         payload.password = trimmedPassword;
@@ -170,8 +167,7 @@ export default function CreateUserPage() {
       setCreatedUser({
         name: created?.name || formData.name.trim(),
         email: created?.email || formData.email.trim(),
-        tempPassword: created?.tempPassword || trimmedPassword || '',
-        emailSent: Boolean(response.data?.data?.emailSent)
+        tempPassword: created?.tempPassword || trimmedPassword || ''
       });
       setSlotStats((prev) => {
         const used = prev.used + 1;
@@ -333,7 +329,7 @@ export default function CreateUserPage() {
             <div className={`p-6 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-white shadow'}`}>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-1 h-6 bg-emerald-500 rounded-full" />
-                <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Role & Hak Akses</h2>
+                <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Role &amp; Hak Akses</h2>
               </div>
               <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Pilih Role Pengguna <span className="text-red-500">*</span>
@@ -444,15 +440,15 @@ export default function CreateUserPage() {
                 <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Konfirmasi</h2>
               </div>
 
-              <div className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-100'}`}>
+              <div className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-100'}`}>
                 <div className="flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
-                    <Mail className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
+                    <Info className={`w-4 h-4 ${isDark ? 'text-amber-400' : 'text-amber-700'}`} />
                   </div>
                   <div>
-                    <h4 className={`font-medium ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>Email Otomatis</h4>
-                    <p className={`text-sm ${isDark ? 'text-emerald-300/80' : 'text-emerald-600'}`}>
-                      Email dengan kredensial login akan dikirim otomatis ke alamat yang dimasukkan. User dapat langsung login setelah menerima email.
+                    <h4 className={`font-medium ${isDark ? 'text-amber-400' : 'text-amber-800'}`}>Serah terima kredensial</h4>
+                    <p className={`text-sm ${isDark ? 'text-amber-300/80' : 'text-amber-700'}`}>
+                      Password hanya ditampilkan sekali setelah akun dibuat. Salin dan bagikan melalui kanal aman.
                     </p>
                   </div>
                 </div>
@@ -488,37 +484,31 @@ export default function CreateUserPage() {
                     : isDark ? 'bg-slate-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                {isSubmitting ? 'Membuat akun...' : 'Buat Akun & Kirim Email'}
+                {isSubmitting ? 'Membuat akun...' : 'Buat Akun'}
                 <ArrowLeft className="w-4 h-4 rotate-180" />
               </button>
             </div>
           </div>
 
-          {/* Sidebar - Email Preview */}
+          {/* Sidebar - credential handoff guidance */}
           <div className="space-y-6">
             <div className={`p-6 rounded-xl sticky top-6 ${isDark ? 'bg-slate-800' : 'bg-white shadow'}`}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Preview Email</h3>
+                <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Alur Aktivasi Akun</h3>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${isDark ? 'bg-slate-700 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
-                  LIVE
+                  AMAN
                 </span>
               </div>
 
               {/* Email Preview Card */}
               <div className={`p-4 rounded-xl ${isDark ? 'bg-slate-700' : 'bg-gray-50'}`}>
                 <div className="text-center py-6">
-                  <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Akun Anda di MyAkuntan</h4>
-                  <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Selamat datang! Akun Anda telah dibuat.<br />
-                    Silakan klik tombol di bawah untuk<br />
-                    mengaktifkan akun Anda.
-                  </p>
-                  <button className="mt-4 px-6 py-2 rounded-lg bg-emerald-500 text-white text-sm font-medium">
-                    Aktivasi Akun
-                  </button>
-                  <p className={`text-xs mt-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    User akan menerima email seperti ini
-                  </p>
+                  <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Password sekali tampil</h4>
+                  <div className={`mt-4 space-y-2 text-left text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <p>1. Buat akun dan salin password.</p>
+                    <p>2. Bagikan kredensial melalui kanal aman.</p>
+                    <p>3. Minta pengguna segera mengganti password.</p>
+                  </div>
                 </div>
               </div>
 
@@ -575,7 +565,7 @@ export default function CreateUserPage() {
                 </button>
               </div>
               <p className={`mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                {createdUser.emailSent ? 'Email berhasil dikirim.' : 'Email belum dikirim; bagikan password ini melalui kanal yang aman.'}
+                Email otomatis belum tersedia. Bagikan password ini melalui kanal yang aman dan minta pengguna segera menggantinya.
               </p>
             </div>
 

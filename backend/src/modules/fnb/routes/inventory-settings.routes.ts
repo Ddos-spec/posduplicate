@@ -1,4 +1,10 @@
 import { Router } from 'express';
+import { authMiddleware } from '../../../middlewares/auth.middleware';
+import {
+  requireTenantContext,
+  tenantMiddleware,
+  tenantOutletScopeMiddleware
+} from '../../../middlewares/tenant.middleware';
 import {
   getInventorySettings,
   updateInventorySettings,
@@ -7,6 +13,7 @@ import {
 } from '../controllers/inventory-settings.controller';
 
 const router = Router();
+router.use(authMiddleware, tenantMiddleware, requireTenantContext, tenantOutletScopeMiddleware);
 
 // Get business type specific fields (must be before other routes)
 /**

@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma';
+import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
 /**
@@ -120,9 +121,9 @@ export const getRevenueForecast = async (
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - historicalDays);
 
-  const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+  const whereOutlet = outletId ? Prisma.sql`AND gl.outlet_id = ${outletId}` : Prisma.empty;
 
-  const historicalData: any[] = await prisma.$queryRawUnsafe(`
+  const historicalData: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       DATE(gl.transaction_date) as date,
       SUM(gl.credit_amount - gl.debit_amount) as net_amount
@@ -130,7 +131,7 @@ export const getRevenueForecast = async (
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
     WHERE gl.tenant_id = ${tenantId}
     ${whereOutlet}
-    AND gl.transaction_date >= '${startDate.toISOString()}'
+    AND gl.transaction_date >= ${startDate.toISOString()}
     AND coa.account_type = 'REVENUE'
     GROUP BY DATE(gl.transaction_date)
     ORDER BY date
@@ -221,9 +222,9 @@ export const getExpenseForecast = async (
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - historicalDays);
 
-  const whereOutlet = outletId ? `AND gl.outlet_id = ${outletId}` : '';
+  const whereOutlet = outletId ? Prisma.sql`AND gl.outlet_id = ${outletId}` : Prisma.empty;
 
-  const historicalData: any[] = await prisma.$queryRawUnsafe(`
+  const historicalData: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       DATE(gl.transaction_date) as date,
       SUM(gl.debit_amount - gl.credit_amount) as net_amount
@@ -231,7 +232,7 @@ export const getExpenseForecast = async (
     JOIN "accounting"."chart_of_accounts" coa ON gl.account_id = coa.id
     WHERE gl.tenant_id = ${tenantId}
     ${whereOutlet}
-    AND gl.transaction_date >= '${startDate.toISOString()}'
+    AND gl.transaction_date >= ${startDate.toISOString()}
     AND coa.account_type IN ('EXPENSE', 'COGS')
     GROUP BY DATE(gl.transaction_date)
     ORDER BY date
@@ -311,17 +312,17 @@ export const getSalesForecast = async (
   startDate.setDate(startDate.getDate() - historicalDays);
 
   const whereOutlet = outletId
-    ? `AND outlet_id = ${outletId}`
-    : `AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
+    ? Prisma.sql`AND outlet_id = ${outletId}`
+    : Prisma.sql`AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
 
-  const historicalData: any[] = await prisma.$queryRawUnsafe(`
+  const historicalData: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       DATE(created_at) as date,
       SUM(total) as net_amount
     FROM "transactions"
     WHERE status = 'completed'
     ${whereOutlet}
-    AND created_at >= '${startDate.toISOString()}'
+    AND created_at >= ${startDate.toISOString()}
     GROUP BY DATE(created_at)
     ORDER BY date
   `);
@@ -510,18 +511,18 @@ export const getInventoryForecast = async (
   startDate.setDate(startDate.getDate() - historicalDays);
 
   const whereOutlet = outletId
-    ? `AND outlet_id = ${outletId}`
-    : `AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
+    ? Prisma.sql`AND outlet_id = ${outletId}`
+    : Prisma.sql`AND outlet_id IN (SELECT id FROM outlets WHERE tenant_id = ${tenantId})`;
 
   // Get daily consumption (OUT movements)
-  const consumptionData: any[] = await prisma.$queryRawUnsafe(`
+  const consumptionData: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT
       DATE(created_at) as date,
       SUM(total_cost) as net_amount
     FROM "stock_movements"
     WHERE type = 'OUT'
     ${whereOutlet}
-    AND created_at >= '${startDate.toISOString()}'
+    AND created_at >= ${startDate.toISOString()}
     GROUP BY DATE(created_at)
     ORDER BY date
   `);
@@ -532,21 +533,21 @@ export const getInventoryForecast = async (
   const predictions = predictFuture(slope, intercept, smoothed.length, forecastDays);
 
   // Get current stock value
-  const stockValue: any[] = await prisma.$queryRawUnsafe(`
+  const stockValue: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT SUM(current_stock * cost_amount) as total_value
     FROM "inventory"
     WHERE is_active = true
-    ${whereOutlet.replace('outlet_id', 'outlet_id')}
+    ${whereOutlet}
   `);
 
   // Get low stock items count
-  const lowStockItems: any[] = await prisma.$queryRawUnsafe(`
+  const lowStockItems: any[] = await prisma.$queryRaw(Prisma.sql`
     SELECT COUNT(*) as count
     FROM "inventory"
     WHERE is_active = true
     AND alert = true
     AND current_stock <= stock_alert
-    ${whereOutlet.replace('outlet_id', 'outlet_id')}
+    ${whereOutlet}
   `);
 
   const dataQuality = Math.min(1, dailyValues.filter(v => v > 0).length / 30);

@@ -19,8 +19,8 @@ export default function ProductivityWorkspacePage() {
   return <div className="min-h-screen bg-slate-50 p-5 md:p-7">
     <div className="mx-auto max-w-7xl space-y-5">
       <header>
-        <p className="text-xs font-bold uppercase tracking-widest text-blue-600">Productivity & Governance</p>
-        <h1 className="mt-1 text-3xl font-black text-slate-900">Documents, Knowledge & Sign</h1>
+        <p className="text-xs font-bold uppercase tracking-widest text-blue-600">Productivity &amp; Governance</p>
+        <h1 className="mt-1 text-3xl font-black text-slate-900">Documents, Knowledge &amp; Sign</h1>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">Private document versions, tenant knowledge, and version-pinned electronic acknowledgement workflows.</p>
       </header>
       <div className="inline-flex flex-wrap rounded-2xl bg-slate-200/70 p-1">

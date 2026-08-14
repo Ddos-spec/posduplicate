@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const REQUIRED_TABLES = [
+  'webhook_events',
   'crm_opportunities', 'sales_quotations', 'sales_orders', 'loyalty_ledger',
   'warehouse_locations', 'warehouse_stock_ledger', 'stock_transfers', 'stock_counts',
   'barcode_aliases', 'manufacturing_orders', 'quality_checks', 'maintenance_requests',
@@ -38,6 +39,10 @@ const REQUIRED_TRIGGERS = [
 ] as const;
 
 const REQUIRED_INDEXES = [
+  'webhook_events_idempotency_key_key',
+  'idx_webhook_events_tenant_type',
+  'idx_webhook_events_expires',
+  'idx_webhook_events_integration_external',
   'ux_workforce_attendance_open_employee',
   'ux_payroll_rate_profile_global_version',
   'ux_payroll_rate_profile_tenant_version',
@@ -126,10 +131,12 @@ async function run() {
     const ledger = await client.query<{ migration_name: string; checksum_sha256: string }>(
       `SELECT migration_name, checksum_sha256 FROM public.suite_schema_migrations ORDER BY migration_name`,
     );
-    assert(ledger.rows.length === 17, `Expected 17 suite migration ledger entries, found ${ledger.rows.length}`);
+    assert(ledger.rows.length === 20, `Expected 20 suite migration ledger entries, found ${ledger.rows.length}`);
     assert(ledger.rows.every((row) => row.checksum_sha256?.length === 64), 'Invalid suite migration checksum');
 
     const migrationNames = [
+      '20260121145000_create_trial_balance_view',
+      '20260728135000_add_webhook_events',
       '20260813023000_p2_workforce_attendance',
       '20260813030000_p2_payroll_rate_profiles',
       '20260813033000_p2_workforce_leave',
@@ -143,10 +150,24 @@ async function run() {
       '20260813073000_p2_payroll_calculation_runs',
       '20260813080000_p2_payroll_final_reconciliation',
       '20260813083000_p2_payroll_official_posting',
+      '20260815090000_harden_webhook_events',
     ];
     for (const migrationName of migrationNames) {
       assert(ledger.rows.some((row) => row.migration_name === migrationName), `${migrationName} missing from ledger`);
     }
+
+    const accountingViews = await client.query<{ viewname: string }>(`
+      SELECT viewname FROM pg_views
+      WHERE schemaname = 'accounting' AND viewname = 'v_trial_balance'
+    `);
+    assert(accountingViews.rows.length === 1, 'Accounting trial balance view is missing');
+
+    const webhookEvidenceColumns = await client.query<{ column_name: string }>(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'webhook_events'
+        AND column_name IN ('idempotency_key','integration_type','tenant_id','external_id','payload_digest','event_status','response_payload','expires_at')
+    `);
+    assert(webhookEvidenceColumns.rows.length === 8, 'Webhook idempotency evidence columns are incomplete');
 
     const indexes = await client.query<{ indexname: string }>(
       `SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = ANY($1::text[])`,
@@ -487,7 +508,7 @@ async function run() {
       throw error;
     }
 
-    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} public suite indexes, payroll governance draft present, payroll current profile v2 global draft present, payroll verification snapshots present, payroll final-tax settings present, tenant activation audit present, official payroll evidence/account mapping present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, appointments scheduling/lifecycle present, 22 blocked mutations.`);
+    console.log(`Suite DB verified: ${REQUIRED_TABLES.length} tables, ${ledger.rows.length} migrations, ${REQUIRED_TRIGGERS.length} immutable triggers, ${REQUIRED_INDEXES.length} public suite indexes, accounting trial balance view present, durable webhook idempotency evidence present, payroll governance draft present, payroll current profile v2 global draft present, payroll verification snapshots present, payroll final-tax settings present, tenant activation audit present, official payroll evidence/account mapping present, workforce leave balances present, recruitment lifecycle present, appraisal lifecycle present, services project/timesheet/planning lifecycle present, field service lifecycle/audit present, helpdesk SLA/ticket/conversation lifecycle present, appointments scheduling/lifecycle present, 22 blocked mutations.`);
   } finally {
     await client.end();
   }

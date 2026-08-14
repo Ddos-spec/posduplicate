@@ -137,7 +137,7 @@ export const getCoA = async (req: Request, res: Response, next: NextFunction) =>
     let balances: any[] = [];
     try {
         balances = await prisma.$queryRaw`
-            SELECT account_code, balance 
+            SELECT account_code, net_balance AS balance
             FROM "accounting"."v_trial_balance" 
             WHERE tenant_id = ${tenantId}
         `;

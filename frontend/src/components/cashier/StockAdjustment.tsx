@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Package, Plus, Minus, AlertCircle } from 'lucide-react';
+import api from '../../services/api';
 
 interface Product {
   id: number;
@@ -33,17 +34,8 @@ const StockAdjustment: React.FC<StockAdjustmentProps> = ({ isOpen, onClose, onSu
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/products', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Filter only products that track stock
-        setProducts(data.data.filter((p: Product) => p.trackStock));
-      }
+      const response = await api.get('/products');
+      setProducts(response.data.data.filter((product: Product) => product.trackStock));
     } catch (error) {
       console.error('Error fetching products:', error);
     }
@@ -67,35 +59,20 @@ const StockAdjustment: React.FC<StockAdjustmentProps> = ({ isOpen, onClose, onSu
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/inventory/adjust-stock', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
+      await api.post('/inventory/adjust', {
           itemId: selectedProduct.id,
           quantity: parseFloat(quantity),
           type: adjustmentType,
           reason: reason.trim(),
           notes: notes.trim() || null,
-        }),
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('Stok berhasil disesuaikan!');
-        // Reset form
-        setSelectedProduct(null);
-        setQuantity('');
-        setReason('');
-        setNotes('');
-        fetchProducts(); // Refresh product list
-        if (onSuccess) onSuccess();
-      } else {
-        alert(data.error?.message || 'Gagal menyesuaikan stok');
-      }
+      alert('Stok berhasil disesuaikan!');
+      setSelectedProduct(null);
+      setQuantity('');
+      setReason('');
+      setNotes('');
+      await fetchProducts();
+      if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error adjusting stock:', error);
       alert('Terjadi kesalahan saat menyesuaikan stok');

@@ -1,9 +1,9 @@
-name: P1 Runtime Gate
+name: Runtime Gate
 
 on:
   push:
     branches:
-      - 'feat/odoo-complete-suite'
+      - main
       - 'feat/**'
       - 'fix/**'
     paths:
@@ -22,7 +22,7 @@ permissions:
   contents: read
 
 jobs:
-  p1-runtime:
+  suite-runtime:
     runs-on: ubuntu-latest
     services:
       postgres:

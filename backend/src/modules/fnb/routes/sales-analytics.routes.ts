@@ -1,4 +1,10 @@
 import { Router } from 'express';
+import { authMiddleware } from '../../../middlewares/auth.middleware';
+import {
+  requireTenantContext,
+  tenantMiddleware,
+  tenantOutletScopeMiddleware
+} from '../../../middlewares/tenant.middleware';
 import {
   getAllSalesTransactions,
   getSalesTransactionById,
@@ -12,6 +18,7 @@ import {
 } from '../controllers/sales-analytics.controller';
 
 const router = Router();
+router.use(authMiddleware, tenantMiddleware, requireTenantContext, tenantOutletScopeMiddleware);
 
 // Get all sales transactions
 /**

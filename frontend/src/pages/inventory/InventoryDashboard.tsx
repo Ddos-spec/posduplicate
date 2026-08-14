@@ -12,12 +12,21 @@ import {
 } from 'recharts';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const RECENT_ACTIVITIES = [
+const DEMO_RECENT_ACTIVITIES = [
   { id: 1, user: 'Budi (Gudang)', action: 'Stok Opname: Kopi Arabika', time: '10 mins ago', type: 'adjustment' },
   { id: 2, user: 'Siti (Purchasing)', action: 'PO Created: #PO-2025-001', time: '1 hour ago', type: 'order' },
   { id: 3, user: 'System', action: 'Alert: Susu Low Stock', time: '2 hours ago', type: 'alert' },
   { id: 4, user: 'Andi (Kitchen)', action: 'Usage: 5kg Tepung', time: '3 hours ago', type: 'usage' },
 ];
+
+const EMPTY_INVENTORY_STATS: InventoryStats = {
+  totalValue: 0,
+  totalItems: 0,
+  lowStockCount: 0,
+  outOfStockCount: 0,
+  pendingPO: 0,
+  avgDaysCover: 0,
+};
 
 export default function InventoryDashboard() {
   const { isDark } = useThemeStore();
@@ -30,9 +39,9 @@ export default function InventoryDashboard() {
 
   // State for API data
   const [loading, setLoading] = useState(!isDemo);
-  const [statsData, setStatsData] = useState<InventoryStats>(MOCK_INVENTORY_STATS);
+  const [statsData, setStatsData] = useState<InventoryStats>(isDemo ? MOCK_INVENTORY_STATS : EMPTY_INVENTORY_STATS);
   const [alertsData, setAlertsData] = useState<InventoryAlert[]>([]);
-  const [forecastData, setForecastData] = useState<ForecastData[]>(MOCK_FORECAST_DATA);
+  const [forecastData, setForecastData] = useState<ForecastData[]>(isDemo ? MOCK_FORECAST_DATA : []);
 
   // Fetch data from API (non-demo mode)
   useEffect(() => {
@@ -176,7 +185,7 @@ export default function InventoryDashboard() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>Tren Penggunaan Bahan</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Real vs Prediksi (7 Hari)</p>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{isDemo ? 'Data simulasi 7 hari' : 'Aktual vs forecast tersimpan (7 hari)'}</p>
             </div>
             <button onClick={() => navigate(`${basePath}/forecast`)} className="text-sm font-bold text-orange-500 flex items-center gap-1 hover:underline">
               Lihat Detail <ArrowRight className="w-4 h-4" />
@@ -184,6 +193,11 @@ export default function InventoryDashboard() {
           </div>
           
           <div className="h-[300px]">
+            {forecastData.length === 0 ? (
+              <div className={`flex h-full items-center justify-center rounded-xl border border-dashed px-6 text-center text-sm ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+                Belum ada forecast tersimpan untuk outlet ini. Dashboard tidak menampilkan prediksi buatan.
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={forecastData}>
                 <defs>
@@ -202,6 +216,7 @@ export default function InventoryDashboard() {
                 <Line type="monotone" dataKey="predicted" stroke="#a855f7" strokeWidth={3} strokeDasharray="5 5" name="Prediksi AI" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -222,7 +237,7 @@ export default function InventoryDashboard() {
                 </div>
               ))}
               
-              <div className={`p-4 rounded-xl flex gap-3 ${isDark ? 'bg-slate-700/50' : 'bg-green-50'}`}>
+              {isDemo ? <div className={`p-4 rounded-xl flex gap-3 ${isDark ? 'bg-slate-700/50' : 'bg-green-50'}`}>
                 <div className="mt-1">
                   <TrendingUp className="w-5 h-5 text-green-500" />
                 </div>
@@ -230,7 +245,12 @@ export default function InventoryDashboard() {
                   <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>Weekend Peak!</p>
                   <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Prediksi demand naik 20% hari Sabtu. Siapkan stok susu lebih banyak.</p>
                 </div>
-              </div>
+              </div> : null}
+              {!isDemo && displayAlerts.length === 0 ? (
+                <p className={`rounded-xl border border-dashed p-4 text-sm ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+                  Belum ada rekomendasi berbasis alert operasional.
+                </p>
+              ) : null}
             </div>
             
             <button 
@@ -248,7 +268,7 @@ export default function InventoryDashboard() {
               <Clock className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
             </div>
             <div className="space-y-4">
-              {RECENT_ACTIVITIES.map((log) => (
+              {isDemo ? DEMO_RECENT_ACTIVITIES.map((log) => (
                 <div key={log.id} className="flex gap-3 items-start">
                   <div className={`mt-1 w-2 h-2 rounded-full ${
                     log.type === 'alert' ? 'bg-red-500' : 
@@ -260,7 +280,11 @@ export default function InventoryDashboard() {
                     <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{log.user} • {log.time}</p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <p className={`rounded-xl border border-dashed p-4 text-sm ${isDark ? 'border-slate-700 text-gray-400' : 'border-gray-200 text-gray-500'}`}>
+                  Feed aktivitas belum tersedia dari API. Tidak ada aktivitas contoh yang ditampilkan pada workspace live.
+                </p>
+              )}
             </div>
           </div>
         </div>

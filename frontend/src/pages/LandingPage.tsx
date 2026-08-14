@@ -59,7 +59,7 @@ const MODULES = [
   {
     icon: ShieldCheck,
     color: 'blue',
-    name: 'Admin & Analytics',
+    name: 'Admin &amp; Analytics',
     desc: 'Satu dashboard untuk mantau semua cabang, tenant, dan performa tim.',
     points: ['Multi-tenant & multi-cabang', 'Kontrol akses berbasis peran', 'Analitik performa real-time'],
   },
@@ -638,7 +638,7 @@ export default function LandingPage() {
           </div>
           <h2 className="text-3xl font-bold tracking-tight mb-4">Dipakai di Berbagai Jenis Bisnis</h2>
           <p className={`max-w-xl mx-auto ${subtext}`}>
-            Alur kerja & laporan menyesuaikan otomatis sesuai tipe bisnis yang kamu pilih saat onboarding.
+            Alur kerja &amp; laporan menyesuaikan otomatis sesuai tipe bisnis yang kamu pilih saat onboarding.
           </p>
         </div>
 
@@ -776,7 +776,7 @@ export default function LandingPage() {
                 <li><a href="#modules" className="hover:text-indigo-500 transition-colors">Point of Sale</a></li>
                 <li><a href="#modules" className="hover:text-indigo-500 transition-colors">Accounting</a></li>
                 <li><a href="#modules" className="hover:text-indigo-500 transition-colors">Inventory</a></li>
-                <li><a href="#modules" className="hover:text-indigo-500 transition-colors">Admin & Analytics</a></li>
+                <li><a href="#modules" className="hover:text-indigo-500 transition-colors">Admin &amp; Analytics</a></li>
                 <li><a href="#modules" className="hover:text-indigo-500 transition-colors">Social Media</a></li>
               </ul>
             </div>
@@ -785,7 +785,7 @@ export default function LandingPage() {
             <div>
               <h4 className="font-bold text-sm mb-4">Solusi</h4>
               <ul className={`space-y-3 text-sm ${subtext}`}>
-                <li><a href="#business" className="hover:text-indigo-500 transition-colors">F&B & Restoran</a></li>
+                <li><a href="#business" className="hover:text-indigo-500 transition-colors">F&amp;B &amp; Restoran</a></li>
                 <li><a href="#business" className="hover:text-indigo-500 transition-colors">Retail</a></li>
                 <li><a href="#business" className="hover:text-indigo-500 transition-colors">Distribusi</a></li>
                 <li><a href="#business" className="hover:text-indigo-500 transition-colors">Manufaktur</a></li>

@@ -4,9 +4,12 @@ import {
   ChefHat, TrendingUp, Save, Plus, Trash2, AlertCircle 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Navigate, useLocation } from 'react-router-dom';
 
 export default function RecipeSimulationPage() {
   const { isDark } = useThemeStore();
+  const location = useLocation();
+  const isDemo = location.pathname.startsWith('/demo');
 
   // Mock Data: Satu Produk
   const [product, setProduct] = useState({
@@ -34,18 +37,22 @@ export default function RecipeSimulationPage() {
   };
 
   const handleSave = () => {
-    toast.success('Resep berhasil disimpan! HPP otomatis terupdate.');
+    toast.success('Simulasi tersimpan untuk sesi demo; data operasional tidak diubah.');
   };
+
+  if (!isDemo) {
+    return <Navigate to="/inventory/analytics" replace />;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className={`text-2xl font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            <ChefHat className="text-orange-500" /> Simulasi Resep & HPP
+            <ChefHat className="text-orange-500" /> Simulasi Resep &amp; HPP
           </h1>
           <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Atur takaran bahan baku untuk mengoptimalkan profit margin.
+            Mode demo: atur takaran bahan untuk melihat simulasi margin tanpa mengubah data operasional.
           </p>
         </div>
         <button 

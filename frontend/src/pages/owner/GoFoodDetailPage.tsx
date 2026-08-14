@@ -69,7 +69,7 @@ export default function GoFoodDetailPage() {
             <h2 className="text-xl font-bold text-gray-800 mb-4">Tentang GoFood</h2>
             <p className="text-gray-600 mb-4">
               GoFood adalah layanan pesan-antar makanan dari Gojek yang menghubungkan restoran dan
-              pelanggan. Dengan jutaan pengguna aktif, GoFood membantu bisnis F&B Anda menjangkau
+              pelanggan. Dengan jutaan pengguna aktif, GoFood membantu bisnis F&amp;B Anda menjangkau
               lebih banyak pelanggan.
             </p>
 
@@ -146,7 +146,7 @@ export default function GoFoodDetailPage() {
                       <h4 className="font-semibold text-gray-800 mb-2 text-sm">Data Restoran</h4>
                       <ul className="text-sm text-gray-600 space-y-1">
                         <li>• Foto lokasi usaha</li>
-                        <li>• Menu & harga</li>
+                        <li>• Menu &amp; harga</li>
                         <li>• Rekening bank</li>
                       </ul>
                     </div>
@@ -290,7 +290,7 @@ export default function GoFoodDetailPage() {
 
           {/* Commission Info */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Komisi & Biaya</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Komisi &amp; Biaya</h2>
             <div className="space-y-4">
               <div>
                 <div className="flex items-baseline gap-2 mb-2">

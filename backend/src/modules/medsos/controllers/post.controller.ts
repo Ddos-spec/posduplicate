@@ -73,7 +73,7 @@ export const createPost = async (req: Request, res: Response, next: NextFunction
       }
     });
 
-    // Mock Analytics entry
+    // Initialize the persisted analytics record at zero until provider metrics arrive.
     await prisma.social_analytics.create({
       data: {
         post_id: post.id
@@ -438,7 +438,7 @@ async function publishToSocialMedia(post: any, account: any): Promise<{ success:
     const externalId = data.id || data.post_id || `${account.platform}_${Date.now()}`;
     return { success: true, externalId };
   } catch (error: any) {
-    console.error(`[Publisher] Error publishing to ${account.platform}:`, error);
+    console.error('[Publisher] Error publishing:', { platform: account.platform, error });
     return { success: false, error: error.message || 'Unknown error' };
   }
 }
@@ -675,7 +675,7 @@ async function fetchAnalyticsFromPlatform(externalId: string, account: any): Pro
 
       const data = (await response.json()) as any;
     if (!response.ok) {
-      console.error(`[Analytics] API error for ${account.platform}:`, data);
+      console.error('[Analytics] API error:', { platform: account.platform, data });
       return null;
     }
 

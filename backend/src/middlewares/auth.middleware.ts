@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// SECURITY: Validate JWT_SECRET is set in production
-if (!process.env.JWT_SECRET) {
+const configuredJwtSecret = process.env.JWT_SECRET?.trim();
+if (!configuredJwtSecret) {
   console.error('FATAL: JWT_SECRET environment variable is not set');
   process.exit(1);
 }
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = configuredJwtSecret;
 
 interface JWTPayload {
   userId: number;
@@ -51,6 +51,7 @@ export const authMiddleware = async (
       req.userId = decoded.userId;
       req.tenantId = decoded.tenantId;
       req.userRole = decoded.roleName;
+      req.roleName = decoded.roleName;
 
       return next();
     } catch (jwtError) {
@@ -112,6 +113,7 @@ export const optionalAuth = async (
       req.userId = decoded.userId;
       req.tenantId = decoded.tenantId;
       req.userRole = decoded.roleName;
+      req.roleName = decoded.roleName;
     } catch (jwtError) {
       // Token invalid, continue without auth
       console.warn('Optional auth: Invalid token, continuing without auth');
