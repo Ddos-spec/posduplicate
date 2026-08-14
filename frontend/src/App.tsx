@@ -62,6 +62,8 @@ const DigitalWebsiteWorkspacePage = lazy(() => import('./pages/DigitalWebsiteWor
 const SubscriptionsWorkspacePage = lazy(() => import('./pages/SubscriptionsWorkspacePage'));
 const RentalWorkspacePage = lazy(() => import('./pages/RentalWorkspacePage'));
 const StorefrontPage = lazy(() => import('./pages/StorefrontPage'));
+const ProductivityWorkspacePage = lazy(() => import('./pages/productivity/ProductivityWorkspacePage'));
+const PublicSignPage = lazy(() => import('./pages/PublicSignPage'));
 
 // Accounting Module Pages
 const AccountingLayout = lazy(() => import('./components/accounting/AccountingLayout'));
@@ -249,6 +251,7 @@ function App() {
             <Route index element={<Navigate to="/demo/medsos/dashboard" />} />
           </Route>
 
+          <Route path="/sign/:token" element={<PublicSignPage />} />
           <Route path="/store/:publicSlug" element={<StorefrontPage />} />
           <Route path="/module-selector" element={<ProtectedRoute><ModuleSelectorPage /></ProtectedRoute>} />
           <Route path="/revenue" element={<OwnerRoute><RevenueWorkspacePage /></OwnerRoute>} />
@@ -257,6 +260,7 @@ function App() {
           <Route path="/digital" element={<TenantModuleRoute moduleKey="commerSocial"><OwnerRoute><DigitalWebsiteWorkspacePage /></OwnerRoute></TenantModuleRoute>} />
           <Route path="/subscriptions" element={<TenantModuleRoute moduleKey="accounting"><ProtectedRoute><SubscriptionsWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />
           <Route path="/rental" element={<TenantModuleRoute moduleKey="pos"><OwnerRoute><RentalWorkspacePage /></OwnerRoute></TenantModuleRoute>} />
+          <Route path="/productivity" element={<TenantModuleRoute moduleKey="accounting"><ProtectedRoute><ProductivityWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />
 
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route path="dashboard" element={<SuperAdminOmniPage />} />
