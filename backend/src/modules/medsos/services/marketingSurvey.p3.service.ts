@@ -177,6 +177,7 @@ export const submitMarketingSurvey = async (
   actorUserId: number | null,
   surveyIdValue: unknown,
   input: { customerId?: number | null; respondentName?: string | null; respondentEmail?: string | null; answers: AnswerInput[] },
+  submissionKeyHash: string | null = null,
 ) => prisma.$transaction(async (tx) => {
   const surveyId = positiveInt(surveyIdValue, 'INVALID_MARKETING_SURVEY_ID');
   const surveyRows = await tx.$queryRaw<any[]>(Prisma.sql`
@@ -184,6 +185,16 @@ export const submitMarketingSurvey = async (
   `);
   const survey = surveyRows[0];
   if (!survey) throw domainError('Marketing survey not found', 'MARKETING_SURVEY_NOT_FOUND', 404);
+
+  if (submissionKeyHash) {
+    const existingRows = await tx.$queryRaw<any[]>(Prisma.sql`
+      SELECT * FROM public.marketing_survey_responses
+      WHERE tenant_id=${tenantId} AND survey_id=${surveyId} AND submission_key_hash=${submissionKeyHash}
+      LIMIT 1
+    `);
+    if (existingRows[0]) return existingRows[0];
+  }
+
   if (survey.status !== 'published') throw domainError('Survey is not accepting responses', 'MARKETING_SURVEY_NOT_PUBLISHED', 409);
 
   const questions = await tx.$queryRaw<any[]>(Prisma.sql`
@@ -209,6 +220,10 @@ export const submitMarketingSurvey = async (
     if (question.required && !answerMap.has(Number(question.id))) throw domainError('Required survey answer missing', 'SURVEY_REQUIRED_ANSWER_MISSING');
   }
 
+  const normalizedAnswers = questions
+    .filter((question) => answerMap.has(Number(question.id)))
+    .map((question) => ({ questionId: Number(question.id), value: validateAnswer(question, answerMap.get(Number(question.id))) }));
+
   let customerId: number | null = null;
   if (input.customerId != null) {
     customerId = positiveInt(input.customerId, 'INVALID_CUSTOMER_ID');
@@ -222,21 +237,18 @@ export const submitMarketingSurvey = async (
 
   const responseRows = await tx.$queryRaw<any[]>(Prisma.sql`
     INSERT INTO public.marketing_survey_responses
-      (tenant_id,survey_id,customer_id,respondent_name,respondent_email,status,submitted_at)
+      (tenant_id,survey_id,customer_id,respondent_name,respondent_email,status,submitted_at,submission_key_hash)
     VALUES (
       ${tenantId},${surveyId},${customerId},
       ${cleanText(input.respondentName, 180, 'INVALID_SURVEY_RESPONDENT_NAME', false)},
-      ${cleanText(input.respondentEmail, 240, 'INVALID_SURVEY_RESPONDENT_EMAIL', false)},'submitted',NOW()
+      ${cleanText(input.respondentEmail, 240, 'INVALID_SURVEY_RESPONDENT_EMAIL', false)},'submitted',NOW(),${submissionKeyHash}
     ) RETURNING *
   `);
   const response = responseRows[0];
-  for (const question of questions) {
-    const questionId = Number(question.id);
-    if (!answerMap.has(questionId)) continue;
-    const normalized = validateAnswer(question, answerMap.get(questionId));
+  for (const answer of normalizedAnswers) {
     await tx.$executeRaw(Prisma.sql`
       INSERT INTO public.marketing_survey_answers (tenant_id,response_id,question_id,answer)
-      VALUES (${tenantId},${Number(response.id)},${questionId},CAST(${JSON.stringify(normalized)} AS jsonb))
+      VALUES (${tenantId},${Number(response.id)},${answer.questionId},CAST(${JSON.stringify(answer.value)} AS jsonb))
     `);
   }
   await appendEvent(tx, {
@@ -261,5 +273,5 @@ export const listSurveyResponses = async (tenantId: number, surveyIdValue: unkno
     LEFT JOIN public.customers c ON c.id=r.customer_id
     WHERE r.tenant_id=${tenantId} AND r.survey_id=${surveyId} AND r.status='submitted'
     ORDER BY r.id DESC
-  `);
+  `;
 };
