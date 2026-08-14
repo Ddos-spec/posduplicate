@@ -5,17 +5,21 @@ const root = path.resolve(__dirname, '../../..');
 const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8');
 
 const migration = read('backend/prisma/migrations/20260813230000_p3_marketing_engagement_core/migration.sql');
+const idempotencyMigration = read('backend/prisma/migrations/20260813231000_p3_marketing_public_idempotency/migration.sql');
 const capabilities = read('backend/src/middlewares/capability.middleware.ts');
 const runner = read('backend/src/scripts/apply-p3-migrations.ts');
 const verifier = read('backend/src/scripts/verify-p3-database.ts');
+const server = read('backend/src/server.ts');
 const eventService = read('backend/src/modules/medsos/services/marketingEvent.p3.service.ts');
 const surveyService = read('backend/src/modules/medsos/services/marketingSurvey.p3.service.ts');
 const journeyService = read('backend/src/modules/medsos/services/marketingJourney.p3.service.ts');
 const publicService = read('backend/src/modules/medsos/services/marketingEngagementPublic.p3.service.ts');
+const publicController = read('backend/src/modules/medsos/controllers/marketingEngagementPublic.p3.controller.ts');
 const routes = read('backend/src/modules/medsos/routes/marketingEngagement.p3.routes.ts');
 const moduleIndex = read('backend/src/modules/medsos/index.ts');
 const storefront = read('frontend/src/pages/StorefrontPage.tsx');
 const publicPanel = read('frontend/src/components/marketing/PublicEngagementPanel.tsx');
+const frontendService = read('frontend/src/services/marketingEngagementService.ts');
 const catalog = read('frontend/src/config/suiteCatalog.ts');
 
 const catalogLine = (appId: string) => catalog.split('\n').find((line) => line.includes(`{ id: '${appId}'`));
@@ -36,11 +40,12 @@ describe('P3.5 marketing engagement contracts', () => {
     expect(registerBlock).toContain("status IN ('registered','checked_in')");
   });
 
-  test('survey submission validates survey ownership and answer contracts', () => {
+  test('survey submission validates survey ownership and answer contracts before response materialization', () => {
     expect(surveyService).toContain('SURVEY_QUESTION_SCOPE_MISMATCH');
     expect(surveyService).toContain('SURVEY_REQUIRED_ANSWER_MISSING');
     expect(surveyService).toContain("type === 'rating'");
     expect(surveyService).toContain("type === 'nps'");
+    expect(surveyService.indexOf('const normalizedAnswers')).toBeLessThan(surveyService.indexOf('INSERT INTO public.marketing_survey_responses'));
   });
 
   test('admin API is authenticated, tenant scoped, and capability gated', () => {
@@ -64,6 +69,20 @@ describe('P3.5 marketing engagement contracts', () => {
     expect(publicService).not.toContain('input.customerId');
   });
 
+  test('public write retries use opaque token hashes and partial unique indexes', () => {
+    expect(idempotencyMigration).toContain('ux_marketing_event_registration_submission_key');
+    expect(idempotencyMigration).toContain('ux_marketing_survey_response_submission_key');
+    expect(idempotencyMigration).toContain('submission_key_hash CHAR(64)');
+    expect(runner).toContain('20260813231000_p3_marketing_public_idempotency');
+    expect(publicController).toContain("req.header('x-engagement-token')");
+    expect(publicService).toContain("crypto.createHash('sha256')");
+    expect(eventService).toContain('AND submission_key_hash=${submissionKeyHash}');
+    expect(surveyService).toContain('AND submission_key_hash=${submissionKeyHash}');
+    expect(server).toContain("'X-Engagement-Token'");
+    expect(frontendService).toContain("'X-Engagement-Token': token");
+    expect(publicPanel).toContain('sessionStorage.setItem(key');
+  });
+
   test('public storefront renders engagement without exposing a separate unauthenticated router', () => {
     expect(storefront).toContain("searchParams.get('event')");
     expect(storefront).toContain("searchParams.get('survey')");
@@ -80,7 +99,7 @@ describe('P3.5 marketing engagement contracts', () => {
     expect(journeyService).not.toContain('axios');
   });
 
-  test('migration runner and DB verifier cover P3.5', () => {
+  test('migration runner and DB verifier cover P3.5 core', () => {
     expect(runner).toContain('20260813230000_p3_marketing_engagement_core');
     expect(verifier).toContain('P3.5 marketing engagement tables are incomplete');
     expect(verifier).toContain('trg_marketing_engagement_events_immutable');
