@@ -4,6 +4,7 @@ import { useThemeStore } from '../../store/themeStore';
 import { Bot, CalendarDays, Loader2, MessageCircle, ShieldCheck, Workflow } from 'lucide-react';
 import { createZernioAutomation } from '../../services/medsosPostsService';
 import toast from 'react-hot-toast';
+import EngagementPublicLinks from '../../components/marketing/EngagementPublicLinks';
 import MarketingEngagementPage from './MarketingEngagementPage';
 import MarketingJourneysPage from './MarketingJourneysPage';
 
@@ -54,7 +55,7 @@ export default function AutoReplyPage() {
         </button>
       </div>
 
-      {activeView === 'engagement' ? <MarketingEngagementPage /> : activeView === 'journeys' ? <MarketingJourneysPage /> : (
+      {activeView === 'engagement' ? <div className="space-y-4"><EngagementPublicLinks /><MarketingEngagementPage /></div> : activeView === 'journeys' ? <MarketingJourneysPage /> : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(320px,0.65fr)]">
           <div className={`rounded-[28px] p-4 md:p-5 ${isDark ? 'bg-[#111318] ring-1 ring-white/10' : 'bg-white shadow-sm ring-1 ring-slate-900/5'}`}>
             <div className="grid gap-4 md:grid-cols-2">
