@@ -3,6 +3,14 @@ import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 
 const CRM_STAGES = ['new', 'qualified', 'proposal', 'negotiation', 'won', 'lost'] as const;
+const CRM_STAGE_DEFAULT_PROBABILITY: Record<(typeof CRM_STAGES)[number], number> = {
+  new: 10,
+  qualified: 30,
+  proposal: 50,
+  negotiation: 75,
+  won: 100,
+  lost: 0,
+};
 const QUOTATION_STATUSES = ['draft', 'sent', 'accepted', 'rejected', 'expired', 'converted'] as const;
 
 type QuoteItemInput = {
@@ -272,15 +280,16 @@ export const moveOpportunityStage = async (req: Request, res: Response, next: Ne
     `);
     if (!existing[0]) return res.status(404).json({ success: false, error: { code: 'OPPORTUNITY_NOT_FOUND', message: 'Opportunity tidak ditemukan' } });
 
+    const normalizedStage = stage as (typeof CRM_STAGES)[number];
     const nextProbability = probability === undefined
-      ? stage === 'won' ? 100 : stage === 'lost' ? 0 : numberValue(existing[0].probability, 10)
+      ? CRM_STAGE_DEFAULT_PROBABILITY[normalizedStage]
       : Math.min(100, Math.max(0, numberValue(probability)));
 
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       UPDATE public.crm_opportunities
-      SET stage = ${stage},
+      SET stage = ${normalizedStage},
           probability = ${nextProbability},
-          lost_reason = ${stage === 'lost' ? (lostReason || 'Tidak ada alasan') : null},
+          lost_reason = ${normalizedStage === 'lost' ? (lostReason || 'Tidak ada alasan') : null},
           updated_at = NOW()
       WHERE id = ${id} AND tenant_id = ${tenantId}
       RETURNING *

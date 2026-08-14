@@ -35,11 +35,10 @@ describe('P3 sales runtime catalog acceptance contract', () => {
     expect(app).toContain('<RentalWorkspacePage />');
   });
 
-  test('the unrelated future loyalty app is not promoted as a side effect', () => {
-    for (const appId of ['loyalty']) {
-      const line = findCatalogLine(appId);
-      expect(line).toContain("status: 'blueprint'");
-    }
+  test('P1 loyalty remains independently accepted on its revenue runtime', () => {
+    const line = findCatalogLine('loyalty');
+    expect(line).toContain("status: 'live'");
+    expect(line).toContain("path: '/revenue'");
   });
 
   test('accepted P3.5 marketing apps remain live independently of sales promotion', () => {

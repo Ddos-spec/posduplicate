@@ -366,7 +366,7 @@ export default function RevenueWorkspacePage() {
 
         {tab === 'orders' && (
           <section className={`rounded-2xl border ${card}`}>
-            <div className="border-b border-inherit p-4"><h2 className="font-black">Sales orders</h2><p className={`text-xs ${muted}`}>Confirmed sales commitment. Fulfillment/stock reservation masuk tranche supply-chain berikutnya.</p></div>
+            <div className="border-b border-inherit p-4"><h2 className="font-black">Sales orders</h2><p className={`text-xs ${muted}`}>Confirmed sales commitments retain their accepted quotation and line snapshots. Warehouse fulfillment remains separately controlled in Supply Chain Operations.</p></div>
             <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-sm"><thead><tr className={muted}>{['Sales Order', 'Customer', 'Status', 'Created', 'Total'].map((h) => <th key={h} className="px-4 py-3 text-left text-xs font-bold">{h}</th>)}</tr></thead><tbody className="divide-y divide-inherit">{orders.map((order) => <tr key={String(order.id)}><td className="px-4 py-3 font-bold">{order.sales_order_number}</td><td className="px-4 py-3">{order.customer_name || '—'}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-bold ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>{order.status}</span></td><td className="px-4 py-3">{dateText(order.created_at)}</td><td className="px-4 py-3 font-black">{money(order.total)}</td></tr>)}</tbody></table></div>
           </section>
         )}
@@ -406,7 +406,7 @@ export default function RevenueWorkspacePage() {
         )}
 
         <section className={`rounded-2xl border p-4 ${card}`}>
-          <div className="flex items-start gap-3"><Sparkles className="mt-0.5 text-cyan-500" size={18} /><div><p className="font-black">P1 status</p><p className={`mt-1 text-sm ${muted}`}>Revenue core aktif: CRM pipeline, activities, quotation, sales order conversion, Customer 360, dan loyalty ledger. Berikutnya: RFQ/PO receiving hardening, warehouse location/transfer/count, barcode, MRP production/yield, quality dan maintenance.</p></div></div>
+          <div className="flex items-start gap-3"><Sparkles className="mt-0.5 text-cyan-500" size={18} /><div><p className="font-black">Accepted revenue contract</p><p className={`mt-1 text-sm ${muted}`}>CRM pipeline, follow-up activities, quotation acceptance, sales-order conversion, Customer 360, and append-only loyalty ledgers are active and tenant scoped.</p></div></div>
         </section>
       </main>
     </div>

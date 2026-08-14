@@ -68,6 +68,14 @@ describe('business-suite contracts', () => {
     }
   });
 
+  test('CRM stage transitions apply deterministic default probabilities', () => {
+    const revenue = read('src/modules/fnb/controllers/revenue.controller.ts');
+    for (const [stage, probability] of Object.entries({ new: 10, qualified: 30, proposal: 50, negotiation: 75, won: 100, lost: 0 })) {
+      expect(revenue).toContain(`${stage}: ${probability}`);
+    }
+    expect(revenue).toContain('CRM_STAGE_DEFAULT_PROBABILITY[normalizedStage]');
+  });
+
   test('production migration runner is locked, checksum protected and includes P2 workforce domains', () => {
     const runner = read('src/scripts/apply-p1-migrations.ts');
     const dockerfile = read('Dockerfile');

@@ -48,26 +48,14 @@ const LEGACY_ROUTE_ALIASES: Record<string, string> = {
   '/inventory/recipe-simulation': '/inventory/recipe',
 };
 
-const P1_REVENUE_IDS = new Set(['crm', 'sales', 'customer-360', 'loyalty']);
-const P1_SUPPLY_IDS = new Set([
-  'purchase',
-  'inventory',
-  'warehouse',
-  'barcode',
-  'manufacturing',
-  'mrp',
-  'quality',
-  'maintenance',
-]);
-
 const resolveRuntimeApp = <T extends { id: string; path?: string; status: SuiteImplementationStatus }>(app: T) => {
-  if (P1_REVENUE_IDS.has(app.id)) {
-    return { ...app, path: '/revenue', status: 'partial' as SuiteImplementationStatus, runtimeWorkspace: 'Revenue Operations' };
-  }
-  if (P1_SUPPLY_IDS.has(app.id)) {
-    return { ...app, path: '/supply-chain', status: 'partial' as SuiteImplementationStatus, runtimeWorkspace: 'Supply Chain Operations' };
-  }
-  return { ...app, path: app.path ? (LEGACY_ROUTE_ALIASES[app.path] ?? app.path) : app.path, runtimeWorkspace: null as string | null };
+  const path = app.path ? (LEGACY_ROUTE_ALIASES[app.path] ?? app.path) : app.path;
+  const runtimeWorkspace = path === '/revenue'
+    ? 'Revenue Operations'
+    : path === '/supply-chain'
+      ? 'Supply Chain Operations'
+      : null;
+  return { ...app, path, runtimeWorkspace };
 };
 
 type McsPermissionSet = Partial<Record<'inbox' | 'analytics' | 'content' | 'ads' | 'settings' | 'marketplace', boolean>>;
@@ -225,7 +213,7 @@ export default function ModuleSelectorPage() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <OmnipilotMark size={38} />
-                <span className={`text-xs font-bold tracking-[0.18em] uppercase ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>OmniPilot Suite · P1 Build</span>
+                <span className={`text-xs font-bold tracking-[0.18em] uppercase ${isDark ? 'text-cyan-300' : 'text-cyan-700'}`}>OmniPilot Suite · Accepted Runtime</span>
               </div>
               <h1 className="text-3xl lg:text-5xl font-black tracking-tight max-w-4xl">Satu operating system untuk seluruh proses bisnis.</h1>
               <p className={`mt-4 max-w-3xl text-base lg:text-lg leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
@@ -233,7 +221,7 @@ export default function ModuleSelectorPage() {
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 px-3 py-1.5 text-xs font-semibold">{LIVE_SUITE_APP_COUNT} catalog live</span>
-                <span className="rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-1.5 text-xs font-semibold">{PARTIAL_SUITE_APP_COUNT}+ P1 in progress</span>
+                <span className="rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-1.5 text-xs font-semibold">{PARTIAL_SUITE_APP_COUNT} release gaps</span>
                 <span className="rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 py-1.5 text-xs font-semibold">Tenant + capability gated</span>
               </div>
             </div>
@@ -321,7 +309,7 @@ export default function ModuleSelectorPage() {
                         </div>
 
                         <p className={`mt-3 text-sm leading-5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{app.description}</p>
-                        {app.runtimeWorkspace && <div className={`mt-3 rounded-xl border px-3 py-2 text-xs font-bold ${isDark ? 'border-cyan-900/60 bg-cyan-950/20 text-cyan-300' : 'border-cyan-100 bg-cyan-50 text-cyan-700'}`}>P1 workspace: {app.runtimeWorkspace}</div>}
+                        {app.runtimeWorkspace && <div className={`mt-3 rounded-xl border px-3 py-2 text-xs font-bold ${isDark ? 'border-cyan-900/60 bg-cyan-950/20 text-cyan-300' : 'border-cyan-100 bg-cyan-50 text-cyan-700'}`}>Accepted workspace: {app.runtimeWorkspace}</div>}
                         <div className="mt-3 flex flex-wrap gap-1.5">
                           {app.capabilities.slice(0, 4).map((capability) => <span key={capability} className={`rounded-lg px-2 py-1 text-[10px] ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{capability}</span>)}
                           {app.capabilities.length > 4 && <span className={`rounded-lg px-2 py-1 text-[10px] ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>+{app.capabilities.length - 4}</span>}
