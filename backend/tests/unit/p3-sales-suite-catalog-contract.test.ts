@@ -36,9 +36,17 @@ describe('P3 sales runtime catalog acceptance contract', () => {
   });
 
   test('unrelated future sales apps are not promoted as a side effect', () => {
-    for (const appId of ['loyalty', 'elearning', 'events', 'surveys']) {
+    for (const appId of ['loyalty', 'elearning']) {
       const line = findCatalogLine(appId);
       expect(line).toContain("status: 'blueprint'");
+    }
+  });
+
+  test('accepted P3.5 marketing apps remain live independently of sales promotion', () => {
+    for (const appId of ['events', 'surveys']) {
+      const line = findCatalogLine(appId);
+      expect(line).toContain("status: 'live'");
+      expect(line).toContain("path: '/medsos/automations?view=engagement'");
     }
   });
 });
