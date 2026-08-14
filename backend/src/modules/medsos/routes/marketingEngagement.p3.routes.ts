@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { authMiddleware } from '../../../middlewares/auth.middleware';
 import { tenantMiddleware } from '../../../middlewares/tenant.middleware';
 import { requireCapability } from '../../../middlewares/capability.middleware';
@@ -20,8 +21,33 @@ import {
   postMarketingSurvey,
   postMarketingSurveyResponse,
 } from '../controllers/marketingEngagement.p3.controller';
+import {
+  getPublicEvent,
+  getPublicSurvey,
+  postPublicEventRegistration,
+  postPublicSurveyResponse,
+} from '../controllers/marketingEngagementPublic.p3.controller';
 
 const router = Router();
+
+const publicWriteLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: 'PUBLIC_ENGAGEMENT_RATE_LIMITED', message: 'Too many submissions. Please try again later.' },
+  },
+});
+
+// Public participation resolves tenant only through a published website_sites.public_slug.
+// These routes intentionally appear before authMiddleware; all admin operations below remain authenticated.
+router.get('/public/:publicSlug/events/:eventSlug', getPublicEvent);
+router.post('/public/:publicSlug/events/:eventSlug/registrations', publicWriteLimiter, postPublicEventRegistration);
+router.get('/public/:publicSlug/surveys/:surveySlug', getPublicSurvey);
+router.post('/public/:publicSlug/surveys/:surveySlug/responses', publicWriteLimiter, postPublicSurveyResponse);
+
 router.use(authMiddleware);
 router.use(tenantMiddleware);
 
