@@ -71,6 +71,8 @@ export interface CommunityForum {
 export interface CommunityTopic {
   id: number;
   forum_id?: number;
+  forum_name?: string;
+  forum_slug?: string;
   slug: string;
   title: string;
   content: DeclarativeBlock[];
