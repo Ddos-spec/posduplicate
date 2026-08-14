@@ -40,11 +40,11 @@ const signWriteLimiter = rateLimit({
   message: { success: false, error: { code: 'PUBLIC_SIGN_RATE_LIMITED', message: 'Too many signature attempts. Please try again later.' } },
 });
 
-// Public signing is token-scoped. Keep these endpoints before authentication middleware.
-router.get('/sign/public/:token', getPublicSignature);
-router.get('/sign/public/:token/document', downloadPublicSignatureDocument);
-router.post('/sign/public/:token/sign', signWriteLimiter, signPublicSignature);
-router.post('/sign/public/:token/decline', signWriteLimiter, declinePublicSignature);
+// Public signing is token-scoped through X-Sign-Token so bearer secrets never enter request URLs/access logs.
+router.get('/sign/public/request', getPublicSignature);
+router.get('/sign/public/document', downloadPublicSignatureDocument);
+router.post('/sign/public/sign', signWriteLimiter, signPublicSignature);
+router.post('/sign/public/decline', signWriteLimiter, declinePublicSignature);
 
 router.use(authMiddleware);
 router.use(tenantMiddleware);
