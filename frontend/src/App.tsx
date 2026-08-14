@@ -64,6 +64,10 @@ const RentalWorkspacePage = lazy(() => import('./pages/RentalWorkspacePage'));
 const StorefrontPage = lazy(() => import('./pages/StorefrontPage'));
 const ProductivityWorkspacePage = lazy(() => import('./pages/productivity/ProductivityWorkspacePage'));
 const PublicSignPage = lazy(() => import('./pages/PublicSignPage'));
+const LearningCommunityWorkspacePage = lazy(() => import('./pages/learning/LearningCommunityWorkspacePage'));
+const PublicLearningPage = lazy(() => import('./pages/learning/PublicLearningPage'));
+const PublicLearnerPage = lazy(() => import('./pages/learning/PublicLearnerPage'));
+const PublicCommunityPage = lazy(() => import('./pages/learning/PublicCommunityPage'));
 
 // Accounting Module Pages
 const AccountingLayout = lazy(() => import('./components/accounting/AccountingLayout'));
@@ -252,6 +256,9 @@ function App() {
           </Route>
 
           <Route path="/sign/:token" element={<PublicSignPage />} />
+          <Route path="/learn/entry" element={<PublicLearnerPage />} />
+          <Route path="/learn/:publicSlug" element={<PublicLearningPage />} />
+          <Route path="/community/:publicSlug" element={<PublicCommunityPage />} />
           <Route path="/store/:publicSlug" element={<StorefrontPage />} />
           <Route path="/module-selector" element={<ProtectedRoute><ModuleSelectorPage /></ProtectedRoute>} />
           <Route path="/revenue" element={<OwnerRoute><RevenueWorkspacePage /></OwnerRoute>} />
@@ -261,6 +268,7 @@ function App() {
           <Route path="/subscriptions" element={<TenantModuleRoute moduleKey="accounting"><ProtectedRoute><SubscriptionsWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />
           <Route path="/rental" element={<TenantModuleRoute moduleKey="pos"><OwnerRoute><RentalWorkspacePage /></OwnerRoute></TenantModuleRoute>} />
           <Route path="/productivity" element={<TenantModuleRoute moduleKey="accounting"><ProtectedRoute><ProductivityWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />
+          <Route path="/learning" element={<TenantModuleRoute moduleKey="commerSocial"><ProtectedRoute><LearningCommunityWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />
 
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route path="dashboard" element={<SuperAdminOmniPage />} />
