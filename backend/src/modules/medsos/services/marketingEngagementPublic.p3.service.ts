@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Prisma } from '@prisma/client';
 import prisma from '../../../utils/prisma';
 import { registerMarketingEvent } from './marketingEvent.p3.service';
@@ -16,6 +17,12 @@ const entitySlug = (value: unknown, code: string) => {
   const slug = String(value || '').trim().toLowerCase();
   if (!/^[a-z0-9][a-z0-9-]{0,119}$/.test(slug)) throw domainError('Invalid public entity slug', code);
   return slug;
+};
+
+const submissionHash = (value: unknown) => {
+  const token = String(value || '').trim();
+  if (!/^[a-f0-9]{64}$/i.test(token)) throw domainError('Valid engagement submission token required', 'PUBLIC_ENGAGEMENT_TOKEN_REQUIRED', 400);
+  return crypto.createHash('sha256').update(token).digest('hex');
 };
 
 const resolvePublicTenant = async (siteSlugValue: unknown) => {
@@ -56,10 +63,12 @@ export const getPublicMarketingEvent = async (siteSlugValue: unknown, eventSlugV
 export const registerPublicMarketingEvent = async (
   siteSlugValue: unknown,
   eventSlugValue: unknown,
+  submissionTokenValue: unknown,
   input: { attendeeName: string; attendeeEmail?: string | null; attendeePhone?: string | null; seats?: number },
 ) => {
   const { tenantId } = await resolvePublicTenant(siteSlugValue);
   const eventSlug = entitySlug(eventSlugValue, 'INVALID_MARKETING_EVENT_SLUG');
+  const keyHash = submissionHash(submissionTokenValue);
   const rows = await prisma.$queryRaw<Array<{ id: number }>>(Prisma.sql`
     SELECT id FROM public.marketing_events
     WHERE tenant_id=${tenantId} AND slug=${eventSlug} AND status='published'
@@ -72,7 +81,7 @@ export const registerPublicMarketingEvent = async (
     attendeeEmail: input.attendeeEmail,
     attendeePhone: input.attendeePhone,
     seats: input.seats,
-  });
+  }, keyHash);
   return {
     id: registration.id,
     event_id: registration.event_id,
@@ -106,10 +115,12 @@ export const getPublicMarketingSurvey = async (siteSlugValue: unknown, surveySlu
 export const submitPublicMarketingSurvey = async (
   siteSlugValue: unknown,
   surveySlugValue: unknown,
+  submissionTokenValue: unknown,
   input: { respondentName?: string | null; respondentEmail?: string | null; answers: Array<{ questionId: number; answer: unknown }> },
 ) => {
   const { tenantId } = await resolvePublicTenant(siteSlugValue);
   const surveySlug = entitySlug(surveySlugValue, 'INVALID_MARKETING_SURVEY_SLUG');
+  const keyHash = submissionHash(submissionTokenValue);
   const rows = await prisma.$queryRaw<Array<{ id: number }>>(Prisma.sql`
     SELECT id FROM public.marketing_surveys
     WHERE tenant_id=${tenantId} AND slug=${surveySlug} AND status='published'
@@ -121,6 +132,6 @@ export const submitPublicMarketingSurvey = async (
     respondentName: input.respondentName,
     respondentEmail: input.respondentEmail,
     answers: input.answers,
-  });
+  }, keyHash);
   return { id: response.id, survey_id: response.survey_id, status: response.status, submitted_at: response.submitted_at };
 };
