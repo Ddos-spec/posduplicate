@@ -15,6 +15,7 @@ const storage = read('backend/src/modules/productivity/services/privateDocumentS
 const documents = read('backend/src/modules/productivity/services/document.p3.service.ts');
 const knowledge = read('backend/src/modules/productivity/services/knowledge.p3.service.ts');
 const sign = read('backend/src/modules/productivity/services/sign.p3.service.ts');
+const app = read('frontend/src/App.tsx');
 const catalog = read('frontend/src/config/suiteCatalog.ts');
 
 const catalogLine = (appId: string) => catalog.split('\n').find((line) => line.includes(`{ id: '${appId}'`));
@@ -90,6 +91,16 @@ describe('P3.6 productivity contracts', () => {
     expect(routes).toContain("requireCapability('productivity.knowledge.manage')");
     expect(routes).toContain("requireCapability('productivity.sign.manage')");
     expect(server).toContain("apiRouter.use('/api/productivity', productivityRoutes)");
+  });
+
+  test('frontend keeps signing public while productivity workspace stays accounting-gated', () => {
+    expect(app).toContain("const ProductivityWorkspacePage = lazy(() => import('./pages/productivity/ProductivityWorkspacePage'))");
+    expect(app).toContain("const PublicSignPage = lazy(() => import('./pages/PublicSignPage'))");
+    const publicSignAt = app.indexOf('<Route path="/sign/:token" element={<PublicSignPage />} />');
+    const catchAllAt = app.indexOf('<Route path="*" element={<Navigate to="/login" />} />');
+    expect(publicSignAt).toBeGreaterThanOrEqual(0);
+    expect(catchAllAt).toBeGreaterThan(publicSignAt);
+    expect(app).toContain('<Route path="/productivity" element={<TenantModuleRoute moduleKey="accounting"><ProtectedRoute><ProductivityWorkspacePage /></ProtectedRoute></TenantModuleRoute>} />');
   });
 
   test('P3 runner and canonical verifier cover both productivity migrations and ten core tables', () => {
