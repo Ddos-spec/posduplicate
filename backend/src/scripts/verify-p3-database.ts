@@ -25,6 +25,7 @@ async function run() {
       '20260813220000_p3_rental_core',
       '20260813220500_p3_rental_inventory_guard',
       '20260813230000_p3_marketing_engagement_core',
+      '20260813231000_p3_marketing_public_idempotency',
     ];
     assert(ledger.rows.length >= requiredMigrations.length, `Expected at least ${requiredMigrations.length} P3 migration ledger entries, found ${ledger.rows.length}`);
     for (const required of requiredMigrations) {
@@ -265,7 +266,32 @@ async function run() {
     `);
     assert(marketingImmutableTrigger.rows.length === 1, 'Marketing engagement append-only event trigger missing');
 
-    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental + marketing engagement source-of-truth/inventory/audit invariants verified');
+    const marketingRetryColumns = await client.query<{ table_name: string; column_name: string }>(`
+      SELECT table_name,column_name FROM information_schema.columns
+      WHERE table_schema='public' AND column_name='submission_key_hash'
+        AND table_name IN ('marketing_event_registrations','marketing_survey_responses')
+    `);
+    const marketingRetryColumnKeys = new Set(marketingRetryColumns.rows.map((row) => `${row.table_name}:${row.column_name}`));
+    for (const key of [
+      'marketing_event_registrations:submission_key_hash',
+      'marketing_survey_responses:submission_key_hash',
+    ]) assert(marketingRetryColumnKeys.has(key), `Marketing public retry column missing: ${key}`);
+
+    const marketingRetryIndexes = await client.query<{ indexname: string; indexdef: string }>(`
+      SELECT indexname,indexdef FROM pg_indexes
+      WHERE schemaname='public' AND indexname IN (
+        'ux_marketing_event_registration_submission_key',
+        'ux_marketing_survey_response_submission_key'
+      )
+    `);
+    assert(marketingRetryIndexes.rows.length === 2, 'Marketing public retry unique indexes are incomplete');
+    for (const row of marketingRetryIndexes.rows) {
+      assert(row.indexdef.includes('CREATE UNIQUE INDEX'), `Marketing public retry index ${row.indexname} must be unique`);
+      assert(row.indexdef.includes('submission_key_hash'), `Marketing public retry index ${row.indexname} must key submission hash`);
+      assert(row.indexdef.includes('WHERE'), `Marketing public retry index ${row.indexname} must remain partial`);
+    }
+
+    console.log('[P3 database verifier] website/CMS + eCommerce + subscription + rental + marketing engagement source-of-truth/inventory/audit/idempotency invariants verified');
   } finally {
     await client.end();
   }
