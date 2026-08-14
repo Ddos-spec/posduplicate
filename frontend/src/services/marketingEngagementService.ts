@@ -4,6 +4,21 @@ export type MarketingEventStatus = 'draft' | 'published' | 'closed' | 'cancelled
 export type MarketingRegistrationStatus = 'registered' | 'checked_in' | 'cancelled' | 'no_show';
 export type MarketingSurveyStatus = 'draft' | 'published' | 'closed' | 'archived';
 export type MarketingSurveyQuestionType = 'short_text' | 'long_text' | 'single_choice' | 'multiple_choice' | 'rating' | 'nps';
+export type MarketingJourneyStatus = 'draft' | 'active' | 'paused' | 'archived';
+export type MarketingJourneyTriggerType = 'manual' | 'event_registration' | 'survey_submitted' | 'customer_created' | 'scheduled';
+export type MarketingJourneyStepType = 'wait' | 'broadcast' | 'tag' | 'notify';
+
+export interface MarketingJourney {
+  id: number;
+  name: string;
+  description?: string | null;
+  status: MarketingJourneyStatus;
+  trigger_type: MarketingJourneyTriggerType;
+  trigger_config: Record<string, unknown>;
+  audience_filter: Record<string, unknown>;
+  step_count?: number;
+  steps?: Array<{ id?: number; position?: number; step_type: MarketingJourneyStepType; config: Record<string, unknown> }>;
+}
 
 export interface MarketingEvent {
   id: number;
@@ -67,7 +82,29 @@ export interface MarketingSurveyResponse {
   answers: Array<{ question_id: number; answer: unknown }>;
 }
 
+export interface PublicMarketingEvent {
+  siteName: string;
+  event: Pick<MarketingEvent, 'id' | 'slug' | 'name' | 'description' | 'starts_at' | 'ends_at' | 'venue' | 'capacity' | 'registration_open' | 'occupied_seats'> & {
+    available_seats: number | null;
+  };
+}
+
+export interface PublicMarketingSurvey {
+  siteName: string;
+  survey: Pick<MarketingSurvey, 'id' | 'slug' | 'title' | 'description' | 'questions'>;
+}
+
 const unwrap = <T>(response: { data: { data: T } }): T => response.data.data;
+
+export const getMarketingJourneys = async () => unwrap<MarketingJourney[]>(await api.get('/medsos/engagement/journeys'));
+export const getMarketingJourney = async (id: number) => unwrap<MarketingJourney>(await api.get(`/medsos/engagement/journeys/${id}`));
+export const createMarketingJourney = async (payload: {
+  name: string; description?: string; triggerType?: MarketingJourneyTriggerType;
+  triggerConfig?: Record<string, unknown>; audienceFilter?: Record<string, unknown>;
+  steps: Array<{ type: MarketingJourneyStepType; config?: Record<string, unknown> }>;
+}) => unwrap<MarketingJourney>(await api.post('/medsos/engagement/journeys', payload));
+export const setMarketingJourneyStatus = async (id: number, status: MarketingJourneyStatus) =>
+  unwrap<MarketingJourney>(await api.patch(`/medsos/engagement/journeys/${id}/status`, { status }));
 
 export const getMarketingEvents = async () => unwrap<MarketingEvent[]>(await api.get('/medsos/engagement/events'));
 export const createMarketingEvent = async (payload: {
@@ -97,3 +134,18 @@ export const submitMarketingSurveyResponse = async (id: number, payload: {
   customerId?: number | null; respondentName?: string; respondentEmail?: string;
   answers: Array<{ questionId: number; answer: unknown }>;
 }) => unwrap<MarketingSurveyResponse>(await api.post(`/medsos/engagement/surveys/${id}/responses`, payload));
+
+export const getPublicMarketingEvent = async (publicSlug: string, eventSlug: string) =>
+  unwrap<PublicMarketingEvent>(await api.get(`/medsos/engagement/public/${encodeURIComponent(publicSlug)}/events/${encodeURIComponent(eventSlug)}`));
+export const registerPublicMarketingEvent = async (publicSlug: string, eventSlug: string, payload: {
+  attendeeName: string; attendeeEmail?: string; attendeePhone?: string; seats?: number;
+}) => unwrap<{ id: number; event_id: number; attendee_name: string; seats: number; status: string; registered_at: string }>(
+  await api.post(`/medsos/engagement/public/${encodeURIComponent(publicSlug)}/events/${encodeURIComponent(eventSlug)}/registrations`, payload),
+);
+export const getPublicMarketingSurvey = async (publicSlug: string, surveySlug: string) =>
+  unwrap<PublicMarketingSurvey>(await api.get(`/medsos/engagement/public/${encodeURIComponent(publicSlug)}/surveys/${encodeURIComponent(surveySlug)}`));
+export const submitPublicMarketingSurvey = async (publicSlug: string, surveySlug: string, payload: {
+  respondentName?: string; respondentEmail?: string; answers: Array<{ questionId: number; answer: unknown }>;
+}) => unwrap<{ id: number; survey_id: number; status: string; submitted_at?: string | null }>(
+  await api.post(`/medsos/engagement/public/${encodeURIComponent(publicSlug)}/surveys/${encodeURIComponent(surveySlug)}/responses`, payload),
+);
