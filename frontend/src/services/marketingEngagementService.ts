@@ -137,15 +137,19 @@ export const submitMarketingSurveyResponse = async (id: number, payload: {
 
 export const getPublicMarketingEvent = async (publicSlug: string, eventSlug: string) =>
   unwrap<PublicMarketingEvent>(await api.get(`/medsos/engagement/public/${encodeURIComponent(publicSlug)}/events/${encodeURIComponent(eventSlug)}`));
-export const registerPublicMarketingEvent = async (publicSlug: string, eventSlug: string, payload: {
+export const registerPublicMarketingEvent = async (publicSlug: string, eventSlug: string, token: string, payload: {
   attendeeName: string; attendeeEmail?: string; attendeePhone?: string; seats?: number;
 }) => unwrap<{ id: number; event_id: number; attendee_name: string; seats: number; status: string; registered_at: string }>(
-  await api.post(`/medsos/engagement/public/${encodeURIComponent(publicSlug)}/events/${encodeURIComponent(eventSlug)}/registrations`, payload),
+  await api.post(`/medsos/engagement/public/${encodeURIComponent(publicSlug)}/events/${encodeURIComponent(eventSlug)}/registrations`, payload, {
+    headers: { 'X-Engagement-Token': token },
+  }),
 );
 export const getPublicMarketingSurvey = async (publicSlug: string, surveySlug: string) =>
   unwrap<PublicMarketingSurvey>(await api.get(`/medsos/engagement/public/${encodeURIComponent(publicSlug)}/surveys/${encodeURIComponent(surveySlug)}`));
-export const submitPublicMarketingSurvey = async (publicSlug: string, surveySlug: string, payload: {
+export const submitPublicMarketingSurvey = async (publicSlug: string, surveySlug: string, token: string, payload: {
   respondentName?: string; respondentEmail?: string; answers: Array<{ questionId: number; answer: unknown }>;
 }) => unwrap<{ id: number; survey_id: number; status: string; submitted_at?: string | null }>(
-  await api.post(`/medsos/engagement/public/${encodeURIComponent(publicSlug)}/surveys/${encodeURIComponent(surveySlug)}/responses`, payload),
+  await api.post(`/medsos/engagement/public/${encodeURIComponent(publicSlug)}/surveys/${encodeURIComponent(surveySlug)}/responses`, payload, {
+    headers: { 'X-Engagement-Token': token },
+  }),
 );
