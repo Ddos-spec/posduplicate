@@ -15,6 +15,7 @@ const MIGRATIONS = [
   '20260813220000_p3_rental_core',
   '20260813220500_p3_rental_inventory_guard',
   '20260813230000_p3_marketing_engagement_core',
+  '20260813231000_p3_marketing_public_idempotency',
 ] as const;
 
 const ADVISORY_LOCK_KEY = 2026081303;
