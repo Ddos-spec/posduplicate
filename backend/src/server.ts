@@ -15,6 +15,7 @@ import accountingRoutes from './modules/accounting';
 import sharedRoutes from './modules/shared';
 import adminRoutes from './modules/admin';
 import medsosRoutes from './modules/medsos';
+import productivityRoutes from './modules/productivity';
 import scheduler from './services/scheduler.service';
 import { swaggerSpec } from './config/swagger';
 
@@ -99,7 +100,8 @@ apiRouter.get('/', (_req: Request, res: Response) => {
       accounting: 'Accounting Module',
       shared: 'Shared Services (Auth, Users, Tenants, etc.)',
       admin: 'Admin & Analytics',
-      medsos: 'Social Media Management'
+      medsos: 'Social Media Management',
+      productivity: 'Documents, Knowledge & Sign'
     },
     endpoints: {
       health: '/health',
@@ -111,7 +113,8 @@ apiRouter.get('/', (_req: Request, res: Response) => {
       categories: '/api/categories',
       transactions: '/api/transactions',
       accounting: '/api/accounting',
-      admin: '/api/admin'
+      admin: '/api/admin',
+      productivity: '/api/productivity'
     },
     timestamp: new Date().toISOString()
   });
@@ -140,6 +143,7 @@ apiRouter.use('/api', fnbRoutes);
 apiRouter.use('/api/accounting', accountingRoutes);
 apiRouter.use('/api/admin', adminRoutes);
 apiRouter.use('/api/medsos', medsosRoutes);
+apiRouter.use('/api/productivity', productivityRoutes);
 
 apiRouter.use((req: Request, res: Response) => {
   res.status(404).json({
