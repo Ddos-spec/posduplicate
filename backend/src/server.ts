@@ -78,7 +78,8 @@ app.use(cors({
     'Expires',
     'If-Modified-Since',
     'X-Order-Token',
-    'X-Engagement-Token'
+    'X-Engagement-Token',
+    'X-Sign-Token'
   ]
 }));
 app.use(express.json());
